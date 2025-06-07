@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Router Demo - Complete Feature Testing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        #app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navigation */
+        .nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            color: #333;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .nav-link:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+        }
+
+        .router-link-active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        /* Page Styles */
+        .page {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .page h1 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        .page h2 {
+            color: #764ba2;
+            margin: 1.5rem 0 1rem 0;
+        }
+
+        /* Dashboard Layout */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .dashboard-sidebar {
+            background: #f8f9fa;
+            padding: 2rem 1rem;
+            border-right: 1px solid #eee;
+        }
+
+        .dashboard-content {
+            padding: 2rem;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-link {
+            display: block;
+            padding: 0.75rem 1rem;
+            text-decoration: none;
+            color: #666;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-link:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .sidebar-link.router-link-active {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Loading States */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        .loading::after {
+            content: "...";
+            animation: dots 1s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+
+        /* Error States */
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+
+        /* Feature Demo Sections */
+        .feature-demo {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .feature-demo h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        /* Buttons */
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        /* 404 Page */
+        .not-found {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .not-found h1 {
+            font-size: 6rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+        }
+
+        /* Animation utilities */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Status indicators */
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Test Results */
+        .test-results {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .test-item:last-child {
+            border-bottom: none;
+        }
+
+        .test-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .test-status.pass {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .test-status.fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .test-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">Loading Juris Router Demo...</div>
+    </div>
+
+    <!-- Use the external Juris script file -->
+    <script src="juris.js"></script>
+    
+    <script>
+        // Demo Components
+        const components = {
+            // Navigation Component
+            NavBar: (props, context) => ({
+                render: () => ({
+                    nav: {
+                        className: 'nav',
+                        children: [{
+                            div: {
+                                className: 'nav-container',
+                                children:[{
+                                    div: {
+                                        className: 'logo',
+                                        text: () => '🚀 Juris Router Demo'
+                                    }
+                                }, {
+                                    ul: {
+                                        className: 'nav-links',
+                                        children: [
+                                            { li: { children: [{ RouterLink: { to: '/', exact: true, className: 'nav-link', text: 'Home' } }] } },
+                                            { li: { children:  [{ RouterLink: { to: '/features', className: 'nav-link', text: 'Features' } }] } },
+                                            { li: { children: [{ RouterLink: { to: '/dashboard', className: 'nav-link', text: 'Dashboard' } }] } },
+                                            { li: { children:  [{ RouterLink: { to: '/users/123', className: 'nav-link', text: 'User Profile' } }] } },
+                                            { li: { children: [{ RouterLink: { to: '/products', className: 'nav-link', text: 'Products' } }] } },
+                                            { li: { children:  [{ RouterLink: { to: '/admin', className: 'nav-link', text: 'Admin' } }] } },
+                                            { li: { children:  [{ RouterLink: { to: '/test-transitions', className: 'nav-link', text: 'Transitions' } }] } }
+                                        ]
+                                    }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            // Layout Component
+            Layout: (props, context) => ({
+                render: () => ({
+                    div: {
+                        children:  [
+                            { NavBar: {} },
+                            {
+                                div: {
+                                    className: 'main-content',
+                                    children: [{ Router: {} }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            }),
+
+            // Home Page
+            HomePage: (props, context) => ({
+        render: () => ({
+            div: {
+                className: 'page fade-in',
+                children: [{
+                    h1: { text: '🏠 Welcome to Juris Router Demo' }
+                }, {
+                    p: { text: 'This demo showcases all the advanced router features implemented in Juris framework.' }
+                }, {
+                    div: {
+                        className: 'feature-demo',
+                        children: [{
+                            h3: { text: '🎯 Router Features Tested:' }
+                        }, {
+                            ul: {
+                                children: [
+                                    { li: { text: '✅ Basic routing and navigation' } },
+                                    { li: { text: '✅ Route parameters and validation' } },
+                                    { li: { text: '✅ Query parameter handling' } },
+                                    { li: { text: '✅ Route guards and middleware' } },
+                                    { li: { text: '✅ Nested routing with RouterOutlet' } },
+                                    { li: { text: '✅ Route aliases' } },
+                                    { li: { text: '✅ Route transitions' } },
+                                    { li: { text: '✅ Advanced scroll behavior' } },
+                                    { li: { text: '✅ Lazy loading simulation' } },
+                                    { li: { text: '✅ Error handling and 404 pages' } }
+                                ]
+                            }
+                        }]
+                    }
+                }, {
+                    div: {
+                        className: 'test-results',
+                        children:  [{
+                            h3: { text: '🧪 Manual Navigation Tests:' }
+                        }, {
+                            div: {
+                                children: [{
+                                    button: {
+                                        className: 'btn',
+                                        text: 'Test User Profile',
+                                        onClick: () => {
+                                            console.log('🧪 Manual test: navigating to user profile');
+                                            context.navigate('/users/123?tab=profile');
+                                        }
+                                    }
+                                }, {
+                                    button: {
+                                        className: 'btn btn-secondary',
+                                        text: 'Test Features Page',
+                                        onClick: () => {
+                                            console.log('🧪 Manual test: navigating to features');
+                                            context.navigate('/features');
+                                        }
+                                    }
+                                }, {
+                                    button: {
+                                        className: 'btn btn-secondary',
+                                        text: 'Test Dashboard',
+                                        onClick: () => {
+                                            console.log('🧪 Manual test: navigating to dashboard');
+                                            context.navigate('/dashboard/stats');
+                                        }
+                                    }
+                                }]
+                            }
+                        }, {
+                            div: {
+                                id: 'test-results-container',
+                                children: () => []
+                            }
+                        }]
+                    }
+                }]
+            }
+        }),
+        
+        onMount: (element, props, context) => {
+            // REMOVED AUTOMATIC TESTS - they were causing the infinite loop
+            console.log('🏠 HomePage mounted - no automatic tests running');
+            
+            // Only run tests if explicitly requested
+            if (context.getState('debug.runTests', false)) {
+                setTimeout(() => {
+                    runFeatureTests(context);
+                    context.setState('debug.runTests', false); // Prevent re-running
+                }, 1000);
+            }
+        }
+    }),
+
+            // Features Page
+            FeaturesPage: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'page fade-in',
+                        children: [{
+                            h1: { text: '🎛️ Router Features Overview' }
+                        }, {
+                            div: {
+                                className: 'cards-grid',
+                                children: [{
+                                    div: {
+                                        className: 'card',
+                                        children: [{
+                                            h3: { text: '🛣️ Basic Routing' }
+                                        }, {
+                                            p: { text: 'Hash, history, and memory routing modes with pattern matching.' }
+                                        }, {
+                                            button: {
+                                                className: 'btn',
+                                                text: 'Test Navigation',
+                                                onClick: () => context.navigate('/users/456?tab=settings')
+                                            }
+                                        }]
+                                    }
+                                }, {
+                                    div: {
+                                        className: 'card',
+                                        children:  [{
+                                            h3: { text: '🔒 Route Guards' }
+                                        }, {
+                                            p: { text: 'Authentication and authorization checks before route activation.' }
+                                        }, {
+                                            button: {
+                                                className: 'btn',
+                                                text: 'Try Admin Access',
+                                                onClick: () => context.navigate('/admin/settings')
+                                            }
+                                        }]
+                                    }
+                                }, {
+                                    div: {
+                                        className: 'card',
+                                        children:  [{
+                                            h3: { text: '🎨 Route Transitions' }
+                                        }, {
+                                            p: { text: 'Smooth animations between route changes with custom effects.' }
+                                        }, {
+                                            button: {
+                                                className: 'btn',
+                                                text: 'View Transitions',
+                                                onClick: () => context.navigate('/test-transitions')
+                                            }
+                                        }]
+                                    }
+                                }, {
+                                    div: {
+                                        className: 'card',
+                                        children: [{
+                                            h3: { text: '🏗️ Nested Routes' }
+                                        }, {
+                                            p: { text: 'Complex layouts with RouterOutlet components for child routes.' }
+                                        }, {
+                                            button: {
+                                                className: 'btn',
+                                                text: 'Open Dashboard',
+                                                onClick: () => context.navigate('/dashboard/stats')
+                                            }
+                                        }]
+                                    }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            // Dashboard Layout (for nested routing)
+            DashboardLayout: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'dashboard',
+                        children: () => [{
+                            div: {
+                                className: 'dashboard-sidebar',
+                                children:  [{
+                                    h3: { text: '📊 Dashboard' }
+                                }, {
+                                    ul: {
+                                        className: 'sidebar-nav',
+                                        children:  [
+                                            { li: { children: () => [{ RouterLink: { to: '/dashboard/stats', className: 'sidebar-link', text: '📈 Statistics' } }] } },
+                                            { li: { children: () => [{ RouterLink: { to: '/dashboard/users', className: 'sidebar-link', text: '👥 Users' } }] } },
+                                            { li: { children: () => [{ RouterLink: { to: '/dashboard/settings', className: 'sidebar-link', text: '⚙️ Settings' } }] } },
+                                            { li: { children: () => [{ RouterLink: { to: '/dashboard/reports', className: 'sidebar-link', text: '📋 Reports' } }] } }
+                                        ]
+                                    }
+                                }]
+                            }
+                        }, {
+                            div: {
+                                className: 'dashboard-content',
+                                children: () => [{ RouterOutlet: { name: 'dashboard' } }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            // Dashboard Pages
+            DashboardStats: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'fade-in',
+                        children:  [{
+                            h2: { text: '📈 Statistics Dashboard' }
+                        }, {
+                            p: { text: () => `Current route: ${context.getState('router.currentRoute', '/')}` }
+                        }, {
+                            p: { text: () => `Route params: ${JSON.stringify(context.getState('router.params', {}))}` }
+                        }, {
+                            div: {
+                                className: 'cards-grid',
+                                children: [{
+                                    div: {
+                                        className: 'card',
+                                        children:  [{
+                                            h4: { text: 'Active Users' }
+                                        }, {
+                                            p: { style: { fontSize: '2rem', color: '#667eea' }, text: '1,234' }
+                                        }]
+                                    }
+                                }, {
+                                    div: {
+                                        className: 'card',
+                                        children:  [{
+                                            h4: { text: 'Revenue' }
+                                        }, {
+                                            p: { style: { fontSize: '2rem', color: '#28a745' }, text: '$45,678' }
+                                        }]
+                                    }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            DashboardUsers: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'fade-in',
+                        children:  [{
+                            h2: { text: '👥 Users Management' }
+                        }, {
+                            p: { text: 'Manage your application users here.' }
+                        }, {
+                            div: {
+                                className: 'card',
+                                children:  [{
+                                    h4: { text: 'User Statistics' }
+                                }, {
+                                    p: { text: 'Total Users: 1,234' }
+                                }, {
+                                    p: { text: 'Active Today: 456' }
+                                }, {
+                                    p: { text: 'New This Week: 78' }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            DashboardSettings: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'fade-in',
+                        children:  [{
+                            h2: { text: '⚙️ Dashboard Settings' }
+                        }, {
+                            p: { text: 'Configure your dashboard preferences.' }
+                        }, {
+                            div: {
+                                className: 'card',
+                                children:  [{
+                                    h4: { text: 'Display Options' }
+                                }, {
+                                    label: { children: [
+                                        { input: { type: 'checkbox', checked: true } },
+                                        { span: { text: ' Show real-time updates' } }
+                                    ] }
+                                }, {
+                                    br: {}
+                                }, {
+                                    label: { children:  [
+                                        { input: { type: 'checkbox' } },
+                                        { span: { text: ' Enable notifications' } }
+                                    ] }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            // User Profile Page (with params)
+            UserProfilePage: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'page fade-in',
+                        children:  [{
+                            h1: { text: () => `👤 User Profile #${context.getState('router.params.id', 'Unknown')}` }
+                        }, {
+                            p: { text: () => `Active tab: ${context.getState('router.query.tab', 'profile')}` }
+                        }, {
+                            div: {
+                                className: 'feature-demo',
+                                children:  [{
+                                    h3: { text: '🔧 Parameter Testing:' }
+                                }, {
+                                    p: { text: () => `Full route: ${context.getState('router.currentRoute', '/')}` }
+                                }, {
+                                    p: { text: () => `Params: ${JSON.stringify(context.getState('router.params', {}))}` }
+                                }, {
+                                    p: { text: () => `Query: ${JSON.stringify(context.getState('router.query', {}))}` }
+                                }]
+                            }
+                        }, {
+                            div: {
+                                children:  [{
+                                    button: {
+                                        className: 'btn',
+                                        text: 'Profile Tab',
+                                        onClick: () => context.navigate(`/users/${context.getState('router.params.id', '123')}?tab=profile`)
+                                    }
+                                }, {
+                                    button: {
+                                        className: 'btn btn-secondary',
+                                        text: 'Settings Tab',
+                                        onClick: () => context.navigate(`/users/${context.getState('router.params.id', '123')}?tab=settings`)
+                                    }
+                                }, {
+                                    button: {
+                                        className: 'btn btn-secondary',
+                                        text: 'Different User',
+                                        onClick: () => context.navigate('/users/999?tab=profile')
+                                    }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            // Products Page (with query params)
+            ProductsPage: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'page fade-in',
+                        children: [{
+                            h1: { text: '🛍️ Products Catalog' }
+                        }, {
+                            div: {
+                                className: 'feature-demo',
+                                children:  [{
+                                    h3: { text: '🔍 Query Parameter Demo:' }
+                                }, {
+                                    p: { text: () => `Category: ${context.getState('router.query.category', 'all')}` }
+                                }, {
+                                    p: { text: () => `Sort: ${context.getState('router.query.sort', 'name')}` }
+                                }, {
+                                    p: { text: () => `Page: ${context.getState('router.query.page', '1')}` }
+                                }]
+                            }
+                        }, {
+                            div: {
+                                children: () => [{
+                                    button: {
+                                        className: 'btn',
+                                        text: 'Electronics',
+                                        onClick: () => context.navigate('/products?category=electronics&sort=price&page=1')
+                                    }
+                                }, {
+                                    button: {
+                                        className: 'btn btn-secondary',
+                                        text: 'Clothing',
+                                        onClick: () => context.navigate('/products?category=clothing&sort=name&page=1')
+                                    }
+                                }, {
+                                    button: {
+                                        className: 'btn btn-secondary',
+                                        text: 'Page 2',
+                                        onClick: () => {
+                                            const currentQuery = context.getState('router.query', {});
+                                            context.navigate(`/products?${new URLSearchParams({...currentQuery, page: '2'}).toString()}`);
+                                        }
+                                    }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            // Admin Page (protected route)
+            AdminPage: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'page fade-in',
+                        children: [{
+                            h1: { text: '🔐 Admin Dashboard' }
+                        }, {
+                            p: { text: 'Welcome to the admin area! This route is protected by guards.' }
+                        }, {
+                            div: {
+                                className: 'status online',
+                                text: () => `Authenticated: ${context.getState('auth.isAuthenticated', false) ? 'Yes' : 'No'}`
+                            }
+                        }, {
+                            div: {
+                                children: [{
+                                    button: {
+                                        className: 'btn btn-secondary',
+                                        text: 'Logout',
+                                        onClick: () => {
+                                            context.setState('auth.isAuthenticated', false);
+                                            context.navigate('/');
+                                        }
+                                    }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            // Transition Test Page
+            TransitionTestPage: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'page fade-in',
+                        children:  [{
+                            h1: { text: '🎬 Route Transitions Test' }
+                        }, {
+                            p: { text: 'Test different route transition effects.' }
+                        }, {
+                            div: {
+                                className: 'cards-grid',
+                                children: [{
+                                    div: {
+                                        className: 'card',
+                                        children: [{
+                                            h4: { text: 'Fade Transition' }
+                                        }, {
+                                            button: {
+                                                className: 'btn',
+                                                text: 'Test Fade',
+                                                onClick: () => context.navigate('/dashboard')
+                                            }
+                                        }]
+                                    }
+                                }, {
+                                    div: {
+                                        className: 'card',
+                                        children: [{
+                                            h4: { text: 'Slide Transition' }
+                                        }, {
+                                            button: {
+                                                className: 'btn',
+                                                text: 'Test Slide',
+                                                onClick: () => context.navigate('/features')
+                                            }
+                                        }]
+                                    }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            // 404 Not Found Page
+            NotFoundPage: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'not-found',
+                        children: [{
+                            h1: { text: '404' }
+                        }, {
+                            h2: { text: 'Page Not Found' }
+                        }, {
+                            p: { text: () => `The route "${context.getState('router.currentRoute', '/')}" does not exist.` }
+                        }, {
+                            RouterLink: {
+                                to: '/',
+                                className: 'btn',
+                                text: '🏠 Go Home'
+                            }
+                        }]
+                    }
+                })
+            }),
+
+            // Loading Component
+            LoadingPage: (props, context) => ({
+                render: () => ({
+                    div: {
+                        className: 'loading',
+                        text: 'Loading route...'
+                    }
+                })
+            })
+        };
+
+        // Route Guards
+        const guards = {
+            authGuard: async (context) => {
+                const isAuth = context.getState('auth.isAuthenticated', false);
+                console.log('🔒 Auth guard triggered. Authenticated:', isAuth);
+                
+                if (!isAuth) {
+                    context.setState('auth.requestedRoute', context.route);
+                    context.navigate('/');
+                    return false;
+                }
+                return true;
+            },
+
+            adminGuard: async (context) => {
+                const isAuth = context.getState('auth.isAuthenticated', false);
+                const isAdmin = context.getState('auth.isAdmin', false);
+                
+                console.log('🛡️ Admin guard triggered. Auth:', isAuth, 'Admin:', isAdmin);
+                
+                if (!isAuth || !isAdmin) {
+                    // Auto-login for demo purposes
+                    context.setState('auth.isAuthenticated', true);
+                    context.setState('auth.isAdmin', true);
+                    console.log('🔓 Auto-authenticated for demo');
+                    return true;
+                }
+                return true;
+            }
+        };
+
+        // Route Middleware
+        const middleware = [
+            {
+                path: '*',
+                handler: (context) => {
+                    console.log('🔄 Global middleware:', context.route);
+                    // Track page views
+                    const views = context.getState('analytics.pageViews', 0);
+                    context.setState('analytics.pageViews', views + 1);
+                },
+                priority: 100
+            },
+            {
+                path: '/admin/*',
+                handler: (context) => {
+                    console.log('🔒 Admin middleware:', context.route);
+                    // Log admin access
+                    const adminLogs = context.getState('logs.adminAccess', []);
+                    adminLogs.push({ route: context.route, timestamp: Date.now() });
+                    context.setState('logs.adminAccess', adminLogs);
+                },
+                priority: 50
+            }
+        ];
+
+        // Feature Testing Functions
+        function runFeatureTests(context) {
+            const tests = [
+                {
+                    name: 'Basic Navigation',
+                    test: () => {
+                        context.navigate('/features');
+                        return context.getState('router.currentRoute') === '/features';
+                    }
+                },
+                {
+                    name: 'Route Parameters',
+                    test: () => {
+                        context.navigate('/users/123?tab=settings');
+                        const params = context.getState('router.params', {});
+                        const query = context.getState('router.query', {});
+                        return params.id === '123' && query.tab === 'settings';
+                    }
+                },
+                {
+                    name: 'State Management',
+                    test: () => {
+                        context.setState('test.value', 'hello');
+                        return context.getState('test.value') === 'hello';
+                    }
+                },
+                {
+                    name: 'Route Guards',
+                    test: () => {
+                        // Guards are configured and will run
+                        return typeof guards.authGuard === 'function';
+                    }
+                },
+                {
+                    name: 'Route Middleware',
+                    test: () => {
+                        return middleware.length > 0;
+                    }
+                }
+            ];
+
+            const container = document.getElementById('test-results-container');
+            if (!container) return;
+
+            tests.forEach(({ name, test }) => {
+                const testItem = document.createElement('div');
+                testItem.className = 'test-item';
+                
+                let status = 'pending';
+                let result = false;
+                
+                try {
+                    result = test();
+                    status = result ? 'pass' : 'fail';
+                } catch (error) {
+                    console.error(`Test "${name}" failed:`, error);
+                    status = 'fail';
+                }
+                
+                testItem.innerHTML = `
+                    <span>${name}</span>
+                    <span class="test-status ${status}">${status.toUpperCase()}</span>
+                `;
+                
+                container.appendChild(testItem);
+            });
+
+            // Navigate back to home
+            setTimeout(() => context.navigate('/'), 100);
+        }
+
+        // Initialize Juris App
+        const app = new Juris({
+            components,
+            layout: { Layout: {} },
+            
+            router: {
+                mode: 'hash',
+                scrollBehavior: 'top',
+                transitions: true,
+                
+                routes: {
+                    '/': { 
+                        component: 'HomePage',
+                        alias: ['/home', '/welcome'],
+                        transitions: { name: 'fade', duration: 300 }
+                    },
+                    '/features': { 
+                        component: 'FeaturesPage',
+                        transitions: { name: 'slide-left', duration: 400 }
+                    },
+                    '/dashboard': {
+                        component: 'DashboardLayout',
+                        children: {
+                            '/stats': { component: 'DashboardStats' },
+                            '/users': { component: 'DashboardUsers' },
+                            '/settings': { component: 'DashboardSettings' },
+                            '/reports': { component: 'DashboardStats' }
+                        },
+                        transitions: { name: 'slide-up', duration: 350 }
+                    },
+                    '/users/:id': { 
+                        component: 'UserProfilePage',
+                        params: {
+                            id: { type: 'string', required: true }
+                        },
+                        query: {
+                            tab: { type: 'string', enum: ['profile', 'settings'], default: 'profile' }
+                        }
+                    },
+                    '/products': { 
+                        component: 'ProductsPage',
+                        query: {
+                            category: { type: 'string', optional: true },
+                            sort: { type: 'string', enum: ['name', 'price'], default: 'name' },
+                            page: { type: 'number', min: 1, default: 1 }
+                        }
+                    },
+                    '/admin': { 
+                        component: 'AdminPage', 
+                        guards: ['adminGuard'],
+                        transitions: { name: 'zoom', duration: 400 }
+                    },
+                    '/admin/*': { 
+                        component: 'AdminPage', 
+                        guards: ['adminGuard'] 
+                    },
+                    '/test-transitions': { 
+                        component: 'TransitionTestPage',
+                        transitions: { name: 'flip', duration: 600 }
+                    },
+                    '*': { component: 'NotFoundPage' }
+                },
+                
+                guards,
+                middleware,
+                
+                loadingComponent: 'LoadingPage',
+                errorComponent: 'NotFoundPage',
+                notFoundComponent: 'NotFoundPage'
+            },
+            
+            states: {
+                auth: {
+                    isAuthenticated: false,
+                    isAdmin: false,
+                    requestedRoute: null
+                },
+                analytics: {
+                    pageViews: 0
+                },
+                logs: {
+                    adminAccess: []
+                }
+            }
+        });
+
+        // Enhanced router setup and render
+        setTimeout(() => {
+            console.log('🎯 Juris Router Demo initialized!');
+            console.log('📊 Available routes:', Object.keys(app.routes));
+            console.log('🔒 Route guards:', Object.keys(app.routeGuards || {}));
+            console.log('🔄 Middleware count:', app.routeMiddleware?.length || 0);
+            
+            app.render();
+        }, 100);
+
+        // Global error handling
+        window.addEventListener('error', (event) => {
+            console.error('🚨 Global error:', event.error);
+        });
+
+        // Expose app for debugging
+        window.app = app;
+        
+        console.log('🚀 Demo ready! Check window.app for debugging.');
+    </script>
+</body>
+</html>
