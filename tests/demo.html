@@ -1,0 +1,34 @@
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Juris Demo</title>
+	<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+	<h1 id="counter-element">0</h1>
+	<button id="increment-button">Increment</button>
+</body>
+<script src="juris.js"></script>
+<script>
+	const juris = new Juris(
+		{
+			states: {
+				count: 0,
+			}
+		});
+	juris.enhance('#counter-element', ({ setState, getState }) => ({
+		text: () => getState('count')
+	}));
+
+	juris.enhance('#increment-button', ({ setState, getState }) => ({
+		text: 'Increment',
+		onClick: () => {
+			setState('count', getState('count') + 1)
+		}
+	}));
+</script>
+
+</html>

@@ -1,0 +1,1117 @@
+<link rel="stylesheet" href="docs-site.css">
+<script src="url-state-sync.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Framework Documentation</title>
+    <script src="https://jurisjs.com/juris.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+    <style>
+        /* Override CSS for headerless layout */
+        .main-layout {
+            min-height: 100vh;
+            /* Full height instead of calc(100vh - 4rem) */
+        }
+
+        .sidebar {
+            max-height: 100vh;
+            /* Full height instead of calc(100vh - 4rem) */
+        }
+
+        .content {
+            max-height: 100vh;
+            /* Full height instead of calc(100vh - 4rem) */
+        }
+
+        /* Make content area wider and better distributed */
+        @media (min-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 280px 1fr;
+                /* Slightly narrower sidebar, more content space */
+            }
+        }
+
+        /* Better content width distribution */
+        .content-body {
+            max-width: none;
+            /* Remove the 800px limit */
+        }
+
+        /* Add some padding/margin for better spacing */
+        .section-view {
+            padding: var(--space-2xl) var(--space-lg);
+            /* Less top/bottom padding */
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Updated to follow existing CSS classes -->
+    <div class="main-layout" id="mainLayout">
+        <!-- This will be populated by Juris -->
+    </div>
+
+    <script>
+        // ====================================================================
+        // PAGE COMPONENTS (Updated for new router)
+        // ====================================================================
+
+        const HomePage = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        className: 'section-view',
+                        children: [
+                            {
+                                h1: {
+                                    text: 'Welcome to Juris Framework'
+                                }
+                            },
+                            {
+                                p: {
+                                    className: 'subtitle',
+                                    text: 'A revolutionary approach to web development with zero race conditions, temporal independence, and unparalleled flexibility.'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'feature-grid',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🚀 Zero Race Conditions' } },
+                                                    { p: { text: 'Automatic dependency tracking eliminates timing issues completely. Your components and data can load in any order without breaking your application.' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🧠 Headless Components' } },
+                                                    { p: { text: 'Separate business logic from UI completely. Write once, use anywhere - web, mobile, server, or any JavaScript environment.' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '⚡ Reactive State' } },
+                                                    { p: { text: 'Granular reactivity system that updates only what needs to change. No virtual DOM overhead, just pure performance.' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🎯 Object DOM' } },
+                                                    { p: { text: 'Describe your UI as JavaScript objects. No JSX compilation needed, yet more powerful than traditional approaches.' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '📦 No Build Step' } },
+                                                    { p: { text: 'Include via CDN and start building immediately. Optional build tools for optimization, but never required for development.' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🔌 Framework Agnostic' } },
+                                                    { p: { text: 'Use alongside React, Vue, Angular, or vanilla JS. Juris components can be embedded anywhere.' } }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                button: {
+                                    className: 'cta-button',
+                                    text: 'Get Started',
+                                    onclick: () => {
+                                        context.UrlStateSync.navigate('/documentation');
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const DocumentationPage = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            { Breadcrumbs: {} },
+                            {
+                                div: {
+                                    className: 'content-header',
+                                    children: () => {
+                                        const current = context.getState('docs.current');
+                                        if (current) {
+                                            return [
+                                                { h1: { className: 'content-title', text: current.title } },
+                                                { p: { className: 'content-subtitle', text: current.subtitle || '' } }
+                                            ];
+                                        }
+                                        return [
+                                            { h1: { className: 'content-title', text: 'Loading...' } }
+                                        ];
+                                    }
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'content-body',
+                                    children: [{ ContentDisplay: {} }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const ExamplesPage = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        className: 'section-view',
+                        children: [
+                            {
+                                h1: {
+                                    text: 'Code Examples'
+                                }
+                            },
+                            {
+                                p: {
+                                    className: 'subtitle',
+                                    text: 'Explore real-world examples of Juris Framework in action.'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'feature-grid',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '📝 Todo App' } },
+                                                    { p: { text: 'Classic todo application showcasing state management, user interactions, and persistent storage.' } },
+                                                    { button: { className: 'cta-button', text: 'View Example' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '📊 Dashboard' } },
+                                                    { p: { text: 'Data visualization dashboard with real-time updates and interactive charts.' } },
+                                                    { button: { className: 'cta-button', text: 'View Example' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🛒 E-commerce' } },
+                                                    { p: { text: 'Shopping cart with product filtering, user authentication, and payment integration.' } },
+                                                    { button: { className: 'cta-button', text: 'View Example' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🎮 Game' } },
+                                                    { p: { text: 'Interactive browser game demonstrating animation, collision detection, and game state.' } },
+                                                    { button: { className: 'cta-button', text: 'View Example' } }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const ApiPage = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        className: 'section-view',
+                        children: [
+                            {
+                                h1: {
+                                    text: 'API Reference'
+                                }
+                            },
+                            {
+                                p: {
+                                    className: 'subtitle',
+                                    text: 'Complete documentation of all Juris Framework APIs, methods, and configuration options.'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'feature-grid',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🏗️ Core API' } },
+                                                    { p: { text: 'Essential classes and methods for building Juris applications. Includes Juris constructor, component registration, and lifecycle methods.' } },
+                                                    { button: { className: 'cta-button', text: 'Explore Core' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🎯 State Management' } },
+                                                    { p: { text: 'State manager APIs for reactive data handling, subscriptions, computed values, and state persistence.' } },
+                                                    { button: { className: 'cta-button', text: 'Explore State' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🧩 Components' } },
+                                                    { p: { text: 'Component lifecycle, props handling, event management, and inter-component communication patterns.' } },
+                                                    { button: { className: 'cta-button', text: 'Explore Components' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🔌 Plugins' } },
+                                                    { p: { text: 'Plugin system for extending Juris functionality. Router, HTTP client, form validation, and more.' } },
+                                                    { button: { className: 'cta-button', text: 'Explore Plugins' } }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const CommunityPage = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        className: 'section-view',
+                        children: [
+                            {
+                                h1: {
+                                    text: 'Community'
+                                }
+                            },
+                            {
+                                p: {
+                                    className: 'subtitle',
+                                    text: 'Connect with other developers, get help, and contribute to the Juris Framework ecosystem.'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'feature-grid',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '💬 Discord' } },
+                                                    { p: { text: 'Join our Discord server for real-time chat, help, and discussions about Juris development.' } },
+                                                    { button: { className: 'cta-button', text: 'Join Discord' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '📚 GitHub' } },
+                                                    { p: { text: 'Contribute to the framework, report issues, and explore the source code on GitHub.' } },
+                                                    { button: { className: 'cta-button', text: 'View GitHub' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '📝 Blog' } },
+                                                    { p: { text: 'Read about new features, best practices, and deep dives into Juris architecture.' } },
+                                                    { button: { className: 'cta-button', text: 'Read Blog' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'feature-card',
+                                                children: [
+                                                    { h3: { text: '🎓 Tutorials' } },
+                                                    { p: { text: 'Step-by-step tutorials and guides for learning Juris from beginner to advanced.' } },
+                                                    { button: { className: 'cta-button', text: 'Start Learning' } }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+
+
+        // ====================================================================
+        // HEADLESS DOCUMENTATION MANAGER (Business Logic)
+        // ====================================================================
+
+        const DocumentationManager = (props, context) => {
+            const { getState, setState, subscribe } = context;
+
+            const api = {
+                loadNavigation: async () => {
+                    console.log('📡 Loading navigation from API...');
+                    try {
+                        const response = await fetch('/juris-js/api.php?path=navigation');
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        const navigation = await response.json();
+                        setState('docs.structure', navigation);
+                        console.log('✅ Navigation loaded successfully');
+                        return navigation;
+                    } catch (error) {
+                        console.warn('⚠️ Failed to load navigation from API, using fallback:', error);
+                        // Fallback navigation structure
+                        const fallback = {
+                            "Getting Started": {
+                                "title": "Getting Started",
+                                "subtitle": "Learn the basics of Juris Framework",
+                                "sections": [
+                                    { "id": "introduction", "title": "Introduction", "subtitle": "What is Juris and why use it?", "status": "new" },
+                                    { "id": "installation", "title": "Installation", "subtitle": "How to install and set up Juris", "status": null },
+                                    { "id": "headless-components", "title": "Headless Components", "subtitle": "Business logic separation", "status": "new" }
+                                ]
+                            },
+                            "Advanced Topics": {
+                                "title": "Advanced Topics",
+                                "subtitle": "Advanced patterns and techniques",
+                                "sections": [
+                                    { "id": "performance", "title": "Performance", "subtitle": "Optimization techniques", "status": null }
+                                ]
+                            }
+                        };
+                        setState('docs.structure', fallback);
+                        return fallback;
+                    }
+                },
+
+                loadDocument: async (docId) => {
+                    console.log('📄 Loading document:', docId);
+                    setState('docs.loading', true);
+                    setState('docs.error', null);
+
+                    try {
+                        const response = await fetch(`/juris-js/api.php?path=docs/${docId}`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        const doc = await response.json();
+
+                        setState('docs.current', doc);
+                        setState('docs.currentId', docId);
+                        api.updateBreadcrumbs(docId);
+
+                        console.log('✅ Document loaded successfully:', doc.title);
+
+                        // Trigger code highlighting after content loads
+                        setTimeout(() => {
+                            if (window.Prism) {
+                                Prism.highlightAll();
+                            }
+                        }, 100);
+
+                    } catch (error) {
+                        console.error('❌ Failed to load document:', error);
+                        setState('docs.error', error.message);
+                    } finally {
+                        setState('docs.loading', false);
+                    }
+                },
+
+                searchDocuments: (query) => {
+                    setState('docs.searchQuery', query);
+
+                    if (!query.trim()) {
+                        setState('docs.searchResults', []);
+                        return;
+                    }
+
+                    console.log('🔍 Searching for:', query);
+                    const results = [];
+                    const structure = getState('docs.structure', {});
+
+                    Object.entries(structure).forEach(([categoryId, category]) => {
+                        if (category.sections) {
+                            category.sections.forEach(section => {
+                                if (section.title.toLowerCase().includes(query.toLowerCase()) ||
+                                    (section.subtitle && section.subtitle.toLowerCase().includes(query.toLowerCase()))) {
+                                    results.push({
+                                        id: section.id,
+                                        title: section.title,
+                                        subtitle: section.subtitle,
+                                        category: category.title
+                                    });
+                                }
+                            });
+                        }
+                    });
+
+                    setState('docs.searchResults', results);
+                    console.log(`📋 Found ${results.length} search results`);
+                },
+
+                clearSearch: () => {
+                    setState('docs.searchQuery', '');
+                    setState('docs.searchResults', []);
+                },
+
+                updateBreadcrumbs: (docId) => {
+                    const breadcrumbs = [{ title: 'Documentation', id: null }];
+                    const structure = getState('docs.structure', {});
+
+                    for (const [categoryId, category] of Object.entries(structure)) {
+                        if (category.sections) {
+                            const section = category.sections.find(s => s.id === docId);
+                            if (section) {
+                                breadcrumbs.push({ title: category.title, id: categoryId });
+                                breadcrumbs.push({ title: section.title, id: docId });
+                                break;
+                            }
+                        }
+                    }
+
+                    setState('docs.breadcrumbs', breadcrumbs);
+                }
+            };
+
+            return {
+                api,
+                hooks: {
+                    onRegister: async () => {
+                        console.log('📚 DocumentationManager registering...');
+
+                        // Initialize state
+                        setState('docs.structure', {});
+                        setState('docs.current', null);
+                        setState('docs.currentId', null);
+                        setState('docs.loading', false);
+                        setState('docs.error', null);
+                        setState('docs.searchQuery', '');
+                        setState('docs.searchResults', []);
+                        setState('docs.breadcrumbs', []);
+
+                        // Load navigation first
+                        await api.loadNavigation();
+
+                        console.log('✅ DocumentationManager registered successfully');
+                    }
+                }
+            };
+        };
+
+        // ====================================================================
+        // UI COMPONENTS (Presentation Layer)
+        // ====================================================================
+
+        // Search Input Component
+        const SearchInput = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        className: 'search-container',
+                        children: [{
+                            input: {
+                                type: 'text',
+                                className: 'search-input',
+                                placeholder: 'Search documentation...',
+                                value: () => context.getState('docs.searchQuery', ''),
+                                oninput: (e) => {
+                                    context.DocumentationManager.searchDocuments(e.target.value);
+                                },
+                                onkeydown: (e) => {
+                                    if (e.key === 'Escape') {
+                                        context.DocumentationManager.clearSearch();
+                                        e.target.blur();
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                })
+            };
+        };
+
+        // Navigation Tree Component
+        const NavigationTree = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        className: 'nav-tree',
+                        children: () => {
+                            const structure = context.getState('docs.structure', {});
+                            const currentId = context.getState('docs.currentId', '');
+                            const searchQuery = context.getState('docs.searchQuery', '');
+                            const searchResults = context.getState('docs.searchResults', []);
+
+                            // Show search results if searching
+                            if (searchQuery && searchResults.length > 0) {
+                                return [{
+                                    div: {
+                                        className: 'nav-section',
+                                        children: [
+                                            {
+                                                div: {
+                                                    className: 'nav-section-title',
+                                                    text: `Search Results (${searchResults.length})`
+                                                }
+                                            },
+                                            {
+                                                ul: {
+                                                    className: 'nav-items',
+                                                    children: searchResults.map(result => ({
+                                                        li: {
+                                                            className: 'nav-item',
+                                                            children: [{
+                                                                a: {
+                                                                    className: `nav-item-link ${currentId === result.id ? 'active' : ''}`,
+                                                                    text: result.title,
+                                                                    onclick: (e) => {
+                                                                        e.preventDefault();
+                                                                        // Navigate to documentation page and load document
+                                                                        context.UrlStateSync.navigate('/documentation');
+                                                                        setTimeout(() => {
+                                                                            context.DocumentationManager.loadDocument(result.id);
+                                                                        }, 100);
+                                                                    }
+                                                                }
+                                                            }],
+                                                            key: result.id
+                                                        }
+                                                    }))
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }];
+                            }
+
+                            // Show loading state if no structure yet
+                            if (Object.keys(structure).length === 0) {
+                                return [{
+                                    div: {
+                                        className: 'loading',
+                                        text: 'Loading navigation...'
+                                    }
+                                }];
+                            }
+
+                            // Show full navigation structure
+                            return Object.entries(structure).map(([categoryId, category]) => ({
+                                div: {
+                                    className: 'nav-section',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'nav-section-title',
+                                                text: category.title
+                                            }
+                                        },
+                                        {
+                                            ul: {
+                                                className: 'nav-items',
+                                                children: (category.sections || []).map(section => ({
+                                                    li: {
+                                                        className: 'nav-item',
+                                                        children: [{
+                                                            a: {
+                                                                className: `nav-item-link ${currentId === section.id ? 'active' : ''}`,
+                                                                children: [
+                                                                    { span: { text: section.title } },
+                                                                    section.status ? {
+                                                                        span: {
+                                                                            className: `status-badge status-${section.status}`,
+                                                                            text: section.status
+                                                                        }
+                                                                    } : null
+                                                                ].filter(Boolean),
+                                                                onclick: (e) => {
+                                                                    e.preventDefault();
+                                                                    // Navigate to documentation page and load document
+                                                                    context.UrlStateSync.navigate('/documentation');
+                                                                    setTimeout(() => {
+                                                                        context.DocumentationManager.loadDocument(section.id);
+                                                                    }, 100);
+                                                                }
+                                                            }
+                                                        }],
+                                                        key: section.id
+                                                    }
+                                                }))
+                                            }
+                                        }
+                                    ],
+                                    key: categoryId
+                                }
+                            }));
+                        }
+                    }
+                })
+            };
+        };
+
+        // Breadcrumbs Component
+        const Breadcrumbs = (props, context) => {
+            return {
+                render: () => {
+                    const breadcrumbs = context.getState('docs.breadcrumbs', []);
+
+                    if (breadcrumbs.length === 0) return null;
+
+                    return {
+                        div: {
+                            className: 'breadcrumbs',
+                            children: [{
+                                ul: {
+                                    className: 'breadcrumb-list',
+                                    children: breadcrumbs.map((crumb, index) => ({
+                                        li: {
+                                            className: 'breadcrumb-item',
+                                            children: index === breadcrumbs.length - 1 ? [
+                                                { span: { text: crumb.title } }
+                                            ] : [{
+                                                a: {
+                                                    className: 'breadcrumb-link',
+                                                    text: crumb.title,
+                                                    onclick: (e) => {
+                                                        e.preventDefault();
+                                                        if (crumb.id) {
+                                                            context.UrlStateSync.navigate('/documentation');
+                                                            setTimeout(() => {
+                                                                context.DocumentationManager.loadDocument(crumb.id);
+                                                            }, 100);
+                                                        }
+                                                    }
+                                                }
+                                            }],
+                                            key: index
+                                        }
+                                    }))
+                                }
+                            }]
+                        }
+                    };
+                }
+            };
+        };
+
+        // Content Display Component
+        const ContentDisplay = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const loading = context.getState('docs.loading', false);
+                            const error = context.getState('docs.error', null);
+                            const current = context.getState('docs.current', null);
+
+                            if (loading) {
+                                return [{
+                                    div: {
+                                        className: 'loading',
+                                        text: 'Loading documentation...'
+                                    }
+                                }];
+                            }
+
+                            if (error) {
+                                return [{
+                                    div: {
+                                        className: 'error',
+                                        children: [
+                                            { h3: { text: 'Error Loading Documentation' } },
+                                            { p: { text: error } }
+                                        ]
+                                    }
+                                }];
+                            }
+
+                            if (!current) {
+                                return [{
+                                    div: {
+                                        text: 'No document selected'
+                                    }
+                                }];
+                            }
+
+                            return [{
+                                div: {
+                                    className: 'fade-in',
+                                    innerHTML: current.content
+                                }
+                            }];
+                        }
+                    }
+                })
+            };
+        };
+
+        // Sidebar Container Component
+        const Sidebar = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const currentPath = context.getState('url.path', '/');
+
+                            // Show different content based on current page
+                            if (currentPath === '/documentation') {
+                                return [
+                                    {
+                                        div: {
+                                            className: 'section-indicator',
+                                            children: [
+                                                {
+                                                    div: {
+                                                        className: 'current-section',
+                                                        text: '📍 Documentation'
+                                                    }
+                                                },
+                                                {
+                                                    div: {
+                                                        className: 'section-description',
+                                                        text: 'Browse complete documentation'
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    { SearchInput: {} },
+                                    { NavigationTree: {} }
+                                ];
+                            } else {
+                                // Show page navigation for other pages
+                                return [
+                                    {
+                                        div: {
+                                            className: 'section-indicator',
+                                            children: [
+                                                {
+                                                    div: {
+                                                        className: 'current-section',
+                                                        text: '📍 Navigation'
+                                                    }
+                                                },
+                                                {
+                                                    div: {
+                                                        className: 'section-description',
+                                                        text: 'Explore Juris Framework'
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        div: {
+                                            className: 'nav-tree',
+                                            children: [
+                                                {
+                                                    div: {
+                                                        className: 'nav-section',
+                                                        children: [
+                                                            {
+                                                                div: {
+                                                                    className: 'nav-section-title',
+                                                                    text: 'Main Navigation'
+                                                                }
+                                                            },
+                                                            {
+                                                                ul: {
+                                                                    className: 'nav-items',
+                                                                    children: [
+                                                                        {
+                                                                            li: {
+                                                                                className: 'nav-item',
+                                                                                children: [{
+                                                                                    a: {
+                                                                                        className: `nav-item-link ${currentPath === '/' ? 'active' : ''}`,
+                                                                                        text: '🏠 Home',
+                                                                                        onclick: (e) => {
+                                                                                            e.preventDefault();
+                                                                                            context.UrlStateSync.navigate('/');
+                                                                                        }
+                                                                                    }
+                                                                                }]
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            li: {
+                                                                                className: 'nav-item',
+                                                                                children: [{
+                                                                                    a: {
+                                                                                        className: `nav-item-link ${currentPath === '/documentation' ? 'active' : ''}`,
+                                                                                        text: '📚 Documentation',
+                                                                                        onclick: (e) => {
+                                                                                            e.preventDefault();
+                                                                                            context.UrlStateSync.navigate('/documentation');
+                                                                                        }
+                                                                                    }
+                                                                                }]
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            li: {
+                                                                                className: 'nav-item',
+                                                                                children: [{
+                                                                                    a: {
+                                                                                        className: `nav-item-link ${currentPath === '/examples' ? 'active' : ''}`,
+                                                                                        text: '💻 Examples',
+                                                                                        onclick: (e) => {
+                                                                                            e.preventDefault();
+                                                                                            context.UrlStateSync.navigate('/examples');
+                                                                                        }
+                                                                                    }
+                                                                                }]
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            li: {
+                                                                                className: 'nav-item',
+                                                                                children: [{
+                                                                                    a: {
+                                                                                        className: `nav-item-link ${currentPath === '/api' ? 'active' : ''}`,
+                                                                                        text: '🔧 API Reference',
+                                                                                        onclick: (e) => {
+                                                                                            e.preventDefault();
+                                                                                            context.UrlStateSync.navigate('/api');
+                                                                                        }
+                                                                                    }
+                                                                                }]
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            li: {
+                                                                                className: 'nav-item',
+                                                                                children: [{
+                                                                                    a: {
+                                                                                        className: `nav-item-link ${currentPath === '/community' ? 'active' : ''}`,
+                                                                                        text: '👥 Community',
+                                                                                        onclick: (e) => {
+                                                                                            e.preventDefault();
+                                                                                            context.UrlStateSync.navigate('/community');
+                                                                                        }
+                                                                                    }
+                                                                                }]
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ];
+                            }
+                        }
+                    }
+                })
+            };
+        };
+
+        // Main App Layout Component - Following existing CSS classes
+        const AppLayout = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        className: 'main-layout',
+                        children: [
+                            // Sidebar with proper CSS classes
+                            {
+                                aside: {
+                                    className: 'sidebar',
+                                    children: [{ Sidebar: {} }]
+                                }
+                            },
+                            // Main content area with proper CSS classes
+                            {
+                                main: {
+                                    className: 'content',
+                                    children: () => {
+                                        const currentPath = context.getState('url.path', '/');
+
+                                        // Route mapping
+                                        const routes = {
+                                            '/': 'HomePage',
+                                            '/documentation': 'DocumentationPage',
+                                            '/examples': 'ExamplesPage',
+                                            '/api': 'ApiPage',
+                                            '/community': 'CommunityPage'
+                                        };
+
+                                        const componentName = routes[currentPath];
+
+                                        if (componentName) {
+                                            return [{ [componentName]: {} }];
+                                        }
+
+                                        // 404 fallback
+                                        return [{
+                                            div: {
+                                                className: 'section-view',
+                                                children: [
+                                                    { h1: { text: '404 - Page Not Found' } },
+                                                    { p: { text: 'The page you are looking for does not exist.' } },
+                                                    {
+                                                        button: {
+                                                            className: 'cta-button',
+                                                            text: 'Go Home',
+                                                            onclick: () => context.UrlStateSync.navigate('/')
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }];
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // ====================================================================
+        // JURIS APPLICATION INITIALIZATION
+        // ====================================================================
+
+        console.log('🚀 Initializing Juris Documentation Site...');
+
+        const juris = new Juris({
+            components: {
+                AppLayout,
+                HomePage,
+                DocumentationPage,
+                ExamplesPage,
+                ApiPage,
+                CommunityPage,
+                Sidebar,
+                SearchInput,
+                NavigationTree,
+                Breadcrumbs,
+                ContentDisplay
+            },
+            headlessComponents: {
+                UrlStateSync: {
+                    fn: UrlStateSync,
+                    options: {
+                        autoInit: true,
+                        config: {
+                            routes: {
+                                '/': { guards: [], meta: { title: 'Home' } },
+                                '/documentation': { guards: [], meta: { title: 'Documentation' } },
+                                '/examples': { guards: [], meta: { title: 'Examples' } },
+                                '/api': { guards: [], meta: { title: 'API Reference' } },
+                                '/community': { guards: [], meta: { title: 'Community' } }
+                            },
+                            events: {
+                                afterChange: (newUrl, oldUrl) => {
+                                    const routes = {
+                                        '/': 'Home',
+                                        '/documentation': 'Documentation',
+                                        '/examples': 'Examples',
+                                        '/api': 'API Reference',
+                                        '/community': 'Community'
+                                    };
+                                    const title = routes[newUrl] || 'Juris Framework';
+                                    document.title = `${title} - Juris Docs`;
+                                }
+                            },
+                            debug: false
+                        }
+                    }
+                },
+                DocumentationManager: {
+                    fn: DocumentationManager,
+                    options: { autoInit: true }
+                }
+            },
+            layout: { AppLayout: {} }
+        });
+
+        // Store global reference
+        window.jurisApp = juris;
+
+        // Render the complete app to the main layout
+        juris.render('#mainLayout');
+
+        // Auto-load documentation when navigating to /documentation
+        juris.stateManager.subscribe('url.path', (path) => {
+            if (path === '/documentation') {
+                const docManager = juris.headlessAPIs?.DocumentationManager;
+                if (docManager && !juris.stateManager.getState('docs.currentId')) {
+                    setTimeout(() => {
+                        docManager.loadDocument('introduction');
+                    }, 100);
+                }
+            }
+        });
+
+        console.log('✅ Juris Documentation Site initialized successfully!');
+    </script>
+</body>
+
+</html>

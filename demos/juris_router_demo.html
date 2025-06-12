@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juris Complete Demo - Full State Sync</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.app {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    min-height: 100vh;
+    box-shadow: 0 0 30px rgba(0,0,0,0.1);
+}
+
+.header {
+    background: #2c3e50;
+    color: white;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.nav {
+    display: flex;
+    gap: 1rem;
+}
+
+.nav-link {
+    color: #bdc3c7;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.nav-link.active {
+    background: #3498db;
+    color: white;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.btn:hover {
+    background: #2980b9;
+}
+
+.btn.danger {
+    background: #e74c3c;
+}
+
+.btn.danger:hover {
+    background: #c0392b;
+}
+
+.btn.small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    margin: 0.25rem;
+}
+
+.main {
+    padding: 2rem;
+    min-height: 400px;
+}
+
+.page {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.login-form {
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.info-box {
+    background: #e8f5e8;
+    border: 1px solid #4caf50;
+    border-radius: 4px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.info-box h4 {
+    color: #2e7d32;
+    margin-bottom: 0.5rem;
+}
+
+.sync-panel {
+    background: #f0f8ff;
+    border: 1px solid #3498db;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+}
+
+.sync-status {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.sync-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #2ecc71;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.tab-info {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.dashboard-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.dashboard-card h3 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.admin-panel {
+    background: linear-gradient(135deg, #ff6b6b, #ffa500);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.sub-nav {
+    background: rgba(0,0,0,0.05);
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 2rem;
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.status-indicator.online {
+    background: #2ecc71;
+}
+
+.debug-details {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-top: 1rem;
+    font-family: monospace;
+    font-size: 0.8rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../src/juris.js"></script>
+<script>
+/**
+ * Complete Juris Demo with Full Multi-Tab State Synchronization
+ */
+
+// ==================== STATE HISTORY MANAGER ====================
+const StateHistoryManager = (props, context) => {
+    const { getState, setState, subscribe } = context;
+    
+    const config = {
+        maxHistorySize: 50,
+        trackPaths: ['auth', 'url', 'form'],
+        excludePaths: ['sync', 'history', 'auth.isLoading', 'auth.loginError'],
+        debounceMs: 300
+    };
+    
+    let historyTimer = null;
+    let isInternalUpdate = false;
+    
+    return {
+        api: {
+            undo: () => performUndo(),
+            redo: () => performRedo(),
+            canUndo: () => getState('history.currentIndex', 0) > 0,
+            canRedo: () => {
+                const currentIndex = getState('history.currentIndex', 0);
+                const historyLength = getState('history.states', []).length;
+                return currentIndex < historyLength - 1;
+            },
+            getHistoryInfo: () => getHistoryInfo(),
+            clearHistory: () => clearHistory(),
+            saveSnapshot: (label) => saveNamedSnapshot(label)
+        },
+        
+        hooks: {
+            onRegister: () => {
+                console.log('🕰️ StateHistoryManager starting...');
+                
+                // Initialize history state
+                initializeHistory();
+                
+                // Watch for state changes to track
+                setupHistoryWatchers();
+                
+                // Save initial snapshot
+                setTimeout(() => {
+                    saveCurrentSnapshot('Initial state');
+                }, 100);
+                
+                console.log('✅ StateHistoryManager ready');
+            }
+        }
+    };
+    
+    function initializeHistory() {
+        if (!getState('history')) {
+            setState('history.states', []);
+            setState('history.currentIndex', -1);
+            setState('history.maxSize', config.maxHistorySize);
+            setState('history.lastAction', null);
+            setState('history.lastActionTime', null);
+        }
+    }
+    
+    function setupHistoryWatchers() {
+        config.trackPaths.forEach(path => {
+            subscribe(path, (newValue, oldValue) => {
+                if (!isInternalUpdate && !isPathExcluded(path)) {
+                    console.log(`📝 Tracking state change for history: ${path}`);
+                    debouncedHistorySave(`Changed ${path}`);
+                }
+            });
+        });
+    }
+    
+    function debouncedHistorySave(label) {
+        if (historyTimer) clearTimeout(historyTimer);
+        historyTimer = setTimeout(() => {
+            saveCurrentSnapshot(label);
+        }, config.debounceMs);
+    }
+    
+    function saveCurrentSnapshot(label = 'State change') {
+        try {
+            const currentStates = {};
+            
+            // Capture current state for tracked paths
+            config.trackPaths.forEach(path => {
+                const value = getState(path);
+                if (value !== undefined && !isPathExcluded(path)) {
+                    setNestedPath(currentStates, path, value);
+                }
+            });
+            
+            // Clean excluded paths
+            config.excludePaths.forEach(excludePath => {
+                deleteNestedPath(currentStates, excludePath);
+            });
+            
+            const snapshot = {
+                id: generateSnapshotId(),
+                label: label,
+                timestamp: Date.now(),
+                state: currentStates,
+                tabId: TAB_ID
+            };
+            
+            const historyStates = getState('history.states', []);
+            const currentIndex = getState('history.currentIndex', -1);
+            
+            // Remove any future states if we're not at the end
+            const newStates = historyStates.slice(0, currentIndex + 1);
+            
+            // Add new snapshot
+            newStates.push(snapshot);
+            
+            // Limit history size
+            if (newStates.length > config.maxHistorySize) {
+                newStates.shift(); // Remove oldest
+            } else {
+                setState('history.currentIndex', currentIndex + 1);
+            }
+            
+            setState('history.states', newStates);
+            setState('history.lastAction', 'save');
+            setState('history.lastActionTime', Date.now());
+            
+            console.log(`💾 History snapshot saved: "${label}" (${newStates.length} total)`);
+            
+        } catch (error) {
+            console.error('❌ History save failed:', error);
+        }
+    }
+    
+    function saveNamedSnapshot(label) {
+        saveCurrentSnapshot(label || 'Manual snapshot');
+    }
+    
+    function performUndo() {
+        try {
+            const currentIndex = getState('history.currentIndex', 0);
+            const historyStates = getState('history.states', []);
+            
+            if (currentIndex > 0) {
+                const targetIndex = currentIndex - 1;
+                const targetSnapshot = historyStates[targetIndex];
+                
+                console.log(`⏪ Undoing to: "${targetSnapshot.label}" (${new Date(targetSnapshot.timestamp).toLocaleTimeString()})`);
+                
+                isInternalUpdate = true;
+                
+                // Restore state from snapshot
+                restoreSnapshot(targetSnapshot);
+                
+                setState('history.currentIndex', targetIndex);
+                setState('history.lastAction', 'undo');
+                setState('history.lastActionTime', Date.now());
+                
+                setTimeout(() => { isInternalUpdate = false; }, 100);
+                
+                return true;
+            } else {
+                console.log('⏪ Cannot undo: at beginning of history');
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Undo failed:', error);
+            isInternalUpdate = false;
+            return false;
+        }
+    }
+    
+    function performRedo() {
+        try {
+            const currentIndex = getState('history.currentIndex', 0);
+            const historyStates = getState('history.states', []);
+            
+            if (currentIndex < historyStates.length - 1) {
+                const targetIndex = currentIndex + 1;
+                const targetSnapshot = historyStates[targetIndex];
+                
+                console.log(`⏩ Redoing to: "${targetSnapshot.label}" (${new Date(targetSnapshot.timestamp).toLocaleTimeString()})`);
+                
+                isInternalUpdate = true;
+                
+                // Restore state from snapshot
+                restoreSnapshot(targetSnapshot);
+                
+                setState('history.currentIndex', targetIndex);
+                setState('history.lastAction', 'redo');
+                setState('history.lastActionTime', Date.now());
+                
+                setTimeout(() => { isInternalUpdate = false; }, 100);
+                
+                return true;
+            } else {
+                console.log('⏩ Cannot redo: at end of history');
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Redo failed:', error);
+            isInternalUpdate = false;
+            return false;
+        }
+    }
+    
+    function restoreSnapshot(snapshot) {
+        // Restore each tracked path
+        config.trackPaths.forEach(path => {
+            const value = getNestedPath(snapshot.state, path);
+            if (value !== undefined) {
+                setState(path, value);
+            }
+        });
+        
+        // Update URL hash if URL state changed
+        const urlState = getNestedPath(snapshot.state, 'url');
+        if (urlState && urlState.path && window.location.hash !== '#' + urlState.path) {
+            window.location.hash = urlState.path;
+        }
+    }
+    
+    function clearHistory() {
+        setState('history.states', []);
+        setState('history.currentIndex', -1);
+        setState('history.lastAction', 'clear');
+        setState('history.lastActionTime', Date.now());
+        console.log('🗑️ History cleared');
+        
+        // Save current state as new initial snapshot
+        setTimeout(() => {
+            saveCurrentSnapshot('History cleared - new initial state');
+        }, 50);
+    }
+    
+    function getHistoryInfo() {
+        const historyStates = getState('history.states', []);
+        const currentIndex = getState('history.currentIndex', -1);
+        const lastAction = getState('history.lastAction');
+        const lastActionTime = getState('history.lastActionTime');
+        
+        return {
+            totalSnapshots: historyStates.length,
+            currentIndex: currentIndex,
+            canUndo: currentIndex > 0,
+            canRedo: currentIndex < historyStates.length - 1,
+            lastAction: lastAction,
+            lastActionTime: lastActionTime,
+            currentSnapshot: historyStates[currentIndex] || null,
+            previousSnapshot: currentIndex > 0 ? historyStates[currentIndex - 1] : null,
+            nextSnapshot: currentIndex < historyStates.length - 1 ? historyStates[currentIndex + 1] : null,
+            allSnapshots: historyStates.map((s, index) => ({
+                index,
+                label: s.label,
+                timestamp: s.timestamp,
+                isCurrent: index === currentIndex
+            }))
+        };
+    }
+    
+    // Helper functions
+    function generateSnapshotId() {
+        return 'snapshot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    }
+    
+    function isPathExcluded(path) {
+        return config.excludePaths.some(excludePath => 
+            path.startsWith(excludePath) || excludePath.startsWith(path)
+        );
+    }
+    
+    function getNestedPath(obj, path) {
+        return path.split('.').reduce((current, key) => current?.[key], obj);
+    }
+    
+    function setNestedPath(obj, path, value) {
+        const keys = path.split('.');
+        const lastKey = keys.pop();
+        const target = keys.reduce((current, key) => {
+            if (!(key in current)) current[key] = {};
+            return current[key];
+        }, obj);
+        target[lastKey] = value;
+    }
+    
+    function deleteNestedPath(obj, path) {
+        const keys = path.split('.');
+        const lastKey = keys.pop();
+        const target = keys.reduce((current, key) => current?.[key], obj);
+        if (target && lastKey in target) {
+            delete target[lastKey];
+        }
+    }
+};
+const TAB_ID = 'tab_' + Math.random().toString(36).substr(2, 8);
+const STORAGE_KEY = 'juris-complete-demo';
+
+// ==================== REAL-TIME STATE SYNC MANAGER ====================
+const StateSyncManager = (props, context) => {
+    const { getState, setState, subscribe } = context;
+    
+    let isInternalUpdate = false;
+    let syncDebounceTimer = null;
+    
+    return {
+        api: {
+            saveState: () => saveToStorage(),
+            loadState: () => loadFromStorage(),
+            clearStorage: () => clearStorage(),
+            getSyncInfo: () => getSyncInfo(),
+            forceSync: () => forceSyncToOtherTabs()
+        },
+        
+        hooks: {
+            onRegister: () => {
+                console.log(`🔧 StateSyncManager starting for tab: ${TAB_ID}`);
+                
+                // Load saved state which will override Juris initial state if it exists
+                loadFromStorage();
+                
+                // Watch all state changes that should sync
+                setupStateWatchers();
+                
+                // Listen for changes from other tabs - FIXED
+                setupCrossTabListener();
+                
+                // Cleanup on page unload
+                window.addEventListener('beforeunload', saveToStorage);
+                
+                console.log('✅ StateSyncManager ready');
+                console.log('📊 Current state after load:', context.juris.stateManager.state);
+            }
+        }
+    };
+    
+    function setupStateWatchers() {
+        // Watch auth changes with immediate sync
+        subscribe('auth', (newValue, oldValue) => {
+            if (!isInternalUpdate) {
+                console.log('🔐 Auth state changed:', { old: oldValue, new: newValue });
+                // Immediate save and sync for auth changes
+                saveToStorage();
+                setTimeout(forceSyncToOtherTabs, 50);
+            }
+        });
+        
+        // Watch URL changes with immediate sync  
+        subscribe('url', (newValue, oldValue) => {
+            if (!isInternalUpdate) {
+                console.log('🧭 URL state changed:', { old: oldValue, new: newValue });
+                // Immediate save and sync for URL changes
+                saveToStorage();
+                setTimeout(forceSyncToOtherTabs, 50);
+            }
+        });
+    }
+    
+    function saveToStorage() {
+        try {
+            const currentState = {
+                auth: getState('auth'),
+                url: getState('url')
+            };
+            
+            // Clean the auth state - exclude temporary fields
+            if (currentState.auth) {
+                currentState.auth = {
+                    isLoggedIn: currentState.auth.isLoggedIn || false,
+                    user: currentState.auth.user || null
+                    // Exclude isLoading, loginError
+                };
+            }
+            
+            const syncData = {
+                state: currentState,
+                timestamp: Date.now(),
+                tabId: TAB_ID
+            };
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(syncData));
+            setState('sync.lastSaved', syncData.timestamp);
+            setState('sync.savedBy', TAB_ID);
+            
+            console.log('💾 State saved to localStorage:', currentState);
+            
+        } catch (error) {
+            console.error('❌ Save failed:', error);
+            setState('sync.error', error.message);
+        }
+    }
+    
+    function loadFromStorage() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (!stored) {
+                console.log('📭 No stored state found - using Juris initial state');
+                return;
+            }
+            
+            const { state, timestamp, tabId } = JSON.parse(stored);
+            console.log(`📥 Loading stored state from tab ${tabId}:`, state);
+            
+            isInternalUpdate = true;
+            
+            // Override Juris initial state with saved state
+            if (state.auth) {
+                setState('auth.isLoggedIn', state.auth.isLoggedIn);
+                setState('auth.user', state.auth.user);
+                // Keep existing isLoading and loginError from Juris initial state
+            }
+            
+            // Override URL state
+            if (state.url) {
+                setState('url', state.url);
+                // Update browser URL to match
+                if (state.url.path && window.location.hash !== '#' + state.url.path) {
+                    window.location.hash = state.url.path;
+                }
+            }
+            
+            setState('sync.lastLoaded', timestamp);
+            setState('sync.loadedFrom', tabId);
+            
+            setTimeout(() => { isInternalUpdate = false; }, 100);
+            
+            console.log('✅ Stored state loaded and merged with Juris initial state');
+            
+        } catch (error) {
+            console.error('❌ Load failed:', error);
+            setState('sync.error', error.message);
+            isInternalUpdate = false;
+        }
+    }
+    
+    function setupCrossTabListener() {
+        console.log('🔗 Setting up cross-tab listener');
+        
+        // Method 1: Standard storage event
+        window.addEventListener('storage', (event) => {
+            if (event.key === STORAGE_KEY && event.newValue) {
+                console.log('📡 Storage event detected from another tab');
+                handleCrossTabSync(event.newValue);
+            }
+        });
+        
+        // Method 2: Sync signal listener (backup method)
+        window.addEventListener('storage', (event) => {
+            if (event.key === STORAGE_KEY + '_sync' && event.newValue) {
+                console.log('📡 Sync signal detected from another tab');
+                // Get the actual data from main storage
+                const mainData = localStorage.getItem(STORAGE_KEY);
+                if (mainData) {
+                    handleCrossTabSync(mainData);
+                }
+            }
+        });
+        
+        // Method 3: BroadcastChannel (modern browsers)
+        if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel(STORAGE_KEY);
+            channel.addEventListener('message', (event) => {
+                console.log('📻 BroadcastChannel message from another tab:', event.data);
+                if (event.data.tabId !== TAB_ID) {
+                    const mainData = localStorage.getItem(STORAGE_KEY);
+                    if (mainData) {
+                        handleCrossTabSync(mainData);
+                    }
+                }
+            });
+            
+            // Store channel for cleanup
+            window.jurisBroadcastChannel = channel;
+        }
+    }
+    
+    function handleCrossTabSync(dataString) {
+        try {
+            const { state, timestamp, tabId } = JSON.parse(dataString);
+            
+            if (tabId !== TAB_ID) {
+                console.log(`🔄 Processing cross-tab sync from ${tabId}:`, state);
+                
+                isInternalUpdate = true;
+                
+                // Sync auth state
+                if (state.auth) {
+                    const currentAuth = getState('auth');
+                    if (JSON.stringify(currentAuth.isLoggedIn) !== JSON.stringify(state.auth.isLoggedIn)) {
+                        console.log('🔐 Syncing auth.isLoggedIn:', state.auth.isLoggedIn);
+                        setState('auth.isLoggedIn', state.auth.isLoggedIn);
+                    }
+                    if (JSON.stringify(currentAuth.user) !== JSON.stringify(state.auth.user)) {
+                        console.log('👤 Syncing auth.user:', state.auth.user);
+                        setState('auth.user', state.auth.user);
+                    }
+                }
+                
+                // Sync URL state
+                if (state.url) {
+                    const currentUrl = getState('url');
+                    if (JSON.stringify(currentUrl) !== JSON.stringify(state.url)) {
+                        console.log('🧭 Syncing URL state:', state.url);
+                        setState('url', state.url);
+                        if (state.url.path && window.location.hash !== '#' + state.url.path) {
+                            window.location.hash = state.url.path;
+                        }
+                    }
+                }
+                
+                setState('sync.lastSynced', timestamp);
+                setState('sync.syncedFrom', tabId);
+                
+                setTimeout(() => { isInternalUpdate = false; }, 100);
+                
+                console.log('✅ Cross-tab sync completed successfully');
+            }
+        } catch (error) {
+            console.error('❌ Cross-tab sync failed:', error);
+        }
+    }
+    
+    function forceSyncToOtherTabs() {
+        try {
+            console.log('📡 Forcing sync to other tabs...');
+            
+            // Method 1: Storage event trigger
+            const syncSignal = {
+                timestamp: Date.now(),
+                tabId: TAB_ID,
+                action: 'sync_request'
+            };
+            localStorage.setItem(STORAGE_KEY + '_sync', JSON.stringify(syncSignal));
+            localStorage.removeItem(STORAGE_KEY + '_sync');
+            
+            // Method 2: BroadcastChannel (if available)
+            if (window.jurisBroadcastChannel) {
+                window.jurisBroadcastChannel.postMessage({
+                    tabId: TAB_ID,
+                    timestamp: Date.now(),
+                    action: 'sync_request'
+                });
+            }
+            
+            // Method 3: Update main storage (triggers storage events)
+            const currentData = localStorage.getItem(STORAGE_KEY);
+            if (currentData) {
+                // Force storage event by updating timestamp
+                const data = JSON.parse(currentData);
+                data.forceSync = Date.now();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            }
+            
+            console.log('📡 All sync methods triggered');
+            
+        } catch (error) {
+            console.error('❌ Force sync failed:', error);
+        }
+    }
+    
+    function clearStorage() {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEY + '_sync');
+        setState('sync.lastCleared', Date.now());
+        setState('sync.clearedBy', TAB_ID);
+        console.log('🗑️ Storage cleared');
+        
+        // Broadcast clear to other tabs
+        if (window.jurisBroadcastChannel) {
+            window.jurisBroadcastChannel.postMessage({
+                tabId: TAB_ID,
+                action: 'storage_cleared'
+            });
+        }
+    }
+    
+    function getSyncInfo() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return {
+                hasData: !!stored,
+                currentTab: TAB_ID,
+                dataSize: stored ? stored.length : 0,
+                lastSaved: getState('sync.lastSaved'),
+                lastLoaded: getState('sync.lastLoaded'),
+                lastSynced: getState('sync.lastSynced'),
+                savedBy: getState('sync.savedBy'),
+                loadedFrom: getState('sync.loadedFrom'),
+                syncedFrom: getState('sync.syncedFrom'),
+                storedData: stored ? JSON.parse(stored) : null,
+                supportsBroadcastChannel: typeof BroadcastChannel !== 'undefined'
+            };
+        } catch (error) {
+            return { error: error.message };
+        }
+    }
+};
+
+// ==================== URL STATE SYNC ====================
+const UrlStateSync = (props, context) => {
+    const { getState, setState } = context;
+    
+    const routeGuards = {
+        '/dashboard': ['authenticated'],
+        '/dashboard/analytics': ['authenticated'],
+        '/dashboard/settings': ['authenticated'],
+        '/admin': ['authenticated', 'admin'],
+        '/admin/users': ['authenticated', 'admin'],
+        '/admin/settings': ['authenticated', 'admin'],
+        '/profile': ['authenticated'],
+        '/profile/edit': ['authenticated']
+    };
+    
+    return {
+        hooks: {
+            onRegister: () => {
+                // StateSyncManager will handle URL state loading
+                // Then we process current URL with any loaded auth state
+                handleUrlChange();
+                window.addEventListener('hashchange', handleUrlChange);
+            }
+        }
+    };
+    
+    function handleUrlChange() {
+        const path = window.location.hash.substring(1) || '/';
+        const guards = getRouteGuards(path);
+        
+        if (checkGuards(guards)) {
+            setState('url.path', path);
+            setState('url.segments', parseSegments(path));
+        } else {
+            const isLoggedIn = getState('auth.isLoggedIn', false);
+            const redirect = isLoggedIn ? '/dashboard' : '/login';
+            window.location.hash = redirect;
+        }
+    }
+    
+    function getRouteGuards(path) {
+        if (routeGuards[path]) return routeGuards[path];
+        
+        const parts = path.split('/').filter(Boolean);
+        for (let i = parts.length - 1; i > 0; i--) {
+            const parentPath = '/' + parts.slice(0, i).join('/');
+            if (routeGuards[parentPath]) return routeGuards[parentPath];
+        }
+        return [];
+    }
+    
+    function checkGuards(guards) {
+        for (const guard of guards) {
+            if (guard === 'authenticated' && !getState('auth.isLoggedIn', false)) {
+                return false;
+            }
+            if (guard === 'admin' && getState('auth.user.role', 'user') !== 'admin') {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    function parseSegments(path) {
+        const parts = path.split('/').filter(Boolean);
+        return {
+            full: path,
+            parts: parts,
+            base: parts[0] || '',
+            sub: parts[1] || ''
+        };
+    }
+};
+const HistoryPanel = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                className: 'sync-panel',
+                children: [
+                    {
+                        h4: {
+                            text: '🕰️ State History & Time Travel'
+                        }
+                    },
+                    {
+                        div: {
+                            style: { marginBottom: '1rem' },
+                            children: () => {
+                                const historyInfo = context.headless.StateHistoryManager?.getHistoryInfo() || {};
+                                const elements = [];
+                                
+                                elements.push({
+                                    p: {
+                                        text: `Snapshots: ${historyInfo.totalSnapshots || 0} | Current: ${historyInfo.currentIndex + 1 || 0}`
+                                    }
+                                });
+                                
+                                if (historyInfo.lastAction) {
+                                    elements.push({
+                                        p: {
+                                            text: `Last: ${historyInfo.lastAction} (${historyInfo.lastActionTime ? new Date(historyInfo.lastActionTime).toLocaleTimeString() : 'N/A'})`
+                                        }
+                                    });
+                                }
+                                
+                                if (historyInfo.currentSnapshot) {
+                                    elements.push({
+                                        p: {
+                                            text: `Current: "${historyInfo.currentSnapshot.label}"`
+                                        }
+                                    });
+                                }
+                                
+                                return elements;
+                            }
+                        }
+                    },
+                    {
+                        div: {
+                            style: { marginBottom: '1rem' },
+                            children: [
+                                {
+                                    button: {
+                                        className: () => {
+                                            const canUndo = context.headless.StateHistoryManager?.canUndo() || false;
+                                            return canUndo ? 'btn small' : 'btn small';
+                                        },
+                                        text: '⏪ Undo',
+                                        disabled: () => !(context.headless.StateHistoryManager?.canUndo() || false),
+                                        onclick: () => {
+                                            const success = context.headless.StateHistoryManager.undo();
+                                            if (!success) {
+                                                console.log('Cannot undo - at beginning of history');
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    button: {
+                                        className: () => {
+                                            const canRedo = context.headless.StateHistoryManager?.canRedo() || false;
+                                            return canRedo ? 'btn small' : 'btn small';
+                                        },
+                                        text: '⏩ Redo',
+                                        disabled: () => !(context.headless.StateHistoryManager?.canRedo() || false),
+                                        onclick: () => {
+                                            const success = context.headless.StateHistoryManager.redo();
+                                            if (!success) {
+                                                console.log('Cannot redo - at end of history');
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    button: {
+                                        className: 'btn small',
+                                        text: '📸 Snapshot',
+                                        onclick: () => {
+                                            const label = prompt('Snapshot label:', 'Manual snapshot');
+                                            if (label) {
+                                                context.headless.StateHistoryManager.saveSnapshot(label);
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    button: {
+                                        className: 'btn small danger',
+                                        text: '🗑️ Clear',
+                                        onclick: () => {
+                                            if (confirm('Clear all history?')) {
+                                                context.headless.StateHistoryManager.clearHistory();
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        details: {
+                            style: { marginTop: '1rem' },
+                            children: [
+                                { summary: { text: 'History Timeline' } },
+                                {
+                                    div: {
+                                        className: 'debug-details',
+                                        style: { maxHeight: '150px' },
+                                        children: () => {
+                                            const historyInfo = context.headless.StateHistoryManager?.getHistoryInfo() || {};
+                                            const snapshots = historyInfo.allSnapshots || [];
+                                            
+                                            if (snapshots.length === 0) {
+                                                return [{ p: { text: 'No history snapshots yet' } }];
+                                            }
+                                            
+                                            return snapshots.map(snapshot => ({
+                                                div: {
+                                                    style: {
+                                                        padding: '0.25rem',
+                                                        background: snapshot.isCurrent ? '#e3f2fd' : 'transparent',
+                                                        border: snapshot.isCurrent ? '1px solid #2196f3' : 'none',
+                                                        borderRadius: '2px',
+                                                        marginBottom: '0.25rem'
+                                                    },
+                                                    children: [
+                                                        {
+                                                            span: {
+                                                                text: `${snapshot.index + 1}. ${snapshot.label}`,
+                                                                style: { fontWeight: snapshot.isCurrent ? 'bold' : 'normal' }
+                                                            }
+                                                        },
+                                                        {
+                                                            small: {
+                                                                text: ` (${new Date(snapshot.timestamp).toLocaleTimeString()})`,
+                                                                style: { color: '#666', marginLeft: '0.5rem' }
+                                                            }
+                                                        }
+                                                    ],
+                                                    key: snapshot.index
+                                                }
+                                            }));
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};        // Global tab identifier
+// ==================== AUTHENTICATION MANAGER ====================
+const AuthManager = (props, context) => {
+    const { setState } = context;
+    
+    return {
+        api: {
+            login: async (username, password) => {
+                setState('auth.isLoading', true);
+                setState('auth.loginError', null);
+                
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    if (username === 'admin' && password === 'admin') {
+                        const user = {
+                            username: 'admin',
+                            role: 'admin',
+                            name: 'Administrator',
+                            loginTime: Date.now()
+                        };
+                        
+                        setState('auth.user', user);
+                        setState('auth.isLoggedIn', true);
+                        console.log('✅ Admin login successful');
+                        return { success: true };
+                        
+                    } else if (username === 'user' && password === 'user') {
+                        const user = {
+                            username: 'user',
+                            role: 'user',
+                            name: 'Regular User',
+                            loginTime: Date.now()
+                        };
+                        
+                        setState('auth.user', user);
+                        setState('auth.isLoggedIn', true);
+                        console.log('✅ User login successful');
+                        return { success: true };
+                        
+                    } else {
+                        setState('auth.loginError', 'Invalid username or password');
+                        return { success: false };
+                    }
+                } finally {
+                    setState('auth.isLoading', false);
+                }
+            },
+            
+            logout: () => {
+                setState('auth.user', null);
+                setState('auth.isLoggedIn', false);
+                setState('auth.loginError', null);
+                console.log('👋 User logged out');
+                window.location.hash = '/';
+            }
+        },
+        
+        hooks: {
+            onRegister: () => {
+                // Juris has already initialized with default state
+                // StateSyncManager will override with saved state if it exists
+                console.log('🔐 AuthManager initialized after StateSyncManager');
+            }
+        }
+    };
+};
+
+// ==================== UI COMPONENTS ====================
+
+const Navigation = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            nav: {
+                className: 'nav',
+                children: () => {
+                    const currentPath = getState('url.path', '/');
+                    const isLoggedIn = getState('auth.isLoggedIn', false);
+                    const userRole = getState('auth.user.role', 'user');
+                    
+                    const navItems = [
+                        { path: '/', label: 'Home' },
+                        { path: '/about', label: 'About' }
+                    ];
+                    
+                    if (isLoggedIn) {
+                        navItems.push(
+                            { path: '/dashboard', label: 'Dashboard' },
+                            { path: '/profile', label: 'Profile' }
+                        );
+                        
+                        if (userRole === 'admin') {
+                            navItems.push({ path: '/admin', label: 'Admin' });
+                        }
+                    }
+                    
+                    return navItems.map(item => ({
+                        a: {
+                            href: '#' + item.path,
+                            className: currentPath === item.path ? 'nav-link active' : 'nav-link',
+                            text: item.label,
+                            onclick: (e) => {
+                                e.preventDefault();
+                                window.location.hash = item.path;
+                            },
+                            key: item.path
+                        }
+                    }));
+                }
+            }
+        })
+    };
+};
+
+const UserInfo = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                className: 'user-info',
+                children: () => {
+                    const isLoggedIn = getState('auth.isLoggedIn', false);
+                    const user = getState('auth.user');
+                    
+                    if (isLoggedIn && user) {
+                        return [
+                            {
+                                span: {
+                                    children: [
+                                        { span: { className: 'status-indicator online' } },
+                                        { span: { text: `${user.name} (${user.role})` } }
+                                    ]
+                                }
+                            },
+                            {
+                                button: {
+                                    className: 'btn danger',
+                                    text: 'Logout',
+                                    onclick: () => context.headless.AuthManager.logout()
+                                }
+                            }
+                        ];
+                    } else {
+                        return [
+                            {
+                                button: {
+                                    className: 'btn',
+                                    text: 'Login',
+                                    onclick: () => window.location.hash = '/login'
+                                }
+                            }
+                        ];
+                    }
+                }
+            }
+        })
+    };
+};
+
+const SyncPanel = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                className: 'sync-panel',
+                children: [
+                    {
+                        h4: {
+                            text: '🔄 Real-Time Multi-Tab Sync'
+                        }
+                    },
+                    {
+                        div: {
+                            className: 'sync-status',
+                            children: () => {
+                                const syncInfo = context.headless.StateSyncManager?.getSyncInfo() || {};
+                                const elements = [];
+                                
+                                elements.push({
+                                    div: {
+                                        className: 'sync-indicator'
+                                    }
+                                });
+                                
+                                elements.push({
+                                    span: {
+                                        text: `Tab: ${TAB_ID}`
+                                    }
+                                });
+                                
+                                if (syncInfo.lastSaved) {
+                                    elements.push({
+                                        span: {
+                                            text: `Last Saved: ${new Date(syncInfo.lastSaved).toLocaleTimeString()}`
+                                        }
+                                    });
+                                }
+                                
+                                if (syncInfo.lastSynced) {
+                                    elements.push({
+                                        span: {
+                                            text: `Synced from: ${syncInfo.syncedFrom}`
+                                        }
+                                    });
+                                }
+                                
+                                return elements;
+                            }
+                        }
+                    },
+                    {
+                        div: {
+                            style: { marginTop: '1rem' },
+                            children: [
+                                {
+                                    button: {
+                                        className: 'btn small',
+                                        text: 'Save Now',
+                                        onclick: () => context.headless.StateSyncManager.saveState()
+                                    }
+                                },
+                                {
+                                    button: {
+                                        className: 'btn small',
+                                        text: 'Force Sync',
+                                        onclick: () => context.headless.StateSyncManager.forceSync()
+                                    }
+                                },
+                                {
+                                    button: {
+                                        className: 'btn small danger',
+                                        text: 'Clear All',
+                                        onclick: () => context.headless.StateSyncManager.clearStorage()
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        details: {
+                            style: { marginTop: '1rem' },
+                            children: [
+                                { summary: { text: 'Debug Info' } },
+                                {
+                                    pre: {
+                                        className: 'debug-details',
+                                        text: () => {
+                                            const syncInfo = context.headless.StateSyncManager?.getSyncInfo() || {};
+                                            return JSON.stringify(syncInfo, null, 2);
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+const AppLayout = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                className: 'app',
+                children: [
+                    {
+                        header: {
+                            className: 'header',
+                            children: [
+                                { div: { className: 'logo', text: 'Juris Multi-Tab Demo' } },
+                                { Navigation: {} },
+                                { UserInfo: {} }
+                            ]
+                        }
+                    },
+                    {
+                        main: {
+                            className: 'main',
+                            children: () => {
+                                const segments = getState('url.segments', { base: '' });
+                                
+                                switch (segments.base) {
+                                    case '':
+                                        return [{ HomePage: {} }];
+                                    case 'about':
+                                        return [{ AboutPage: {} }];
+                                    case 'login':
+                                        return [{ LoginPage: {} }];
+                                    case 'dashboard':
+                                        return [{ DashboardLayout: { subRoute: segments.sub } }];
+                                    case 'admin':
+                                        return [{ AdminLayout: { subRoute: segments.sub } }];
+                                    case 'profile':
+                                        return [{ ProfileLayout: { subRoute: segments.sub } }];
+                                    default:
+                                        return [{ NotFoundPage: {} }];
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+// ==================== PAGE COMPONENTS ====================
+
+const HomePage = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                className: 'page',
+                children: [
+                    { h1: { text: 'Juris Multi-Tab State Sync Demo' } },
+                    {
+                        div: {
+                            className: 'info-box',
+                            children: [
+                                { h4: { text: 'Test Multi-Tab Sync:' } },
+                                { p: { text: '1. Login with admin/admin or user/user' } },
+                                { p: { text: '2. Open this page in another tab' } },
+                                { p: { text: '3. See instant login sync!' } },
+                                { p: { text: '4. Navigate in one tab, URL syncs to other' } },
+                                { p: { text: '5. Logout in any tab, all tabs log out' } }
+                            ]
+                        }
+                    },
+                    {
+                        div: {
+                            className: 'tab-info',
+                            children: [
+                                { p: { text: () => `Current Tab ID: ${TAB_ID}` } },
+                                { p: { text: () => `Auth Status: ${getState('auth.isLoggedIn', false) ? '✅ Logged In' : '❌ Not Logged In'}` } },
+                                { p: { text: () => `User: ${getState('auth.user.name', 'None')}` } },
+                                { p: { text: () => `Current URL: ${getState('url.path', '/')}` } }
+                            ]
+                        }
+                    },
+                    { HistoryPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const AboutPage = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                className: 'page',
+                children: [
+                    { h1: { text: 'About Multi-Tab State Sync' } },
+                    {
+                        div: {
+                            className: 'info-box',
+                            children: [
+                                { h4: { text: 'How It Works:' } },
+                                { p: { text: '• StateSyncManager watches all state changes' } },
+                                { p: { text: '• Saves to localStorage when auth or URL changes' } },
+                                { p: { text: '• Uses storage events to sync between tabs' } },
+                                { p: { text: '• Debounced to prevent excessive saves' } },
+                                { p: { text: '• Automatic cleanup of temporary data' } }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} },
+                    { HistoryPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const LoginPage = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                className: 'page',
+                children: [
+                    { h1: { text: 'Login' } },
+                    {
+                        div: {
+                            className: 'login-form',
+                            children: [
+                                {
+                                    div: {
+                                        className: 'form-group',
+                                        children: [
+                                            { label: { text: 'Username:' } },
+                                            {
+                                                input: {
+                                                    type: 'text',
+                                                    value: () => getState('form.username', ''),
+                                                    oninput: (e) => context.setState('form.username', e.target.value),
+                                                    placeholder: 'admin or user'
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'form-group',
+                                        children: [
+                                            { label: { text: 'Password:' } },
+                                            {
+                                                input: {
+                                                    type: 'password',
+                                                    value: () => getState('form.password', ''),
+                                                    oninput: (e) => context.setState('form.password', e.target.value),
+                                                    placeholder: 'admin or user'
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                () => {
+                                    const error = getState('auth.loginError');
+                                    return error ? {
+                                        div: {
+                                            style: { color: 'red', marginBottom: '1rem' },
+                                            text: error
+                                        }
+                                    } : null;
+                                },
+                                {
+                                    button: {
+                                        className: 'btn',
+                                        text: () => getState('auth.isLoading') ? 'Logging in...' : 'Login',
+                                        disabled: () => getState('auth.isLoading'),
+                                        onclick: async () => {
+                                            const username = getState('form.username', '');
+                                            const password = getState('form.password', '');
+                                            
+                                            if (!username || !password) {
+                                                context.setState('auth.loginError', 'Please enter username and password');
+                                                return;
+                                            }
+                                            
+                                            const result = await context.headless.AuthManager.login(username, password);
+                                            
+                                            if (result.success) {
+                                                context.setState('form.username', '');
+                                                context.setState('form.password', '');
+                                                window.location.hash = '/dashboard';
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+// ==================== LAYOUT COMPONENTS ====================
+
+const DashboardLayout = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                className: 'page',
+                children: [
+                    { h1: { text: () => `Dashboard - Welcome ${getState('auth.user.name', 'User')}!` } },
+                    {
+                        nav: {
+                            className: 'sub-nav',
+                            children: [
+                                { a: { href: '#/dashboard', text: 'Overview', className: () => props.subRoute === '' ? 'nav-link active' : 'nav-link' } },
+                                { a: { href: '#/dashboard/analytics', text: 'Analytics', className: () => props.subRoute === 'analytics' ? 'nav-link active' : 'nav-link', style: { marginLeft: '1rem' } } },
+                                { a: { href: '#/dashboard/settings', text: 'Settings', className: () => props.subRoute === 'settings' ? 'nav-link active' : 'nav-link', style: { marginLeft: '1rem' } } }
+                            ]
+                        }
+                    },
+                    {
+                        div: {
+                            children: () => {
+                                switch (props.subRoute) {
+                                    case 'analytics':
+                                        return [{ DashboardAnalytics: {} }];
+                                    case 'settings':
+                                        return [{ DashboardSettings: {} }];
+                                    default:
+                                        return [{ DashboardOverview: {} }];
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+const AdminLayout = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                className: 'page',
+                children: [
+                    {
+                        div: {
+                            className: 'admin-panel',
+                            children: [
+                                { h1: { text: '🔒 Admin Panel' } },
+                                { p: { text: 'Multi-tab admin access synchronized' } }
+                            ]
+                        }
+                    },
+                    {
+                        nav: {
+                            className: 'sub-nav',
+                            children: [
+                                { a: { href: '#/admin', text: 'Overview', className: () => props.subRoute === '' ? 'nav-link active' : 'nav-link' } },
+                                { a: { href: '#/admin/users', text: 'Users', className: () => props.subRoute === 'users' ? 'nav-link active' : 'nav-link', style: { marginLeft: '1rem' } } },
+                                { a: { href: '#/admin/settings', text: 'Settings', className: () => props.subRoute === 'settings' ? 'nav-link active' : 'nav-link', style: { marginLeft: '1rem' } } }
+                            ]
+                        }
+                    },
+                    {
+                        div: {
+                            children: () => {
+                                switch (props.subRoute) {
+                                    case 'users':
+                                        return [{ AdminUsers: {} }];
+                                    case 'settings':
+                                        return [{ AdminSettings: {} }];
+                                    default:
+                                        return [{ AdminOverview: {} }];
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+const ProfileLayout = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                className: 'page',
+                children: [
+                    { h1: { text: 'User Profile' } },
+                    {
+                        nav: {
+                            className: 'sub-nav',
+                            children: [
+                                { a: { href: '#/profile', text: 'View Profile', className: () => props.subRoute === '' ? 'nav-link active' : 'nav-link' } },
+                                { a: { href: '#/profile/edit', text: 'Edit Profile', className: () => props.subRoute === 'edit' ? 'nav-link active' : 'nav-link', style: { marginLeft: '1rem' } } }
+                            ]
+                        }
+                    },
+                    {
+                        div: {
+                            children: () => {
+                                switch (props.subRoute) {
+                                    case 'edit':
+                                        return [{ ProfileEdit: {} }];
+                                    default:
+                                        return [{ ProfileView: {} }];
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+// ==================== SUB-PAGE COMPONENTS ====================
+
+const DashboardOverview = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        div: {
+                            className: 'dashboard-grid',
+                            children: [
+                                {
+                                    div: {
+                                        className: 'dashboard-card',
+                                        children: [
+                                            { h3: { text: 'Session Info' } },
+                                            { p: { text: () => `User: ${getState('auth.user.name', 'Unknown')}` } },
+                                            { p: { text: () => `Role: ${getState('auth.user.role', 'Unknown')}` } },
+                                            { p: { text: () => `Tab: ${TAB_ID}` } },
+                                            { p: { text: () => `Login Time: ${getState('auth.user.loginTime') ? new Date(getState('auth.user.loginTime')).toLocaleTimeString() : 'N/A'}` } }
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'dashboard-card',
+                                        children: [
+                                            { h3: { text: 'Multi-Tab Status' } },
+                                            { p: { text: '✅ Real-time sync active' } },
+                                            { p: { text: '✅ Cross-tab navigation' } },
+                                            { p: { text: '✅ Instant logout sync' } },
+                                            { p: { text: '✅ Persistent sessions' } }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const DashboardAnalytics = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        div: {
+                            className: 'dashboard-card',
+                            children: [
+                                { h3: { text: '📊 Analytics (Multi-Tab Synced)' } },
+                                { p: { text: 'Navigation to this sub-route syncs across all tabs' } },
+                                { p: { text: '• Page Views: 12,453' } },
+                                { p: { text: '• Active Tabs: Synchronized' } },
+                                { p: { text: '• Real-time Updates: Enabled' } }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const DashboardSettings = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        div: {
+                            className: 'dashboard-card',
+                            children: [
+                                { h3: { text: '⚙️ Settings (Multi-Tab Synced)' } },
+                                { p: { text: 'Settings changes would sync across all tabs' } },
+                                { button: { className: 'btn', text: 'Save Preferences', style: { margin: '0.5rem' } } },
+                                { button: { className: 'btn', text: 'Export Data', style: { margin: '0.5rem' } } }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const AdminOverview = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        div: {
+                            className: 'info-box',
+                            children: [
+                                { h4: { text: 'Admin Access Synchronized' } },
+                                { p: { text: () => `Admin: ${getState('auth.user.name')} across all tabs` } },
+                                { p: { text: 'Admin privileges sync instantly to all open tabs' } }
+                            ]
+                        }
+                    },
+                    {
+                        div: {
+                            className: 'dashboard-card',
+                            children: [
+                                { h3: { text: 'System Status' } },
+                                { p: { text: '🟢 Multi-tab sync operational' } },
+                                { p: { text: '🔐 Admin session synced' } },
+                                { p: { text: '📡 Real-time updates active' } }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const AdminUsers = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        div: {
+                            className: 'dashboard-card',
+                            children: [
+                                { h3: { text: '👥 User Management (Multi-Tab)' } },
+                                { p: { text: 'User changes sync across admin tabs' } },
+                                { p: { text: '• admin@demo.com (Administrator) - Online' } },
+                                { p: { text: '• user@demo.com (Regular User) - Offline' } },
+                                { button: { className: 'btn', text: 'Add User', style: { marginTop: '1rem' } } }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const AdminSettings = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        div: {
+                            className: 'dashboard-card',
+                            children: [
+                                { h3: { text: '🔧 Admin Settings (Synced)' } },
+                                { p: { text: 'System configuration changes sync to all admin tabs' } },
+                                { button: { className: 'btn', text: 'Security Settings', style: { margin: '0.5rem' } } },
+                                { button: { className: 'btn', text: 'System Config', style: { margin: '0.5rem' } } }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const ProfileView = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        div: {
+                            className: 'dashboard-card',
+                            children: [
+                                { h3: { text: 'Profile (Multi-Tab Synced)' } },
+                                { p: { text: () => `Name: ${getState('auth.user.name', 'N/A')}` } },
+                                { p: { text: () => `Username: ${getState('auth.user.username', 'N/A')}` } },
+                                { p: { text: () => `Role: ${getState('auth.user.role', 'N/A')}` } },
+                                { p: { text: () => `Session Tab: ${TAB_ID}` } }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const ProfileEdit = (props, context) => {
+    const { getState } = context;
+    
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        div: {
+                            className: 'dashboard-card',
+                            children: [
+                                { h3: { text: '✏️ Edit Profile (Changes Sync)' } },
+                                { p: { text: 'Profile edits would sync to all tabs' } },
+                                {
+                                    div: {
+                                        className: 'form-group',
+                                        children: [
+                                            { label: { text: 'Display Name:' } },
+                                            { input: { type: 'text', value: () => getState('auth.user.name', '') } }
+                                        ]
+                                    }
+                                },
+                                { button: { className: 'btn', text: 'Save Changes', style: { marginTop: '1rem' } } }
+                            ]
+                        }
+                    },
+                    { SyncPanel: {} }
+                ]
+            }
+        })
+    };
+};
+
+const NotFoundPage = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                className: 'page',
+                style: { textAlign: 'center', padding: '3rem' },
+                children: [
+                    { h1: { text: '404 - Page Not Found' } },
+                    { p: { text: 'The page you\'re looking for doesn\'t exist.' } },
+                    {
+                        button: {
+                            className: 'btn',
+                            text: 'Go Home',
+                            onclick: () => window.location.hash = '/'
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+// ==================== APPLICATION INITIALIZATION ====================
+const juris = new Juris({
+    components: {
+        AppLayout,
+        Navigation,
+        UserInfo,
+        SyncPanel,
+        HistoryPanel,
+        HomePage,
+        AboutPage,
+        LoginPage,
+        DashboardLayout,
+        DashboardOverview,
+        DashboardAnalytics,
+        DashboardSettings,
+        AdminLayout,
+        AdminOverview,
+        AdminUsers,
+        AdminSettings,
+        ProfileLayout,
+        ProfileView,
+        ProfileEdit,
+        NotFoundPage
+    },
+    
+    headlessComponents: {
+        StateHistoryManager: { fn: StateHistoryManager, options: { autoInit: true } },
+        StateSyncManager: { fn: StateSyncManager, options: { autoInit: true } },
+        UrlStateSync: { fn: UrlStateSync, options: { autoInit: true } },
+        AuthManager: { fn: AuthManager, options: { autoInit: true } }
+    },
+    
+    layout: {
+        div: {
+            children: [{ AppLayout: {} }]
+        }
+    },
+    
+    states: {
+        url: {
+            path: '/',
+            segments: { full: '/', parts: [], base: '', sub: '' }
+        },
+        auth: {
+            isLoggedIn: false,
+            user: null,
+            isLoading: false,
+            loginError: null
+        },
+        form: {
+            username: '',
+            password: ''
+        },
+        sync: {
+            lastSaved: null,
+            lastLoaded: null,
+            lastSynced: null,
+            lastCleared: null,
+            savedBy: null,
+            loadedFrom: null,
+            syncedFrom: null,
+            error: null
+        },
+        history: {
+            states: [],
+            currentIndex: -1,
+            maxSize: 50,
+            lastAction: null,
+            lastActionTime: null
+        }
+    }
+});
+
+// Start the application
+juris.render('#app');
+
+// Auto-navigate to home if no hash
+if (!window.location.hash) {
+    window.location.hash = '/';
+}
+
+// Global access for debugging
+window.juris = juris;
+
+console.log('🚀 Juris Multi-Tab Sync Demo Ready!');
+console.log(`📱 Tab ID: ${TAB_ID}`);
+console.log('🔐 Login: admin/admin or user/user');
+console.log('🎯 Multi-Tab Test: Login → Open new tab → Instant sync!');
+console.log('🧭 Navigation Test: Navigate in one tab → URL syncs to others');
+</script>
+</body>
+</html>

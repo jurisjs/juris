@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Todos - Juris Framework</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .todos-app {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(255, 107, 53, 0.15);
+            border: 1px solid rgba(255, 107, 53, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .todos-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 300;
+        }
+
+        .add-todo-form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .todo-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .todo-input:focus {
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        .add-btn {
+            padding: 0.75rem 1.5rem;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .add-btn:hover {
+            background: #e55a2b;
+            transform: translateY(-1px);
+        }
+
+        .add-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .todos-list {
+            min-height: 200px;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.2s ease;
+        }
+
+        .todo-item:hover {
+            background: #fff4f1;
+            margin: 0 -0.5rem;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .todo-item:last-child {
+            border-bottom: none;
+        }
+
+        .todo-checkbox {
+            width: 1.2rem;
+            height: 1.2rem;
+            cursor: pointer;
+            accent-color: #ff6b35;
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 1rem;
+            color: #333;
+            transition: all 0.2s ease;
+        }
+
+        .todo-text.completed {
+            text-decoration: line-through;
+            color: #999;
+            opacity: 0.7;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ff6b35;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+
+        .todo-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255, 107, 53, 0.1);
+            transform: scale(1.1);
+        }
+
+        .todos-stats {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #fff4f1;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 107, 53, 0.1);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ff6b35;
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .filters {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            background: white;
+            color: #666;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+            border-color: #ff6b35;
+            color: #ff6b35;
+        }
+
+        .filter-btn.active {
+            background: #ff6b35;
+            color: white;
+            border-color: #ff6b35;
+        }
+
+        @media (max-width: 480px) {
+            .todos-app {
+                padding: 1.5rem;
+            }
+
+            .add-todo-form {
+                flex-direction: column;
+            }
+
+            .todos-stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .filters {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    
+    <script src="juris.js"></script>
+    <script>
+        // Simple Todo Item Component
+        const TodoItem = (props, context) => {
+            const { getState, setState } = context;
+            const { todoId } = props;
+            
+            return {
+                render: () => {
+                    const todo = getState(`todos.${todoId}`);
+                    if (!todo) return null;
+                    
+                    return {
+                        div: {
+                            className: 'todo-item',
+                            children: [
+                                {
+                                    input: {
+                                        type: 'checkbox',
+                                        className: 'todo-checkbox',
+                                        checked: todo.completed,
+                                        onchange: () => {
+                                            setState(`todos.${todoId}.completed`, !todo.completed);
+                                        }
+                                    }
+                                },
+                                {
+                                    span: {
+                                        className: todo.completed ? 'todo-text completed' : 'todo-text',
+                                        text: todo.text
+                                    }
+                                },
+                                {
+                                    button: {
+                                        className: 'delete-btn',
+                                        text: '🗑️',
+                                        onclick: () => {
+                                            const todos = getState('todos', {});
+                                            const { [todoId]: removed, ...remaining } = todos;
+                                            setState('todos', remaining);
+                                            
+                                            const todoList = getState('todoList', []);
+                                            setState('todoList', todoList.filter(id => id !== todoId));
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+        };
+
+        // Main Todos App Component
+        const TodosApp = (props, context) => {
+            const { getState, setState } = context;
+            
+            return {
+                render: () => ({
+                    div: {
+                        className: 'todos-app',
+                        children: [
+                            {
+                                h1: {
+                                    className: 'todos-title',
+                                    text: 'Simple Todos'
+                                }
+                            },
+                            {
+                                form: {
+                                    className: 'add-todo-form',
+                                    onsubmit: (e) => {
+                                        e.preventDefault();
+                                        const text = getState('newTodo', '').trim();
+                                        
+                                        if (text) {
+                                            const id = Date.now().toString();
+                                            const newTodo = {
+                                                id,
+                                                text,
+                                                completed: false,
+                                                createdAt: new Date().toISOString()
+                                            };
+                                            
+                                            setState(`todos.${id}`, newTodo);
+                                            const todoList = getState('todoList', []);
+                                            setState('todoList', [...todoList, id]);
+                                            setState('newTodo', '');
+                                        }
+                                    },
+                                    children: [
+                                        {
+                                            input: {
+                                                type: 'text',
+                                                className: 'todo-input',
+                                                placeholder: 'Add a new todo...',
+                                                value: () => getState('newTodo', ''),
+                                                oninput: (e) => setState('newTodo', e.target.value)
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                type: 'submit',
+                                                className: 'add-btn',
+                                                text: 'Add',
+                                                disabled: () => !getState('newTodo', '').trim()
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'filters',
+                                    children: [
+                                        {
+                                            button: {
+                                                className: () => {
+                                                    const filter = getState('filter', 'all');
+                                                    return filter === 'all' ? 'filter-btn active' : 'filter-btn';
+                                                },
+                                                text: 'All',
+                                                onclick: () => setState('filter', 'all')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: () => {
+                                                    const filter = getState('filter', 'all');
+                                                    return filter === 'active' ? 'filter-btn active' : 'filter-btn';
+                                                },
+                                                text: 'Active',
+                                                onclick: () => setState('filter', 'active')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: () => {
+                                                    const filter = getState('filter', 'all');
+                                                    return filter === 'completed' ? 'filter-btn active' : 'filter-btn';
+                                                },
+                                                text: 'Completed',
+                                                onclick: () => setState('filter', 'completed')
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'todos-list',
+                                    children: () => {
+                                        const todoList = getState('todoList', []);
+                                        const todos = getState('todos', {});
+                                        const filter = getState('filter', 'all');
+                                        
+                                        let filteredIds = todoList.filter(id => {
+                                            const todo = todos[id];
+                                            if (!todo) return false;
+                                            
+                                            if (filter === 'active') return !todo.completed;
+                                            if (filter === 'completed') return todo.completed;
+                                            return true;
+                                        });
+                                        
+                                        if (filteredIds.length === 0) {
+                                            return [{
+                                                div: {
+                                                    className: 'empty-state',
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                className: 'empty-icon',
+                                                                text: '📝'
+                                                            }
+                                                        },
+                                                        {
+                                                            p: {
+                                                                text: todoList.length === 0 
+                                                                    ? 'No todos yet. Add one above!'
+                                                                    : `No ${filter} todos.`
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }];
+                                        }
+                                        
+                                        return filteredIds.map(todoId => ({
+                                            TodoItem: { todoId, key: todoId }
+                                        }));
+                                    }
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'todos-stats',
+                                    children: () => {
+                                        const todoList = getState('todoList', []);
+                                        const todos = getState('todos', {});
+                                        
+                                        const total = todoList.length;
+                                        const completed = todoList.filter(id => todos[id]?.completed).length;
+                                        const active = total - completed;
+                                        
+                                        return [
+                                            {
+                                                div: {
+                                                    className: 'stat-item',
+                                                    children: [
+                                                        {
+                                                            span: {
+                                                                className: 'stat-number',
+                                                                text: total.toString()
+                                                            }
+                                                        },
+                                                        {
+                                                            span: {
+                                                                text: 'Total'
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'stat-item',
+                                                    children: [
+                                                        {
+                                                            span: {
+                                                                className: 'stat-number',
+                                                                text: active.toString()
+                                                            }
+                                                        },
+                                                        {
+                                                            span: {
+                                                                text: 'Active'
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'stat-item',
+                                                    children: [
+                                                        {
+                                                            span: {
+                                                                className: 'stat-number',
+                                                                text: completed.toString()
+                                                            }
+                                                        },
+                                                        {
+                                                            span: {
+                                                                text: 'Done'
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ];
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Initialize Juris app
+        const juris = new Juris({
+            components: {
+                TodosApp,
+                TodoItem
+            },
+            
+            layout: {
+                div: {
+                    children: [{ TodosApp: {} }]
+                }
+            },
+            
+            states: {
+                todos: {},
+                todoList: [],
+                newTodo: '',
+                filter: 'all'
+            }
+        });
+
+        // Render the app
+        juris.render('#app');
+
+        // Global access for debugging
+        window.juris = juris;
+
+        console.log('📝 Simple Todos Ready!');
+        console.log('💡 Try: juris.setState("newTodo", "Test todo")');
+        console.log('📊 Current todos:', juris.getState('todos'));
+    </script>
+</body>
+</html>

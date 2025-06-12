@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Function Enhancement Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .demo-section h2 {
+            color: #555;
+            margin-top: 0;
+        }
+
+        /* Elements to be enhanced */
+        .counter-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 6px;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .control-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .control-button:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .status-panel {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 18px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-selector {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin: 10px;
+            background: white;
+        }
+
+        .todo-container {
+            min-height: 200px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+        }
+
+        .todo-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 8px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .todo-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .todo-item.completed {
+            background: #d4edda;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .stats-display {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .code-preview {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .enhancement-info {
+            background: #e8f5e8;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .error-panel {
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #c33;
+        }
+    </style>
+</head>
+<body>
+    <!-- Include the original Juris framework -->
+    <script src="juris.js"></script>
+
+    <div class="container">
+        <h1>🚀 Juris Function-Based Enhancement Demo</h1>
+
+        <div class="enhancement-info">
+            <strong>New Feature:</strong> Function-based enhancement definitions that receive full Juris context!
+        </div>
+
+        <!-- Demo Section 1: Counter with Function Enhancement -->
+        <div class="demo-section">
+            <h2>📊 Counter with Function Enhancement</h2>
+            <div class="counter-display">Loading...</div>
+            <button class="control-button" data-action="increment">+ Increment</button>
+            <button class="control-button" data-action="decrement">- Decrement</button>
+            <button class="control-button" data-action="reset">🔄 Reset</button>
+
+            <div class="code-preview">
+// Function-based enhancement with full context
+juris.enhance('.counter-display', ({ getState, setState, subscribe }) => {
+    // Can use full context here for complex logic
+    const baseCount = getState('counter.base', 0);
+    const multiplier = getState('counter.multiplier', 1);
+    
+    return {
+        text: () => `Count: ${getState('counter.value', 0)} (Base: ${baseCount})`,
+        style: () => ({
+            color: getState('counter.value', 0) > 10 ? '#e74c3c' : '#2ecc71',
+            transform: getState('counter.active') ? 'scale(1.1)' : 'scale(1)'
+        })
+    };
+});
+            </div>
+        </div>
+
+        <!-- Demo Section 2: Dynamic Todo List -->
+        <div class="demo-section">
+            <h2>📝 Todo List with Complex Logic</h2>
+            <div class="todo-container">Loading todos...</div>
+            <button class="control-button" data-action="add-todo">➕ Add Todo</button>
+            <button class="control-button" data-action="clear-completed">🗑️ Clear Completed</button>
+
+            <div class="code-preview">
+// Complex children enhancement with business logic
+juris.enhance('.todo-container', ({ getState, setState, headless, services }) => {
+    // Access headless components and services
+    const todoManager = headless.todoManager;
+    
+    return {
+        children: () => {
+            const todos = getState('todos', []);
+            const filter = getState('filter', 'all');
+            
+            const filteredTodos = todos.filter(todo => {
+                if (filter === 'completed') return todo.completed;
+                if (filter === 'active') return !todo.completed;
+                return true;
+            });
+            
+            return filteredTodos.map(todo => ({
+                div: {
+                    className: `todo-item ${todo.completed ? 'completed' : ''}`,
+                    text: todo.text,
+                    onclick: () => setState(`todos.${todo.id}.completed`, !todo.completed)
+                }
+            }));
+        }
+    };
+});
+            </div>
+        </div>
+
+        <!-- Demo Section 3: Theme-aware Status Panel -->
+        <div class="demo-section">
+            <h2>🎨 Theme-Aware Status Panel</h2>
+            <div class="status-panel">Status loading...</div>
+            <select class="theme-selector">
+                <option value="light">Light Theme</option>
+                <option value="dark">Dark Theme</option>
+                <option value="auto">Auto Theme</option>
+            </select>
+
+            <div class="code-preview">
+// Theme-aware enhancement with services
+juris.enhance('.status-panel', ({ getState, services }) => {
+    const themeService = services.theme;
+    
+    return {
+        text: () => {
+            const status = getState('app.status', 'ready');
+            const theme = getState('theme.current', 'light');
+            return `Status: ${status} | Theme: ${theme}`;
+        },
+        style: () => {
+            const theme = getState('theme.current', 'light');
+            const isDark = theme === 'dark';
+            
+            return {
+                backgroundColor: isDark ? '#2c3e50' : '#ecf0f1',
+                color: isDark ? '#ecf0f1' : '#2c3e50',
+                border: `2px solid ${isDark ? '#34495e' : '#bdc3c7'}`
+            };
+        }
+    };
+});
+            </div>
+        </div>
+
+        <!-- Demo Section 4: Statistics Display -->
+        <div class="demo-section">
+            <h2>📈 Live Statistics</h2>
+            <div class="stats-display">Stats loading...</div>
+
+            <div class="code-preview">
+// Statistics with computed values
+juris.enhance('.stats-display', ({ getState, subscribe }) => {
+    return {
+        innerHTML: () => {
+            const counter = getState('counter.value', 0);
+            const todos = getState('todos', []);
+            const completedTodos = todos.filter(t => t.completed).length;
+            
+            return `
+                &lt;strong&gt;Live Stats:&lt;/strong&gt;&lt;br&gt;
+                Counter: ${counter}&lt;br&gt;
+                Total Todos: ${todos.length}&lt;br&gt;
+                Completed: ${completedTodos}&lt;br&gt;
+                Progress: ${todos.length > 0 ? Math.round((completedTodos / todos.length) * 100) : 0}%
+            `;
+        }
+    };
+});
+            </div>
+        </div>
+
+        <div class="error-panel" id="errorPanel" style="display: none;">
+            <strong>Error:</strong> <span id="errorMessage"></span>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Juris with some sample data and services
+        const juris = new Juris({
+            states: {
+                counter: {
+                    value: 0,
+                    base: 0,
+                    multiplier: 1,
+                    active: false
+                },
+                todos: [
+                    { id: 1, text: 'Learn Juris Framework', completed: false },
+                    { id: 2, text: 'Build awesome apps', completed: false },
+                    { id: 3, text: 'Share with the world', completed: true }
+                ],
+                theme: {
+                    current: 'light'
+                },
+                app: {
+                    status: 'ready'
+                },
+                filter: 'all'
+            },
+            services: {
+                theme: {
+                    toggle: () => {
+                        const current = juris.getState('theme.current');
+                        const next = current === 'light' ? 'dark' : 'light';
+                        juris.setState('theme.current', next);
+                    }
+                }
+            }
+        });
+
+        // Check if enhance function support exists
+        function hasEnhanceFunctionSupport() {
+            // Test by trying to enhance with a function
+            try {
+                juris.enhance('.test-element', () => ({ text: 'test' }));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('errorPanel').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function runDemo() {
+            if (!hasEnhanceFunctionSupport()) {
+                showError('Function-based enhancements not yet supported. Please apply the suggested code changes to juris.js first.');
+                return;
+            }
+
+            try {
+                // 1. Counter Enhancement with Function
+                juris.enhance('.counter-display', ({ getState, setState }) => {
+                    return {
+                        text: () => {
+                            const value = getState('counter.value', 0);
+                            const base = getState('counter.base', 0);
+                            return `Count: ${value} (Base: ${base})`;
+                        },
+                        style: () => ({
+                            color: getState('counter.value', 0) > 10 ? '#e74c3c' : '#2ecc71',
+                            transform: getState('counter.active') ? 'scale(1.1)' : 'scale(1)',
+                            transition: 'all 0.3s ease'
+                        })
+                    };
+                });
+
+                // 2. Todo List Enhancement
+                juris.enhance('.todo-container', ({ getState, setState }) => {
+                    return {
+                        children: () => {
+                            const todos = getState('todos', []);
+                            const filter = getState('filter', 'all');
+                            
+                            const filteredTodos = todos.filter(todo => {
+                                if (filter === 'completed') return todo.completed;
+                                if (filter === 'active') return !todo.completed;
+                                return true;
+                            });
+                            
+                            if (filteredTodos.length === 0) {
+                                return [{ div: { text: 'No todos found!', style: { textAlign: 'center', color: '#666' } } }];
+                            }
+                            
+                            return filteredTodos.map(todo => ({
+                                div: {
+                                    className: `todo-item ${todo.completed ? 'completed' : ''}`,
+                                    text: todo.text,
+                                    onclick: () => {
+                                        const todos = getState('todos', []);
+                                        const updatedTodos = todos.map(t => 
+                                            t.id === todo.id ? { ...t, completed: !t.completed } : t
+                                        );
+                                        setState('todos', updatedTodos);
+                                    }
+                                }
+                            }));
+                        }
+                    };
+                });
+
+                // 3. Status Panel Enhancement
+                juris.enhance('.status-panel', ({ getState, services }) => {
+                    return {
+                        text: () => {
+                            const status = getState('app.status', 'ready');
+                            const theme = getState('theme.current', 'light');
+                            const counter = getState('counter.value', 0);
+                            return `Status: ${status} | Theme: ${theme} | Counter: ${counter}`;
+                        },
+                        style: () => {
+                            const theme = getState('theme.current', 'light');
+                            const isDark = theme === 'dark';
+                            
+                            return {
+                                backgroundColor: isDark ? '#2c3e50' : '#ecf0f1',
+                                color: isDark ? '#ecf0f1' : '#2c3e50',
+                                border: `2px solid ${isDark ? '#34495e' : '#bdc3c7'}`,
+                                transition: 'all 0.3s ease'
+                            };
+                        }
+                    };
+                });
+
+                // 4. Stats Enhancement
+                juris.enhance('.stats-display', ({ getState }) => {
+                    return {
+                        innerHTML: () => {
+                            const counter = getState('counter.value', 0);
+                            const todos = getState('todos', []);
+                            const completedTodos = todos.filter(t => t.completed).length;
+                            const progress = todos.length > 0 ? Math.round((completedTodos / todos.length) * 100) : 0;
+                            
+                            return `
+                                <strong>📊 Live Stats:</strong><br>
+                                🔢 Counter: ${counter}<br>
+                                📝 Total Todos: ${todos.length}<br>
+                                ✅ Completed: ${completedTodos}<br>
+                                📈 Progress: ${progress}%
+                            `;
+                        }
+                    };
+                });
+
+                // 5. Theme Selector Enhancement
+                juris.enhance('.theme-selector', ({ getState, setState }) => {
+                    return {
+                        value: () => getState('theme.current', 'light'),
+                        onchange: (e) => {
+                            setState('theme.current', e.target.value);
+                            setState('app.status', `Theme changed to ${e.target.value}`);
+                        }
+                    };
+                });
+
+                // Event handlers for buttons
+                document.addEventListener('click', (e) => {
+                    const action = e.target.dataset.action;
+                    if (!action) return;
+
+                    switch (action) {
+                        case 'increment':
+                            juris.setState('counter.active', true);
+                            setTimeout(() => juris.setState('counter.active', false), 200);
+                            juris.setState('counter.value', juris.getState('counter.value', 0) + 1);
+                            break;
+                        
+                        case 'decrement':
+                            juris.setState('counter.active', true);
+                            setTimeout(() => juris.setState('counter.active', false), 200);
+                            juris.setState('counter.value', Math.max(0, juris.getState('counter.value', 0) - 1));
+                            break;
+                        
+                        case 'reset':
+                            juris.setState('counter.value', 0);
+                            juris.setState('counter.base', 0);
+                            break;
+                        
+                        case 'add-todo':
+                            const todos = juris.getState('todos', []);
+                            const newId = Math.max(...todos.map(t => t.id), 0) + 1;
+                            const newTodo = {
+                                id: newId,
+                                text: `New todo #${newId}`,
+                                completed: false
+                            };
+                            juris.setState('todos', [...todos, newTodo]);
+                            break;
+                        
+                        case 'clear-completed':
+                            const allTodos = juris.getState('todos', []);
+                            const activeTodos = allTodos.filter(t => !t.completed);
+                            juris.setState('todos', activeTodos);
+                            break;
+                    }
+                });
+
+                console.log('✅ Demo initialized successfully!');
+                console.log('🎯 Try interacting with the buttons to see function-based enhancements in action!');
+                
+            } catch (error) {
+                console.error('Demo initialization error:', error);
+                showError(`Demo failed to initialize: ${error.message}`);
+            }
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', runDemo);
+        } else {
+            runDemo();
+        }
+    </script>
+</body>
+</html>

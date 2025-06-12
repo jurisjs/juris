@@ -1,0 +1,25 @@
+{
+    "title": "Introduction to Juris Framework",
+    "subtitle": "A revolutionary approach to web development",
+    "category": "Getting Started",
+    "categorySubtitle": "Learn the basics of Juris Framework",
+    "order": 1,
+    "status": "new",
+    "tags": [
+        "introduction",
+        "overview",
+        "framework"
+    ],
+    "content": "<h2>What is Juris Framework?<\/h2><p>Juris is a revolutionary JavaScript framework that brings unprecedented flexibility to web development through its Object DOM architecture and reactive state management system.<\/p><h3>Key Features<\/h3><ul><li><strong>Zero Race Conditions:<\/strong> Automatic dependency tracking eliminates timing issues<\/li><li><strong>Temporal Independence:<\/strong> Components and data can load in any order<\/li><li><strong>Headless Components:<\/strong> Separate business logic from UI completely<\/li><\/ul>",
+    "toc": [
+        {
+            "title": "What is Juris Framework?",
+            "anchor": "#what-is-juris-framework"
+        },
+        {
+            "title": "Key Features",
+            "anchor": "#key-features"
+        }
+    ],
+    "markdown": false
+}

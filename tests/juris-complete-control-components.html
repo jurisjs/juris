@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Control Components Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 15px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.3);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .control-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .control-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .control-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2d3748;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .demo-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .demo-output {
+            min-height: 100px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px dashed #dee2e6;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-online {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-offline {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .status-loading {
+            background: #bee3f8;
+            color: #2a4365;
+        }
+
+        .user-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 15px;
+            vertical-align: middle;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            transform: scale(1);
+            animation: modalAppear 0.3s ease;
+        }
+
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .error-boundary {
+            background: #fed7d7;
+            border: 2px solid #f56565;
+            border-radius: 10px;
+            padding: 20px;
+            color: #742a2a;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .star {
+            color: #ffd700;
+            font-size: 1.5rem;
+            margin: 0 2px;
+        }
+
+        .star.empty {
+            color: #e2e8f0;
+        }
+
+        .access-denied {
+            background: #fed7d7;
+            color: #742a2a;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #f56565;
+        }
+
+        .theme-dark {
+            background: #2d3748;
+            color: #e2e8f0;
+        }
+
+        .theme-dark .control-section {
+            background: #4a5568;
+            color: #e2e8f0;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #48bb78;
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .widget-container {
+            min-height: 150px;
+            padding: 20px;
+            border: 2px dashed #cbd5e0;
+            border-radius: 10px;
+            text-align: center;
+            background: #f7fafc;
+        }
+
+        .chart-widget {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .calendar-widget {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .todo-widget {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"></div>
+    <div id="portal-root"></div>
+
+    <!-- Use actual Juris framework -->
+    <script src="juris.js"></script>
+
+    <script>
+        // ===== ALL CONTROL COMPONENTS =====
+
+        // 1. Conditional Component
+        const Conditional = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: props.className || '',
+                        children: () => {
+                            const condition = typeof props.condition === 'function'
+                                ? props.condition()
+                                : getState(props.condition);
+
+                            if (condition) {
+                                const content = props.then || props.children;
+                                return content ? [content].flat().filter(Boolean) : [];
+                            } else {
+                                const content = props.else;
+                                return content ? [content].flat().filter(Boolean) : [];
+                            }
+                        }
+                    }
+                })
+            };
+        };
+
+        // 2. Switch Component
+        const Switch = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: props.className || '',
+                        children: () => {
+                            const switchValue = typeof props.value === 'function'
+                                ? props.value()
+                                : getState(props.value);
+
+                            const cases = props.cases || {};
+
+                            if (switchValue !== undefined && switchValue in cases) {
+                                const content = cases[switchValue];
+                                return content ? [content].flat().filter(Boolean) : [];
+                            } else if (props.default) {
+                                const content = props.default;
+                                return content ? [content].flat().filter(Boolean) : [];
+                            }
+
+                            return [];
+                        }
+                    }
+                })
+            };
+        };
+
+        // 3. For Component with "ignore" optimization
+        const For = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: props.className || '',
+                        children: () => {
+                            const isLoading = typeof props.loading === 'function'
+                                ? props.loading()
+                                : props.loading && getState(props.loading);
+
+                            if (isLoading && props.loadingContent) {
+                                return [props.loadingContent].flat().filter(Boolean);
+                            }
+
+                            const items = typeof props.items === 'function'
+                                ? props.items()
+                                : getState(props.items, []);
+
+                            if (!items || items.length === 0) {
+                                if (props.emptyContent) {
+                                    return [props.emptyContent].flat().filter(Boolean);
+                                }
+                                return [];
+                            }
+
+                            // Performance optimization with "ignore"
+                            const currentLength = items.length;
+                            const cacheKey = `_forComponent_${props.items}_length`;
+                            const previousLength = getState(cacheKey, -1);
+
+                            if (currentLength === previousLength && previousLength > 0) {
+                                return "ignore"; // Preserve DOM structure
+                            }
+
+                            setState(cacheKey, currentLength);
+
+                            const keyPath = props.keyPath || 'id';
+
+                            return items.map((item, index) => {
+                                let key;
+                                if (typeof keyPath === 'function') {
+                                    key = keyPath(item, index);
+                                } else if (typeof item === 'object' && item !== null) {
+                                    key = keyPath.split('.').reduce((obj, path) => obj?.[path], item) || index;
+                                } else {
+                                    key = index;
+                                }
+
+                                const content = props.render(item, index);
+
+                                if (content && typeof content === 'object' && !Array.isArray(content)) {
+                                    const tagName = Object.keys(content)[0];
+                                    if (tagName && content[tagName]) {
+                                        content[tagName].key = key;
+                                    }
+                                }
+
+                                return content;
+                            }).filter(Boolean);
+                        }
+                    }
+                })
+            };
+        };
+
+        // 4. Portal Component
+        const Portal = (props, context) => {
+            return {
+                hooks: {
+                    onMount: () => {
+                        const target = typeof props.target === 'string'
+                            ? document.querySelector(props.target)
+                            : props.target || document.body;
+
+                        if (target && props.children) {
+                            // Create portal content and append to target
+                            const portalDiv = document.createElement('div');
+                            target.appendChild(portalDiv);
+
+                            // Store reference for cleanup
+                            context._portalElement = portalDiv;
+                            context._portalTarget = target;
+                        }
+                    },
+                    onUnmount: () => {
+                        if (context._portalElement && context._portalTarget) {
+                            context._portalTarget.removeChild(context._portalElement);
+                        }
+                    }
+                },
+                render: () => {
+                    // Render portal content in target element
+                    if (context._portalElement && props.children) {
+                        // Use Juris to render content in portal element
+                        setTimeout(() => {
+                            const jurisPortal = new Juris({
+                                components: juris.components,
+                                layout: props.children
+                            });
+                            jurisPortal.render(context._portalElement);
+                        }, 0);
+                    }
+
+                    return {
+                        div: {
+                            style: { display: 'none' },
+                            text: '<!-- Portal Content Rendered Elsewhere -->'
+                        }
+                    };
+                }
+            };
+        };
+
+        // 5. Fragment Component
+        const Fragment = (props, context) => {
+            return {
+                render: () => {
+                    // Return children directly without wrapper
+                    const children = props.children || [];
+                    return Array.isArray(children) ? children : [children];
+                }
+            };
+        };
+
+        // 6. Guard Component
+        const Guard = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const userPermissions = getState('auth.permissions', []);
+                            const requiredPermissions = props.permissions || [];
+                            const requireAll = props.requireAll !== false;
+
+                            const hasPermission = requireAll
+                                ? requiredPermissions.every(perm => userPermissions.includes(perm))
+                                : requiredPermissions.some(perm => userPermissions.includes(perm));
+
+                            if (hasPermission) {
+                                return props.children ? [props.children].flat().filter(Boolean) : [];
+                            } else {
+                                return props.fallback ? [props.fallback].flat().filter(Boolean) : [];
+                            }
+                        }
+                    }
+                })
+            };
+        };
+
+        // 7. Suspense Component
+        const Suspense = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const isLoading = getState('suspense.loading', false);
+                            const error = getState('suspense.error', null);
+
+                            if (error && props.error) {
+                                return [props.error(error)].flat().filter(Boolean);
+                            }
+
+                            if (isLoading && props.loading) {
+                                return [props.loading].flat().filter(Boolean);
+                            }
+
+                            return props.children ? [props.children].flat().filter(Boolean) : [];
+                        }
+                    }
+                })
+            };
+        };
+
+        // 8. ErrorBoundary Component
+        const ErrorBoundary = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const error = getState('errorBoundary.error', null);
+
+                            if (error && props.fallback) {
+                                return [props.fallback(error)].flat().filter(Boolean);
+                            }
+
+                            return props.children ? [props.children].flat().filter(Boolean) : [];
+                        }
+                    }
+                })
+            };
+        };
+
+        // 9. Show Component
+        const Show = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        style: () => ({
+                            display: (() => {
+                                const condition = typeof props.when === 'function'
+                                    ? props.when()
+                                    : getState(props.when);
+                                return condition ? 'block' : 'none';
+                            })()
+                        }),
+                        children: props.children ? [props.children].flat().filter(Boolean) : []
+                    }
+                })
+            };
+        };
+
+        // 10. Match Component
+        const Match = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const cases = props.cases || [];
+
+                            for (const caseItem of cases) {
+                                const condition = typeof caseItem.when === 'function'
+                                    ? caseItem.when()
+                                    : getState(caseItem.when);
+
+                                if (condition) {
+                                    return caseItem.render ? [caseItem.render].flat().filter(Boolean) : [];
+                                }
+                            }
+
+                            return props.default ? [props.default].flat().filter(Boolean) : [];
+                        }
+                    }
+                })
+            };
+        };
+
+        // 11. Repeat Component
+        const Repeat = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        className: props.className || '',
+                        children: () => {
+                            const times = typeof props.times === 'function'
+                                ? props.times()
+                                : props.times || 0;
+
+                            return Array.from({ length: times }, (_, index) =>
+                                props.render ? props.render(index) : null
+                            ).filter(Boolean);
+                        }
+                    }
+                })
+            };
+        };
+
+        // 12. Await Component
+        const Await = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onMount: async () => {
+                        if (props.promise) {
+                            setState('await.loading', true);
+                            setState('await.error', null);
+                            setState('await.data', null);
+
+                            try {
+                                const promise = typeof props.promise === 'function'
+                                    ? props.promise()
+                                    : props.promise;
+                                const data = await promise;
+                                setState('await.data', data);
+                            } catch (error) {
+                                setState('await.error', error);
+                            } finally {
+                                setState('await.loading', false);
+                            }
+                        }
+                    }
+                },
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const loading = getState('await.loading', false);
+                            const error = getState('await.error', null);
+                            const data = getState('await.data', null);
+
+                            if (loading && props.loading) {
+                                return [props.loading].flat().filter(Boolean);
+                            }
+
+                            if (error && props.error) {
+                                return [props.error(error)].flat().filter(Boolean);
+                            }
+
+                            if (data && props.then) {
+                                return [props.then(data)].flat().filter(Boolean);
+                            }
+
+                            return [];
+                        }
+                    }
+                })
+            };
+        };
+
+        // 13. Dynamic Component - Fixed to work with Juris component registry
+        const Dynamic = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const componentName = typeof props.component === 'function'
+                                ? props.component()
+                                : getState(props.component);
+
+                            // Create the component reference dynamically
+                            if (componentName) {
+                                // Return the component as a child
+                                return [{
+                                    [componentName]: props.props || {}
+                                }];
+                            }
+
+                            // Fallback content
+                            const fallback = props.fallback || {
+                                div: {
+                                    style: { textAlign: 'center', padding: '20px', color: '#666' },
+                                    children: [
+                                        { h4: { text: '🎯 Dynamic Components' } },
+                                        { p: { text: 'Select a widget above to load it dynamically!' } }
+                                    ]
+                                }
+                            };
+
+                            return [fallback];
+                        }
+                    }
+                })
+            };
+        };
+
+        // ===== DEMO COMPONENTS =====
+
+        // User Card Component
+        const UserCard = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'user-card',
+                        children: [
+                            {
+                                img: {
+                                    className: 'user-avatar',
+                                    src: () => getState(`users.${props.userId}.avatar`, 'https://via.placeholder.com/40'),
+                                    alt: () => getState(`users.${props.userId}.name`, 'User')
+                                }
+                            },
+                            {
+                                div: {
+                                    children: [
+                                        {
+                                            strong: {
+                                                text: () => getState(`users.${props.userId}.name`, 'Unknown User')
+                                            }
+                                        },
+                                        { br: {} },
+                                        {
+                                            span: {
+                                                className: () => {
+                                                    const isOnline = getState(`users.${props.userId}.isOnline`, false);
+                                                    return isOnline ? 'status-badge status-online' : 'status-badge status-offline';
+                                                },
+                                                text: () => getState(`users.${props.userId}.isOnline`, false) ? 'Online' : 'Offline'
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Show/Hide Demo Components
+        const RevealableContent = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        // Set initial reveal timestamp
+                        setState('ui.revealedAt', Date.now());
+                        console.log('RevealableContent mounted at:', new Date().toLocaleTimeString());
+                    }
+                },
+                render: () => ({
+                    div: {
+                        className: 'revealable-content',
+                        style: () => ({
+                            background: `linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)`,
+                            color: 'white',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            textAlign: 'center',
+                            animation: 'fadeIn 0.3s ease-in',
+                            transform: `scale(${getState('ui.contentScale', 1)})`,
+                            transition: 'transform 0.3s ease'
+                        }),
+                        children: [
+                            {
+                                h4: {
+                                    text: () => {
+                                        const revealCount = getState('ui.revealCount', 0);
+                                        return `👁️ Now You See Me! (Reveal #${revealCount + 1})`;
+                                    }
+                                }
+                            },
+                            {
+                                p: {
+                                    text: () => {
+                                        const revealedAt = getState('ui.revealedAt');
+                                        return `This content is controlled by the Show component. Revealed at: ${new Date(revealedAt).toLocaleTimeString()}`;
+                                    }
+                                }
+                            },
+                            {
+                                p: {
+                                    text: () => {
+                                        const scale = getState('ui.contentScale', 1);
+                                        return `I can appear and disappear based on application state! Current scale: ${scale}x`;
+                                    },
+                                    style: { fontSize: '0.9rem', opacity: '0.9', marginTop: '10px' }
+                                }
+                            },
+                            {
+                                div: {
+                                    style: { marginTop: '15px' },
+                                    children: [
+                                        {
+                                            button: {
+                                                className: 'btn btn-secondary',
+                                                style: { margin: '5px', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                                text: () => `Scale: ${getState('ui.contentScale', 1)}x`,
+                                                onclick: () => {
+                                                    const currentScale = getState('ui.contentScale', 1);
+                                                    const newScale = currentScale >= 1.3 ? 0.8 : currentScale + 0.1;
+                                                    setState('ui.contentScale', Math.round(newScale * 10) / 10);
+                                                }
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-secondary',
+                                                style: { margin: '5px', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                                text: 'Increment Count',
+                                                onclick: () => {
+                                                    const current = getState('ui.revealCount', 0);
+                                                    setState('ui.revealCount', current + 1);
+                                                    setState('ui.revealedAt', Date.now());
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const VisibilityStatus = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    p: {
+                        style: {
+                            textAlign: 'center',
+                            marginTop: '15px',
+                            padding: '10px',
+                            backgroundColor: '#f7fafc',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0'
+                        },
+                        children: [
+                            {
+                                strong: {
+                                    text: 'Status: '
+                                }
+                            },
+                            {
+                                span: {
+                                    style: () => ({
+                                        color: getState('ui.showContent', false) ? '#38a169' : '#e53e3e'
+                                    }),
+                                    text: () => getState('ui.showContent', false)
+                                        ? 'Content is visible (display: block)'
+                                        : 'Content is hidden (display: none)'
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Auth State Components for Conditional Demo - NOW INTERACTIVE!
+        const WelcomeMessage = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        setState('auth.loginTime', Date.now());
+                        setState('auth.sessionDuration', 0);
+
+                        // Start session timer
+                        const timer = setInterval(() => {
+                            const loginTime = getState('auth.loginTime');
+                            if (loginTime && getState('auth.isLoggedIn')) {
+                                const duration = Math.floor((Date.now() - loginTime) / 1000);
+                                setState('auth.sessionDuration', duration);
+                            }
+                        }, 1000);
+
+                        setState('auth.sessionTimer', timer);
+                    },
+                    onUnmount: () => {
+                        const timer = getState('auth.sessionTimer');
+                        if (timer) clearInterval(timer);
+                    }
+                },
+                render: () => ({
+                    div: {
+                        className: 'auth-message welcome',
+                        style: () => ({
+                            background: `linear-gradient(135deg, #48bb78 0%, #38a169 100%)`,
+                            color: 'white',
+                            padding: '20px',
+                            borderRadius: '10px',
+                            textAlign: 'center',
+                            transform: `rotate(${Math.sin(getState('auth.sessionDuration', 0) * 0.1) * 2}deg)`,
+                            transition: 'transform 0.3s ease'
+                        }),
+                        children: [
+                            {
+                                h4: {
+                                    text: () => {
+                                        const duration = getState('auth.sessionDuration', 0);
+                                        return `✅ Welcome Back! Session: ${duration}s`;
+                                    }
+                                }
+                            },
+                            {
+                                p: {
+                                    text: () => {
+                                        const loginTime = getState('auth.loginTime');
+                                        return `Logged in at: ${new Date(loginTime).toLocaleTimeString()}`;
+                                    }
+                                }
+                            },
+                            {
+                                p: {
+                                    text: () => {
+                                        const clicks = getState('auth.welcomeClicks', 0);
+                                        return `You now have access to all features! (Clicked ${clicks} times)`;
+                                    },
+                                    style: { fontSize: '0.9rem', opacity: '0.9', marginTop: '10px' }
+                                }
+                            },
+                            {
+                                button: {
+                                    className: 'btn btn-secondary',
+                                    style: { margin: '10px 5px 0', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                    text: () => `Celebrate! 🎉 (${getState('auth.welcomeClicks', 0)})`,
+                                    onclick: () => {
+                                        const current = getState('auth.welcomeClicks', 0);
+                                        setState('auth.welcomeClicks', current + 1);
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const LoginPrompt = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        setState('auth.promptShown', Date.now());
+                        setState('auth.urgencyLevel', 1);
+
+                        // Increase urgency over time
+                        const urgencyTimer = setInterval(() => {
+                            if (!getState('auth.isLoggedIn')) {
+                                const current = getState('auth.urgencyLevel', 1);
+                                if (current < 5) setState('auth.urgencyLevel', current + 1);
+                            }
+                        }, 3000);
+
+                        setState('auth.urgencyTimer', urgencyTimer);
+                    },
+                    onUnmount: () => {
+                        const timer = getState('auth.urgencyTimer');
+                        if (timer) clearInterval(timer);
+                    }
+                },
+                render: () => ({
+                    div: {
+                        className: 'auth-message login-prompt',
+                        style: () => {
+                            const urgency = getState('auth.urgencyLevel', 1);
+                            const intensity = Math.min(urgency * 0.2, 1);
+                            return {
+                                background: `linear-gradient(135deg, #f56565 0%, #e53e3e 100%)`,
+                                color: 'white',
+                                padding: '20px',
+                                borderRadius: '10px',
+                                textAlign: 'center',
+                                animation: urgency > 3 ? 'pulse 1s infinite' : 'none',
+                                transform: `scale(${1 + intensity * 0.05})`,
+                                transition: 'transform 0.3s ease'
+                            };
+                        },
+                        children: [
+                            {
+                                h4: {
+                                    text: () => {
+                                        const urgency = getState('auth.urgencyLevel', 1);
+                                        const messages = [
+                                            '🔐 Please Log In',
+                                            '🔐 Login Required!',
+                                            '🚨 Access Denied!',
+                                            '⚠️ LOGIN NOW!',
+                                            '🔥 URGENT LOGIN!'
+                                        ];
+                                        return messages[Math.min(urgency - 1, messages.length - 1)];
+                                    }
+                                }
+                            },
+                            {
+                                p: {
+                                    text: () => {
+                                        const urgency = getState('auth.urgencyLevel', 1);
+                                        return urgency > 2
+                                            ? 'SECURITY BREACH DETECTED! LOGIN IMMEDIATELY!'
+                                            : 'Access denied. Please authenticate.';
+                                    }
+                                }
+                            },
+                            {
+                                p: {
+                                    text: () => {
+                                        const attempts = getState('auth.loginAttempts', 0);
+                                        return `Click "Toggle Login" to access. Failed attempts: ${attempts}`;
+                                    },
+                                    style: { fontSize: '0.9rem', opacity: '0.9', marginTop: '10px' }
+                                }
+                            },
+                            {
+                                button: {
+                                    className: 'btn btn-secondary',
+                                    style: { margin: '10px 5px 0', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                    text: () => `Fake Login Attempt (${getState('auth.loginAttempts', 0)})`,
+                                    onclick: () => {
+                                        const current = getState('auth.loginAttempts', 0);
+                                        setState('auth.loginAttempts', current + 1);
+                                        setState('auth.urgencyLevel', Math.min(getState('auth.urgencyLevel', 1) + 1, 5));
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Dashboard Components for Switch Demo - NOW INTERACTIVE!
+        const AdminDashboard = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        setState('admin.accessTime', Date.now());
+                        setState('admin.systemHealth', 95);
+                        setState('admin.activeUsers', 1247);
+
+                        // Simulate real-time admin data
+                        const adminTimer = setInterval(() => {
+                            const health = getState('admin.systemHealth', 95);
+                            const users = getState('admin.activeUsers', 1247);
+                            setState('admin.systemHealth', Math.max(85, Math.min(100, health + (Math.random() - 0.5) * 3)));
+                            setState('admin.activeUsers', Math.max(1000, users + Math.floor((Math.random() - 0.5) * 20)));
+                        }, 2000);
+
+                        setState('admin.timer', adminTimer);
+                    },
+                    onUnmount: () => {
+                        const timer = getState('admin.timer');
+                        if (timer) clearInterval(timer);
+                    }
+                },
+                render: () => ({
+                    div: {
+                        className: 'dashboard admin-dashboard',
+                        style: () => {
+                            const health = getState('admin.systemHealth', 95);
+                            const healthColor = health > 90 ? '#667eea' : health > 80 ? '#f093fb' : '#f56565';
+                            return {
+                                background: `linear-gradient(135deg, ${healthColor} 0%, #764ba2 100%)`,
+                                color: 'white',
+                                padding: '20px',
+                                borderRadius: '10px',
+                                border: health < 85 ? '3px solid #f56565' : 'none'
+                            };
+                        },
+                        children: [
+                            {
+                                h4: {
+                                    text: () => {
+                                        const health = getState('admin.systemHealth', 95);
+                                        return `👑 Admin Dashboard (Health: ${Math.round(health)}%)`;
+                                    }
+                                }
+                            },
+                            {
+                                p: {
+                                    text: () => {
+                                        const users = getState('admin.activeUsers', 1247);
+                                        return `Full system access granted. Active users: ${users}`;
+                                    }
+                                }
+                            },
+                            {
+                                ul: {
+                                    children: [
+                                        {
+                                            li: {
+                                                text: () => {
+                                                    const actions = getState('admin.configActions', 0);
+                                                    return `🔧 System Configuration (${actions} actions)`;
+                                                }
+                                            }
+                                        },
+                                        {
+                                            li: {
+                                                text: () => {
+                                                    const reports = getState('admin.reportsGenerated', 0);
+                                                    return `📊 Analytics & Reports (${reports} generated)`;
+                                                }
+                                            }
+                                        },
+                                        { li: { text: '👥 User Management' } }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    style: { marginTop: '15px' },
+                                    children: [
+                                        {
+                                            button: {
+                                                className: 'btn btn-secondary',
+                                                style: { margin: '5px', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                                text: 'Configure System',
+                                                onclick: () => {
+                                                    const current = getState('admin.configActions', 0);
+                                                    setState('admin.configActions', current + 1);
+                                                }
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-secondary',
+                                                style: { margin: '5px', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                                text: 'Generate Report',
+                                                onclick: () => {
+                                                    const current = getState('admin.reportsGenerated', 0);
+                                                    setState('admin.reportsGenerated', current + 1);
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const UserDashboard = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        setState('user.tasksCompleted', 0);
+                        setState('user.progressPercent', 65);
+                        setState('user.streakDays', 7);
+                    }
+                },
+                render: () => ({
+                    div: {
+                        className: 'dashboard user-dashboard',
+                        style: () => {
+                            const progress = getState('user.progressPercent', 65);
+                            return {
+                                background: `linear-gradient(135deg, #48bb78 0%, #38a169 100%)`,
+                                color: 'white',
+                                padding: '20px',
+                                borderRadius: '10px',
+                                transform: `scale(${1 + (progress / 1000)})`
+                            };
+                        },
+                        children: [
+                            {
+                                h4: {
+                                    text: () => {
+                                        const streak = getState('user.streakDays', 7);
+                                        return `👤 User Dashboard (${streak} day streak!)`;
+                                    }
+                                }
+                            },
+                            {
+                                p: {
+                                    text: () => {
+                                        const progress = getState('user.progressPercent', 65);
+                                        return `Standard user privileges. Progress: ${progress}%`;
+                                    }
+                                }
+                            },
+                            {
+                                ul: {
+                                    children: [
+                                        {
+                                            li: {
+                                                text: () => {
+                                                    const tasks = getState('user.tasksCompleted', 0);
+                                                    return `📋 My Tasks (${tasks} completed)`;
+                                                }
+                                            }
+                                        },
+                                        {
+                                            li: {
+                                                text: () => {
+                                                    const progress = getState('user.progressPercent', 65);
+                                                    return `📈 My Progress (${progress}%)`;
+                                                }
+                                            }
+                                        },
+                                        { li: { text: '⚙️ Profile Settings' } }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    style: { marginTop: '15px' },
+                                    children: [
+                                        {
+                                            button: {
+                                                className: 'btn btn-secondary',
+                                                style: { margin: '5px', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                                text: 'Complete Task',
+                                                onclick: () => {
+                                                    const tasks = getState('user.tasksCompleted', 0);
+                                                    const progress = getState('user.progressPercent', 65);
+                                                    setState('user.tasksCompleted', tasks + 1);
+                                                    setState('user.progressPercent', Math.min(100, progress + 5));
+                                                }
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-secondary',
+                                                style: { margin: '5px', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                                text: 'Extend Streak',
+                                                onclick: () => {
+                                                    const current = getState('user.streakDays', 7);
+                                                    setState('user.streakDays', current + 1);
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const GuestView = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        setState('guest.visitTime', Date.now());
+                        setState('guest.curiosityLevel', 1);
+                        setState('guest.hints', 0);
+                    }
+                },
+                render: () => ({
+                    div: {
+                        className: 'dashboard guest-dashboard',
+                        style: () => {
+                            const curiosity = getState('guest.curiosityLevel', 1);
+                            return {
+                                background: `linear-gradient(135deg, #a0aec0 0%, #718096 100%)`,
+                                color: 'white',
+                                padding: '20px',
+                                borderRadius: '10px',
+                                opacity: Math.max(0.6, 1 - (curiosity * 0.1))
+                            };
+                        },
+                        children: [
+                            {
+                                h4: {
+                                    text: () => {
+                                        const hints = getState('guest.hints', 0);
+                                        return `👀 Guest View (${hints} hints revealed)`;
+                                    }
+                                }
+                            },
+                            {
+                                p: {
+                                    text: () => {
+                                        const curiosity = getState('guest.curiosityLevel', 1);
+                                        return curiosity > 3
+                                            ? 'Getting curious? Sign up for full access!'
+                                            : 'Limited access only';
+                                    }
+                                }
+                            },
+                            {
+                                ul: {
+                                    children: [
+                                        { li: { text: '📖 Public Documentation' } },
+                                        { li: { text: '💬 Contact Information' } },
+                                        {
+                                            li: {
+                                                text: () => {
+                                                    const curiosity = getState('guest.curiosityLevel', 1);
+                                                    return curiosity > 2
+                                                        ? '🔐 Login to Access Premium Features!'
+                                                        : '🔐 Login to Access More';
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    style: { marginTop: '15px' },
+                                    children: [
+                                        {
+                                            button: {
+                                                className: 'btn btn-secondary',
+                                                style: { margin: '5px', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                                text: 'Get Curious',
+                                                onclick: () => {
+                                                    const current = getState('guest.curiosityLevel', 1);
+                                                    setState('guest.curiosityLevel', current + 1);
+                                                }
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-secondary',
+                                                style: { margin: '5px', backgroundColor: 'rgba(255,255,255,0.2)' },
+                                                text: 'Show Hint',
+                                                onclick: () => {
+                                                    const current = getState('guest.hints', 0);
+                                                    setState('guest.hints', current + 1);
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Widget Components
+        const ChartWidget = () => ({
+            render: () => ({
+                div: {
+                    className: 'widget-container chart-widget',
+                    children: [
+                        { h3: { text: '📊 Chart Widget' } },
+                        { p: { text: 'Analytics and data visualization' } }
+                    ]
+                }
+            })
+        });
+
+        const CalendarWidget = () => ({
+            render: () => ({
+                div: {
+                    className: 'widget-container calendar-widget',
+                    children: [
+                        { h3: { text: '📅 Calendar Widget' } },
+                        { p: { text: 'Schedule and events' } }
+                    ]
+                }
+            })
+        });
+
+        const TodoWidget = () => ({
+            render: () => ({
+                div: {
+                    className: 'widget-container todo-widget',
+                    children: [
+                        { h3: { text: '✅ Todo Widget' } },
+                        { p: { text: 'Task management' } }
+                    ]
+                }
+            })
+        });
+
+        // Main Demo App Component
+        const DemoApp = (props, context) => {
+            const { getState, setState } = context;
+
+            // Debug: Log context to verify it's working
+            console.log('DemoApp context:', context);
+            console.log('Current auth state:', getState('auth'));
+
+            return {
+                render: () => ({
+                    div: {
+                        className: () => {
+                            const theme = getState('ui.theme', 'light');
+                            console.log('Current theme:', theme); // Debug
+                            return `app-container ${theme === 'dark' ? 'theme-dark' : ''}`;
+                        },
+                        children: [
+                            // Header
+                            {
+                                div: {
+                                    className: 'header',
+                                    children: [
+                                        { h1: { text: 'Juris Control Components' } },
+                                        { p: { text: 'Complete demonstration of all control flow components' } }
+                                    ]
+                                }
+                            },
+
+                            // Controls Grid
+                            {
+                                div: {
+                                    className: 'control-grid',
+                                    children: [
+                                        // 1. Conditional Demo
+                                        {
+                                            div: {
+                                                className: 'control-section',
+                                                children: [
+                                                    { h3: { className: 'control-title', text: '1. Conditional' } },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-controls',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-primary',
+                                                                        text: 'Toggle Login',
+                                                                        onclick: () => {
+                                                                            const current = getState('auth.isLoggedIn', false);
+                                                                            console.log('Toggling login from:', current, 'to:', !current); // Debug
+                                                                            setState('auth.isLoggedIn', !current);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-output',
+                                                            children: [
+                                                                {
+                                                                    Conditional: {
+                                                                        condition: 'auth.isLoggedIn',
+                                                                        then: { WelcomeMessage: {} },
+                                                                        else: { LoginPrompt: {} }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+
+                                        // 2. Switch Demo
+                                        {
+                                            div: {
+                                                className: 'control-section',
+                                                children: [
+                                                    { h3: { className: 'control-title', text: '2. Switch' } },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-controls',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-secondary',
+                                                                        text: 'Set Admin',
+                                                                        onclick: () => setState('auth.role', 'admin')
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-secondary',
+                                                                        text: 'Set User',
+                                                                        onclick: () => setState('auth.role', 'user')
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-secondary',
+                                                                        text: 'Set Guest',
+                                                                        onclick: () => setState('auth.role', 'guest')
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-output',
+                                                            children: [
+                                                                {
+                                                                    Switch: {
+                                                                        value: 'auth.role',
+                                                                        cases: {
+                                                                            'admin': { AdminDashboard: {} },
+                                                                            'user': { UserDashboard: {} },
+                                                                            'guest': { GuestView: {} }
+                                                                        },
+                                                                        default: {
+                                                                            div: {
+                                                                                style: { textAlign: 'center', padding: '20px', color: '#666' },
+                                                                                text: '❓ Unknown role - please contact administrator'
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+
+                                        // 3. For Loop Demo
+                                        {
+                                            div: {
+                                                className: 'control-section',
+                                                children: [
+                                                    { h3: { className: 'control-title', text: '3. For Loop' } },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-controls',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-primary',
+                                                                        text: 'Add User',
+                                                                        onclick: () => {
+                                                                            const users = getState('demo.users', []);
+                                                                            const newUser = {
+                                                                                id: Date.now(),
+                                                                                name: `User ${users.length + 1}`,
+                                                                                isOnline: Math.random() > 0.5,
+                                                                                avatar: 'https://via.placeholder.com/40'
+                                                                            };
+                                                                            setState('demo.users', [...users, newUser]);
+                                                                            setState(`users.${newUser.id}`, newUser);
+                                                                        }
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-danger',
+                                                                        text: 'Clear Users',
+                                                                        onclick: () => setState('demo.users', [])
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-output',
+                                                            children: [
+                                                                {
+                                                                    For: {
+                                                                        items: 'demo.users',
+                                                                        render: (user) => ({
+                                                                            UserCard: { userId: user.id }
+                                                                        }),
+                                                                        emptyContent: {
+                                                                            div: {
+                                                                                text: '👥 No users yet. Click "Add User" to start!',
+                                                                                style: { textAlign: 'center', padding: '20px', color: '#666' }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+
+                                        // 4. Guard Demo
+                                        {
+                                            div: {
+                                                className: 'control-section',
+                                                children: [
+                                                    { h3: { className: 'control-title', text: '4. Guard' } },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-controls',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-success',
+                                                                        text: 'Grant Admin',
+                                                                        onclick: () => setState('auth.permissions', ['read', 'write', 'admin'])
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-secondary',
+                                                                        text: 'Grant Read Only',
+                                                                        onclick: () => setState('auth.permissions', ['read'])
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-danger',
+                                                                        text: 'Remove All',
+                                                                        onclick: () => setState('auth.permissions', [])
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-output',
+                                                            children: [
+                                                                {
+                                                                    Guard: {
+                                                                        permissions: ['admin'],
+                                                                        children: {
+                                                                            div: {
+                                                                                children: [
+                                                                                    { h4: { text: '🔐 Admin Panel' } },
+                                                                                    { p: { text: 'Secret admin content!' } }
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        fallback: {
+                                                                            div: {
+                                                                                className: 'access-denied',
+                                                                                children: [
+                                                                                    { h4: { text: '🚫 Access Denied' } },
+                                                                                    { p: { text: 'You need admin permissions to view this content.' } }
+                                                                                ]
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+
+                                        // 5. Repeat Demo
+                                        {
+                                            div: {
+                                                className: 'control-section',
+                                                children: [
+                                                    { h3: { className: 'control-title', text: '5. Repeat' } },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-controls',
+                                                            children: [
+                                                                {
+                                                                    input: {
+                                                                        type: 'range',
+                                                                        min: '1',
+                                                                        max: '5',
+                                                                        value: () => getState('demo.rating', 3),
+                                                                        oninput: (e) => setState('demo.rating', parseInt(e.target.value))
+                                                                    }
+                                                                },
+                                                                {
+                                                                    span: {
+                                                                        text: () => ` Rating: ${getState('demo.rating', 3)}/5`
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-output',
+                                                            children: [
+                                                                {
+                                                                    Repeat: {
+                                                                        times: 5,
+                                                                        render: (index) => ({
+                                                                            span: {
+                                                                                className: () => {
+                                                                                    const rating = getState('demo.rating', 3);
+                                                                                    return index < rating ? 'star' : 'star empty';
+                                                                                },
+                                                                                text: '★'
+                                                                            }
+                                                                        })
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+
+                                        // 6. Dynamic Component Demo
+                                        {
+                                            div: {
+                                                className: 'control-section',
+                                                children: [
+                                                    { h3: { className: 'control-title', text: '6. Dynamic Component' } },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-controls',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-secondary',
+                                                                        text: 'Chart',
+                                                                        onclick: () => setState('ui.currentWidget', 'ChartWidget')
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-secondary',
+                                                                        text: 'Calendar',
+                                                                        onclick: () => setState('ui.currentWidget', 'CalendarWidget')
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-secondary',
+                                                                        text: 'Todo',
+                                                                        onclick: () => setState('ui.currentWidget', 'TodoWidget')
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-output',
+                                                            children: [
+                                                                {
+                                                                    Dynamic: {
+                                                                        component: 'ui.currentWidget',
+                                                                        fallback: {
+                                                                            div: {
+                                                                                className: 'widget-container',
+                                                                                children: [
+                                                                                    { h4: { text: '🎯 Dynamic Components' } },
+                                                                                    { p: { text: 'Select a widget above to load it dynamically!' } }
+                                                                                ]
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+
+                                        // 7. Show/Hide Demo
+                                        {
+                                            div: {
+                                                className: 'control-section',
+                                                children: [
+                                                    { h3: { className: 'control-title', text: '7. Show/Hide' } },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-controls',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-primary',
+                                                                        text: () => getState('ui.showContent', false) ? 'Hide Content' : 'Show Content',
+                                                                        onclick: () => {
+                                                                            const current = getState('ui.showContent', false);
+                                                                            setState('ui.showContent', !current);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'demo-output',
+                                                            children: [
+                                                                {
+                                                                    Show: {
+                                                                        when: 'ui.showContent',
+                                                                        children: { RevealableContent: {} }
+                                                                    }
+                                                                },
+                                                                { VisibilityStatus: {} }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // ===== JURIS APPLICATION SETUP =====
+
+        // First, let's create a proper state manager and component registry
+        // Initialize Juris with the documented structure
+        const app = new Juris({
+            components: {
+                // Control Components
+                Conditional,
+                Switch,
+                For,
+                Portal,
+                Fragment,
+                Guard,
+                Suspense,
+                ErrorBoundary,
+                Show,
+                Match,
+                Repeat,
+                Await,
+                Dynamic,
+
+                // Demo Components
+                UserCard,
+                RevealableContent,
+                VisibilityStatus,
+                WelcomeMessage,
+                LoginPrompt,
+                AdminDashboard,
+                UserDashboard,
+                GuestView,
+                ChartWidget,
+                CalendarWidget,
+                TodoWidget,
+                DemoApp
+            },
+
+            headlessComponents: {},
+
+            layout: {
+                div: {
+                    children: [{ DemoApp: {} }]
+                }
+            },
+
+            states: {
+                auth: {
+                    isLoggedIn: false,
+                    role: 'guest',
+                    permissions: ['read']
+                },
+                ui: {
+                    theme: 'light',
+                    showModal: false,
+                    showContent: false,
+                    currentWidget: null,
+                    revealCount: 0,
+                    revealedAt: null,
+                    contentScale: 1
+                },
+                demo: {
+                    rating: 3,
+                    users: []
+                },
+                users: {},
+                suspense: {
+                    loading: false,
+                    error: null
+                },
+                await: {
+                    loading: false,
+                    error: null,
+                    data: null
+                },
+                errorBoundary: {
+                    error: null
+                }
+            }
+        });
+
+        // Mount using the correct API pattern from documentation
+        app.render('#app');
+    </script>
+</body>
+
+</html>

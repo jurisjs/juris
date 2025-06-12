@@ -1,0 +1,3266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JurisJS Component Patterns - Complete Guide</title>
+    <!-- Highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #e2e8f0;
+            background: #0f172a;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #7c3aed;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #7c3aed;
+        }
+
+        .nav-links a.active {
+            color: #7c3aed;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, #7c3aed, #3b82f6);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3);
+        }
+
+        /* Mobile menu button */
+        .menu-toggle {
+            display: none;
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            position: relative;
+            z-index: 1002;
+        }
+
+        /* Main Layout */
+        .docs-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 0;
+            margin-top: 80px;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: rgba(15, 23, 42, 0.9);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 80px;
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            padding: 2rem 0;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .sidebar-title {
+            color: #ffd700;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1rem;
+            padding: 0 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: color 0.3s ease;
+        }
+
+        .sidebar-title:hover {
+            color: #ffed4a;
+        }
+
+        .sidebar-title .toggle-icon {
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-title.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .sidebar-nav {
+            list-style: none;
+            max-height: 500px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .sidebar-nav.collapsed {
+            max-height: 0;
+        }
+
+        .sidebar-nav li {
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-nav a {
+            display: block;
+            padding: 0.5rem 1.5rem;
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-nav a:hover {
+            color: #7c3aed;
+            background: rgba(124, 58, 237, 0.1);
+            border-left-color: #7c3aed;
+        }
+
+        .sidebar-nav a.active {
+            color: #ffffff;
+            background: rgba(124, 58, 237, 0.2);
+            border-left-color: #7c3aed;
+        }
+
+        /* Content Area */
+        .content {
+            padding: 2rem 3rem;
+            max-width: none;
+            background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.3) 100%);
+        }
+
+        .content h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: #ffffff;
+            background: linear-gradient(135deg, #ffffff, #c4b5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .content h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 3rem 0 1.5rem 0;
+            color: #ffd700;
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 0.5rem;
+        }
+
+        .content h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 2rem 0 1rem 0;
+            color: #c4b5fd;
+        }
+
+        .content h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #e2e8f0;
+        }
+
+        .content p {
+            margin-bottom: 1.5rem;
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .content ul, .content ol {
+            margin: 1rem 0 1.5rem 2rem;
+            color: #94a3b8;
+        }
+
+        .content li {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .content blockquote {
+            border-left: 4px solid #7c3aed;
+            background: rgba(124, 58, 237, 0.1);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Code Blocks */
+        .content pre {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .content pre code {
+            background: transparent !important;
+            padding: 0 !important;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+
+        .content p code {
+            background: rgba(124, 58, 237, 0.2);
+            color: #c4b5fd;
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        /* Pattern Cards */
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .pattern-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .pattern-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(124, 58, 237, 0.3);
+        }
+
+        .pattern-card h4 {
+            color: #ffd700;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pattern-card p {
+            color: #94a3b8;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .pattern-card .use-cases {
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .pattern-card .use-cases h5 {
+            color: #60a5fa;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pattern-card .use-cases ul {
+            margin: 0;
+            padding-left: 1rem;
+        }
+
+        .pattern-card .use-cases li {
+            font-size: 0.8rem;
+            margin-bottom: 0.25rem;
+            color: #cbd5e1;
+        }
+
+        /* Edge Case Boxes */
+        .edge-cases {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .edge-cases h5 {
+            color: #f59e0b;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .edge-cases ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .edge-cases li {
+            color: #fbbf24;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            background: rgba(124, 58, 237, 0.2);
+            color: #c4b5fd;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 0.25rem 0.25rem 0.25rem 0;
+            border: 1px solid rgba(124, 58, 237, 0.3);
+        }
+
+        .badge.complexity-low {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .badge.complexity-medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .badge.complexity-high {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Scrollbar styling */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(124, 58, 237, 0.5);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(124, 58, 237, 0.7);
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 0 15px;
+            }
+            
+            .nav-links {
+                gap: 1.5rem;
+            }
+            
+            .cta-button {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+            }
+
+            .docs-layout {
+                grid-template-columns: 280px 1fr;
+            }
+
+            .content {
+                padding: 2rem;
+            }
+
+            .pattern-grid {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                padding: 0.75rem 0;
+                flex-wrap: wrap;
+                position: relative;
+            }
+            
+            .logo {
+                font-size: 1.3rem;
+                order: 1;
+            }
+            
+            .menu-toggle {
+                display: block;
+                order: 2;
+            }
+            
+            .nav-links {
+                display: none;
+                order: 3;
+                flex-basis: 100%;
+                justify-content: center;
+                margin-top: 1rem;
+                gap: 1rem;
+            }
+            
+            .nav-links.open {
+                display: flex;
+                flex-wrap: wrap;
+            }
+            
+            .nav-links a {
+                font-size: 0.9rem;
+                padding: 0.5rem;
+                flex: 1 1 auto;
+                text-align: center;
+                min-width: 60px;
+            }
+            
+            .cta-button {
+                display: none;
+            }
+
+            .docs-layout {
+                grid-template-columns: 1fr;
+                margin-top: 100px;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 100px;
+                left: -300px;
+                width: 300px;
+                height: calc(100vh - 100px);
+                z-index: 999;
+                background: #0f172a;
+                border-right: 1px solid rgba(255, 255, 255, 0.2);
+                transition: left 0.3s ease;
+                transform: none;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .content {
+                padding: 1.5rem;
+                grid-column: 1;
+            }
+
+            .content h1 {
+                font-size: 2rem;
+            }
+
+            .content h2 {
+                font-size: 1.5rem;
+            }
+
+            .pattern-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-links a {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.5rem;
+                min-width: 50px;
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
+            .content pre {
+                padding: 1rem;
+                font-size: 0.8rem;
+            }
+
+            .pattern-card {
+                padding: 1rem;
+            }
+
+            .sidebar {
+                width: 280px;
+                left: -280px;
+            }
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Overlay for mobile menu */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+        }
+
+        .overlay.open {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .overlay.open {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+          <nav class="nav">
+              <a href="index.html" class="logo">JurisJS</a>
+              <ul class="nav-links">
+                  <li><a href="index.html#features">Features</a></li>
+                  <li><a href="juris-demo.html">Demo</a></li>
+                  <li><a href="juris-examples.html">Examples</a></li>
+                  <li><a href="juris-docs.html" class="active">Docs</a></li>
+                  <li><a href="juris-component.html" class="active">Components</a></li>
+                  <li><a href="why_juris_page.html">Why Juris</a></li>
+              </ul>
+              <a href="#get-started" class="cta-button">Get Started</a>
+          </nav>
+      </div>
+    </header>
+
+    <!-- Overlay for mobile menu -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Main Layout -->
+    <div class="docs-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title" data-section="getting-started">
+                    Getting Started <span class="toggle-icon">▼</span>
+                </div>
+                <ul class="sidebar-nav" id="getting-started">
+                    <li><a href="#overview">Overview</a></li>
+                    <li><a href="#component-basics">Component Basics</a></li>
+                    <li><a href="#pattern-categories">Pattern Categories</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title" data-section="basic-patterns">
+                    Basic Patterns <span class="toggle-icon">▼</span>
+                </div>
+                <ul class="sidebar-nav" id="basic-patterns">
+                    <li><a href="#simple-display">Simple Display</a></li>
+                    <li><a href="#interactive-basic">Interactive Basic</a></li>
+                    <li><a href="#conditional-rendering">Conditional Rendering</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title" data-section="data-patterns">
+                    Data Patterns <span class="toggle-icon">▼</span>
+                </div>
+                <ul class="sidebar-nav" id="data-patterns">
+                    <li><a href="#list-rendering">List Rendering</a></li>
+                    <li><a href="#form-handling">Form Handling</a></li>
+                    <li><a href="#async-data">Async Data</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title" data-section="composition-patterns">
+                    Composition Patterns <span class="toggle-icon">▼</span>
+                </div>
+                <ul class="sidebar-nav" id="composition-patterns">
+                    <li><a href="#parent-child">Parent-Child</a></li>
+                    <li><a href="#higher-order">Higher-Order</a></li>
+                    <li><a href="#render-props">Render Props</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title" data-section="state-patterns">
+                    State Patterns <span class="toggle-icon">▼</span>
+                </div>
+                <ul class="sidebar-nav" id="state-patterns">
+                    <li><a href="#local-state">Local State</a></li>
+                    <li><a href="#shared-state">Shared State</a></li>
+                    <li><a href="#computed-state">Computed State</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title" data-section="lifecycle-patterns">
+                    Lifecycle Patterns <span class="toggle-icon">▼</span>
+                </div>
+                <ul class="sidebar-nav" id="lifecycle-patterns">
+                    <li><a href="#mounting">Mounting</a></li>
+                    <li><a href="#updating">Updating</a></li>
+                    <li><a href="#cleanup">Cleanup</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title" data-section="advanced-patterns">
+                    Advanced Patterns <span class="toggle-icon">▼</span>
+                </div>
+                <ul class="sidebar-nav" id="advanced-patterns">
+                    <li><a href="#error-boundaries">Error Boundaries</a></li>
+                    <li><a href="#portal-patterns">Portal Patterns</a></li>
+                    <li><a href="#performance">Performance</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title" data-section="reference">
+                    Reference <span class="toggle-icon">▼</span>
+                </div>
+                <ul class="sidebar-nav" id="reference">
+                    <li><a href="#pattern-selection">Pattern Selection</a></li>
+                    <li><a href="#best-practices">Best Practices</a></li>
+                    <li><a href="#anti-patterns">Anti-Patterns</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Content -->
+        <main class="content">
+            <section id="overview">
+                <h1>Juris Component Patterns</h1>
+                <p class="lead">Comprehensive guide to component patterns in JurisJS - from basic display components to advanced composition patterns. Learn proven approaches for building maintainable, reusable, and performant UI components.</p>
+
+                <h2 id="component-basics">🧩 Component Basics</h2>
+                <p>Juris components are pure functions that return UI object definitions. They receive props from parents and context for framework interactions.</p>
+
+                <pre><code class="language-javascript">// Basic component structure
+const ComponentName = (props, context) => {
+    // Component logic here
+    
+    return {
+        tagName: {
+            // Attributes and properties
+            className: 'component-class',
+            
+            // Event handlers
+            onClick: (event) => {
+                // Handle interactions
+            },
+            
+            // Content
+            text: 'Component content',
+            
+            // Child components
+            children: () => [
+                { ChildComponent: { prop: 'value' } }
+            ]
+        }
+    };
+};</code></pre>
+
+                <h2 id="pattern-categories">📋 Pattern Categories</h2>
+                <div class="pattern-grid">
+                    <div class="pattern-card">
+                        <h4>🎯 Basic Patterns</h4>
+                        <p>Fundamental component patterns for common UI needs</p>
+                        <span class="badge complexity-low">Low Complexity</span>
+                        <div class="use-cases">
+                            <h5>Use Cases</h5>
+                            <ul>
+                                <li>Static content display</li>
+                                <li>Simple user interactions</li>
+                                <li>Basic conditional rendering</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="pattern-card">
+                        <h4>📊 Data Patterns</h4>
+                        <p>Components that handle data display, forms, and async operations</p>
+                        <span class="badge complexity-medium">Medium Complexity</span>
+                        <div class="use-cases">
+                            <h5>Use Cases</h5>
+                            <ul>
+                                <li>Lists and tables</li>
+                                <li>Form validation</li>
+                                <li>API integration</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="pattern-card">
+                        <h4>🏗️ Composition Patterns</h4>
+                        <p>Advanced patterns for component composition and reusability</p>
+                        <span class="badge complexity-high">High Complexity</span>
+                        <div class="use-cases">
+                            <h5>Use Cases</h5>
+                            <ul>
+                                <li>Complex UI layouts</li>
+                                <li>Reusable logic</li>
+                                <li>Component abstraction</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="simple-display">
+                <h2>🎯 Simple Display Components</h2>
+                <p>Components that display static or reactive content without complex interactions.</p>
+
+                <h3>Basic Text Display</h3>
+                <pre><code class="language-javascript">// Static text component
+const Heading = (props) => ({
+    h1: {
+        className: `heading ${props.size || 'medium'}`,
+        text: props.title,
+        style: {
+            color: props.color || '#ffffff'
+        }
+    }
+});
+
+// Reactive text component
+const UserGreeting = (props, { getState }) => ({
+    div: {
+        className: 'greeting',
+        text: () => {
+            const userName = getState('user.name', 'Guest');
+            const timeOfDay = new Date().getHours() < 12 ? 'morning' : 'evening';
+            return `Good ${timeOfDay}, ${userName}!`;
+        }
+    }
+});
+
+// Status badge component
+const StatusBadge = (props, { getState }) => ({
+    span: {
+        className: () => {
+            const status = props.status || getState('system.status', 'unknown');
+            return `badge badge-${status}`;
+        },
+        text: () => (props.status || getState('system.status', 'Unknown')).toUpperCase(),
+        style: {
+            backgroundColor: () => {
+                const status = props.status || getState('system.status');
+                const colors = {
+                    online: '#22c55e',
+                    offline: '#ef4444',
+                    maintenance: '#f59e0b'
+                };
+                return colors[status] || '#6b7280';
+            }
+        }
+    }
+});</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Null/undefined data:</strong> Always provide fallback values</li>
+                        <li><strong>Long text overflow:</strong> Handle text truncation and tooltips</li>
+                        <li><strong>Dynamic styling:</strong> Validate color values and CSS properties</li>
+                    </ul>
+                </div>
+
+                <h3>Image Display Components</h3>
+                <pre><code class="language-javascript">// Responsive image with fallback
+const ResponsiveImage = (props) => ({
+    div: {
+        className: 'image-container',
+        children: () => [{
+            img: {
+                src: props.src,
+                alt: props.alt || 'Image',
+                className: 'responsive-image',
+                onError: (e) => {
+                    e.target.src = props.fallback || '/images/placeholder.jpg';
+                },
+                onLoad: () => {
+                    // Image loaded successfully
+                    if (props.onLoad) props.onLoad();
+                }
+            }
+        }]
+    }
+});
+
+// Avatar component with initials fallback
+const Avatar = (props, { getState }) => {
+    const getInitials = (name) => {
+        return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    };
+    
+    return {
+        div: {
+            className: `avatar ${props.size || 'medium'}`,
+            children: () => {
+                const user = props.user || getState('user.current');
+                if (user?.avatar) {
+                    return [{
+                        img: {
+                            src: user.avatar,
+                            alt: user.name,
+                            onError: (e) => e.target.style.display = 'none'
+                        }
+                    }];
+                }
+                
+                return [{
+                    span: {
+                        className: 'avatar-initials',
+                        text: user?.name ? getInitials(user.name) : '?'
+                    }
+                }];
+            }
+        }
+    };
+};
+
+// Icon component with loading state
+const Icon = (props) => ({
+    i: {
+        className: () => {
+            const baseClass = 'icon';
+            const iconClass = `icon-${props.name}`;
+            const sizeClass = props.size ? `icon-${props.size}` : '';
+            const loadingClass = props.loading ? 'icon-loading' : '';
+            
+            return [baseClass, iconClass, sizeClass, loadingClass]
+                .filter(Boolean).join(' ');
+        },
+        style: {
+            color: props.color,
+            fontSize: props.customSize
+        },
+        title: props.tooltip
+    }
+});</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Image loading failures:</strong> Provide meaningful fallbacks</li>
+                        <li><strong>Missing user data:</strong> Show placeholder initials or default avatar</li>
+                        <li><strong>Icon accessibility:</strong> Include proper alt text and ARIA labels</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="interactive-basic">
+                <h2>🎛️ Interactive Basic Components</h2>
+                <p>Components that handle user interactions like clicks, form inputs, and state changes.</p>
+
+                <h3>Button Components</h3>
+                <pre><code class="language-javascript">// Basic interactive button
+const Button = (props, { getState }) => ({
+    button: {
+        className: () => {
+            const baseClass = 'btn';
+            const variantClass = `btn-${props.variant || 'primary'}`;
+            const sizeClass = props.size ? `btn-${props.size}` : '';
+            const disabledClass = props.disabled || getState('ui.loading') ? 'btn-disabled' : '';
+            
+            return [baseClass, variantClass, sizeClass, disabledClass]
+                .filter(Boolean).join(' ');
+        },
+        disabled: () => props.disabled || getState('ui.loading'),
+        onClick: (e) => {
+            if (props.disabled || getState('ui.loading')) return;
+            
+            if (props.onClick) {
+                props.onClick(e);
+            }
+        },
+        children: () => {
+            if (getState('ui.loading') && props.showLoading) {
+                return [
+                    { Icon: { name: 'spinner', className: 'btn-spinner' } },
+                    { span: { text: 'Loading...' } }
+                ];
+            }
+            
+            return [
+                props.icon ? { Icon: { name: props.icon } } : null,
+                { span: { text: props.text || props.children } }
+            ].filter(Boolean);
+        }
+    }
+});
+
+// Toggle button with state
+const ToggleButton = (props, { getState, setState }) => {
+    const isActive = () => getState(props.statePath, props.defaultValue || false);
+    
+    return {
+        button: {
+            className: () => `toggle-btn ${isActive() ? 'active' : 'inactive'}`,
+            onClick: () => {
+                const newValue = !isActive();
+                setState(props.statePath, newValue);
+                
+                if (props.onChange) {
+                    props.onChange(newValue);
+                }
+            },
+            children: () => [{
+                span: {
+                    text: isActive() ? props.activeText : props.inactiveText
+                }
+            }]
+        }
+    };
+};
+
+// Action button with confirmation
+const ActionButton = (props, { setState }) => ({
+    button: {
+        className: `action-btn ${props.danger ? 'btn-danger' : 'btn-primary'}`,
+        onClick: async (e) => {
+            if (props.requireConfirmation) {
+                const confirmed = confirm(props.confirmMessage || 'Are you sure?');
+                if (!confirmed) return;
+            }
+            
+            if (props.async) {
+                setState('ui.loading', true);
+                try {
+                    await props.onClick(e);
+                } catch (error) {
+                    setState('ui.error', error.message);
+                } finally {
+                    setState('ui.loading', false);
+                }
+            } else {
+                props.onClick(e);
+            }
+        },
+        text: props.text
+    }
+});</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Double-click prevention:</strong> Disable button during async operations</li>
+                        <li><strong>Keyboard accessibility:</strong> Handle Enter and Space key events</li>
+                        <li><strong>Loading states:</strong> Show visual feedback during async actions</li>
+                    </ul>
+                </div>
+
+                <h3>Input Components</h3>
+                <pre><code class="language-javascript">// Controlled input with validation
+const TextInput = (props, { useState }) => {
+  const [value, setValue] = useState(props.statePath, props.defaultValue || '');
+  const [error, setError] = useState(`${props.statePath}.error`, null);
+  
+  const validate = (newValue) => {
+      if (props.required && !newValue.trim()) {
+          return 'This field is required';
+      }
+      return null;
+  };
+  
+  return {
+      div: {
+          className: 'input-group',
+          children: () => [
+              {
+                  input: {
+                      value: value(),
+                      onInput: (e) => {
+                          const newValue = e.target.value;
+                          setValue(newValue);
+                          setError(null); // Clear error on input
+                      },
+                      onBlur: (e) => {
+                          const validationError = validate(e.target.value);
+                          setError(validationError);
+                      }
+                  }
+              }
+          ]
+      }
+  };
+};
+
+// Select dropdown component
+const Select = (props, { getState, setState }) => {
+    const getValue = () => getState(props.statePath, props.defaultValue || '');
+    
+    return {
+        div: {
+            className: 'select-group',
+            children: () => [
+                props.label ? {
+                    label: {
+                        text: props.label,
+                        className: 'select-label'
+                    }
+                } : null,
+                {
+                    select: {
+                        value: () => getValue(),
+                        className: 'form-select',
+                        onChange: (e) => {
+                            const value = e.target.value;
+                            setState(props.statePath, value);
+                            
+                            if (props.onChange) {
+                                props.onChange(value);
+                            }
+                        },
+                        children: () => [
+                            props.placeholder ? {
+                                option: {
+                                    value: '',
+                                    text: props.placeholder,
+                                    disabled: true
+                                }
+                            } : null,
+                            ...props.options.map(option => ({
+                                option: {
+                                    value: option.value,
+                                    text: option.label || option.value,
+                                    selected: () => getValue() === option.value
+                                }
+                            }))
+                        ].filter(Boolean)
+                    }
+                }
+            ].filter(Boolean)
+        }
+    };
+};
+
+// Checkbox with indeterminate state
+const Checkbox = (props, { getState, setState }) => {
+    const isChecked = () => getState(props.statePath, props.defaultValue || false);
+    
+    return {
+        label: {
+            className: 'checkbox-label',
+            children: () => [
+                {
+                    input: {
+                        type: 'checkbox',
+                        checked: () => isChecked(),
+                        indeterminate: () => props.indeterminate,
+                        onChange: (e) => {
+                            const checked = e.target.checked;
+                            setState(props.statePath, checked);
+                            
+                            if (props.onChange) {
+                                props.onChange(checked);
+                            }
+                        }
+                    }
+                },
+                {
+                    span: {
+                        text: props.label,
+                        className: 'checkbox-text'
+                    }
+                }
+            ]
+        }
+    };
+};</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Input sanitization:</strong> Clean and validate user input</li>
+                        <li><strong>Real-time validation:</strong> Balance UX with validation feedback timing</li>
+                        <li><strong>Accessibility:</strong> Proper labeling and ARIA attributes</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="conditional-rendering">
+                <h2>🔀 Conditional Rendering Patterns</h2>
+                <p>Components that render different content based on state, props, or conditions.</p>
+
+                <h3>Conditional Display</h3>
+                <pre><code class="language-javascript">// Simple conditional rendering
+const ConditionalMessage = (props, { getState }) => ({
+    div: {
+        children: () => {
+            const isLoggedIn = getState('auth.isAuthenticated', false);
+            
+            if (isLoggedIn) {
+                return [{
+                    div: {
+                        className: 'welcome-message',
+                        text: `Welcome back, ${getState('auth.user.name', 'User')}!`
+                    }
+                }];
+            }
+            
+            return [{
+                div: {
+                    className: 'login-prompt',
+                    children: [
+                        { p: { text: 'Please log in to continue' } },
+                        { Button: { text: 'Login', onClick: props.onLogin } }
+                    ]
+                }
+            }];
+        }
+    }
+});
+
+// Multi-state conditional rendering
+const LoadingStateComponent = (props, { getState }) => ({
+    div: {
+        className: 'state-container',
+        children: () => {
+            const loading = getState('ui.loading', false);
+            const error = getState('ui.error', null);
+            const data = getState('data.items', null);
+            
+            // Loading state
+            if (loading) {
+                return [{
+                    div: {
+                        className: 'loading-state',
+                        children: [
+                            { Icon: { name: 'spinner', className: 'spinner' } },
+                            { p: { text: 'Loading...' } }
+                        ]
+                    }
+                }];
+            }
+            
+            // Error state
+            if (error) {
+                return [{
+                    div: {
+                        className: 'error-state',
+                        children: [
+                            { Icon: { name: 'alert-circle', className: 'error-icon' } },
+                            { p: { text: error } },
+                            { Button: { 
+                                text: 'Retry', 
+                                onClick: props.onRetry,
+                                variant: 'secondary'
+                            }}
+                        ]
+                    }
+                }];
+            }
+            
+            // Empty state
+            if (!data || data.length === 0) {
+                return [{
+                    div: {
+                        className: 'empty-state',
+                        children: [
+                            { Icon: { name: 'inbox', className: 'empty-icon' } },
+                            { p: { text: 'No items found' } },
+                            { Button: { 
+                                text: 'Add Item', 
+                                onClick: props.onAdd 
+                            }}
+                        ]
+                    }
+                }];
+            }
+            
+            // Success state with data
+            return [{
+                div: {
+                    className: 'data-state',
+                    children: data.map(item => ({
+                        DataItem: { item }
+                    }))
+                }
+            }];
+        }
+    }
+});
+
+// Permission-based rendering
+const PermissionGate = (props, { getState }) => {
+    const hasPermission = () => {
+        const userRole = getState('auth.user.role', 'guest');
+        const userPermissions = getState('auth.user.permissions', []);
+        
+        // Check role-based permissions
+        if (props.requiredRole && userRole !== props.requiredRole) {
+            return false;
+        }
+        
+        // Check specific permissions
+        if (props.requiredPermissions) {
+            return props.requiredPermissions.every(permission => 
+                userPermissions.includes(permission)
+            );
+        }
+        
+        return true;
+    };
+    
+    return {
+        div: {
+            children: () => {
+                if (!hasPermission()) {
+                    if (props.fallback) {
+                        return [props.fallback];
+                    }
+                    
+                    return [{
+                        div: {
+                            className: 'permission-denied',
+                            text: 'Access denied'
+                        }
+                    }];
+                }
+                
+                return props.children || [];
+            }
+        }
+    };
+};</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Race conditions:</strong> Handle rapid state changes gracefully</li>
+                        <li><strong>Permission checks:</strong> Validate permissions on both client and server</li>
+                        <li><strong>Fallback content:</strong> Always provide meaningful fallbacks</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="list-rendering">
+                <h2>📋 List Rendering Patterns</h2>
+                <p>Components for displaying dynamic lists, tables, and collections of data.</p>
+
+                <h3>Dynamic Lists</h3>
+                <pre><code class="language-javascript">// Basic list component
+const ItemList = (props, { getState }) => ({
+    div: {
+        className: 'item-list',
+        children: () => {
+            const items = getState(props.dataPath, []);
+            
+            if (items.length === 0) {
+                return [{
+                    div: {
+                        className: 'empty-list',
+                        text: props.emptyMessage || 'No items available'
+                    }
+                }];
+            }
+            
+            return items.map((item, index) => ({
+                div: {
+                    key: item.id || index,
+                    className: 'list-item',
+                    children: [{
+                        [props.itemComponent]: {
+                            item,
+                            index,
+                            onUpdate: props.onItemUpdate,
+                            onDelete: props.onItemDelete
+                        }
+                    }]
+                }
+            }));
+        }
+    }
+});
+
+// Filterable and sortable list
+const FilterableList = (props, { getState, setState }) => {
+    const getFilteredItems = () => {
+        let items = getState(props.dataPath, []);
+        const filter = getState('ui.filter', '');
+        const sortBy = getState('ui.sortBy', 'name');
+        const sortOrder = getState('ui.sortOrder', 'asc');
+        
+        // Apply filter
+        if (filter) {
+            items = items.filter(item => 
+                Object.values(item)
+                    .join(' ')
+                    .toLowerCase()
+                    .includes(filter.toLowerCase())
+            );
+        }
+        
+        // Apply sorting
+        items.sort((a, b) => {
+            const aVal = a[sortBy] || '';
+            const bVal = b[sortBy] || '';
+            const comparison = aVal.toString().localeCompare(bVal.toString());
+            return sortOrder === 'desc' ? -comparison : comparison;
+        });
+        
+        return items;
+    };
+    
+    return {
+        div: {
+            className: 'filterable-list',
+            children: () => [
+                {
+                    div: {
+                        className: 'list-controls',
+                        children: [
+                            {
+                                TextInput: {
+                                    statePath: 'ui.filter',
+                                    placeholder: 'Search items...',
+                                    className: 'filter-input'
+                                }
+                            },
+                            {
+                                Select: {
+                                    statePath: 'ui.sortBy',
+                                    options: props.sortOptions || [
+                                        { value: 'name', label: 'Name' },
+                                        { value: 'date', label: 'Date' }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    div: {
+                        className: 'filtered-items',
+                        children: () => getFilteredItems().map(item => ({
+                            [props.itemComponent]: { item }
+                        }))
+                    }
+                }
+            ]
+        }
+    };
+};
+
+// Paginated list component
+const PaginatedList = (props, { getState, setState }) => {
+    const pageSize = props.pageSize || 10;
+    const currentPage = () => getState('ui.currentPage', 1);
+    const items = () => getState(props.dataPath, []);
+    
+    const totalPages = () => Math.ceil(items().length / pageSize);
+    const startIndex = () => (currentPage() - 1) * pageSize;
+    const endIndex = () => startIndex() + pageSize;
+    const currentItems = () => items().slice(startIndex(), endIndex());
+    
+    return {
+        div: {
+            className: 'paginated-list',
+            children: () => [
+                {
+                    div: {
+                        className: 'pagination-info',
+                        text: () => {
+                            const total = items().length;
+                            const start = startIndex() + 1;
+                            const end = Math.min(endIndex(), total);
+                            return `Showing ${start}-${end} of ${total} items`;
+                        }
+                    }
+                },
+                {
+                    div: {
+                        className: 'paginated-items',
+                        children: () => currentItems().map(item => ({
+                            [props.itemComponent]: { item }
+                        }))
+                    }
+                },
+                {
+                    div: {
+                        className: 'pagination-controls',
+                        children: () => [
+                            {
+                                Button: {
+                                    text: 'Previous',
+                                    disabled: () => currentPage() <= 1,
+                                    onClick: () => setState('ui.currentPage', currentPage() - 1)
+                                }
+                            },
+                            {
+                                span: {
+                                    className: 'page-info',
+                                    text: () => `Page ${currentPage()} of ${totalPages()}`
+                                }
+                            },
+                            {
+                                Button: {
+                                    text: 'Next',
+                                    disabled: () => currentPage() >= totalPages(),
+                                    onClick: () => setState('ui.currentPage', currentPage() + 1)
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    };
+};</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Large datasets:</strong> Implement virtual scrolling for performance</li>
+                        <li><strong>Real-time updates:</strong> Handle list changes while user is interacting</li>
+                        <li><strong>Selection state:</strong> Maintain selection across pagination and filtering</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="form-handling">
+                <h2>📝 Form Handling Patterns</h2>
+                <p>Comprehensive form components with validation, submission, and error handling.</p>
+
+                <h3>Form Components</h3>
+                <pre><code class="language-javascript">// Complete form component with validation
+const ContactForm = (props, { getState, setState }) => {
+    const formData = () => getState('form.contact', {
+        name: '',
+        email: '',
+        message: ''
+    });
+    
+    const errors = () => getState('form.contact.errors', {});
+    const isSubmitting = () => getState('form.contact.submitting', false);
+    
+    const validateField = (field, value) => {
+        const validations = {
+            name: (val) => {
+                if (!val.trim()) return 'Name is required';
+                if (val.length < 2) return 'Name must be at least 2 characters';
+                return null;
+            },
+            email: (val) => {
+                if (!val.trim()) return 'Email is required';
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(val)) return 'Please enter a valid email';
+                return null;
+            },
+            message: (val) => {
+                if (!val.trim()) return 'Message is required';
+                if (val.length < 10) return 'Message must be at least 10 characters';
+                return null;
+            }
+        };
+        
+        return validations[field] ? validations[field](value) : null;
+    };
+    
+    const validateForm = () => {
+        const data = formData();
+        const newErrors = {};
+        
+        Object.keys(data).forEach(field => {
+            const error = validateField(field, data[field]);
+            if (error) newErrors[field] = error;
+        });
+        
+        setState('form.contact.errors', newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+    
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!validateForm()) return;
+        
+        setState('form.contact.submitting', true);
+        
+        try {
+            await props.onSubmit(formData());
+            setState('form.contact', { name: '', email: '', message: '' });
+            setState('form.contact.errors', {});
+            setState('ui.notification', {
+                type: 'success',
+                message: 'Message sent successfully!'
+            });
+        } catch (error) {
+            setState('form.contact.errors', {
+                submit: 'Failed to send message. Please try again.'
+            });
+        } finally {
+            setState('form.contact.submitting', false);
+        }
+    };
+    
+    return {
+        form: {
+            className: 'contact-form',
+            onSubmit: handleSubmit,
+            children: () => [
+                {
+                    div: {
+                        className: 'form-row',
+                        children: [
+                            {
+                                TextInput: {
+                                    label: 'Name',
+                                    statePath: 'form.contact.name',
+                                    required: true,
+                                    error: () => errors().name
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    div: {
+                        className: 'form-row',
+                        children: [
+                            {
+                                TextInput: {
+                                    label: 'Email',
+                                    type: 'email',
+                                    statePath: 'form.contact.email',
+                                    required: true,
+                                    error: () => errors().email
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    div: {
+                        className: 'form-row',
+                        children: [
+                            {
+                                textarea: {
+                                    placeholder: 'Your message...',
+                                    value: () => formData().message,
+                                    className: () => errors().message ? 'error' : '',
+                                    onInput: (e) => {
+                                        setState('form.contact.message', e.target.value);
+                                        // Clear error on input
+                                        if (errors().message) {
+                                            const newErrors = { ...errors() };
+                                            delete newErrors.message;
+                                            setState('form.contact.errors', newErrors);
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                errors().submit ? {
+                    div: {
+                        className: 'form-error',
+                        text: () => errors().submit
+                    }
+                } : null,
+                {
+                    div: {
+                        className: 'form-actions',
+                        children: [
+                            {
+                                Button: {
+                                    type: 'submit',
+                                    text: () => isSubmitting() ? 'Sending...' : 'Send Message',
+                                    disabled: () => isSubmitting(),
+                                    variant: 'primary'
+                                }
+                            }
+                        ]
+                    }
+                }
+            ].filter(Boolean)
+        }
+    };
+};
+
+// Multi-step form component
+const MultiStepForm = (props, { getState, setState }) => {
+    const currentStep = () => getState('form.multiStep.currentStep', 1);
+    const totalSteps = props.steps.length;
+    
+    const nextStep = () => {
+        if (currentStep() < totalSteps) {
+            setState('form.multiStep.currentStep', currentStep() + 1);
+        }
+    };
+    
+    const prevStep = () => {
+        if (currentStep() > 1) {
+            setState('form.multiStep.currentStep', currentStep() - 1);
+        }
+    };
+    
+    const getCurrentStepComponent = () => {
+        const step = props.steps[currentStep() - 1];
+        return step ? step.component : null;
+    };
+    
+    return {
+        div: {
+            className: 'multi-step-form',
+            children: () => [
+                {
+                    div: {
+                        className: 'step-indicator',
+                        children: () => props.steps.map((step, index) => ({
+                            div: {
+                                className: () => {
+                                    const stepNumber = index + 1;
+                                    const classes = ['step'];
+                                    if (stepNumber === currentStep()) classes.push('active');
+                                    if (stepNumber < currentStep()) classes.push('completed');
+                                    return classes.join(' ');
+                                },
+                                children: [
+                                    {
+                                        span: {
+                                            className: 'step-number',
+                                            text: index + 1
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            className: 'step-title',
+                                            text: step.title
+                                        }
+                                    }
+                                ]
+                            }
+                        }))
+                    }
+                },
+                {
+                    div: {
+                        className: 'step-content',
+                        children: () => {
+                            const StepComponent = getCurrentStepComponent();
+                            return StepComponent ? [{ [StepComponent]: {} }] : [];
+                        }
+                    }
+                },
+                {
+                    div: {
+                        className: 'step-navigation',
+                        children: () => [
+                            {
+                                Button: {
+                                    text: 'Previous',
+                                    disabled: () => currentStep() <= 1,
+                                    onClick: prevStep,
+                                    variant: 'secondary'
+                                }
+                            },
+                            {
+                                Button: {
+                                    text: () => currentStep() === totalSteps ? 'Submit' : 'Next',
+                                    onClick: () => {
+                                        if (currentStep() === totalSteps) {
+                                            props.onSubmit();
+                                        } else {
+                                            nextStep();
+                                        }
+                                    },
+                                    variant: 'primary'
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    };
+};
+
+// Form field with dynamic validation
+const ValidatedField = (props, { getState, setState }) => {
+    const value = () => getState(props.statePath, '');
+    const error = () => getState(`${props.statePath}.error`, null);
+    const touched = () => getState(`${props.statePath}.touched`, false);
+    
+    const runValidation = async (val) => {
+        if (props.validators) {
+            for (const validator of props.validators) {
+                const result = await validator(val);
+                if (result) {
+                    setState(`${props.statePath}.error`, result);
+                    return result;
+                }
+            }
+        }
+        
+        setState(`${props.statePath}.error`, null);
+        return null;
+    };
+    
+    return {
+        div: {
+            className: 'validated-field',
+            children: () => [
+                {
+                    input: {
+                        type: props.type || 'text',
+                        value: () => value(),
+                        placeholder: props.placeholder,
+                        className: () => {
+                            const classes = ['form-input'];
+                            if (touched() && error()) classes.push('error');
+                            if (touched() && !error()) classes.push('valid');
+                            return classes.join(' ');
+                        },
+                        onInput: (e) => {
+                            setState(props.statePath, e.target.value);
+                            runValidation(e.target.value);
+                        },
+                        onBlur: () => {
+                            setState(`${props.statePath}.touched`, true);
+                            runValidation(value());
+                        }
+                    }
+                },
+                touched() && error() ? {
+                    div: {
+                        className: 'field-error',
+                        text: () => error()
+                    }
+                } : null
+            ].filter(Boolean)
+        }
+    };
+};</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Async validation:</strong> Handle server-side validation and debouncing</li>
+                        <li><strong>Form persistence:</strong> Save draft data during navigation</li>
+                        <li><strong>File uploads:</strong> Handle progress, validation, and error states</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="async-data">
+                <h2>🔄 Async Data Patterns</h2>
+                <p>Components that handle asynchronous operations, API calls, and data loading states.</p>
+
+                <h3>Data Loading Components</h3>
+                <pre><code class="language-javascript">// Async data loader with caching
+const DataLoader = (props, { getState, setState }) => {
+    const cacheKey = props.cacheKey || props.url;
+    const data = () => getState(`cache.${cacheKey}`, null);
+    const loading = () => getState(`loading.${cacheKey}`, false);
+    const error = () => getState(`errors.${cacheKey}`, null);
+    const lastFetch = () => getState(`lastFetch.${cacheKey}`, 0);
+    
+    const shouldRefetch = () => {
+        const maxAge = props.maxAge || 300000; // 5 minutes
+        return Date.now() - lastFetch() > maxAge;
+    };
+    
+    const fetchData = async () => {
+        if (loading()) return;
+        
+        setState(`loading.${cacheKey}`, true);
+        setState(`errors.${cacheKey}`, null);
+        
+        try {
+            const response = await fetch(props.url, props.options || {});
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            setState(`cache.${cacheKey}`, result);
+            setState(`lastFetch.${cacheKey}`, Date.now());
+            
+            if (props.onSuccess) {
+                props.onSuccess(result);
+            }
+        } catch (err) {
+            setState(`errors.${cacheKey}`, err.message);
+            
+            if (props.onError) {
+                props.onError(err);
+            }
+        } finally {
+            setState(`loading.${cacheKey}`, false);
+        }
+    };
+    
+    return {
+        div: {
+            className: 'data-loader',
+            onMount: () => {
+                if (!data() || shouldRefetch()) {
+                    fetchData();
+                }
+            },
+            children: () => {
+                if (loading() && !data()) {
+                    return [{
+                        div: {
+                            className: 'loading-state',
+                            children: [
+                                { Icon: { name: 'spinner' } },
+                                { span: { text: props.loadingText || 'Loading...' } }
+                            ]
+                        }
+                    }];
+                }
+                
+                if (error() && !data()) {
+                    return [{
+                        div: {
+                            className: 'error-state',
+                            children: [
+                                { p: { text: error() } },
+                                { Button: { 
+                                    text: 'Retry', 
+                                    onClick: fetchData 
+                                }}
+                            ]
+                        }
+                    }];
+                }
+                
+                if (data()) {
+                    return [{
+                        div: {
+                            className: 'data-content',
+                            children: [
+                                loading() ? {
+                                    div: {
+                                        className: 'refresh-indicator',
+                                        text: 'Refreshing...'
+                                    }
+                                } : null,
+                                { [props.component]: { data: data() } }
+                            ].filter(Boolean)
+                        }
+                    }];
+                }
+                
+                return [];
+            }
+        }
+    };
+};
+
+// Infinite scroll data loader
+const InfiniteLoader = (props, { getState, setState }) => {
+    const items = () => getState(props.dataPath, []);
+    const loading = () => getState('ui.infiniteLoading', false);
+    const hasMore = () => getState('ui.hasMore', true);
+    const page = () => getState('ui.currentPage', 1);
+    
+    const loadMore = async () => {
+        if (loading() || !hasMore()) return;
+        
+        setState('ui.infiniteLoading', true);
+        
+        try {
+            const response = await fetch(`${props.url}?page=${page()}&limit=${props.pageSize || 20}`);
+            const data = await response.json();
+            
+            const newItems = [...items(), ...data.items];
+            setState(props.dataPath, newItems);
+            setState('ui.currentPage', page() + 1);
+            setState('ui.hasMore', data.hasMore);
+            
+        } catch (error) {
+            setState('ui.error', 'Failed to load more items');
+        } finally {
+            setState('ui.infiniteLoading', false);
+        }
+    };
+    
+    return {
+        div: {
+            className: 'infinite-loader',
+            children: () => [
+                {
+                    div: {
+                        className: 'infinite-content',
+                        children: () => items().map(item => ({
+                            [props.itemComponent]: { item }
+                        }))
+                    }
+                },
+                hasMore() ? {
+                    div: {
+                        className: 'load-trigger',
+                        onIntersect: loadMore, // Custom intersection observer
+                        children: [{
+                            Button: {
+                                text: () => loading() ? 'Loading...' : 'Load More',
+                                disabled: () => loading(),
+                                onClick: loadMore
+                            }
+                        }]
+                    }
+                } : {
+                    div: {
+                        className: 'end-indicator',
+                        text: 'No more items to load'
+                    }
+                }
+            ]
+        }
+    };
+};
+
+// Real-time data component with WebSocket
+const RealTimeData = (props, context) => {
+  return {
+      render: () => ({
+          div: {
+              className: 'realtime-data',
+              children: () => [
+                  {
+                      div: {
+                          className: () => {
+                              const connected = context.getState('ws.connected', false);
+                              return `connection-status ${connected ? 'connected' : 'disconnected'}`;
+                          },
+                          children: () => {
+                              const connected = context.getState('ws.connected', false);
+                              const error = context.getState('ws.error', null);
+                              
+                              if (error) {
+                                  return [
+                                      { Icon: { name: 'alert-circle', className: 'status-icon' } },
+                                      { span: { text: `Connection Error: ${error}` } }
+                                  ];
+                              }
+                              
+                              return [
+                                  { Icon: { 
+                                      name: connected ? 'wifi' : 'wifi-off',
+                                      className: 'status-icon'
+                                  }},
+                                  { span: { 
+                                      text: connected ? 'Connected' : 'Disconnected',
+                                      className: 'status-text'
+                                  }}
+                              ];
+                          }
+                      }
+                  },
+                  {
+                      div: {
+                          className: 'data-content',
+                          children: () => {
+                              const data = context.getState(props.dataPath);
+                              
+                              if (!data) {
+                                  return [{ div: { 
+                                      className: 'no-data',
+                                      text: 'Waiting for data...' 
+                                  }}];
+                              }
+                              
+                              // Render data using provided component or default
+                              if (props.component) {
+                                  return [{ [props.component]: { data } }];
+                              }
+                              
+                              // Default data display
+                              return [{ 
+                                  pre: { 
+                                      text: JSON.stringify(data, null, 2),
+                                      className: 'data-display'
+                                  }
+                              }];
+                          }
+                      }
+                  }
+              ]
+          }
+      }),
+
+      onMount: (element, componentProps, componentContext) => {
+          let socket = null;
+          let reconnectTimeout = null;
+          let reconnectAttempts = 0;
+          
+          const maxReconnectAttempts = componentProps.maxReconnectAttempts || 5;
+          const reconnectDelay = componentProps.reconnectDelay || 3000;
+          const autoReconnect = componentProps.autoReconnect !== false;
+          
+          const connect = () => {
+              if (socket && socket.readyState === WebSocket.OPEN) {
+                  return; // Already connected
+              }
+              
+              console.log(`🔄 Connecting to WebSocket: ${componentProps.wsUrl}`);
+              componentContext.setState('ws.connecting', true);
+              
+              try {
+                  socket = new WebSocket(componentProps.wsUrl);
+                  
+                  socket.onopen = () => {
+                      console.log('✅ WebSocket connected');
+                      componentContext.setState('ws.connected', true);
+                      componentContext.setState('ws.connecting', false);
+                      componentContext.setState('ws.error', null);
+                      reconnectAttempts = 0; // Reset on successful connection
+                      
+                      // Call onConnect callback if provided
+                      if (componentProps.onConnect) {
+                          componentProps.onConnect(socket);
+                      }
+                  };
+                  
+                  socket.onmessage = (event) => {
+                      try {
+                          const data = JSON.parse(event.data);
+                          
+                          // Call custom message handler if provided
+                          if (componentProps.onMessage) {
+                              componentProps.onMessage(data, componentContext);
+                          } else {
+                              // Default: update the specified data path
+                              componentContext.setState(componentProps.dataPath, data);
+                          }
+                          
+                          // Update last received timestamp
+                          componentContext.setState('ws.lastReceived', Date.now());
+                          
+                      } catch (error) {
+                          console.error('❌ WebSocket message parse error:', error);
+                          componentContext.setState('ws.error', 'Invalid message format');
+                      }
+                  };
+                  
+                  socket.onerror = (error) => {
+                      console.error('❌ WebSocket error:', error);
+                      componentContext.setState('ws.error', 'Connection failed');
+                      componentContext.setState('ws.connecting', false);
+                      
+                      if (componentProps.onError) {
+                          componentProps.onError(error, componentContext);
+                      }
+                  };
+                  
+                  socket.onclose = (event) => {
+                      console.log(`🔌 WebSocket closed: ${event.code} ${event.reason}`);
+                      componentContext.setState('ws.connected', false);
+                      componentContext.setState('ws.connecting', false);
+                      
+                      socket = null;
+                      
+                      // Call onDisconnect callback if provided
+                      if (componentProps.onDisconnect) {
+                          componentProps.onDisconnect(event, componentContext);
+                      }
+                      
+                      // Auto-reconnect logic
+                      if (autoReconnect && reconnectAttempts < maxReconnectAttempts) {
+                          reconnectAttempts++;
+                          const delay = reconnectDelay * Math.pow(1.5, reconnectAttempts - 1); // Exponential backoff
+                          
+                          console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+                          componentContext.setState('ws.reconnecting', true);
+                          
+                          reconnectTimeout = setTimeout(() => {
+                              componentContext.setState('ws.reconnecting', false);
+                              connect();
+                          }, delay);
+                      } else if (reconnectAttempts >= maxReconnectAttempts) {
+                          console.error('❌ Max reconnection attempts reached');
+                          componentContext.setState('ws.error', 'Connection lost - max retries exceeded');
+                      }
+                  };
+                  
+              } catch (error) {
+                  console.error('❌ WebSocket connection error:', error);
+                  componentContext.setState('ws.error', error.message);
+                  componentContext.setState('ws.connecting', false);
+              }
+          };
+          
+          const disconnect = () => {
+              if (reconnectTimeout) {
+                  clearTimeout(reconnectTimeout);
+                  reconnectTimeout = null;
+              }
+              
+              if (socket) {
+                  socket.close(1000, 'Component unmounting');
+                  socket = null;
+              }
+              
+              // Clear all WebSocket state
+              componentContext.setState('ws.connected', false);
+              componentContext.setState('ws.connecting', false);
+              componentContext.setState('ws.reconnecting', false);
+              componentContext.setState('ws.error', null);
+          };
+          
+          // Initial connection
+          connect();
+          
+          // Expose methods to component API (optional)
+          if (componentProps.exposeAPI) {
+              element._wsAPI = {
+                  connect,
+                  disconnect,
+                  send: (data) => {
+                      if (socket && socket.readyState === WebSocket.OPEN) {
+                          socket.send(JSON.stringify(data));
+                          return true;
+                      }
+                      return false;
+                  },
+                  getStatus: () => ({
+                      connected: componentContext.getState('ws.connected', false),
+                      connecting: componentContext.getState('ws.connecting', false),
+                      reconnecting: componentContext.getState('ws.reconnecting', false),
+                      error: componentContext.getState('ws.error', null),
+                      attempts: reconnectAttempts
+                  })
+              };
+          }
+          
+          // Return cleanup function - this is called on component unmount
+          return () => {
+              console.log('🧹 Cleaning up WebSocket connection');
+              disconnect();
+          };
+      },
+
+      onError: (error, element, props, context) => {
+          console.error('❌ RealTimeData component error:', error);
+          context.setState('ws.error', `Component error: ${error.message}`);
+          
+          // Attempt to recover by reconnecting
+          if (props.recoverOnError !== false) {
+              setTimeout(() => {
+                  context.setState('ws.error', null);
+                  // Force remount by updating a dummy state
+                  context.setState('ws.forceReconnect', Date.now());
+              }, 2000);
+          }
+      }
+  };
+};
+
+const RealTimeDataSimple = (props, context) => {
+  return {
+      render: () => {
+          const [connected, setConnected] = context.useState('ws.connected', false);
+          const [error, setError] = context.useState('ws.error', null);
+          const [data, setData] = context.useState(props.dataPath, null);
+          
+          return {
+              div: {
+                  className: 'realtime-data-simple',
+                  children: () => [
+                      // Connection status
+                      {
+                          div: {
+                              className: `status ${connected() ? 'connected' : 'disconnected'}`,
+                              text: () => {
+                                  if (error()) return `Error: ${error()}`;
+                                  return connected() ? '🟢 Connected' : '🔴 Disconnected';
+                              }
+                          }
+                      },
+                      // Data display
+                      {
+                          div: {
+                              className: 'data',
+                              children: () => {
+                                  const currentData = data();
+                                  if (!currentData) {
+                                      return [{ div: { text: 'No data received yet...' } }];
+                                  }
+                                  
+                                  return props.renderData 
+                                      ? [props.renderData(currentData)]
+                                      : [{ pre: { text: JSON.stringify(currentData, null, 2) } }];
+                              }
+                          }
+                      }
+                  ]
+              }
+          };
+      },
+
+      onMount: (element, componentProps, componentContext) => {
+          const [, setConnected] = componentContext.useState('ws.connected', false);
+          const [, setError] = componentContext.useState('ws.error', null);
+          const [, setData] = componentContext.useState(componentProps.dataPath, null);
+          
+          const socket = new WebSocket(componentProps.wsUrl);
+          
+          socket.onopen = () => {
+              setConnected(true);
+              setError(null);
+          };
+          
+          socket.onmessage = (event) => {
+              try {
+                  const data = JSON.parse(event.data);
+                  setData(data);
+              } catch (err) {
+                  setError('Invalid data format');
+              }
+          };
+          
+          socket.onerror = () => {
+              setError('Connection failed');
+              setConnected(false);
+          };
+          
+          socket.onclose = () => {
+              setConnected(false);
+          };
+          
+          // Cleanup function
+          return () => {
+              socket.close();
+          };
+      }
+  };
+};
+
+// Usage examples:
+const examples = {
+    basic: {
+        RealTimeData: {
+            wsUrl: 'wss://api.example.com/live',
+            dataPath: 'liveData.prices',
+            component: 'PriceDisplay'
+        }
+    },
+    
+    advanced: {
+        RealTimeData: {
+            wsUrl: 'wss://api.example.com/live',
+            dataPath: 'liveData.messages',
+            maxReconnectAttempts: 10,
+            reconnectDelay: 2000,
+            autoReconnect: true,
+            exposeAPI: true,
+            onConnect: (socket) => {
+                socket.send(JSON.stringify({ action: 'subscribe', channel: 'notifications' }));
+            },
+            onMessage: (data, context) => {
+                // Custom message handling
+                if (data.type === 'notification') {
+                    context.setState('notifications', data.payload);
+                } else if (data.type === 'update') {
+                    context.setState('liveData.updates', data.payload);
+                }
+            },
+            onError: (error, context) => {
+                context.setState('ui.toast', {
+                    type: 'error',
+                    message: 'Real-time connection lost'
+                });
+            }
+        }
+    },
+    
+    simple: {
+        RealTimeDataSimple: {
+            wsUrl: 'wss://api.example.com/simple',
+            dataPath: 'simpleData',
+            renderData: (data) => ({
+                div: {
+                    className: 'custom-data-display',
+                    text: `Latest: ${data.value} at ${new Date(data.timestamp).toLocaleTimeString()}`
+                }
+            })
+        }
+    }
+};
+
+</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Network failures:</strong> Implement retry logic with exponential backoff</li>
+                        <li><strong>Race conditions:</strong> Cancel previous requests when new ones are made</li>
+                        <li><strong>Memory leaks:</strong> Clean up subscriptions and intervals on unmount</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="parent-child">
+                <h2>👨‍👧‍👦 Parent-Child Communication</h2>
+                <p>Patterns for data flow and communication between parent and child components.</p>
+
+                <h3>Props and Callbacks</h3>
+                <pre><code class="language-javascript">// Parent component managing child state
+const TodoApp = (props, { getState, setState }) => {
+    const todos = () => getState('todos', []);
+    
+    const addTodo = (text) => {
+        const newTodo = {
+            id: Date.now(),
+            text: text.trim(),
+            completed: false,
+            createdAt: new Date()
+        };
+        
+        setState('todos', [...todos(), newTodo]);
+    };
+    
+    const updateTodo = (id, updates) => {
+        const updated = todos().map(todo => 
+            todo.id === id ? { ...todo, ...updates } : todo
+        );
+        setState('todos', updated);
+    };
+    
+    const deleteTodo = (id) => {
+        const filtered = todos().filter(todo => todo.id !== id);
+        setState('todos', filtered);
+    };
+    
+    return {
+        div: {
+            className: 'todo-app',
+            children: () => [
+                {
+                    TodoForm: {
+                        onSubmit: addTodo,
+                        placeholder: 'Add a new todo...'
+                    }
+                },
+                {
+                    TodoList: {
+                        items: todos(),
+                        onUpdate: updateTodo,
+                        onDelete: deleteTodo
+                    }
+                },
+                {
+                    TodoStats: {
+                        total: todos().length,
+                        completed: todos().filter(t => t.completed).length
+                    }
+                }
+            ]
+        }
+    };
+};
+
+// Child component receiving props and callbacks
+const TodoItem = (props) => ({
+    div: {
+        className: () => `todo-item ${props.item.completed ? 'completed' : ''}`,
+        children: () => [
+            {
+                Checkbox: {
+                    checked: props.item.completed,
+                    onChange: (checked) => {
+                        props.onUpdate(props.item.id, { completed: checked });
+                    }
+                }
+            },
+            {
+                span: {
+                    className: 'todo-text',
+                    text: props.item.text,
+                    onDoubleClick: () => {
+                        // Enable inline editing
+                        props.onEdit(props.item.id);
+                    }
+                }
+            },
+            {
+                Button: {
+                    text: 'Delete',
+                    variant: 'danger',
+                    size: 'small',
+                    onClick: () => {
+                        if (confirm('Delete this todo?')) {
+                            props.onDelete(props.item.id);
+                        }
+                    }
+                }
+            }
+        ]
+    }
+});
+
+// Provider pattern for deep prop passing
+const ThemeProvider = (props, { getState, setState }) => {
+    const theme = () => getState('ui.theme', 'light');
+    
+    const toggleTheme = () => {
+        const newTheme = theme() === 'light' ? 'dark' : 'light';
+        setState('ui.theme', newTheme);
+    };
+    
+    const themeContext = {
+        theme: theme(),
+        toggleTheme,
+        colors: {
+            light: { bg: '#ffffff', text: '#000000' },
+            dark: { bg: '#1a1a1a', text: '#ffffff' }
+        }
+    };
+    
+    return {
+        div: {
+            className: () => `theme-provider theme-${theme()}`,
+            style: () => ({
+                backgroundColor: themeContext.colors[theme()].bg,
+                color: themeContext.colors[theme()].text
+            }),
+            children: () => props.children.map(child => ({
+                ...child,
+                themeContext
+            }))
+        }
+    };
+};</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Prop drilling:</strong> Use context or state management for deep hierarchies</li>
+                        <li><strong>Callback stability:</strong> Ensure callbacks don't cause unnecessary re-renders</li>
+                        <li><strong>Data synchronization:</strong> Handle conflicts when multiple children update shared state</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="higher-order">
+                <h2>🎭 Higher-Order Components</h2>
+                <p>Patterns for component composition and cross-cutting concerns.</p>
+
+                <h3>HOC Patterns</h3>
+                <pre><code class="language-javascript">// Authentication HOC
+  const withAuth = (WrappedComponent) => {
+    return (props, context) => {
+        const { getState, navigate } = context;
+        const isAuthenticated = () => getState('auth.isAuthenticated', false);
+        
+        return {
+            div: {
+                children: () => {
+                    if (!isAuthenticated()) {
+                        return [{
+                            div: {
+                                className: 'auth-required',
+                                text: 'Please log in to access this content'
+                            }
+                        }];
+                    }
+                    
+                    // Render wrapped component by returning its definition
+                    return [WrappedComponent(props, context)];
+                }
+            }
+        };
+    };
+};
+
+// Loading HOC
+const withLoading = (WrappedComponent, loadingConfig = {}) => {
+    return (props, context) => {
+        const { getState } = context;
+        const isLoading = () => getState(loadingConfig.statePath || 'ui.loading', false);
+        
+        return {
+            div: {
+                className: 'loading-wrapper',
+                children: () => {
+                    if (isLoading()) {
+                        return [{
+                            div: {
+                                className: 'loading-overlay',
+                                children: [
+                                    { Icon: { name: 'spinner' } },
+                                    { p: { text: loadingConfig.message || 'Loading...' } }
+                                ]
+                            }
+                        }];
+                    }
+                    
+                    return [{ [WrappedComponent]: props }];
+                }
+            }
+        };
+    };
+};
+
+// Error boundary HOC
+const withErrorBoundary = (WrappedComponent, errorConfig = {}) => {
+    return (props, context) => {
+        const { getState, setState } = context;
+        const error = () => getState(`errors.${errorConfig.key || 'component'}`, null);
+        
+        const clearError = () => {
+            setState(`errors.${errorConfig.key || 'component'}`, null);
+        };
+        
+        return {
+            div: {
+                className: 'error-boundary',
+                children: () => {
+                    if (error()) {
+                        return [{
+                            div: {
+                                className: 'error-fallback',
+                                children: [
+                                    { h3: { text: 'Something went wrong' } },
+                                    { p: { text: error() } },
+                                    { Button: { 
+                                        text: 'Try Again', 
+                                        onClick: clearError 
+                                    }}
+                                ]
+                            }
+                        }];
+                    }
+                    
+                    try {
+                        return [{ [WrappedComponent]: props }];
+                    } catch (err) {
+                        setState(`errors.${errorConfig.key || 'component'}`, err.message);
+                        return [];
+                    }
+                }
+            }
+        };
+    };
+};
+
+// Data fetching HOC
+const withData = (WrappedComponent, dataConfig) => {
+    return (props, context) => {
+        const { getState, setState } = context;
+        const cacheKey = dataConfig.cacheKey || dataConfig.url;
+        
+        const data = () => getState(`cache.${cacheKey}`, null);
+        const loading = () => getState(`loading.${cacheKey}`, false);
+        const error = () => getState(`errors.${cacheKey}`, null);
+        
+        const fetchData = async () => {
+            setState(`loading.${cacheKey}`, true);
+            setState(`errors.${cacheKey}`, null);
+            
+            try {
+                const url = typeof dataConfig.url === 'function' 
+                    ? dataConfig.url(props) 
+                    : dataConfig.url;
+                    
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                setState(`cache.${cacheKey}`, result);
+            } catch (err) {
+                setState(`errors.${cacheKey}`, err.message);
+            } finally {
+                setState(`loading.${cacheKey}`, false);
+            }
+        };
+        
+        return {
+            div: {
+                onMount: () => {
+                    if (!data() && !loading()) {
+                        fetchData();
+                    }
+                },
+                children: () => [{
+                    [WrappedComponent]: {
+                        ...props,
+                        data: data(),
+                        loading: loading(),
+                        error: error(),
+                        refetch: fetchData
+                    }
+                }]
+            }
+        };
+    };
+};
+
+// Usage examples
+const ProtectedUserProfile = withAuth(withLoading(withData(UserProfile, {
+    url: (props) => `/api/users/${props.userId}`,
+    cacheKey: 'currentUser'
+})));
+
+const SafeDashboard = withErrorBoundary(withAuth(Dashboard), {
+    key: 'dashboard'
+});</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>HOC composition order:</strong> Order matters for data flow and functionality</li>
+                        <li><strong>Props collision:</strong> Ensure HOCs don't override important props</li>
+                        <li><strong>Performance impact:</strong> Consider HOC wrapping depth and re-render frequency</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="render-props">
+                <h2>🎨 Render Props Pattern</h2>
+                <p>Flexible component patterns that provide data or functionality through render functions.</p>
+
+                <h3>Render Props Implementation</h3>
+                <pre><code class="language-javascript">// Data provider with render prop
+const DataProvider = (props, context) => {
+    const { getState, setState } = context;
+    const data = () => getState(props.dataPath, null);
+    const loading = () => getState(`${props.dataPath}.loading`, false);
+    const error = () => getState(`${props.dataPath}.error`, null);
+    
+    const actions = {
+        refetch: async () => {
+            setState(`${props.dataPath}.loading`, true);
+            try {
+                const response = await fetch(props.url);
+                const result = await response.json();
+                setState(props.dataPath, result);
+                setState(`${props.dataPath}.error`, null);
+            } catch (err) {
+                setState(`${props.dataPath}.error`, err.message);
+            } finally {
+                setState(`${props.dataPath}.loading`, false);
+            }
+        },
+        
+        update: (newData) => {
+            setState(props.dataPath, newData);
+        },
+        
+        reset: () => {
+            setState(props.dataPath, null);
+            setState(`${props.dataPath}.error`, null);
+        }
+    };
+    
+    return {
+        div: {
+            children: () => props.render({
+                data: data(),
+                loading: loading(),
+                error: error(),
+                actions
+            })
+        }
+    };
+};
+
+// Mouse tracker render prop
+const MouseTracker = (props) => {
+    let mousePosition = { x: 0, y: 0 };
+    
+    const updatePosition = (e) => {
+        mousePosition = { x: e.clientX, y: e.clientY };
+        // Trigger re-render somehow - in real implementation
+        // this would use setState or similar
+    };
+    
+    return {
+        div: {
+            onMouseMove: updatePosition,
+            style: {
+                height: '100%',
+                width: '100%'
+            },
+            children: () => props.render(mousePosition)
+        }
+    };
+};
+
+// Form state management render prop
+const FormProvider = (props, { getState, setState }) => {
+    const formPath = props.formPath || 'form';
+    const formData = () => getState(formPath, props.initialValues || {});
+    const errors = () => getState(`${formPath}.errors`, {});
+    const touched = () => getState(`${formPath}.touched`, {});
+    
+    const formActions = {
+        setValue: (field, value) => {
+            setState(`${formPath}.${field}`, value);
+        },
+        
+        setError: (field, error) => {
+            const currentErrors = errors();
+            setState(`${formPath}.errors`, { ...currentErrors, [field]: error });
+        },
+        
+        setTouched: (field, isTouched = true) => {
+            const currentTouched = touched();
+            setState(`${formPath}.touched`, { ...currentTouched, [field]: isTouched });
+        },
+        
+        reset: () => {
+            setState(formPath, props.initialValues || {});
+            setState(`${formPath}.errors`, {});
+            setState(`${formPath}.touched`, {});
+        },
+        
+        validate: () => {
+            if (!props.validationSchema) return true;
+            
+            const data = formData();
+            const newErrors = {};
+            
+            Object.keys(props.validationSchema).forEach(field => {
+                const validator = props.validationSchema[field];
+                const error = validator(data[field], data);
+                if (error) newErrors[field] = error;
+            });
+            
+            setState(`${formPath}.errors`, newErrors);
+            return Object.keys(newErrors).length === 0;
+        },
+        
+        submit: async (onSubmit) => {
+            if (formActions.validate()) {
+                try {
+                    await onSubmit(formData());
+                } catch (error) {
+                    setState(`${formPath}.submitError`, error.message);
+                }
+            }
+        }
+    };
+    
+    return {
+        div: {
+            children: () => props.render({
+                values: formData(),
+                errors: errors(),
+                touched: touched(),
+                actions: formActions
+            })
+        }
+    };
+};
+
+// Usage examples
+const UserDataDisplay = () => ({
+    DataProvider: {
+        url: '/api/user',
+        dataPath: 'userData',
+        render: ({ data, loading, error, actions }) => {
+            if (loading) return [{ div: { text: 'Loading user...' } }];
+            if (error) return [{ div: { text: `Error: ${error}` } }];
+            if (!data) return [{ div: { text: 'No user data' } }];
+            
+            return [
+                { h2: { text: data.name } },
+                { p: { text: data.email } },
+                { Button: { 
+                    text: 'Refresh', 
+                    onClick: actions.refetch 
+                }}
+            ];
+        }
+    }
+});
+
+const ContactForm = () => ({
+    FormProvider: {
+        formPath: 'contactForm',
+        initialValues: { name: '', email: '', message: '' },
+        validationSchema: {
+            name: (value) => !value ? 'Name is required' : null,
+            email: (value) => !value || !value.includes('@') ? 'Valid email required' : null,
+            message: (value) => !value || value.length < 10 ? 'Message must be at least 10 characters' : null
+        },
+        render: ({ values, errors, touched, actions }) => [
+            {
+                TextInput: {
+                    value: values.name || '',
+                    error: touched.name && errors.name,
+                    onChange: (value) => actions.setValue('name', value),
+                    onBlur: () => actions.setTouched('name')
+                }
+            },
+            {
+                TextInput: {
+                    type: 'email',
+                    value: values.email || '',
+                    error: touched.email && errors.email,
+                    onChange: (value) => actions.setValue('email', value),
+                    onBlur: () => actions.setTouched('email')
+                }
+            },
+            {
+                Button: {
+                    text: 'Submit',
+                    onClick: () => actions.submit(async (data) => {
+                        await fetch('/api/contact', {
+                            method: 'POST',
+                            body: JSON.stringify(data)
+                        });
+                    })
+                }
+            }
+        ]
+    }
+});</code></pre>
+
+                <div class="edge-cases">
+                    <h5>⚠️ Edge Cases to Handle</h5>
+                    <ul>
+                        <li><strong>Render function stability:</strong> Ensure render functions don't cause infinite loops</li>
+                        <li><strong>Performance considerations:</strong> Optimize render prop components for frequent updates</li>
+                        <li><strong>Type safety:</strong> Document expected render prop parameters clearly</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="pattern-selection">
+                <h2>🎯 Pattern Selection Guide</h2>
+                <p>Choose the right component pattern based on your specific use case and requirements.</p>
+
+                <div class="pattern-grid">
+                    <div class="pattern-card">
+                        <h4>📊 Simple Display</h4>
+                        <p>Use for static content, labels, badges, and basic information display</p>
+                        <span class="badge complexity-low">Low Complexity</span>
+                        <div class="use-cases">
+                            <h5>Best For</h5>
+                            <ul>
+                                <li>Headers and text content</li>
+                                <li>Status indicators</li>
+                                <li>Image and media display</li>
+                                <li>Icons and visual elements</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-card">
+                        <h4>🎛️ Interactive Basic</h4>
+                        <p>Perfect for buttons, inputs, and simple user interactions</p>
+                        <span class="badge complexity-low">Low Complexity</span>
+                        <div class="use-cases">
+                            <h5>Best For</h5>
+                            <ul>
+                                <li>Form controls</li>
+                                <li>Action buttons</li>
+                                <li>Toggle switches</li>
+                                <li>Basic user input</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-card">
+                        <h4>📋 List & Data</h4>
+                        <p>Ideal for displaying collections, tables, and data-driven content</p>
+                        <span class="badge complexity-medium">Medium Complexity</span>
+                        <div class="use-cases">
+                            <h5>Best For</h5>
+                            <ul>
+                                <li>Data tables</li>
+                                <li>Product catalogs</li>
+                                <li>Search results</li>
+                                <li>Infinite scroll lists</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-card">
+                        <h4>📝 Forms</h4>
+                        <p>Complex form handling with validation, submission, and error management</p>
+                        <span class="badge complexity-high">High Complexity</span>
+                        <div class="use-cases">
+                            <h5>Best For</h5>
+                            <ul>
+                                <li>User registration</li>
+                                <li>Data entry forms</li>
+                                <li>Multi-step wizards</li>
+                                <li>Settings panels</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-card">
+                        <h4>🔄 Async Data</h4>
+                        <p>Components that handle API calls, loading states, and real-time data</p>
+                        <span class="badge complexity-high">High Complexity</span>
+                        <div class="use-cases">
+                            <h5>Best For</h5>
+                            <ul>
+                                <li>API integration</li>
+                                <li>Real-time dashboards</li>
+                                <li>Live notifications</li>
+                                <li>Data synchronization</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-card">
+                        <h4>🏗️ Composition</h4>
+                        <p>Advanced patterns for reusable logic and component composition</p>
+                        <span class="badge complexity-high">High Complexity</span>
+                        <div class="use-cases">
+                            <h5>Best For</h5>
+                            <ul>
+                                <li>Cross-cutting concerns</li>
+                                <li>Reusable behaviors</li>
+                                <li>Complex layouts</li>
+                                <li>Plugin architectures</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Decision Matrix</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Requirement</th>
+                            <th>Recommended Pattern</th>
+                            <th>Alternative Options</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Display user information</td>
+                            <td>Simple Display</td>
+                            <td>Conditional Rendering</td>
+                        </tr>
+                        <tr>
+                            <td>Handle form submission</td>
+                            <td>Form Handling</td>
+                            <td>Interactive Basic + Validation</td>
+                        </tr>
+                        <tr>
+                            <td>Show list of products</td>
+                            <td>List Rendering</td>
+                            <td>Async Data + List</td>
+                        </tr>
+                        <tr>
+                            <td>Reusable authentication</td>
+                            <td>Higher-Order Components</td>
+                            <td>Render Props</td>
+                        </tr>
+                        <tr>
+                            <td>Real-time notifications</td>
+                            <td>Async Data</td>
+                            <td>WebSocket + Conditional</td>
+                        </tr>
+                        <tr>
+                            <td>Complex modal dialog</td>
+                            <td>Portal + Composition</td>
+                            <td>Conditional + Interactive</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="best-practices">
+                <h2>✨ Best Practices</h2>
+                <p>Guidelines for writing maintainable, performant, and reusable Juris components.</p>
+
+                <h3>Component Design Principles</h3>
+                <ul>
+                    <li><strong>Single Responsibility:</strong> Each component should have one clear purpose</li>
+                    <li><strong>Pure Functions:</strong> Same props should always produce the same output</li>
+                    <li><strong>Minimal Props:</strong> Keep component interfaces simple and focused</li>
+                    <li><strong>Composition over Inheritance:</strong> Build complex UIs by composing simple components</li>
+                </ul>
+
+                <h3>Performance Guidelines</h3>
+                <ul>
+                    <li><strong>Optimize Reactive Functions:</strong> Avoid expensive calculations in reactive functions</li>
+                    <li><strong>Use Keys for Lists:</strong> Provide stable keys for list items to optimize updates</li>
+                    <li><strong>Minimize State Subscriptions:</strong> Only subscribe to the state you actually need</li>
+                    <li><strong>Lazy Load Components:</strong> Load heavy components only when needed</li>
+                </ul>
+
+                <h3>Code Organization</h3>
+                <ul>
+                    <li><strong>Group Related Components:</strong> Organize components by feature or domain</li>
+                    <li><strong>Extract Common Logic:</strong> Use HOCs or render props for shared functionality</li>
+                    <li><strong>Document Props:</strong> Clearly document expected props and their types</li>
+                    <li><strong>Handle Edge Cases:</strong> Always consider null, undefined, and error states</li>
+                </ul>
+
+                <h3>Testing Strategies</h3>
+                <ul>
+                    <li><strong>Test Component Logic:</strong> Focus on testing component behavior, not implementation</li>
+                    <li><strong>Mock External Dependencies:</strong> Isolate components from external services</li>
+                    <li><strong>Test User Interactions:</strong> Verify that user actions produce expected results</li>
+                    <li><strong>Test Error Conditions:</strong> Ensure components handle errors gracefully</li>
+                </ul>
+            </section>
+
+            <section id="anti-patterns">
+                <h2>⚠️ Anti-Patterns to Avoid</h2>
+                <p>Common mistakes and patterns that should be avoided in Juris component development.</p>
+
+                <h3>State Anti-Patterns</h3>
+                <pre><code class="language-javascript">// ❌ DON'T: Mutate state directly
+const BadComponent = (props, { getState, setState }) => {
+    const data = getState('data', []);
+    data.push(newItem); // Direct mutation!
+    setState('data', data);
+};
+
+// ✅ DO: Create new state objects
+const GoodComponent = (props, { getState, setState }) => {
+    const data = getState('data', []);
+    setState('data', [...data, newItem]); // Immutable update
+};</code></pre>
+
+                <h3>Performance Anti-Patterns</h3>
+                <pre><code class="language-javascript">// ❌ DON'T: Expensive operations in reactive functions
+const BadComponent = (props, { getState }) => ({
+    div: {
+        text: () => {
+            const items = getState('items', []);
+            // Expensive calculation on every render!
+            return items.reduce((sum, item) => sum + complexCalculation(item), 0);
+        }
+    }
+});
+
+// ✅ DO: Use computed state or memoization
+const GoodComponent = (props, { getState }) => ({
+    div: {
+        text: () => getState('computedTotal', 0) // Pre-calculated value
+    }
+});</code></pre>
+
+                <h3>Common Mistakes</h3>
+                <ul>
+                    <li><strong>Over-engineering:</strong> Don't use complex patterns for simple use cases</li>
+                    <li><strong>Props drilling:</strong> Avoid passing props through many component layers</li>
+                    <li><strong>Mixed concerns:</strong> Don't mix UI logic with business logic in components</li>
+                    <li><strong>Missing error handling:</strong> Always handle potential error states</li>
+                    <li><strong>Ignoring accessibility:</strong> Include proper ARIA labels and keyboard navigation</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+    <script src="juris.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script>
+        const app = new Juris();
+        document.addEventListener("DOMContentLoaded", ()=>{
+          // Mobile menu toggle
+          const menuToggle = document.getElementById('menu-toggle');
+          const navLinks = document.getElementById('nav-links');
+          const sidebar = document.getElementById('sidebar');
+          const overlay = document.getElementById('overlay');
+
+          menuToggle.addEventListener('click', (e) => {
+              e.stopPropagation();
+              navLinks.classList.toggle('open');
+          });
+
+          // Sidebar toggle for mobile
+          const sidebarToggle = () => {
+              sidebar.classList.toggle('open');
+              overlay.classList.toggle('open');
+          };
+
+          // Close menus when clicking outside
+          document.addEventListener('click', (e) => {
+              if (!navLinks.contains(e.target) && !menuToggle.contains(e.target)) {
+                  navLinks.classList.remove('open');
+              }
+              
+              if (window.innerWidth <= 768 && 
+                  !sidebar.contains(e.target) && 
+                  sidebar.classList.contains('open')) {
+                  sidebar.classList.remove('open');
+                  overlay.classList.remove('open');
+              }
+          });
+
+          // Overlay click to close sidebar
+          overlay.addEventListener('click', () => {
+              sidebar.classList.remove('open');
+              overlay.classList.remove('open');
+          });
+
+          // Collapsible sidebar sections
+          document.querySelectorAll('.sidebar-title').forEach(title => {
+              title.addEventListener('click', () => {
+                  const section = title.getAttribute('data-section');
+                  const nav = document.getElementById(section);
+                  
+                  if (nav) {
+                      title.classList.toggle('collapsed');
+                      nav.classList.toggle('collapsed');
+                  }
+              });
+          });
+
+          // Active link highlighting
+          const navLinksA = document.querySelectorAll('.sidebar-nav a');
+          const sections = document.querySelectorAll('section[id]');
+
+          function updateActiveLink() {
+              let current = '';
+              sections.forEach(section => {
+                  const sectionTop = section.offsetTop - 100;
+                  if (window.pageYOffset >= sectionTop) {
+                      current = section.getAttribute('id');
+                  }
+              });
+
+              navLinksA.forEach(link => {
+                  link.classList.remove('active');
+                  if (link.getAttribute('href') === `#${current}`) {
+                      link.classList.add('active');
+                  }
+              });
+          }
+
+          // Update active link on scroll
+          window.addEventListener('scroll', updateActiveLink);
+          updateActiveLink();
+
+          // Smooth scrolling for navigation links
+          navLinksA.forEach(link => {
+              link.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  const targetId = link.getAttribute('href').substring(1);
+                  const targetElement = document.getElementById(targetId);
+                  
+                  if (targetElement) {
+                      const headerHeight = 80;
+                      const targetPosition = targetElement.offsetTop - headerHeight;
+                      
+                      window.scrollTo({
+                          top: targetPosition,
+                          behavior: 'smooth'
+                      });
+
+                      // Close mobile sidebar if open
+                      if (window.innerWidth <= 768) {
+                          sidebar.classList.remove('open');
+                          overlay.classList.remove('open');
+                      }
+                  }
+              });
+          });
+
+          // Add click handler to menu toggle for sidebar on mobile
+          if (window.innerWidth <= 768) {
+              menuToggle.addEventListener('click', sidebarToggle);
+          }
+
+          // Handle window resize
+          window.addEventListener('resize', () => {
+              if (window.innerWidth > 768) {
+                  navLinks.classList.remove('open');
+                  sidebar.classList.remove('open');
+                  overlay.classList.remove('open');
+              }
+          });
+        })
+
+        // Syntax highlighting using enhance() API + Highlight.js - The JurisJS way!
+        app.enhance('pre code', (props, { getState }) => {
+            // Apply highlight.js to this code block
+            if (!props.element.classList.contains('hljs')) {
+                hljs.highlightElement(props.element);
+            }
+            
+            return {};
+        });
+
+        console.log('📚 Juris Component Patterns Documentation loaded!');
+        console.log('🧩 Ready to explore component patterns and best practices');
+    </script>
+</body>
+</html>

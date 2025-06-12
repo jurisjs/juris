@@ -1,0 +1,4098 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Dashboard - Advanced Admin Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --orange: #ff6b35;
+            --orange-light: #ff8c5a;
+            --orange-dark: #e55a2b;
+            --orange-pale: #fff4f1;
+            --white: #ffffff;
+            --gray-50: #fafafa;
+            --gray-100: #f5f5f5;
+            --gray-200: #e5e5e5;
+            --gray-300: #d4d4d4;
+            --gray-400: #a3a3a3;
+            --gray-500: #6b7280;
+            --gray-600: #525252;
+            --gray-700: #404040;
+            --gray-800: #262626;
+            --gray-900: #171717;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--gray-900);
+            background: var(--gray-50);
+            font-size: 14px;
+        }
+
+        /* Layout */
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            grid-template-rows: 64px 1fr;
+            grid-template-areas:
+                "sidebar header"
+                "sidebar main";
+            min-height: 100vh;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-layout {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "header"
+                    "main";
+            }
+        }
+
+        /* Header */
+        .header {
+            grid-area: header;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--gray-600);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s;
+        }
+
+        .mobile-menu-btn:hover {
+            background: var(--gray-100);
+        }
+
+        @media (max-width: 1024px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .notification-btn {
+            position: relative;
+            background: none;
+            border: none;
+            color: var(--gray-600);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .notification-btn:hover {
+            background: var(--gray-100);
+            color: var(--orange);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .user-menu:hover {
+            background: var(--gray-100);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--orange);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        @media (max-width: 640px) {
+            .user-info {
+                display: none;
+            }
+        }
+
+        .user-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--white);
+            border-right: 1px solid var(--gray-200);
+            padding: 1rem 0;
+            overflow-y: auto;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                top: 64px;
+                height: calc(100vh - 64px);
+                z-index: 50;
+                transition: left 0.3s ease;
+                box-shadow: var(--shadow-lg);
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+        }
+
+        .sidebar-header {
+            padding: 0 1.5rem 1rem;
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--orange);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 1rem;
+        }
+
+        .nav-section {
+            padding: 0 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            padding: 0 0.5rem;
+        }
+
+        .nav-list {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 0.5rem;
+            color: var(--gray-700);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background: var(--gray-100);
+            color: var(--orange);
+        }
+
+        .nav-link.active {
+            background: var(--orange-pale);
+            color: var(--orange);
+            border: 1px solid var(--orange-light);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--orange);
+            color: var(--white);
+            font-size: 0.75rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 1rem;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            grid-area: main;
+            padding: 2rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 64px);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 0.75rem;
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--orange-light);
+        }
+
+        .card-header {
+            padding: 1.5rem 1.5rem 0;
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        .card-content {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        .card-full {
+            padding: 1.5rem;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-600);
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: var(--white);
+        }
+
+        .stat-icon.primary {
+            background: var(--orange);
+        }
+
+        .stat-icon.success {
+            background: var(--success);
+        }
+
+        .stat-icon.warning {
+            background: var(--warning);
+        }
+
+        .stat-icon.info {
+            background: var(--info);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-change {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .stat-change.positive {
+            color: var(--success);
+        }
+
+        .stat-change.negative {
+            color: var(--danger);
+        }
+
+        .stat-change.neutral {
+            color: var(--gray-500);
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 0.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--white);
+        }
+
+        .table th {
+            background: var(--gray-50);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray-700);
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.875rem;
+        }
+
+        .table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-100);
+            font-size: 0.875rem;
+        }
+
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table tr:hover {
+            background: var(--gray-50);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--orange);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--orange-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .badge-info {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--info);
+        }
+
+        .badge-primary {
+            background: var(--orange-pale);
+            color: var(--orange);
+        }
+
+        /* Charts */
+        .chart-container {
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-50);
+            border-radius: 0.5rem;
+            border: 1px dashed var(--gray-300);
+            color: var(--gray-500);
+            font-size: 0.875rem;
+        }
+
+        /* Activity Feed */
+        .activity-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--orange);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-text {
+            font-size: 0.875rem;
+            color: var(--gray-700);
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            font-size: 0.875rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        /* Utilities */
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .text-xs {
+            font-size: 0.75rem;
+        }
+
+        .font-semibold {
+            font-weight: 600;
+        }
+
+        .font-bold {
+            font-weight: 700;
+        }
+
+        .mb-2 {
+            margin-bottom: 0.5rem;
+        }
+
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+
+        .mb-6 {
+            margin-bottom: 1.5rem;
+        }
+
+        .mt-4 {
+            margin-top: 1rem;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        .gap-4 {
+            gap: 1rem;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 640px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .table-container {
+                font-size: 0.75rem;
+            }
+
+            .table th,
+            .table td {
+                padding: 0.5rem;
+            }
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--gray-200) 25%, var(--gray-100) 50%, var(--gray-200) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Dark mode support (future enhancement) */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --white: #1f2937;
+                --gray-50: #111827;
+                --gray-100: #1f2937;
+                --gray-200: #374151;
+                --gray-300: #4b5563;
+                --gray-900: #f9fafb;
+                --gray-800: #e5e7eb;
+                --gray-700: #d1d5db;
+                --gray-600: #9ca3af;
+                --gray-500: #6b7280;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"></div>
+
+    <!-- Juris Framework -->
+    <script src="juris.js"></script>
+
+    <script>
+
+        const StatePersistenceManager = (props, context) => {
+            const { getState, setState, subscribe } = context;
+
+            // Enhanced configuration with timing controls
+            const config = {
+                domains: props.domains || [],
+                excludeDomains: props.excludeDomains || ['temp', 'cache', 'session', 'geolocation', 'persistence'],
+                keyPrefix: props.keyPrefix || 'app_state_',
+                debounceMs: props.debounceMs || 1000,
+                debug: props.debug || false,
+                autoDetectNewDomains: props.autoDetectNewDomains || true,
+                watchIntervalMs: props.watchIntervalMs || 5000,
+
+                // Timing controls for layout shift prevention
+                aggressiveRestore: props.aggressiveRestore !== false, // Default: true
+                restoreDelay: props.restoreDelay || 0,
+                priorityDomains: props.priorityDomains || [], // Restore these first
+                earlyRestoreTimeout: props.earlyRestoreTimeout || 50,
+
+                // Granular domain timing
+                domainRestoreConfig: props.domainRestoreConfig || {},
+
+                // Save timing controls
+                immediateSave: props.immediateSave || [], // Save changes immediately
+                criticalSave: props.criticalSave || [], // Save with shorter debounce
+                criticalDebounceMs: props.criticalDebounceMs || 200,
+
+                // User-specific domains (requires authentication)
+                userSpecificDomains: props.userSpecificDomains || [],
+                userIdPath: props.userIdPath || 'auth.user.id', // Path to user ID in state
+                requireAuth: props.requireAuth || false // Whether user-specific domains require auth
+            };
+
+            // Internal state
+            let saveTimers = new Map();
+            let isRestoring = false;
+            let domainSubscriptions = new Map();
+            let domainWatcher = null;
+            let restoreQueue = [];
+            let isProcessingRestoreQueue = false;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('💾 StatePersistenceManager initializing with timing controls...');
+
+                        // Initialize persistence state - DIRECT INJECTION
+                        if (context.juris && context.juris.stateManager && context.juris.stateManager.state) {
+                            context.juris.stateManager.state.persistence = {
+                                isEnabled: true,
+                                lastSave: null,
+                                lastRestore: null,
+                                errors: [],
+                                stats: {
+                                    domainsTracked: 0,
+                                    totalSaves: 0,
+                                    totalRestores: 0,
+                                    priorityRestores: 0,
+                                    delayedRestores: 0
+                                }
+                            };
+                        } else {
+                            // Fallback if direct access not available
+                            setState('persistence.isEnabled', true);
+                            setState('persistence.lastSave', null);
+                            setState('persistence.lastRestore', null);
+                            setState('persistence.errors', []);
+                            setState('persistence.stats', {
+                                domainsTracked: 0,
+                                totalSaves: 0,
+                                totalRestores: 0,
+                                priorityRestores: 0,
+                                delayedRestores: 0
+                            });
+                        }
+
+                        // Restore state with timing controls
+                        if (config.aggressiveRestore) {
+                            restoreAllDomainsWithTiming();
+                        } else {
+                            setTimeout(() => restoreAllDomainsWithTiming(), config.restoreDelay);
+                        }
+
+                        // Setup monitoring after early restore
+                        setTimeout(() => {
+                            setupDomainMonitoring();
+
+                            if (config.autoDetectNewDomains) {
+                                setupDomainWatcher();
+                            }
+                        }, Math.max(config.earlyRestoreTimeout, 100));
+
+                        // Setup cross-tab sync
+                        window.addEventListener('storage', handleStorageEvent);
+                        window.addEventListener('beforeunload', saveAllTrackedDomains);
+
+                        console.log('✅ StatePersistenceManager ready with timing controls');
+                    },
+
+                    onUnregister: () => {
+                        console.log('💾 StatePersistenceManager cleanup');
+
+                        // Save all before cleanup
+                        saveAllTrackedDomains();
+
+                        // Clear all timers
+                        saveTimers.forEach(timer => clearTimeout(timer));
+                        saveTimers.clear();
+
+                        if (domainWatcher) {
+                            clearInterval(domainWatcher);
+                            domainWatcher = null;
+                        }
+
+                        // Unsubscribe from all domains
+                        domainSubscriptions.forEach(unsubscribe => unsubscribe());
+                        domainSubscriptions.clear();
+
+                        // Remove storage listener
+                        window.removeEventListener('storage', handleStorageEvent);
+                        window.removeEventListener('beforeunload', saveAllTrackedDomains);
+
+                        console.log('✅ StatePersistenceManager cleaned up');
+                    }
+                },
+
+                api: {
+                    saveDomain: (domain, immediate = false) => saveDomain(domain, immediate),
+                    saveAllDomains: () => saveAllTrackedDomains(),
+                    restoreDomain: (domain) => restoreDomain(domain),
+                    restoreAllDomains: () => restoreAllDomainsWithTiming(),
+                    addDomain: (domain) => addDomainTracking(domain),
+                    removeDomain: (domain) => removeDomainTracking(domain),
+                    clearDomain: (domain) => clearDomainStorage(domain),
+                    clearAllStorage: () => clearAllStorage(),
+                    getStorageStats: () => getStorageStats(),
+                    getTrackedDomains: () => Array.from(domainSubscriptions.keys()),
+                    exportState: () => exportState(),
+                    importState: (data) => importState(data),
+                    refreshDomainDetection: () => setupDomainMonitoring(),
+                    forceImmediateSave: (domain) => saveDomain(domain, true),
+                    restorePriorityDomains: () => restorePriorityDomains(),
+                    getRestoreQueue: () => [...restoreQueue],
+                    updateTimingConfig: (newConfig) => Object.assign(config, newConfig),
+                    getConfig: () => ({ ...config }) // Get current configuration
+                }
+            };
+
+            // Enhanced restore with timing controls
+            function restoreAllDomainsWithTiming() {
+                log('📂 Starting timed restore sequence...');
+
+                // Get all stored domains by scanning localStorage
+                const storedDomains = [];
+                const keyPrefix = config.keyPrefix;
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(keyPrefix)) {
+                        // Extract domain from key
+                        let remainder = key.substring(keyPrefix.length);
+
+                        // Split by underscore and take first part as domain
+                        let domain = remainder.split('_')[0];
+
+                        // Only include if it's a valid domain and not already included
+                        if (domain && !storedDomains.includes(domain)) {
+                            storedDomains.push(domain);
+                        }
+                    }
+                }
+
+                log(`📂 Found stored domains: [${storedDomains.join(', ')}]`);
+
+                if (storedDomains.length === 0) {
+                    log('📂 No stored domains found');
+                    // DIRECT INJECTION for lastRestore
+                    if (context.juris && context.juris.stateManager && context.juris.stateManager.state && context.juris.stateManager.state.persistence) {
+                        context.juris.stateManager.state.persistence.lastRestore = Date.now();
+                    }
+                    return { restored: [], failed: [] };
+                }
+
+                // Sort domains by priority and timing configuration
+                const sortedDomains = storedDomains.sort((a, b) => {
+                    const configA = config.domainRestoreConfig[a] || { priority: 999, delay: 0 };
+                    const configB = config.domainRestoreConfig[b] || { priority: 999, delay: 0 };
+
+                    if (configA.priority !== configB.priority) {
+                        return configA.priority - configB.priority;
+                    }
+                    return configA.delay - configB.delay;
+                });
+
+                log(`📂 Restore order: [${sortedDomains.join(', ')}]`);
+
+                // Process domains with their configured timing
+                let cumulativeDelay = 0;
+                const results = { restored: [], failed: [], priority: [], delayed: [] };
+
+                sortedDomains.forEach((domain, index) => {
+                    const domainConfig = config.domainRestoreConfig[domain] || { priority: 999, delay: 0, aggressive: false };
+
+                    if (domainConfig.aggressive || config.priorityDomains.includes(domain)) {
+                        // Immediate restore for aggressive/priority domains
+                        if (restoreDomain(domain)) {
+                            results.restored.push(domain);
+                            results.priority.push(domain);
+
+                            // DIRECT INJECTION for stats
+                            if (context.juris && context.juris.stateManager && context.juris.stateManager.state && context.juris.stateManager.state.persistence) {
+                                context.juris.stateManager.state.persistence.stats.priorityRestores =
+                                    (context.juris.stateManager.state.persistence.stats.priorityRestores || 0) + 1;
+                            }
+                        } else {
+                            results.failed.push(domain);
+                        }
+
+                        log(`⚡ Priority restore completed for ${domain} immediately`);
+
+                    } else {
+                        // Delayed restore for non-critical domains
+                        const restoreDelay = cumulativeDelay + domainConfig.delay;
+
+                        setTimeout(() => {
+                            if (restoreDomain(domain)) {
+                                results.restored.push(domain);
+                                results.delayed.push(domain);
+
+                                // DIRECT INJECTION for stats
+                                if (context.juris && context.juris.stateManager && context.juris.stateManager.state && context.juris.stateManager.state.persistence) {
+                                    context.juris.stateManager.state.persistence.stats.delayedRestores =
+                                        (context.juris.stateManager.state.persistence.stats.delayedRestores || 0) + 1;
+                                }
+                            } else {
+                                results.failed.push(domain);
+                            }
+                        }, restoreDelay);
+
+                        log(`⏳ Delayed restore scheduled for ${domain} at ${restoreDelay}ms`);
+                        cumulativeDelay += domainConfig.delay;
+                    }
+                });
+
+                // Update final restore timestamp
+                const finalDelay = Math.max(cumulativeDelay, config.earlyRestoreTimeout);
+                setTimeout(() => {
+                    // DIRECT INJECTION for lastRestore
+                    if (context.juris && context.juris.stateManager && context.juris.stateManager.state && context.juris.stateManager.state.persistence) {
+                        context.juris.stateManager.state.persistence.lastRestore = Date.now();
+                    }
+                    log(`📂 Restore sequence completed. Priority: ${results.priority.length}, Delayed: ${results.delayed.length}, Failed: ${results.failed.length}`);
+                }, finalDelay);
+
+                return results;
+            }
+
+            function restorePriorityDomains() {
+                log('⚡ Restoring priority domains only...');
+
+                const priorityResults = { restored: [], failed: [] };
+
+                config.priorityDomains.forEach(domain => {
+                    if (restoreDomain(domain)) {
+                        priorityResults.restored.push(domain);
+                    } else {
+                        priorityResults.failed.push(domain);
+                    }
+                });
+
+                log(`⚡ Priority restore completed: [${priorityResults.restored.join(', ')}]`);
+                return priorityResults;
+            }
+
+            function setupDomainMonitoring() {
+                log('🔍 Setting up domain monitoring...');
+
+                const allState = context.juris.stateManager.state;
+                const availableDomains = Object.keys(allState);
+                log(`🔍 Available domains in state:`, availableDomains);
+
+                // Clear existing subscriptions
+                domainSubscriptions.forEach(unsubscribe => unsubscribe());
+                domainSubscriptions.clear();
+
+                // Determine which domains to track
+                let domainsToTrack = [];
+
+                if (config.domains.length > 0) {
+                    domainsToTrack = config.domains.filter(domain => {
+                        const exists = availableDomains.includes(domain);
+                        if (!exists) {
+                            log(`⚠️ Configured domain '${domain}' not found in state`);
+                        }
+                        return exists && !config.excludeDomains.includes(domain);
+                    });
+                } else {
+                    domainsToTrack = availableDomains.filter(domain =>
+                        !config.excludeDomains.includes(domain)
+                    );
+                }
+
+                log(`📊 Domains to track: [${domainsToTrack.join(', ')}]`);
+
+                // Track each domain
+                domainsToTrack.forEach(domain => {
+                    addDomainTracking(domain);
+                });
+
+                // Update stats - DIRECT INJECTION
+                if (context.juris && context.juris.stateManager && context.juris.stateManager.state && context.juris.stateManager.state.persistence) {
+                    context.juris.stateManager.state.persistence.stats.domainsTracked = domainSubscriptions.size;
+                }
+
+                log(`✅ Now tracking ${domainSubscriptions.size} domains: [${Array.from(domainSubscriptions.keys()).join(', ')}]`);
+            }
+
+            function setupDomainWatcher() {
+                domainWatcher = setInterval(() => {
+                    const currentDomains = Object.keys(context.juris.stateManager.state);
+                    const trackedDomains = Array.from(domainSubscriptions.keys());
+
+                    const newDomains = currentDomains.filter(domain =>
+                        !trackedDomains.includes(domain) &&
+                        !config.excludeDomains.includes(domain) &&
+                        (config.domains.length === 0 || config.domains.includes(domain))
+                    );
+
+                    if (newDomains.length > 0) {
+                        log(`🆕 Detected new domains: [${newDomains.join(', ')}]`);
+                        newDomains.forEach(domain => addDomainTracking(domain));
+
+                        // DIRECT INJECTION for stats
+                        if (context.juris && context.juris.stateManager && context.juris.stateManager.state && context.juris.stateManager.state.persistence) {
+                            context.juris.stateManager.state.persistence.stats.domainsTracked = domainSubscriptions.size;
+                        }
+                    }
+                }, config.watchIntervalMs);
+
+                log(`👀 Domain watcher started (checking every ${config.watchIntervalMs}ms)`);
+            }
+
+            function addDomainTracking(domain) {
+                if (domainSubscriptions.has(domain)) {
+                    log(`⚠️ Domain ${domain} already being tracked`);
+                    return false;
+                }
+
+                try {
+                    const testValue = getState(domain);
+                    log(`🔍 Testing domain '${domain}': ${testValue !== undefined ? 'exists' : 'undefined'}`);
+
+                    // Use internal subscription
+                    const unsubscribe = context.juris.stateManager.subscribeInternal(domain, () => {
+                        if (!isRestoring) {
+                            const currentValue = getState(domain);
+                            log(`🔄 State change detected in domain: ${domain}`, { currentValue });
+                            debouncedSave(domain, currentValue);
+                        }
+                    });
+
+                    domainSubscriptions.set(domain, unsubscribe);
+                    log(`➕ Added tracking for domain: ${domain}`);
+                    return true;
+
+                } catch (error) {
+                    logError(`Failed to add tracking for domain ${domain}:`, error);
+                    return false;
+                }
+            }
+
+            function removeDomainTracking(domain) {
+                const unsubscribe = domainSubscriptions.get(domain);
+                if (unsubscribe) {
+                    unsubscribe();
+                    domainSubscriptions.delete(domain);
+                    log(`➖ Removed tracking for domain: ${domain}`);
+                    return true;
+                }
+
+                log(`⚠️ Domain ${domain} was not being tracked`);
+                return false;
+            }
+
+            function debouncedSave(domain, value) {
+                // Clear existing timer
+                if (saveTimers.has(domain)) {
+                    clearTimeout(saveTimers.get(domain));
+                }
+
+                // Determine save timing based on domain configuration
+                let saveDelay = config.debounceMs;
+
+                if (config.immediateSave.includes(domain)) {
+                    // Immediate save for critical domains
+                    saveDomain(domain, true);
+                    return;
+                } else if (config.criticalSave.includes(domain)) {
+                    // Faster save for critical domains
+                    saveDelay = config.criticalDebounceMs;
+                }
+
+                const timer = setTimeout(() => {
+                    saveDomain(domain, false);
+                    saveTimers.delete(domain);
+                }, saveDelay);
+
+                saveTimers.set(domain, timer);
+
+                const saveType = config.criticalSave.includes(domain) ? 'CRITICAL' : 'NORMAL';
+                log(`⏰ ${saveType} save scheduled for domain: ${domain} in ${saveDelay}ms`);
+            }
+
+            function saveDomain(domain, immediate = false) {
+                try {
+                    const value = getState(domain);
+                    if (value === undefined || value === null) {
+                        log(`⚠️ Skipping save for undefined domain: ${domain}`);
+                        return false;
+                    }
+
+                    const dataPackage = {
+                        value: value,
+                        timestamp: Date.now(),
+                        domain: domain,
+                        immediate: immediate
+                    };
+
+                    // Check if domain requires user-specific storage
+                    const isUserSpecific = config.userSpecificDomains.includes(domain);
+                    const currentUserId = getUserId();
+
+                    if (isUserSpecific && config.requireAuth && !currentUserId) {
+                        log(`⚠️ Skipping save for user-specific domain '${domain}' - no authenticated user`);
+                        return false;
+                    }
+
+                    // Build storage key
+                    let storageKey = config.keyPrefix + domain;
+                    if (isUserSpecific && currentUserId) {
+                        storageKey = `${storageKey}_${currentUserId}`;
+                    }
+
+                    localStorage.setItem(storageKey, JSON.stringify(dataPackage));
+
+                    // Update statistics - DIRECT INJECTION
+                    if (context.juris && context.juris.stateManager && context.juris.stateManager.state && context.juris.stateManager.state.persistence) {
+                        const stats = context.juris.stateManager.state.persistence.stats;
+                        stats.totalSaves = (stats.totalSaves || 0) + 1;
+
+                        context.juris.stateManager.state.persistence.lastSave = {
+                            domain,
+                            timestamp: Date.now(),
+                            size: JSON.stringify(dataPackage).length,
+                            immediate
+                        };
+                    }
+
+                    const saveType = immediate ? 'IMMEDIATE' : 'DEBOUNCED';
+                    log(`💾 ${saveType} saved domain: ${domain} (${JSON.stringify(dataPackage).length} bytes) key: ${storageKey}`);
+                    return true;
+
+                } catch (error) {
+                    logError(`Failed to save domain ${domain}:`, error);
+                    return false;
+                }
+            }
+
+            function restoreDomain(domain) {
+                try {
+                    const isUserSpecific = config.userSpecificDomains.includes(domain);
+                    const currentUserId = getUserId();
+
+                    // Build storage key
+                    let storageKey = config.keyPrefix + domain;
+                    if (isUserSpecific && currentUserId) {
+                        storageKey = `${storageKey}_${currentUserId}`;
+                    }
+
+                    const stored = localStorage.getItem(storageKey);
+
+                    if (!stored) {
+                        log(`📂 No stored data for domain: ${domain} (key: ${storageKey})`);
+                        return false;
+                    }
+
+                    const data = JSON.parse(stored);
+
+                    // DIRECT INJECTION - Restore directly to state without triggering subscriptions
+                    isRestoring = true;
+
+                    // Direct injection into the state manager's internal state
+                    if (context.juris && context.juris.stateManager && context.juris.stateManager.state) {
+                        context.juris.stateManager.state[domain] = data.value;
+                        log(`📂 DIRECT INJECT: ${domain} directly injected into state`);
+                    } else {
+                        // Fallback to setState if direct access not available
+                        setState(domain, data.value);
+                        log(`📂 FALLBACK: ${domain} restored via setState`);
+                    }
+
+                    isRestoring = false;
+
+                    // Update statistics - DIRECT INJECTION
+                    if (context.juris && context.juris.stateManager && context.juris.stateManager.state && context.juris.stateManager.state.persistence) {
+                        const stats = context.juris.stateManager.state.persistence.stats;
+                        stats.totalRestores = (stats.totalRestores || 0) + 1;
+
+                        context.juris.stateManager.state.persistence.lastRestore = {
+                            domain,
+                            timestamp: Date.now(),
+                            dataTimestamp: data.timestamp
+                        };
+                    }
+
+                    log(`📂 Restored domain: ${domain} (saved ${new Date(data.timestamp).toLocaleString()})`);
+                    return true;
+
+                } catch (error) {
+                    logError(`Failed to restore domain ${domain}:`, error);
+                    return false;
+                }
+            }
+
+            function saveAllTrackedDomains() {
+                log('💾 Saving all tracked domains...');
+
+                const savedDomains = [];
+                const failedDomains = [];
+
+                domainSubscriptions.forEach((unsubscribe, domain) => {
+                    if (saveDomain(domain, true)) {
+                        savedDomains.push(domain);
+                    } else {
+                        failedDomains.push(domain);
+                    }
+                });
+
+                log(`💾 Saved ${savedDomains.length} domains: [${savedDomains.join(', ')}]`);
+
+                if (failedDomains.length > 0) {
+                    logError(`❌ Failed to save ${failedDomains.length} domains: [${failedDomains.join(', ')}]`);
+                }
+
+                return { saved: savedDomains, failed: failedDomains };
+            }
+
+            function handleStorageEvent(event) {
+                if (!event.key || !event.key.startsWith(config.keyPrefix)) {
+                    return;
+                }
+
+                // Extract domain from key
+                let remainder = event.key.substring(config.keyPrefix.length);
+                let domain = remainder.split('_')[0];
+
+                if (domainSubscriptions.has(domain)) {
+                    log(`🔄 Storage changed externally for domain: ${domain}`);
+
+                    if (event.newValue) {
+                        // Parse and directly inject the new value
+                        try {
+                            const data = JSON.parse(event.newValue);
+                            isRestoring = true;
+
+                            // DIRECT INJECTION for cross-tab sync
+                            if (context.juris && context.juris.stateManager && context.juris.stateManager.state) {
+                                context.juris.stateManager.state[domain] = data.value;
+                                log(`🔄 DIRECT INJECT: ${domain} synced from external tab`);
+                            } else {
+                                setState(domain, data.value);
+                                log(`🔄 FALLBACK: ${domain} synced via setState`);
+                            }
+
+                            isRestoring = false;
+                        } catch (error) {
+                            logError(`Failed to parse external change for ${domain}:`, error);
+                        }
+                    } else {
+                        // Value was deleted externally
+                        isRestoring = true;
+                        if (context.juris && context.juris.stateManager && context.juris.stateManager.state) {
+                            delete context.juris.stateManager.state[domain];
+                            log(`🔄 DIRECT DELETE: ${domain} removed from state`);
+                        } else {
+                            setState(domain, undefined);
+                            log(`🔄 FALLBACK DELETE: ${domain} removed via setState`);
+                        }
+                        isRestoring = false;
+                    }
+                }
+            }
+
+            function clearDomainStorage(domain) {
+                try {
+                    const isUserSpecific = config.userSpecificDomains.includes(domain);
+                    const currentUserId = getUserId();
+
+                    let storageKey = config.keyPrefix + domain;
+                    if (isUserSpecific && currentUserId) {
+                        storageKey = `${storageKey}_${currentUserId}`;
+                    }
+
+                    localStorage.removeItem(storageKey);
+                    log(`🗑️ Cleared storage for domain: ${domain} (key: ${storageKey})`);
+                    return true;
+                } catch (error) {
+                    logError(`Failed to clear storage for domain ${domain}:`, error);
+                    return false;
+                }
+            }
+
+            function clearAllStorage() {
+                try {
+                    const keysToRemove = [];
+
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith(config.keyPrefix)) {
+                            keysToRemove.push(key);
+                        }
+                    }
+
+                    keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                    log(`🗑️ Cleared ${keysToRemove.length} storage entries`);
+                    return true;
+                } catch (error) {
+                    logError('Failed to clear all storage:', error);
+                    return false;
+                }
+            }
+
+            function getStorageStats() {
+                let totalSize = 0;
+                let entryCount = 0;
+                const domains = [];
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(config.keyPrefix)) {
+                        const value = localStorage.getItem(key);
+                        totalSize += key.length + (value ? value.length : 0);
+                        entryCount++;
+
+                        // Extract domain from key
+                        let remainder = key.substring(config.keyPrefix.length);
+                        let domain = remainder.split('_')[0];
+                        domains.push(domain);
+                    }
+                }
+
+                return {
+                    totalSize,
+                    entryCount,
+                    domains: [...new Set(domains)], // Remove duplicates
+                    trackedDomains: Array.from(domainSubscriptions.keys()),
+                    config: {
+                        aggressiveRestore: config.aggressiveRestore,
+                        priorityDomains: config.priorityDomains,
+                        immediateSave: config.immediateSave,
+                        criticalSave: config.criticalSave,
+                        keyPrefix: config.keyPrefix,
+                        userSpecificDomains: config.userSpecificDomains
+                    }
+                };
+            }
+
+            function exportState() {
+                const exportData = {
+                    timestamp: Date.now(),
+                    domains: {}
+                };
+
+                domainSubscriptions.forEach((unsubscribe, domain) => {
+                    exportData.domains[domain] = getState(domain);
+                });
+
+                return exportData;
+            }
+
+            function importState(data) {
+                try {
+                    if (!data.domains) {
+                        throw new Error('Invalid import data format');
+                    }
+
+                    isRestoring = true;
+
+                    Object.entries(data.domains).forEach(([domain, value]) => {
+                        // DIRECT INJECTION for import as well
+                        if (context.juris && context.juris.stateManager && context.juris.stateManager.state) {
+                            context.juris.stateManager.state[domain] = value;
+                            log(`📥 DIRECT INJECT: ${domain} imported directly into state`);
+                        } else {
+                            setState(domain, value);
+                            log(`📥 FALLBACK: ${domain} imported via setState`);
+                        }
+                        saveDomain(domain, true);
+                    });
+
+                    isRestoring = false;
+
+                    log(`📥 Imported ${Object.keys(data.domains).length} domains`);
+                    return true;
+                } catch (error) {
+                    isRestoring = false;
+                    logError('Import failed:', error);
+                    return false;
+                }
+            }
+
+            // Helper function to get user ID from configurable path
+            function getUserId() {
+                try {
+                    const pathParts = config.userIdPath.split('.');
+                    let value = context.juris.stateManager.state;
+
+                    for (const part of pathParts) {
+                        if (value && typeof value === 'object') {
+                            value = value[part];
+                        } else {
+                            return null;
+                        }
+                    }
+
+                    return value;
+                } catch (error) {
+                    log(`⚠️ Failed to get user ID from path: ${config.userIdPath}`, error);
+                    return null;
+                }
+            }
+
+            function log(message, ...args) {
+                if (config.debug) {
+                    console.log(`💾 [StatePersistence] ${message}`, ...args);
+                }
+            }
+
+            function logError(message, error = null) {
+                console.error(`💾 [StatePersistence] ${message}`, error);
+
+                // DIRECT INJECTION for errors
+                if (context.juris && context.juris.stateManager && context.juris.stateManager.state && context.juris.stateManager.state.persistence) {
+                    const errors = context.juris.stateManager.state.persistence.errors;
+                    errors.push({
+                        message,
+                        error: error ? error.message : null,
+                        timestamp: Date.now()
+                    });
+
+                    if (errors.length > 10) {
+                        errors.splice(0, errors.length - 10);
+                    }
+                }
+            }
+        };
+
+        // URL State Sync with Route Guards
+        const UrlStateSync = (props, context) => {
+            const { getState, setState } = context;
+
+            const routeGuards = {
+                '/': ['authenticated'],
+                '/lists': ['authenticated'],
+                '/profile': ['authenticated'],
+                '/settings': ['authenticated']
+            };
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('🧭 UrlStateSync initializing...');
+                        handleUrlChange();
+                        window.addEventListener('hashchange', handleUrlChange);
+                        window.addEventListener('popstate', handleUrlChange);
+                    }
+                }
+            };
+
+            async function handleUrlChange() {
+                const hash = window.location.hash.substring(1) || '/';
+                const segments = parseSegments(hash);
+
+                // Check route guards
+                const guardResult = await checkRouteAccess(hash);
+
+                if (guardResult.allowed) {
+                    setState('url.path', hash);
+                    setState('url.segments', segments);
+                    console.log('🧭 URL updated:', hash);
+                } else {
+                    console.log('🚫 Route access denied, redirecting to:', guardResult.redirect);
+                    window.location.hash = guardResult.redirect;
+                }
+            }
+
+            async function checkRouteAccess(path) {
+                const guards = getRouteGuards(path);
+                const isAuthenticated = getState('auth.isLoggedIn', false);
+
+                if (guards.includes('authenticated') && !isAuthenticated) {
+                    return { allowed: false, redirect: '/login' };
+                }
+
+                return { allowed: true };
+            }
+
+            function getRouteGuards(path) {
+                if (routeGuards[path]) return routeGuards[path];
+
+                const segments = path.split('/').filter(Boolean);
+                for (let i = segments.length - 1; i > 0; i--) {
+                    const parentPath = '/' + segments.slice(0, i).join('/');
+                    if (routeGuards[parentPath]) return routeGuards[parentPath];
+                }
+
+                return [];
+            }
+
+            function parseSegments(path) {
+                const parts = path.split('/').filter(Boolean);
+                return {
+                    full: path,
+                    parts: parts,
+                    base: parts[0] || '',
+                    sub: parts[1] || '',
+                    id: parts[2] || ''
+                };
+            }
+        };
+
+        // Mock Data Generator
+        const MockDataManager = (props, context) => {
+            const { setState } = context;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('📊 MockDataManager initializing...');
+                        generateMockData();
+                        startRealTimeUpdates();
+                    }
+                },
+
+                api: {
+                    refreshData: () => generateMockData(),
+                    generateUsers: () => generateUsers(),
+                    generateActivities: () => generateActivities()
+                }
+            };
+
+            function generateMockData() {
+                // Stats
+                setState('dashboard.stats', {
+                    totalUsers: Math.floor(Math.random() * 10000) + 5000,
+                    activeUsers: Math.floor(Math.random() * 1000) + 500,
+                    revenue: Math.floor(Math.random() * 100000) + 50000,
+                    orders: Math.floor(Math.random() * 500) + 200
+                });
+
+                // Users
+                setState('dashboard.users', generateUsers());
+
+                // Activities
+                setState('dashboard.activities', generateActivities());
+
+                // Chart data
+                setState('dashboard.chartData', generateChartData());
+
+                console.log('📊 Mock data generated');
+            }
+
+            function generateUsers() {
+                const names = ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Wilson', 'David Brown', 'Lisa Davis', 'Tom Wilson', 'Emma Thompson'];
+                const roles = ['Admin', 'User', 'Manager', 'Developer'];
+                const statuses = ['Active', 'Inactive', 'Pending'];
+
+                return Array.from({ length: 10 }, (_, i) => ({
+                    id: i + 1,
+                    name: names[Math.floor(Math.random() * names.length)],
+                    email: `user${i + 1}@example.com`,
+                    role: roles[Math.floor(Math.random() * roles.length)],
+                    status: statuses[Math.floor(Math.random() * statuses.length)],
+                    lastActive: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleDateString()
+                }));
+            }
+
+            function generateActivities() {
+                const activities = [
+                    'Created a new project',
+                    'Updated user profile',
+                    'Deleted a task',
+                    'Uploaded a document',
+                    'Sent a message',
+                    'Completed a milestone',
+                    'Started a meeting',
+                    'Closed a ticket'
+                ];
+
+                const users = ['JD', 'JS', 'MJ', 'SW', 'DB', 'LD', 'TW', 'ET'];
+
+                return Array.from({ length: 8 }, (_, i) => ({
+                    id: i + 1,
+                    user: users[Math.floor(Math.random() * users.length)],
+                    action: activities[Math.floor(Math.random() * activities.length)],
+                    time: new Date(Date.now() - Math.random() * 2 * 60 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }));
+            }
+
+            function generateChartData() {
+                return {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    values: Array.from({ length: 6 }, () => Math.floor(Math.random() * 100) + 20)
+                };
+            }
+
+            function startRealTimeUpdates() {
+                setInterval(() => {
+                    const stats = context.getState('dashboard.stats', {});
+                    setState('dashboard.stats', {
+                        ...stats,
+                        activeUsers: Math.max(1, stats.activeUsers + Math.floor(Math.random() * 10) - 5)
+                    });
+                }, 5000);
+            }
+        };
+
+        // Navigation Manager
+        const NavigationManager = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('🧭 NavigationManager initializing...');
+                        handleRouteChange();
+                        window.addEventListener('hashchange', handleRouteChange);
+                    }
+                },
+
+                api: {
+                    navigate: (route) => {
+                        window.location.hash = route;
+                        setState('ui.currentRoute', route);
+                    },
+                    toggleSidebar: () => {
+                        const isOpen = getState('ui.sidebarOpen', false);
+                        setState('ui.sidebarOpen', !isOpen);
+                    }
+                }
+            };
+
+            function handleRouteChange() {
+                const hash = window.location.hash.substring(1) || '/';
+                setState('ui.currentRoute', hash);
+                setState('ui.sidebarOpen', false); // Close mobile sidebar on route change
+                console.log('🧭 Route changed to:', hash);
+            }
+        };
+
+        // Theme Manager
+        const ThemeManager = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('🎨 ThemeManager initializing...');
+                        loadTheme();
+                    }
+                },
+
+                api: {
+                    toggleTheme: () => {
+                        const currentTheme = getState('ui.theme', 'light');
+                        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                        setState('ui.theme', newTheme);
+                        applyTheme(newTheme);
+                    }
+                }
+            };
+
+            function loadTheme() {
+                const savedTheme = localStorage.getItem('dashboard_theme') || 'light';
+                setState('ui.theme', savedTheme);
+                applyTheme(savedTheme);
+            }
+
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('dashboard_theme', theme);
+                console.log('🎨 Theme applied:', theme);
+            }
+        };
+
+        // ==================== UI COMPONENTS ====================
+
+        // Dashboard Layout
+        const DashboardLayout = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'dashboard-layout',
+                        children: [
+                            { DashboardHeader: {} },
+                            { DashboardSidebar: {} },
+                            { MainContent: {} }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Dashboard Header
+        const DashboardHeader = (props, context) => {
+            const { getState, NavigationManager } = context;
+
+            return {
+                render: () => ({
+                    header: {
+                        className: 'header',
+                        children: [
+                            {
+                                div: {
+                                    className: 'header-left',
+                                    children: [
+                                        {
+                                            button: {
+                                                className: 'mobile-menu-btn',
+                                                innerHTML: '☰',
+                                                onclick: () => NavigationManager.toggleSidebar()
+                                            }
+                                        },
+                                        {
+                                            h1: {
+                                                className: 'page-title',
+                                                text: () => {
+                                                    const route = getState('ui.currentRoute', '/');
+                                                    const titles = {
+                                                        '/': 'Dashboard',
+                                                        '/analytics': 'Analytics',
+                                                        '/users': 'User Management',
+                                                        '/settings': 'Settings',
+                                                        '/activity': 'Activity Log'
+                                                    };
+                                                    return titles[route] || 'Dashboard';
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'header-right',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'header-actions',
+                                                children: [
+                                                    {
+                                                        button: {
+                                                            className: 'notification-btn',
+                                                            innerHTML: '🔔',
+                                                            children: [{
+                                                                div: {
+                                                                    className: 'notification-badge'
+                                                                }
+                                                            }]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'user-menu',
+                                                children: [
+                                                    {
+                                                        div: {
+                                                            className: 'user-avatar',
+                                                            text: 'JD'
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'user-info',
+                                                            children: [
+                                                                {
+                                                                    div: {
+                                                                        className: 'user-name',
+                                                                        text: 'John Doe'
+                                                                    }
+                                                                },
+                                                                {
+                                                                    div: {
+                                                                        className: 'user-role',
+                                                                        text: 'Administrator'
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Dashboard Sidebar
+        const DashboardSidebar = (props, context) => {
+            const { getState, NavigationManager } = context;
+
+            return {
+                render: () => ({
+                    aside: {
+                        className: () => {
+                            const isOpen = getState('ui.sidebarOpen', false);
+                            return isOpen ? 'sidebar open' : 'sidebar';
+                        },
+                        children: [
+                            {
+                                div: {
+                                    className: 'sidebar-header',
+                                    children: [{
+                                        a: {
+                                            className: 'logo',
+                                            href: '#/',
+                                            onclick: (e) => {
+                                                e.preventDefault();
+                                                NavigationManager.navigate('/');
+                                            },
+                                            children: [
+                                                {
+                                                    div: {
+                                                        className: 'logo-icon',
+                                                        text: '📊'
+                                                    }
+                                                },
+                                                {
+                                                    span: {
+                                                        text: 'Juris Dashboard'
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }]
+                                }
+                            },
+                            {
+                                nav: {
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'nav-section',
+                                                children: [
+                                                    {
+                                                        div: {
+                                                            className: 'nav-title',
+                                                            text: 'Main'
+                                                        }
+                                                    },
+                                                    {
+                                                        ul: {
+                                                            className: 'nav-list',
+                                                            children: [
+                                                                { NavItem: { route: '/', icon: '📊', label: 'Dashboard' } },
+                                                                { NavItem: { route: '/analytics', icon: '📈', label: 'Analytics' } },
+                                                                { NavItem: { route: '/users', icon: '👥', label: 'Users', badge: '23' } }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'nav-section',
+                                                children: [
+                                                    {
+                                                        div: {
+                                                            className: 'nav-title',
+                                                            text: 'System'
+                                                        }
+                                                    },
+                                                    {
+                                                        ul: {
+                                                            className: 'nav-list',
+                                                            children: [
+                                                                { NavItem: { route: '/activity', icon: '📋', label: 'Activity Log' } },
+                                                                { NavItem: { route: '/settings', icon: '⚙️', label: 'Settings' } }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Navigation Item
+        const NavItem = (props, context) => {
+            const { getState, NavigationManager } = context;
+            const { route, icon, label, badge } = props;
+
+            return {
+                render: () => ({
+                    li: {
+                        className: 'nav-item',
+                        children: [{
+                            a: {
+                                className: () => {
+                                    const currentRoute = getState('ui.currentRoute', '/');
+                                    return currentRoute === route ? 'nav-link active' : 'nav-link';
+                                },
+                                href: `#${route}`,
+                                onclick: (e) => {
+                                    e.preventDefault();
+                                    NavigationManager.navigate(route);
+                                },
+                                children: [
+                                    {
+                                        span: {
+                                            className: 'nav-icon',
+                                            text: icon
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            text: label
+                                        }
+                                    },
+                                    ...(badge ? [{
+                                        span: {
+                                            className: 'nav-badge',
+                                            text: badge
+                                        }
+                                    }] : [])
+                                ]
+                            }
+                        }]
+                    }
+                })
+            };
+        };
+
+        // Main Content Router
+        const MainContent = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    main: {
+                        className: 'main-content fade-in',
+                        children: () => {
+                            const route = getState('ui.currentRoute', '/');
+
+                            switch (route) {
+                                case '/':
+                                    return [{ DashboardOverview: {} }];
+                                case '/analytics':
+                                    return [{ AnalyticsView: {} }];
+                                case '/users':
+                                    return [{ UsersView: {} }];
+                                case '/settings':
+                                    return [{ SettingsView: {} }];
+                                case '/activity':
+                                    return [{ ActivityView: {} }];
+                                default:
+                                    return [{ DashboardOverview: {} }];
+                            }
+                        }
+                    }
+                })
+            };
+        };
+
+        // Dashboard Overview
+        const DashboardOverview = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            {
+                                div: {
+                                    className: 'stats-grid',
+                                    children: () => {
+                                        const stats = getState('dashboard.stats', {});
+                                        return [
+                                            {
+                                                StatCard: {
+                                                    title: 'Total Users',
+                                                    value: stats.totalUsers || 0,
+                                                    change: '+12%',
+                                                    changeType: 'positive',
+                                                    icon: '👥',
+                                                    iconType: 'primary'
+                                                }
+                                            },
+                                            {
+                                                StatCard: {
+                                                    title: 'Active Users',
+                                                    value: stats.activeUsers || 0,
+                                                    change: '+5%',
+                                                    changeType: 'positive',
+                                                    icon: '🟢',
+                                                    iconType: 'success'
+                                                }
+                                            },
+                                            {
+                                                StatCard: {
+                                                    title: 'Revenue',
+                                                    value: `$${(stats.revenue || 0).toLocaleString()}`,
+                                                    change: '+8%',
+                                                    changeType: 'positive',
+                                                    icon: '💰',
+                                                    iconType: 'warning'
+                                                }
+                                            },
+                                            {
+                                                StatCard: {
+                                                    title: 'Orders',
+                                                    value: stats.orders || 0,
+                                                    change: '-2%',
+                                                    changeType: 'negative',
+                                                    icon: '📦',
+                                                    iconType: 'info'
+                                                }
+                                            }
+                                        ];
+                                    }
+                                }
+                            },
+                            {
+                                div: {
+                                    style: {
+                                        display: 'grid',
+                                        gridTemplateColumns: '2fr 1fr',
+                                        gap: '1.5rem',
+                                        marginBottom: '2rem'
+                                    },
+                                    children: [
+                                        { ConfigurableChartCard: {} },
+                                        { ActivityCard: {} }
+                                    ]
+                                }
+                            },
+                            { UsersTable: {} }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Stat Card
+        const StatCard = (props, context) => {
+            const { title, value, change, changeType, icon, iconType } = props;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'stat-card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'stat-header',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'stat-title',
+                                                text: title
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: `stat-icon ${iconType}`,
+                                                text: icon
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'stat-value',
+                                    text: value.toString()
+                                }
+                            },
+                            {
+                                div: {
+                                    className: `stat-change ${changeType}`,
+                                    children: [
+                                        {
+                                            span: {
+                                                text: changeType === 'positive' ? '↗' : changeType === 'negative' ? '↘' : '→'
+                                            }
+                                        },
+                                        {
+                                            span: {
+                                                text: change
+                                            }
+                                        },
+                                        {
+                                            span: {
+                                                text: ' from last month',
+                                                style: { color: 'var(--gray-500)' }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Chart Card
+        // Chart Card Component (Simple Version)
+        const ChartCard = (props, context) => {
+            return {
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'card-header',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'card-title',
+                                                text: 'Revenue Trend'
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'card-subtitle',
+                                                text: 'Monthly revenue for the past 6 months'
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card-content',
+                                    children: [{
+                                        div: {
+                                            className: 'chart-container',
+                                            text: '📊 Chart placeholder - Connect to your favorite charting library'
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Enhanced Chart Card Component (With Working Chart)
+        const ChartCardEnhanced = (props, context) => {
+            const { getState } = context;
+            const { title = 'Revenue Trend', subtitle = 'Monthly revenue for the past 6 months', chartId = 'chartCard' } = props;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        setTimeout(() => renderChart(), 100);
+                    }
+                },
+
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'card-header',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'card-title',
+                                                text: title
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'card-subtitle',
+                                                text: subtitle
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card-content',
+                                    children: [{
+                                        canvas: {
+                                            id: chartId,
+                                            style: {
+                                                width: '100%',
+                                                height: '300px'
+                                            }
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+
+            function renderChart() {
+                const canvas = document.getElementById(chartId);
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+                const data = getState('dashboard.chartData', {});
+
+                // Sample data if none provided
+                const chartData = {
+                    labels: data.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    values: data.values || [45000, 52000, 48000, 61000, 58000, 67000]
+                };
+
+                drawLineChart(ctx, canvas, chartData, {
+                    lineColor: '#ff6b35',
+                    fillColor: 'rgba(255, 107, 53, 0.1)',
+                    gridColor: '#e5e5e5',
+                    textColor: '#525252'
+                });
+            }
+        };
+
+        // Configurable Chart Card Component
+        const ConfigurableChartCard = (props, context) => {
+            const { getState } = context;
+            const {
+                title = 'Chart Title',
+                subtitle = 'Chart description',
+                chartId = 'configurableChart',
+                chartType = 'line', // 'line', 'bar', 'pie'
+                dataKey = 'dashboard.chartData',
+                options = {}
+            } = props;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        setTimeout(() => renderConfigurableChart(), 100);
+                    }
+                },
+
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'card-header',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'flex justify-between items-center',
+                                                children: [
+                                                    {
+                                                        div: {
+                                                            children: [
+                                                                {
+                                                                    h3: {
+                                                                        className: 'card-title',
+                                                                        text: title
+                                                                    }
+                                                                },
+                                                                {
+                                                                    p: {
+                                                                        className: 'card-subtitle',
+                                                                        text: subtitle
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'flex gap-2',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-secondary btn-sm',
+                                                                        text: '📊',
+                                                                        title: 'Refresh Chart',
+                                                                        onclick: () => {
+                                                                            setTimeout(() => renderConfigurableChart(), 100);
+                                                                        }
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'btn btn-secondary btn-sm',
+                                                                        text: '⚙️',
+                                                                        title: 'Chart Options',
+                                                                        onclick: () => console.log('Chart options for:', chartId)
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card-content',
+                                    children: [{
+                                        canvas: {
+                                            id: chartId,
+                                            style: {
+                                                width: '100%',
+                                                height: '300px',
+                                                cursor: 'crosshair'
+                                            }
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+
+            function renderConfigurableChart() {
+                const canvas = document.getElementById(chartId);
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+                const data = getState(dataKey, {});
+
+                // Default chart options
+                const defaultOptions = {
+                    lineColor: '#ff6b35',
+                    fillColor: 'rgba(255, 107, 53, 0.1)',
+                    barColor: '#ff6b35',
+                    gridColor: '#e5e5e5',
+                    textColor: '#525252'
+                };
+
+                const chartOptions = { ...defaultOptions, ...options };
+
+                // Sample data based on chart type
+                let chartData;
+
+                switch (chartType) {
+                    case 'bar':
+                        chartData = data.barData || {
+                            labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                            values: [25000, 35000, 42000, 38000]
+                        };
+                        drawBarChart(ctx, canvas, chartData, chartOptions);
+                        break;
+
+                    case 'pie':
+                        chartData = data.pieData || [
+                            { label: 'Product A', value: 40, color: '#ff6b35' },
+                            { label: 'Product B', value: 30, color: '#10b981' },
+                            { label: 'Product C', value: 20, color: '#3b82f6' },
+                            { label: 'Product D', value: 10, color: '#f59e0b' }
+                        ];
+                        drawPieChart(ctx, canvas, chartData);
+                        break;
+
+                    default: // 'line'
+                        chartData = data.lineData || {
+                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                            values: [45000, 52000, 48000, 61000, 58000, 67000]
+                        };
+                        drawLineChart(ctx, canvas, chartData, chartOptions);
+                        break;
+                }
+            }
+        };
+
+        // Mini Chart Card Component (For smaller displays)
+        const MiniChartCard = (props, context) => {
+            const { title, value, change, changeType, chartId = 'miniChart', sparklineData = [] } = props;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        setTimeout(() => renderMiniChart(), 100);
+                    }
+                },
+
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        style: {
+                            padding: '1rem'
+                        },
+                        children: [
+                            {
+                                div: {
+                                    className: 'flex justify-between items-start mb-2',
+                                    children: [
+                                        {
+                                            div: {
+                                                children: [
+                                                    {
+                                                        h4: {
+                                                            className: 'text-sm font-medium text-gray-600',
+                                                            text: title
+                                                        }
+                                                    },
+                                                    {
+                                                        div: {
+                                                            className: 'text-2xl font-bold text-gray-900',
+                                                            text: value
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: `text-sm ${changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`,
+                                                text: change
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    style: { height: '60px' },
+                                    children: [{
+                                        canvas: {
+                                            id: chartId,
+                                            style: {
+                                                width: '100%',
+                                                height: '100%'
+                                            }
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+
+            function renderMiniChart() {
+                const canvas = document.getElementById(chartId);
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+
+                // Sample sparkline data
+                const data = sparklineData.length > 0 ? sparklineData : [20, 25, 18, 30, 28, 35, 32, 40, 38, 45];
+
+                drawSparkline(ctx, canvas, data, {
+                    lineColor: changeType === 'positive' ? '#10b981' : '#ef4444',
+                    lineWidth: 2
+                });
+            }
+        };
+
+        // Utility function for sparkline charts
+        function drawSparkline(ctx, canvas, data, options = {}) {
+            const { lineColor = '#ff6b35', lineWidth = 2 } = options;
+
+            // Set canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            // Clear canvas
+            ctx.clearRect(0, 0, rect.width, rect.height);
+
+            if (data.length < 2) return;
+
+            const padding = 4;
+            const chartWidth = rect.width - padding * 2;
+            const chartHeight = rect.height - padding * 2;
+
+            const maxValue = Math.max(...data);
+            const minValue = Math.min(...data);
+            const valueRange = maxValue - minValue || 1;
+
+            const stepX = chartWidth / (data.length - 1);
+
+            // Draw line
+            ctx.beginPath();
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = lineWidth;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+
+            for (let i = 0; i < data.length; i++) {
+                const x = padding + stepX * i;
+                const y = padding + chartHeight - ((data[i] - minValue) / valueRange) * chartHeight;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        // Activity Card
+        const ActivityCard = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'card-header',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'card-title',
+                                                text: 'Recent Activity'
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'card-subtitle',
+                                                text: 'Latest user actions'
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card-content',
+                                    children: [{
+                                        div: {
+                                            className: 'activity-feed',
+                                            children: () => {
+                                                const activities = getState('dashboard.activities', []);
+                                                return activities.slice(0, 5).map(activity => ({
+                                                    ActivityItem: { activity, key: activity.id }
+                                                }));
+                                            }
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Users Table
+        const UsersTable = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'card-header',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'card-title',
+                                                text: 'Recent Users'
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'card-subtitle',
+                                                text: 'Latest registered users'
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card-content',
+                                    children: [{
+                                        div: {
+                                            className: 'table-container',
+                                            children: [{
+                                                table: {
+                                                    className: 'table',
+                                                    children: [
+                                                        {
+                                                            thead: {
+                                                                children: [{
+                                                                    tr: {
+                                                                        children: [
+                                                                            { th: { text: 'Name' } },
+                                                                            { th: { text: 'Email' } },
+                                                                            { th: { text: 'Role' } },
+                                                                            { th: { text: 'Status' } },
+                                                                            { th: { text: 'Last Active' } }
+                                                                        ]
+                                                                    }
+                                                                }]
+                                                            }
+                                                        },
+                                                        {
+                                                            tbody: {
+                                                                children: () => {
+                                                                    const users = getState('dashboard.users', []);
+                                                                    return users.slice(0, 5).map(user => ({
+                                                                        UserRow: { user, key: user.id }
+                                                                    }));
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }]
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // User Row
+        const UserRow = (props, context) => {
+            const { user } = props;
+
+            return {
+                render: () => ({
+                    tr: {
+                        children: [
+                            {
+                                td: {
+                                    text: user.name
+                                }
+                            },
+                            {
+                                td: {
+                                    text: user.email
+                                }
+                            },
+                            {
+                                td: {
+                                    text: user.role
+                                }
+                            },
+                            {
+                                td: {
+                                    children: [{
+                                        span: {
+                                            className: () => {
+                                                const statusClasses = {
+                                                    'Active': 'badge badge-success',
+                                                    'Inactive': 'badge badge-danger',
+                                                    'Pending': 'badge badge-warning'
+                                                };
+                                                return statusClasses[user.status] || 'badge badge-info';
+                                            },
+                                            text: user.status
+                                        }
+                                    }]
+                                }
+                            },
+                            {
+                                td: {
+                                    text: user.lastActive
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Enhanced Analytics View with Working Charts
+        const AnalyticsView = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            {
+                                div: {
+                                    className: 'stats-grid',
+                                    children: [
+                                        {
+                                            StatCard: {
+                                                title: 'Page Views',
+                                                value: '127,543',
+                                                change: '+15%',
+                                                changeType: 'positive',
+                                                icon: '👁️',
+                                                iconType: 'primary'
+                                            }
+                                        },
+                                        {
+                                            StatCard: {
+                                                title: 'Unique Visitors',
+                                                value: '23,891',
+                                                change: '+8%',
+                                                changeType: 'positive',
+                                                icon: '👤',
+                                                iconType: 'success'
+                                            }
+                                        },
+                                        {
+                                            StatCard: {
+                                                title: 'Bounce Rate',
+                                                value: '32.5%',
+                                                change: '-3%',
+                                                changeType: 'positive',
+                                                icon: '📊',
+                                                iconType: 'info'
+                                            }
+                                        },
+                                        {
+                                            StatCard: {
+                                                title: 'Avg. Session',
+                                                value: '4m 32s',
+                                                change: '+12%',
+                                                changeType: 'positive',
+                                                icon: '⏱️',
+                                                iconType: 'warning'
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    style: {
+                                        display: 'grid',
+                                        gridTemplateColumns: '2fr 1fr',
+                                        gap: '1.5rem',
+                                        marginBottom: '2rem'
+                                    },
+                                    children: [
+                                        { RevenueChart: {} },
+                                        { TrafficSourcesChart: {} }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    style: {
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+                                        gap: '1.5rem'
+                                    },
+                                    children: [
+                                        { UserGrowthChart: {} },
+                                        { ConversionChart: {} }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Revenue Trend Chart Component
+        const RevenueChart = (props, context) => {
+            const { getState } = context;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        setTimeout(() => renderRevenueChart(), 100);
+                    }
+                },
+
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'card-header',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'card-title',
+                                                text: 'Revenue Trend'
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'card-subtitle',
+                                                text: 'Monthly revenue for the past 6 months'
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card-content',
+                                    children: [{
+                                        canvas: {
+                                            id: 'revenueChart',
+                                            style: {
+                                                width: '100%',
+                                                height: '300px'
+                                            }
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+
+            function renderRevenueChart() {
+                const canvas = document.getElementById('revenueChart');
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+                const data = getState('dashboard.chartData', {});
+
+                // Sample data if none provided
+                const chartData = {
+                    labels: data.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    values: data.values || [45000, 52000, 48000, 61000, 58000, 67000]
+                };
+
+                drawLineChart(ctx, canvas, chartData, {
+                    lineColor: '#ff6b35',
+                    fillColor: 'rgba(255, 107, 53, 0.1)',
+                    gridColor: '#e5e5e5',
+                    textColor: '#525252'
+                });
+            }
+        };
+
+        // Traffic Sources Pie Chart
+        const TrafficSourcesChart = (props, context) => {
+            return {
+                hooks: {
+                    onMount: () => {
+                        setTimeout(() => renderTrafficChart(), 100);
+                    }
+                },
+
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'card-header',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'card-title',
+                                                text: 'Traffic Sources'
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'card-subtitle',
+                                                text: 'Visitor acquisition channels'
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card-content',
+                                    children: [{
+                                        canvas: {
+                                            id: 'trafficChart',
+                                            style: {
+                                                width: '100%',
+                                                height: '300px'
+                                            }
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+
+            function renderTrafficChart() {
+                const canvas = document.getElementById('trafficChart');
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+
+                const data = [
+                    { label: 'Organic', value: 45, color: '#ff6b35' },
+                    { label: 'Direct', value: 25, color: '#10b981' },
+                    { label: 'Social', value: 20, color: '#3b82f6' },
+                    { label: 'Email', value: 10, color: '#f59e0b' }
+                ];
+
+                drawPieChart(ctx, canvas, data);
+            }
+        };
+
+        // User Growth Chart
+        const UserGrowthChart = (props, context) => {
+            return {
+                hooks: {
+                    onMount: () => {
+                        setTimeout(() => renderUserGrowthChart(), 100);
+                    }
+                },
+
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'card-header',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'card-title',
+                                                text: 'User Growth'
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'card-subtitle',
+                                                text: 'New users over time'
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card-content',
+                                    children: [{
+                                        canvas: {
+                                            id: 'userGrowthChart',
+                                            style: {
+                                                width: '100%',
+                                                height: '250px'
+                                            }
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+
+            function renderUserGrowthChart() {
+                const canvas = document.getElementById('userGrowthChart');
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+
+                const data = {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    values: [120, 190, 300, 250]
+                };
+
+                drawBarChart(ctx, canvas, data, {
+                    barColor: '#ff6b35',
+                    gridColor: '#e5e5e5',
+                    textColor: '#525252'
+                });
+            }
+        };
+
+        // Conversion Rate Chart
+        const ConversionChart = (props, context) => {
+            return {
+                hooks: {
+                    onMount: () => {
+                        setTimeout(() => renderConversionChart(), 100);
+                    }
+                },
+
+                render: () => ({
+                    div: {
+                        className: 'card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'card-header',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'card-title',
+                                                text: 'Conversion Rate'
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'card-subtitle',
+                                                text: 'Daily conversion percentage'
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card-content',
+                                    children: [{
+                                        canvas: {
+                                            id: 'conversionChart',
+                                            style: {
+                                                width: '100%',
+                                                height: '250px'
+                                            }
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+
+            function renderConversionChart() {
+                const canvas = document.getElementById('conversionChart');
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+
+                const data = {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    values: [2.4, 3.1, 2.8, 3.5, 4.2, 3.8, 2.9]
+                };
+
+                drawLineChart(ctx, canvas, data, {
+                    lineColor: '#10b981',
+                    fillColor: 'rgba(16, 185, 129, 0.1)',
+                    gridColor: '#e5e5e5',
+                    textColor: '#525252',
+                    suffix: '%'
+                });
+            }
+        };
+
+        // ==================== CHART DRAWING UTILITIES ====================
+
+        function drawLineChart(ctx, canvas, data, options = {}) {
+            const { lineColor = '#ff6b35', fillColor = 'rgba(255, 107, 53, 0.1)',
+                gridColor = '#e5e5e5', textColor = '#525252', suffix = '' } = options;
+
+            // Set canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            const padding = 40;
+            const chartWidth = rect.width - padding * 2;
+            const chartHeight = rect.height - padding * 2;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, rect.width, rect.height);
+
+            // Find min/max values
+            const maxValue = Math.max(...data.values);
+            const minValue = Math.min(...data.values);
+            const valueRange = maxValue - minValue || 1;
+
+            // Draw grid lines
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 1;
+
+            // Horizontal grid lines
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (chartHeight / 5) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(padding + chartWidth, y);
+                ctx.stroke();
+
+                // Y-axis labels
+                const value = maxValue - (valueRange / 5) * i;
+                ctx.fillStyle = textColor;
+                ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(Math.round(value) + suffix, padding - 8, y + 4);
+            }
+
+            // Vertical grid lines and X-axis labels
+            const stepX = chartWidth / (data.labels.length - 1);
+            for (let i = 0; i < data.labels.length; i++) {
+                const x = padding + stepX * i;
+
+                // Grid line
+                ctx.strokeStyle = gridColor;
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, padding + chartHeight);
+                ctx.stroke();
+
+                // X-axis label
+                ctx.fillStyle = textColor;
+                ctx.textAlign = 'center';
+                ctx.fillText(data.labels[i], x, padding + chartHeight + 20);
+            }
+
+            // Draw area fill
+            ctx.beginPath();
+            for (let i = 0; i < data.values.length; i++) {
+                const x = padding + stepX * i;
+                const y = padding + chartHeight - ((data.values[i] - minValue) / valueRange) * chartHeight;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.lineTo(padding + chartWidth, padding + chartHeight);
+            ctx.lineTo(padding, padding + chartHeight);
+            ctx.closePath();
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+
+            // Draw line
+            ctx.beginPath();
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+
+            for (let i = 0; i < data.values.length; i++) {
+                const x = padding + stepX * i;
+                const y = padding + chartHeight - ((data.values[i] - minValue) / valueRange) * chartHeight;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // Draw data points
+            ctx.fillStyle = lineColor;
+            for (let i = 0; i < data.values.length; i++) {
+                const x = padding + stepX * i;
+                const y = padding + chartHeight - ((data.values[i] - minValue) / valueRange) * chartHeight;
+
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawBarChart(ctx, canvas, data, options = {}) {
+            const { barColor = '#ff6b35', gridColor = '#e5e5e5', textColor = '#525252' } = options;
+
+            // Set canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            const padding = 40;
+            const chartWidth = rect.width - padding * 2;
+            const chartHeight = rect.height - padding * 2;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, rect.width, rect.height);
+
+            const maxValue = Math.max(...data.values);
+            const barWidth = chartWidth / data.values.length * 0.8;
+            const barSpacing = chartWidth / data.values.length * 0.2;
+
+            // Draw grid lines
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 1;
+
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (chartHeight / 5) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(padding + chartWidth, y);
+                ctx.stroke();
+
+                // Y-axis labels
+                const value = maxValue - (maxValue / 5) * i;
+                ctx.fillStyle = textColor;
+                ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(Math.round(value), padding - 8, y + 4);
+            }
+
+            // Draw bars
+            ctx.fillStyle = barColor;
+            for (let i = 0; i < data.values.length; i++) {
+                const x = padding + (chartWidth / data.values.length) * i + barSpacing / 2;
+                const barHeight = (data.values[i] / maxValue) * chartHeight;
+                const y = padding + chartHeight - barHeight;
+
+                ctx.fillRect(x, y, barWidth, barHeight);
+
+                // X-axis labels
+                ctx.fillStyle = textColor;
+                ctx.textAlign = 'center';
+                ctx.fillText(data.labels[i], x + barWidth / 2, padding + chartHeight + 20);
+
+                ctx.fillStyle = barColor;
+            }
+        }
+
+        function drawPieChart(ctx, canvas, data) {
+            // Set canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            // Clear canvas
+            ctx.clearRect(0, 0, rect.width, rect.height);
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const radius = Math.min(centerX, centerY) - 40;
+
+            const total = data.reduce((sum, item) => sum + item.value, 0);
+            let currentAngle = -Math.PI / 2;
+
+            // Draw pie slices
+            data.forEach((item, index) => {
+                const sliceAngle = (item.value / total) * Math.PI * 2;
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+                ctx.lineTo(centerX, centerY);
+                ctx.fillStyle = item.color;
+                ctx.fill();
+
+                // Draw labels
+                const labelAngle = currentAngle + sliceAngle / 2;
+                const labelX = centerX + Math.cos(labelAngle) * (radius + 20);
+                const labelY = centerY + Math.sin(labelAngle) * (radius + 20);
+
+                ctx.fillStyle = '#525252';
+                ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${item.label}`, labelX, labelY);
+                ctx.fillText(`${item.value}%`, labelX, labelY + 15);
+
+                currentAngle += sliceAngle;
+            });
+        }
+
+        // Users View
+        const UsersView = (props, context) => {
+            const { getState, headless } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            {
+                                div: {
+                                    className: 'flex justify-between items-center mb-6',
+                                    children: [
+                                        {
+                                            div: {
+                                                children: [
+                                                    {
+                                                        h2: {
+                                                            className: 'text-xl font-bold mb-2',
+                                                            text: 'User Management'
+                                                        }
+                                                    },
+                                                    {
+                                                        p: {
+                                                            className: 'text-sm text-gray-600',
+                                                            text: 'Manage users, roles and permissions'
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-primary',
+                                                text: '+ Add User',
+                                                onclick: () => console.log('Add user clicked')
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card',
+                                    children: [{
+                                        div: {
+                                            className: 'card-content',
+                                            children: [{
+                                                div: {
+                                                    className: 'activity-feed',
+                                                    style: { maxHeight: '600px' },
+                                                    children: () => {
+                                                        const activities = getState('dashboard.activities', []);
+                                                        return activities.map(activity => ({
+                                                            ActivityItem: { activity, key: activity.id }
+                                                        }));
+                                                    }
+                                                }
+                                            }]
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Settings View
+        const SettingsView = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            {
+                                h2: {
+                                    className: 'text-xl font-bold mb-6',
+                                    text: 'Settings'
+                                }
+                            },
+                            {
+                                div: {
+                                    style: {
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                                        gap: '1.5rem'
+                                    },
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'card',
+                                                children: [{
+                                                    div: {
+                                                        className: 'card-full',
+                                                        children: [
+                                                            {
+                                                                h3: {
+                                                                    className: 'card-title mb-4',
+                                                                    text: 'General Settings'
+                                                                }
+                                                            },
+                                                            {
+                                                                div: {
+                                                                    className: 'form-group',
+                                                                    children: [
+                                                                        {
+                                                                            label: {
+                                                                                className: 'form-label',
+                                                                                text: 'Site Name'
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            input: {
+                                                                                className: 'form-input',
+                                                                                type: 'text',
+                                                                                value: 'Juris Dashboard',
+                                                                                placeholder: 'Enter site name'
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            },
+                                                            {
+                                                                div: {
+                                                                    className: 'form-group',
+                                                                    children: [
+                                                                        {
+                                                                            label: {
+                                                                                className: 'form-label',
+                                                                                text: 'Admin Email'
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            input: {
+                                                                                className: 'form-input',
+                                                                                type: 'email',
+                                                                                value: 'admin@example.com',
+                                                                                placeholder: 'Enter admin email'
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            },
+                                                            {
+                                                                button: {
+                                                                    className: 'btn btn-primary',
+                                                                    text: 'Save Changes'
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                }]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'card',
+                                                children: [{
+                                                    div: {
+                                                        className: 'card-full',
+                                                        children: [
+                                                            {
+                                                                h3: {
+                                                                    className: 'card-title mb-4',
+                                                                    text: 'Appearance'
+                                                                }
+                                                            },
+                                                            {
+                                                                div: {
+                                                                    className: 'form-group',
+                                                                    children: [
+                                                                        {
+                                                                            label: {
+                                                                                className: 'form-label',
+                                                                                text: 'Theme'
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            select: {
+                                                                                className: 'form-input',
+                                                                                children: [
+                                                                                    { option: { value: 'light', text: 'Light' } },
+                                                                                    { option: { value: 'dark', text: 'Dark' } },
+                                                                                    { option: { value: 'auto', text: 'Auto' } }
+                                                                                ]
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            },
+                                                            {
+                                                                div: {
+                                                                    className: 'form-group',
+                                                                    children: [
+                                                                        {
+                                                                            label: {
+                                                                                className: 'form-label',
+                                                                                text: 'Primary Color'
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            input: {
+                                                                                className: 'form-input',
+                                                                                type: 'color',
+                                                                                value: '#ff6b35'
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            },
+                                                            {
+                                                                button: {
+                                                                    className: 'btn btn-primary',
+                                                                    text: 'Apply Theme'
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                }]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Activity View Component
+        const ActivityView = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            {
+                                h2: {
+                                    className: 'text-xl font-bold mb-6',
+                                    text: 'Activity Log'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'card',
+                                    children: [{
+                                        div: {
+                                            className: 'card-full',
+                                            children: [{
+                                                div: {
+                                                    className: 'activity-feed',
+                                                    style: { maxHeight: '600px' },
+                                                    children: () => {
+                                                        const activities = getState('dashboard.activities', []);
+                                                        return activities.map(activity => ({
+                                                            ActivityItem: { activity, key: activity.id }
+                                                        }));
+                                                    }
+                                                }
+                                            }]
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Detailed User Row Component
+        const UserRowDetailed = (props, context) => {
+            const { user } = props;
+
+            return {
+                render: () => ({
+                    tr: {
+                        children: [
+                            {
+                                td: {
+                                    text: user.name
+                                }
+                            },
+                            {
+                                td: {
+                                    text: user.email
+                                }
+                            },
+                            {
+                                td: {
+                                    text: user.role
+                                }
+                            },
+                            {
+                                td: {
+                                    children: [{
+                                        span: {
+                                            className: () => {
+                                                const statusClasses = {
+                                                    'Active': 'badge badge-success',
+                                                    'Inactive': 'badge badge-danger',
+                                                    'Pending': 'badge badge-warning'
+                                                };
+                                                return statusClasses[user.status] || 'badge badge-info';
+                                            },
+                                            text: user.status
+                                        }
+                                    }]
+                                }
+                            },
+                            {
+                                td: {
+                                    text: user.lastActive
+                                }
+                            },
+                            {
+                                td: {
+                                    children: [{
+                                        div: {
+                                            className: 'flex gap-2',
+                                            children: [
+                                                {
+                                                    button: {
+                                                        className: 'btn btn-secondary btn-sm',
+                                                        text: 'Edit',
+                                                        onclick: () => console.log('Edit user:', user.id)
+                                                    }
+                                                },
+                                                {
+                                                    button: {
+                                                        className: 'btn btn-secondary btn-sm',
+                                                        text: 'Delete',
+                                                        onclick: () => console.log('Delete user:', user.id)
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Supporting ActivityItem component (referenced by ActivityView)
+        const ActivityItem = (props, context) => {
+            const { activity } = props;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'activity-item',
+                        children: [
+                            {
+                                div: {
+                                    className: 'activity-avatar',
+                                    text: activity.user
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'activity-content',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'activity-text',
+                                                text: activity.action
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'activity-time',
+                                                text: activity.time
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+        // ==================== APPLICATION INITIALIZATION ====================
+
+        const juris = new Juris({
+            components: {
+                DashboardLayout,
+                DashboardHeader,
+                DashboardSidebar,
+                NavItem,
+                MainContent,
+                DashboardOverview,
+                StatCard,
+                ChartCard,
+                ActivityCard,
+                ActivityItem,
+                UsersTable,
+                UserRow,
+                AnalyticsView,
+                UsersView,
+                UserRowDetailed,
+                SettingsView,
+                ActivityView,
+                RevenueChart,
+                TrafficSourcesChart,
+                UserGrowthChart,
+                MiniChartCard,
+                ConversionChart,
+                ChartCardEnhanced,
+                ConfigurableChartCard
+            },
+
+            headlessComponents: {
+                MockDataManager: {
+                    fn: MockDataManager,
+                    options: { autoInit: true }
+                },
+                NavigationManager: {
+                    fn: NavigationManager,
+                    options: { autoInit: true }
+                },
+                ThemeManager: {
+                    fn: ThemeManager,
+                    options: { autoInit: true }
+                },
+                StatePersistenceManager: {
+                    fn: StatePersistenceManager,
+                    options: {
+                        autoInit: true,
+                        debug: true, // Enable debug logging
+                        domains: ['ui', 'dashboard', 'notifications'], // Specify domains to track
+                        priorityDomains: ['ui'], // UI gets priority restore for selected list
+                        immediateSave: ['ui'], // Save UI changes immediately (like selected list)
+                        criticalSave: ['ui', 'dashboard'], // Save dashboard with faster debounce
+                        aggressiveRestore: true, // Restore immediately on startup
+                        keyPrefix: 'dashboard_app_state_',
+                        // User-specific domains will have user ID appended automatically
+                        domainRestoreConfig: {
+                            ui: { priority: 1, delay: 0, aggressive: true }, // Restore selected list first
+                            dashboard: { priority: 3, delay: 100, aggressive: true },
+                            notifications: { priority: 4, delay: 200, aggressive: false }
+                        }
+                    }
+                }
+            },
+
+            layout: {
+                div: {
+                    children: [{ DashboardLayout: {} }]
+                }
+            },
+
+            states: {
+                ui: {
+                    currentRoute: '/',
+                    sidebarOpen: false,
+                    theme: 'light',
+                    loading: false
+                },
+                dashboard: {
+                    stats: {
+                        totalUsers: 0,
+                        activeUsers: 0,
+                        revenue: 0,
+                        orders: 0
+                    },
+                    users: [],
+                    activities: [],
+                    chartData: {}
+                },
+                notifications: {
+                    count: 3,
+                    items: []
+                }
+            }
+        });
+
+        // Start the application
+        juris.render('#app');
+
+        // Add sidebar overlay click handler for mobile
+        document.addEventListener('click', (e) => {
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarOpen = juris.getState('ui.sidebarOpen', false);
+
+            if (sidebarOpen && sidebar && !sidebar.contains(e.target) && !e.target.closest('.mobile-menu-btn')) {
+                juris.setState('ui.sidebarOpen', false);
+            }
+        });
+
+        // Add mobile touch improvements
+        document.addEventListener('DOMContentLoaded', () => {
+            // Prevent zoom on input focus (iOS Safari)
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.style.fontSize = '16px';
+            });
+
+            // Add touch-friendly styles
+            const style = document.createElement('style');
+            style.textContent = `
+                /* Mobile touch improvements */
+                @media (max-width: 768px) {
+                    button, [onclick], .btn, .nav-link {
+                        min-height: 44px !important;
+                        touch-action: manipulation !important;
+                        user-select: none !important;
+                        -webkit-tap-highlight-color: transparent !important;
+                        -webkit-touch-callout: none !important;
+                    }
+                    
+                    input, select, textarea {
+                        font-size: 16px !important; /* Prevent zoom on iOS */
+                    }
+                    
+                    .table td, .table th {
+                        min-height: 44px;
+                        vertical-align: middle;
+                    }
+                }
+                
+                /* Smooth sidebar transitions */
+                .sidebar {
+                    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                
+                /* Loading states */
+                .card.loading {
+                    position: relative;
+                    overflow: hidden;
+                }
+                
+                .card.loading::after {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(
+                        90deg,
+                        transparent,
+                        rgba(255, 255, 255, 0.8),
+                        transparent
+                    );
+                    animation: shimmer 1.5s infinite;
+                }
+                
+                @keyframes shimmer {
+                    0% { left: -100%; }
+                    100% { left: 100%; }
+                }
+                
+                /* Enhanced hover states for desktop */
+                @media (hover: hover) and (pointer: fine) {
+                    .stat-card:hover {
+                        transform: translateY(-4px);
+                        box-shadow: var(--shadow-xl);
+                    }
+                    
+                    .nav-link:hover {
+                        transform: translateX(4px);
+                    }
+                }
+                
+                /* Dark mode overrides */
+                @media (prefers-color-scheme: dark) {
+                    .chart-container {
+                        background: var(--gray-800);
+                        color: var(--gray-400);
+                        border-color: var(--gray-700);
+                    }
+                }
+                
+                /* Print styles */
+                @media print {
+                    .sidebar, .header, .mobile-menu-btn {
+                        display: none !important;
+                    }
+                    
+                    .dashboard-layout {
+                        grid-template-columns: 1fr !important;
+                        grid-template-areas: "main" !important;
+                    }
+                    
+                    .main-content {
+                        padding: 0 !important;
+                        max-height: none !important;
+                        overflow: visible !important;
+                    }
+                    
+                    .card {
+                        break-inside: avoid;
+                        box-shadow: none !important;
+                        border: 1px solid #ccc !important;
+                    }
+                }
+                
+                /* Accessibility improvements */
+                .nav-link:focus,
+                .btn:focus,
+                .form-input:focus {
+                    outline: 2px solid var(--orange);
+                    outline-offset: 2px;
+                }
+                
+                /* Reduced motion support */
+                @media (prefers-reduced-motion: reduce) {
+                    *,
+                    *::before,
+                    *::after {
+                        animation-duration: 0.01ms !important;
+                        animation-iteration-count: 1 !important;
+                        transition-duration: 0.01ms !important;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        });
+
+        // Add keyboard navigation support
+        document.addEventListener('keydown', (e) => {
+            // ESC to close mobile sidebar
+            if (e.key === 'Escape') {
+                const sidebarOpen = juris.getState('ui.sidebarOpen', false);
+                if (sidebarOpen) {
+                    juris.setState('ui.sidebarOpen', false);
+                }
+            }
+
+            // Alt + M to toggle mobile menu
+            if (e.altKey && e.key === 'm') {
+                e.preventDefault();
+                const isOpen = juris.getState('ui.sidebarOpen', false);
+                juris.setState('ui.sidebarOpen', !isOpen);
+            }
+        });
+
+        // Global access for debugging
+        window.juris = juris;
+        window.dashboard = {
+            navigate: (route) => juris.headless.NavigationManager.navigate(route),
+            refreshData: () => juris.headless.MockDataManager.refreshData(),
+            toggleTheme: () => juris.headless.ThemeManager.toggleTheme(),
+            getStats: () => juris.getState('dashboard', {}),
+            exportData: () => {
+                const data = juris.getState('dashboard', {});
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dashboard-data-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        };
+
+        console.log('🚀 Juris Dashboard Ready!');
+        console.log('📱 Available routes:');
+        console.log('  - #/ (Dashboard Overview)');
+        console.log('  - #/analytics (Analytics View)');
+        console.log('  - #/users (User Management)');
+        console.log('  - #/settings (Settings)');
+        console.log('  - #/activity (Activity Log)');
+        console.log('💡 Tips:');
+        console.log('  - Use Alt+M to toggle mobile menu');
+        console.log('  - Use ESC to close mobile sidebar');
+        console.log('  - window.dashboard contains helper functions');
+        console.log('  - Fully responsive design with touch optimization');
+        console.log('  - Real-time data updates every 5 seconds');
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Virtual DOM Stress Test</title>
+    <script src="juris-vdom.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9em;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .danger {
+            background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+            box-shadow: 0 4px 15px rgba(245, 101, 101, 0.3);
+        }
+        
+        .danger:hover {
+            box-shadow: 0 6px 20px rgba(245, 101, 101, 0.4);
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            outline: none;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #718096;
+            margin-top: 5px;
+        }
+        
+        .test-area {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 400px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+            border: 2px solid #e2e8f0;
+        }
+        
+        .item {
+            background: linear-gradient(135deg, #81e6d9 0%, #68d391 100%);
+            margin: 5px;
+            padding: 15px;
+            border-radius: 8px;
+            display: inline-block;
+            min-width: 120px;
+            text-align: center;
+            color: #2d3748;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(104, 211, 145, 0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(104, 211, 145, 0.4);
+        }
+        
+        .item.selected {
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+            box-shadow: 0 4px 15px rgba(237, 137, 54, 0.4);
+        }
+        
+        .item.animated {
+            animation: pulse 1s ease-in-out infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
+        }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .performance-warning {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #feb2b2;
+            display: none;
+        }
+        
+        .fps-meter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="fps-meter" id="fpsMeter">FPS: --</div>
+    
+    <div class="container">
+        <h1>🚀 Juris Virtual DOM Stress Test</h1>
+        
+        <div class="performance-warning" id="perfWarning">
+            ⚠️ Performance may be impacted with high item counts. Consider reducing the number of items if your browser becomes unresponsive.
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Items: <span id="itemCountLabel">100</span></label>
+                <input type="range" id="itemCount" min="10" max="10000" value="100" step="10">
+            </div>
+            
+            <div class="control-group">
+                <label>Update Speed (ms): <span id="speedLabel">100</span></label>
+                <input type="range" id="updateSpeed" min="16" max="1000" value="100" step="16">
+            </div>
+            
+            <div class="control-group">
+                <label>Batch Size: <span id="batchLabel">10</span></label>
+                <input type="range" id="batchSize" min="1" max="100" value="10" step="1">
+            </div>
+            
+            <div class="control-group">
+                <button onclick="app.startRandomUpdates()">🎲 Random Updates</button>
+                <button onclick="app.startMassUpdates()">⚡ Mass Updates</button>
+            </div>
+            
+            <div class="control-group">
+                <button onclick="app.startCascadeTest()">🌊 Cascade Test</button>
+                <button onclick="app.startReorderTest()">🔄 Reorder Test</button>
+            </div>
+            
+            <div class="control-group">
+                <button onclick="app.regenerateAll()">🔄 Regenerate All</button>
+                <button onclick="app.stopAll()" class="danger">⏹️ Stop All Tests</button>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalItems">0</div>
+                <div class="stat-label">Total Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="updatesPerSec">0</div>
+                <div class="stat-label">Updates/sec</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="renderTime">0ms</div>
+                <div class="stat-label">Avg Render Time</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="memoryUsage">--</div>
+                <div class="stat-label">Memory (MB)</div>
+            </div>
+        </div>
+        
+        <div class="test-area" id="app"></div>
+    </div>
+
+    <script>
+        // Performance monitoring
+        let fps = 0;
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let renderTimes = [];
+        let updateCount = 0;
+        let lastUpdateTime = Date.now();
+
+        function updateFPS() {
+            frameCount++;
+            const now = performance.now();
+            if (now >= lastTime + 1000) {
+                fps = Math.round((frameCount * 1000) / (now - lastTime));
+                frameCount = 0;
+                lastTime = now;
+                document.getElementById('fpsMeter').textContent = `FPS: ${fps}`;
+            }
+            requestAnimationFrame(updateFPS);
+        }
+        updateFPS();
+
+        // Stress test application
+        const app = new Juris({
+            states: {
+                items: [],
+                selectedItems: new Set(),
+                animatedItems: new Set(),
+                testRunning: false,
+                updateSpeed: 100,
+                batchSize: 10
+            },
+            
+            components: {
+                StressTestItem: (props, { getState, setState }) => ({
+                    div: {
+                        className: `item ${props.selected ? 'selected' : ''} ${props.animated ? 'animated' : ''}`,
+                        text: props.text,
+                        style: {
+                            backgroundColor: props.color,
+                            transform: `scale(${props.scale || 1})`,
+                            opacity: props.opacity || 1
+                        },
+                        onClick: (e) => {
+                            const selected = getState('selectedItems');
+                            const newSelected = new Set(selected);
+                            if (newSelected.has(props.id)) {
+                                newSelected.delete(props.id);
+                            } else {
+                                newSelected.add(props.id);
+                            }
+                            setState('selectedItems', newSelected);
+                        }
+                    }
+                }),
+                
+                StatsDisplay: (props, { getState }) => ({
+                    div: {
+                        children: [
+                            { div: { text: `Items: ${getState('items', []).length}` } },
+                            { div: { text: `Selected: ${getState('selectedItems', new Set()).size}` } },
+                            { div: { text: `Test Running: ${getState('testRunning') ? 'Yes' : 'No'}` } }
+                        ]
+                    }
+                })
+            },
+            
+            layout: {
+                div: {
+                    className: 'grid-container',
+                    children: () => {
+                        const items = app.getState('items', []);
+                        const selected = app.getState('selectedItems', new Set());
+                        const animated = app.getState('animatedItems', new Set());
+                        
+                        return items.map(item => ({
+                            StressTestItem: {
+                                key: item.id,
+                                id: item.id,
+                                text: item.text,
+                                color: item.color,
+                                scale: item.scale,
+                                opacity: item.opacity,
+                                selected: selected.has(item.id),
+                                animated: animated.has(item.id)
+                            }
+                        }));
+                    }
+                }
+            }
+        });
+
+        // Utility functions
+        function randomColor() {
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd', '#98d8c8'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function generateItems(count) {
+            const items = [];
+            for (let i = 0; i < count; i++) {
+                items.push({
+                    id: i,
+                    text: `Item ${i}`,
+                    color: randomColor(),
+                    scale: 1,
+                    opacity: 1,
+                    value: Math.random() * 100
+                });
+            }
+            return items;
+        }
+
+        // Test functions
+        app.generateItems = function(count) {
+            const startTime = performance.now();
+            this.setState('items', generateItems(count));
+            const endTime = performance.now();
+            renderTimes.push(endTime - startTime);
+            if (renderTimes.length > 10) renderTimes.shift();
+            this.updateStats();
+        };
+
+        app.startRandomUpdates = function() {
+            this.stopAll();
+            this.setState('testRunning', true);
+            
+            const updateInterval = setInterval(() => {
+                if (!this.getState('testRunning')) {
+                    clearInterval(updateInterval);
+                    return;
+                }
+                
+                const items = this.getState('items', []);
+                const batchSize = this.getState('batchSize', 10);
+                const speed = this.getState('updateSpeed', 100);
+                
+                for (let i = 0; i < Math.min(batchSize, items.length); i++) {
+                    const randomIndex = Math.floor(Math.random() * items.length);
+                    const newItems = [...items];
+                    newItems[randomIndex] = {
+                        ...newItems[randomIndex],
+                        color: randomColor(),
+                        scale: 0.8 + Math.random() * 0.4,
+                        opacity: 0.5 + Math.random() * 0.5
+                    };
+                    this.setState('items', newItems);
+                }
+                
+                updateCount += batchSize;
+            }, this.getState('updateSpeed', 100));
+            
+            this.currentTest = updateInterval;
+        };
+
+        app.startMassUpdates = function() {
+            this.stopAll();
+            this.setState('testRunning', true);
+            
+            const massUpdateInterval = setInterval(() => {
+                if (!this.getState('testRunning')) {
+                    clearInterval(massUpdateInterval);
+                    return;
+                }
+                
+                const startTime = performance.now();
+                const items = this.getState('items', []);
+                const newItems = items.map(item => ({
+                    ...item,
+                    color: randomColor(),
+                    scale: 0.8 + Math.random() * 0.4,
+                    value: Math.random() * 100
+                }));
+                
+                this.setState('items', newItems);
+                const endTime = performance.now();
+                renderTimes.push(endTime - startTime);
+                if (renderTimes.length > 10) renderTimes.shift();
+                
+                updateCount += items.length;
+            }, this.getState('updateSpeed', 100) * 2);
+            
+            this.currentTest = massUpdateInterval;
+        };
+
+        app.startCascadeTest = function() {
+            this.stopAll();
+            this.setState('testRunning', true);
+            
+            let cascadeIndex = 0;
+            const cascadeInterval = setInterval(() => {
+                if (!this.getState('testRunning')) {
+                    clearInterval(cascadeInterval);
+                    return;
+                }
+                
+                const items = this.getState('items', []);
+                if (items.length === 0) return;
+                
+                const newItems = [...items];
+                const targetIndex = cascadeIndex % items.length;
+                
+                newItems[targetIndex] = {
+                    ...newItems[targetIndex],
+                    color: '#ff6b6b',
+                    scale: 1.2
+                };
+                
+                // Reset previous item
+                if (cascadeIndex > 0) {
+                    const prevIndex = (cascadeIndex - 1) % items.length;
+                    newItems[prevIndex] = {
+                        ...newItems[prevIndex],
+                        color: randomColor(),
+                        scale: 1
+                    };
+                }
+                
+                this.setState('items', newItems);
+                cascadeIndex++;
+                updateCount++;
+            }, 50);
+            
+            this.currentTest = cascadeInterval;
+        };
+
+        app.startReorderTest = function() {
+            this.stopAll();
+            this.setState('testRunning', true);
+            
+            const reorderInterval = setInterval(() => {
+                if (!this.getState('testRunning')) {
+                    clearInterval(reorderInterval);
+                    return;
+                }
+                
+                const items = this.getState('items', []);
+                if (items.length < 2) return;
+                
+                const startTime = performance.now();
+                const newItems = [...items];
+                
+                // Shuffle array
+                for (let i = newItems.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [newItems[i], newItems[j]] = [newItems[j], newItems[i]];
+                }
+                
+                this.setState('items', newItems);
+                const endTime = performance.now();
+                renderTimes.push(endTime - startTime);
+                if (renderTimes.length > 10) renderTimes.shift();
+                
+                updateCount += items.length;
+            }, this.getState('updateSpeed', 100) * 3);
+            
+            this.currentTest = reorderInterval;
+        };
+
+        app.regenerateAll = function() {
+            const count = parseInt(document.getElementById('itemCount').value);
+            this.generateItems(count);
+            this.setState('selectedItems', new Set());
+            this.setState('animatedItems', new Set());
+        };
+
+        app.stopAll = function() {
+            this.setState('testRunning', false);
+            if (this.currentTest) {
+                clearInterval(this.currentTest);
+                this.currentTest = null;
+            }
+        };
+
+        app.updateStats = function() {
+            const items = this.getState('items', []);
+            document.getElementById('totalItems').textContent = items.length;
+            
+            const avgRenderTime = renderTimes.length > 0 
+                ? (renderTimes.reduce((a, b) => a + b, 0) / renderTimes.length).toFixed(2)
+                : '0';
+            document.getElementById('renderTime').textContent = `${avgRenderTime}ms`;
+            
+            // Memory usage (if available)
+            if (performance.memory) {
+                const memory = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+                document.getElementById('memoryUsage').textContent = memory;
+            }
+        };
+
+        // Control bindings
+        document.getElementById('itemCount').addEventListener('input', (e) => {
+            const count = parseInt(e.target.value);
+            document.getElementById('itemCountLabel').textContent = count;
+            
+            if (count > 1000) {
+                document.getElementById('perfWarning').style.display = 'block';
+            } else {
+                document.getElementById('perfWarning').style.display = 'none';
+            }
+        });
+
+        document.getElementById('updateSpeed').addEventListener('input', (e) => {
+            const speed = parseInt(e.target.value);
+            document.getElementById('speedLabel').textContent = speed;
+            app.setState('updateSpeed', speed);
+        });
+
+        document.getElementById('batchSize').addEventListener('input', (e) => {
+            const size = parseInt(e.target.value);
+            document.getElementById('batchLabel').textContent = size;
+            app.setState('batchSize', size);
+        });
+
+        // Updates per second counter
+        setInterval(() => {
+            const now = Date.now();
+            const timeDiff = (now - lastUpdateTime) / 1000;
+            const updatesPerSec = Math.round(updateCount / timeDiff);
+            document.getElementById('updatesPerSec').textContent = updatesPerSec;
+            updateCount = 0;
+            lastUpdateTime = now;
+            app.updateStats();
+        }, 1000);
+
+        // Initialize
+        app.generateItems(100);
+        app.render('#app');
+        
+        console.log('🚀 Juris Virtual DOM Stress Test Ready!');
+        console.log('Try different tests to see how the virtual DOM performs under stress.');
+    </script>
+</body>
+</html>

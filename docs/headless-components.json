@@ -1,0 +1,26 @@
+{
+    "title": "Headless Components",
+    "subtitle": "Separating business logic from UI presentation",
+    "category": "Components",
+    "categorySubtitle": "Building UI components with Juris",
+    "order": 2,
+    "status": "new",
+    "tags": [
+        "headless",
+        "components",
+        "architecture",
+        "separation"
+    ],
+    "content": "<h2>Understanding Headless Components<\/h2><p>Headless components are pure business logic components that don't render any UI. They handle data operations, API calls, state management, and business rules.<\/p><h3>Benefits<\/h3><ul><li>Separation of Concerns<\/li><li>Reusability across platforms<\/li><li>Independent testing<\/li><\/ul>",
+    "toc": [
+        {
+            "title": "Understanding Headless Components",
+            "anchor": "#understanding-headless-components"
+        },
+        {
+            "title": "Benefits",
+            "anchor": "#benefits"
+        }
+    ],
+    "markdown": false
+}

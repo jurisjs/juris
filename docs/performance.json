@@ -1,0 +1,15 @@
+{
+    "title": "Performance Optimization",
+    "subtitle": "Making your app lightning fast",
+    "category": "Advanced Topics",
+    "categorySubtitle": "Advanced patterns and techniques",
+    "order": 1,
+    "tags": [
+        "performance",
+        "optimization",
+        "reactivity",
+        "memory"
+    ],
+    "content": "<h2>Optimizing Reactivity<\/h2><p>Juris provides several patterns to optimize reactive performance:<\/p><ul><li>Granular state subscriptions<\/li><li>Computed state caching<\/li><li>Selective re-rendering<\/li><\/ul>",
+    "markdown": false
+}

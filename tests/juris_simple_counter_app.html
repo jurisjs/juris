@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Counter - Juris Framework</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .counter-app {
+            background: white;
+            padding: 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(255, 107, 53, 0.15);
+            border: 1px solid rgba(255, 107, 53, 0.1);
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .counter-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+
+        .counter-display {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ff6b35;
+            margin: 2rem 0;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .counter-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 60px;
+        }
+
+        .btn-primary {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #e55a2b;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #f1f3f4;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e8eaed;
+            transform: translateY(-2px);
+        }
+
+        .counter-info {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #fff4f1;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+            border: 1px solid rgba(255, 107, 53, 0.1);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5rem 0;
+        }
+
+        .status-positive {
+            color: #ff6b35;
+            font-weight: 600;
+        }
+
+        .status-negative {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .status-zero {
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        @media (max-width: 480px) {
+            .counter-app {
+                padding: 2rem;
+                margin: 1rem;
+            }
+
+            .counter-display {
+                font-size: 3rem;
+            }
+
+            .counter-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                padding: 0.8rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    
+    <script src="juris.js"></script>
+    <script>
+        // Simple Counter Component
+        const Counter = (props, context) => {
+            const { getState, setState } = context;
+            
+            return {
+                render: () => ({
+                    div: {
+                        className: 'counter-app',
+                        children: [
+                            {
+                                h1: {
+                                    className: 'counter-title',
+                                    text: 'Simple Counter'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'counter-display',
+                                    text: () => getState('count', 0).toString()
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'counter-buttons',
+                                    children: [
+                                        {
+                                            button: {
+                                                className: 'btn btn-primary',
+                                                text: '−',
+                                                onclick: () => {
+                                                    const current = getState('count', 0);
+                                                    setState('count', current - 1);
+                                                }
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-secondary',
+                                                text: 'Reset',
+                                                onclick: () => setState('count', 0)
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-primary',
+                                                text: '+',
+                                                onclick: () => {
+                                                    const current = getState('count', 0);
+                                                    setState('count', current + 1);
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'counter-info',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'info-row',
+                                                children: [
+                                                    {
+                                                        span: { text: 'Status:' }
+                                                    },
+                                                    {
+                                                        span: {
+                                                            className: () => {
+                                                                const count = getState('count', 0);
+                                                                if (count > 0) return 'status-positive';
+                                                                if (count < 0) return 'status-negative';
+                                                                return 'status-zero';
+                                                            },
+                                                            text: () => {
+                                                                const count = getState('count', 0);
+                                                                if (count > 0) return 'Positive';
+                                                                if (count < 0) return 'Negative';
+                                                                return 'Zero';
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'info-row',
+                                                children: [
+                                                    {
+                                                        span: { text: 'Even/Odd:' }
+                                                    },
+                                                    {
+                                                        span: {
+                                                            text: () => {
+                                                                const count = getState('count', 0);
+                                                                return count % 2 === 0 ? 'Even' : 'Odd';
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'info-row',
+                                                children: [
+                                                    {
+                                                        span: { text: 'Squared:' }
+                                                    },
+                                                    {
+                                                        span: {
+                                                            text: () => {
+                                                                const count = getState('count', 0);
+                                                                return (count * count).toString();
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Initialize Juris app
+        const juris = new Juris({
+            components: {
+                Counter
+            },
+            
+            layout: {
+                div: {
+                    children: [{ Counter: {} }]
+                }
+            },
+            
+            states: {
+                count: 0
+            }
+        });
+
+        // Render the app
+        juris.render('#app');
+
+        // Global access for debugging
+        window.juris = juris;
+
+        console.log('🎯 Simple Counter Ready!');
+        console.log('💡 Try: juris.setState("count", 42)');
+        console.log('📊 Current state:', juris.getState('count'));
+    </script>
+</body>
+</html>
