@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris News - JSON Streaming Demo</title>
+    <script src="juris.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 2em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .performance-indicator {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-item {
+            padding: 15px 0;
+            color: #64748b;
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 30px;
+        }
+
+        .articles-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .article {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+
+        .article:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .article-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(45deg, #f1f5f9, #e2e8f0);
+        }
+
+        .article-content {
+            padding: 25px;
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #64748b;
+        }
+
+        .category-tag {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .category-tag:hover {
+            background: #5a67d8;
+            transform: scale(1.05);
+        }
+
+        .article-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1e293b;
+            line-height: 1.3;
+        }
+
+        .article-excerpt {
+            color: #64748b;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .article-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 15px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .article-engagement {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .engagement-btn {
+            background: none;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+            color: #64748b;
+        }
+
+        .engagement-btn:hover {
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .engagement-btn.liked {
+            color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .engagement-btn.bookmarked {
+            color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .sidebar-widget {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .widget-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1e293b;
+        }
+
+        .trending-item {
+            display: flex;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 8px;
+        }
+
+        .trending-item:last-child {
+            border-bottom: none;
+        }
+
+        .trending-item:hover {
+            background: #f8fafc;
+            transform: translateX(5px);
+        }
+
+        .trending-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9em;
+            flex-shrink: 0;
+        }
+
+        .trending-content {
+            flex: 1;
+        }
+
+        .trending-title {
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #334155;
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+
+        .trending-meta {
+            font-size: 0.8em;
+            color: #64748b;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .controls h3 {
+            margin-bottom: 20px;
+            color: #1e293b;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            color: #334155;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .json-viewer {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .status-indicator {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .loading-skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 8px;
+            height: 20px;
+            margin: 10px 0;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .enhancement-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 1000;
+            transform: translateY(100px);
+            transition: transform 0.3s;
+        }
+
+        .enhancement-status.show {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                padding: 20px 15px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .nav-content {
+                overflow-x: auto;
+                padding: 0 15px;
+            }
+
+            .control-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        /* Article entrance animation */
+        .article.fade-in {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="enhancement-status" id="enhancementStatus">
+        🔧 Ready to enhance with Juris...
+    </div>
+
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                📰 Juris News
+            </div>
+            <div class="performance-indicator">
+                ⚡ JSON Streaming: <span id="renderTime">0ms</span>
+            </div>
+        </div>
+    </header>
+
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="#" class="nav-item active" data-category="all">All News</a>
+            <a href="#" class="nav-item" data-category="technology">Technology</a>
+            <a href="#" class="nav-item" data-category="science">Science</a>
+            <a href="#" class="nav-item" data-category="business">Business</a>
+            <a href="#" class="nav-item" data-category="politics">Politics</a>
+        </div>
+    </nav>
+
+    <div class="controls">
+        <h3>🚀 JSON Streaming Demo Controls</h3>
+        <div class="control-row">
+            <button class="btn" onclick="streamArticles()">📡 Stream New Articles</button>
+            <button class="btn btn-secondary" onclick="showJSON()">👀 Show JSON Payload</button>
+            <button class="btn" onclick="enhanceArticles()">✨ Enhance with Juris</button>
+            <button class="btn btn-danger" onclick="clearArticles()">🗑️ Clear All</button>
+        </div>
+        <div id="jsonViewer" class="json-viewer"></div>
+        <div id="statusIndicator" class="status-indicator status-info">
+            Ready to stream articles. Each article is pure JSON (68% smaller than HTML!)
+        </div>
+    </div>
+
+    <div class="main-container">
+        <main class="articles-container" id="articlesContainer">
+            <!-- Articles will be streamed here -->
+        </main>
+
+        <aside class="sidebar">
+            <div class="sidebar-widget">
+                <h3 class="widget-title">📈 Trending Now</h3>
+                <div id="trendingContent">
+                    <!-- Trending articles will be populated -->
+                </div>
+            </div>
+
+            <div class="sidebar-widget">
+                <h3 class="widget-title">📊 Performance Stats</h3>
+                <div id="performanceStats">
+                    <div>Articles Loaded: <strong id="articleCount">0</strong></div>
+                    <div>JSON Payload Size: <strong id="payloadSize">0 KB</strong></div>
+                    <div>Render Speed: <strong id="avgRenderTime">0ms</strong></div>
+                    <div>Enhancement Status: <strong id="enhancementCount">0 enhanced</strong></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Performance tracking
+        const startTime = performance.now();
+        let articleCount = 0;
+        let totalPayloadSize = 0;
+        let enhancementActive = false;
+        let lastRenderStart = 0;
+
+        // Initialize Juris
+        const juris = new Juris({
+            components: {
+                NewsArticle: createNewsArticleFactory()
+            }
+        });
+
+        // JSON Component Factory for News Articles
+        function createNewsArticleFactory() {
+            return function NewsArticleFactory(props, context) {
+                const { articleData } = props;
+
+                return {
+                    article: {
+                        className: 'article fade-in',
+                        'data-article-id': articleData.id,
+                        'data-category': articleData.category,
+                        children: [
+                            {
+                                img: {
+                                    className: 'article-image',
+                                    src: articleData.image,
+                                    alt: articleData.title,
+                                    loading: 'lazy'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'article-content',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'article-meta',
+                                                children: [
+                                                    {
+                                                        span: {
+                                                            className: 'category-tag',
+                                                            children: [articleData.category]
+                                                        }
+                                                    },
+                                                    {
+                                                        span: {
+                                                            children: [articleData.publishDate]
+                                                        }
+                                                    },
+                                                    {
+                                                        span: {
+                                                            children: [`${articleData.readTime} min read`]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            h2: {
+                                                className: 'article-title',
+                                                text: articleData.title
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'article-excerpt',
+                                                text: articleData.excerpt
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'article-actions',
+                                                children: [
+                                                    {
+                                                        div: {
+                                                            className: 'article-engagement',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'engagement-btn like-btn',
+                                                                        'data-article-id': articleData.id,
+                                                                        text: `❤️ ${articleData.likes}`
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'engagement-btn comment-btn',
+                                                                        'data-article-id': articleData.id,
+                                                                        text: `💬 ${articleData.comments}`
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'engagement-btn bookmark-btn',
+                                                                        'data-article-id': articleData.id,
+                                                                        text: '🔖 Bookmark'
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'engagement-btn share-btn',
+                                                                        'data-article-id': articleData.id,
+                                                                        text: '🔗 Share'
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                };
+            };
+        }
+
+        // Sample article data (simulating API response)
+        const sampleArticles = [
+            {
+                id: 1,
+                title: "Juris Framework Revolutionizes Web Development",
+                excerpt: "The new Object DOM architecture enables unprecedented flexibility in building web applications. Developers can now stream pure JSON content and enhance it progressively.",
+                category: "technology",
+                image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=200&fit=crop",
+                publishDate: "2024-01-15",
+                readTime: 5,
+                likes: 142,
+                comments: 23,
+                author: "Alex Johnson"
+            },
+            {
+                id: 2,
+                title: "The Future of Progressive Enhancement is Here",
+                excerpt: "Modern web applications can now achieve perfect performance while maintaining full accessibility. This revolutionary approach separates content from behavior completely.",
+                category: "technology",
+                image: "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=400&h=200&fit=crop",
+                publishDate: "2024-01-14",
+                readTime: 7,
+                likes: 89,
+                comments: 15,
+                author: "Sarah Chen"
+            },
+            {
+                id: 3,
+                title: "Breaking: JSON Streaming Reduces Load Times by 68%",
+                excerpt: "New research shows that streaming pure JSON content instead of HTML with embedded JavaScript can dramatically improve website performance across all devices.",
+                category: "science",
+                image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop",
+                publishDate: "2024-01-13",
+                readTime: 4,
+                likes: 267,
+                comments: 45,
+                author: "Dr. Michael Torres"
+            },
+            {
+                id: 4,
+                title: "Major Corporations Adopt Universal UI Architecture",
+                excerpt: "Leading tech companies are embracing object-first development patterns that enable write-once, deploy-anywhere capabilities across web, mobile, and desktop platforms.",
+                category: "business",
+                image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=200&fit=crop",
+                publishDate: "2024-01-12",
+                readTime: 6,
+                likes: 156,
+                comments: 31,
+                author: "Emma Rodriguez"
+            },
+            {
+                id: 5,
+                title: "Government Agencies Modernize Legacy Systems",
+                excerpt: "Federal departments successfully enhance decades-old applications using progressive enhancement techniques, avoiding costly complete rewrites.",
+                category: "politics",
+                image: "https://images.unsplash.com/photo-1589578527966-fdac0f44566c?w=400&h=200&fit=crop",
+                publishDate: "2024-01-11",
+                readTime: 8,
+                likes: 203,
+                comments: 67,
+                author: "James Wilson"
+            },
+            {
+                id: 6,
+                title: "Framework Fatigue: The Post-Framework Solution",
+                excerpt: "Developers worldwide report decreased burnout and increased productivity after adopting platform-agnostic development approaches that transcend traditional framework limitations.",
+                category: "technology",
+                image: "https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=200&fit=crop",
+                publishDate: "2024-01-10",
+                readTime: 3,
+                likes: 378,
+                comments: 89,
+                author: "Lisa Park"
+            },
+            // New Business Articles
+            {
+                id: 7,
+                title: "Startup Raises $50M Using Revolutionary Architecture",
+                excerpt: "A new startup focusing on object-first development has secured major funding from leading venture capital firms, citing unprecedented developer productivity gains.",
+                category: "business",
+                image: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=200&fit=crop",
+                publishDate: "2024-01-16",
+                readTime: 6,
+                likes: 234,
+                comments: 42,
+                author: "Maria Santos"
+            },
+            {
+                id: 8,
+                title: "Fortune 500 Companies Report 40% Cost Reduction",
+                excerpt: "Enterprise clients using modern web architectures report significant development cost savings and faster time-to-market for new digital products.",
+                category: "business",
+                image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=200&fit=crop",
+                publishDate: "2024-01-15",
+                readTime: 5,
+                likes: 189,
+                comments: 28,
+                author: "David Kim"
+            },
+            {
+                id: 9,
+                title: "Remote Work Revolution: New Development Tools",
+                excerpt: "Companies worldwide are adopting platform-agnostic development tools that enable seamless collaboration between remote teams and faster product delivery.",
+                category: "business",
+                image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=200&fit=crop",
+                publishDate: "2024-01-14",
+                readTime: 7,
+                likes: 167,
+                comments: 35,
+                author: "Jennifer Lee"
+            },
+            {
+                id: 10,
+                title: "E-commerce Giants Embrace Streaming Content",
+                excerpt: "Major online retailers are implementing JSON streaming architectures to deliver faster page loads and improved user experiences during high-traffic events.",
+                category: "business",
+                image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=200&fit=crop",
+                publishDate: "2024-01-13",
+                readTime: 4,
+                likes: 278,
+                comments: 56,
+                author: "Robert Chen"
+            },
+            {
+                id: 11,
+                title: "Investment Banking Modernizes Trading Platforms",
+                excerpt: "Wall Street firms are upgrading legacy trading systems using progressive enhancement techniques, resulting in millisecond performance improvements.",
+                category: "business",
+                image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=200&fit=crop",
+                publishDate: "2024-01-12",
+                readTime: 8,
+                likes: 143,
+                comments: 29,
+                author: "Amanda Foster"
+            },
+            {
+                id: 12,
+                title: "SaaS Market Sees 300% Growth in Modern Frameworks",
+                excerpt: "Software-as-a-Service companies report explosive growth after adopting universal development architectures that support multiple deployment targets.",
+                category: "business",
+                image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop",
+                publishDate: "2024-01-11",
+                readTime: 6,
+                likes: 195,
+                comments: 38,
+                author: "Michael Torres"
+            },
+            // Additional Politics Articles
+            {
+                id: 13,
+                title: "EU Passes Digital Infrastructure Modernization Act",
+                excerpt: "European Union legislators approve sweeping reforms requiring government websites to adopt accessible, performance-first development practices.",
+                category: "politics",
+                image: "https://images.unsplash.com/photo-1494790108755-2616c79ca28d?w=400&h=200&fit=crop",
+                publishDate: "2024-01-16",
+                readTime: 7,
+                likes: 156,
+                comments: 42,
+                author: "François Dubois"
+            },
+            {
+                id: 14,
+                title: "Congressional Committee Reviews Tech Modernization",
+                excerpt: "House committee examines federal IT spending, calling for adoption of modern development practices that reduce costs and improve citizen services.",
+                category: "politics",
+                image: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&h=200&fit=crop",
+                publishDate: "2024-01-15",
+                readTime: 6,
+                likes: 89,
+                comments: 23,
+                author: "Senator Patricia Williams"
+            },
+            {
+                id: 15,
+                title: "State Governments Report Digital Transformation Success",
+                excerpt: "Multiple state administrations achieve significant cost savings and improved citizen engagement through progressive web development initiatives.",
+                category: "politics",
+                image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=200&fit=crop",
+                publishDate: "2024-01-14",
+                readTime: 5,
+                likes: 134,
+                comments: 31,
+                author: "Governor Maria Gonzalez"
+            },
+            {
+                id: 16,
+                title: "International Standards Body Adopts New Web Guidelines",
+                excerpt: "Global consortium establishes new accessibility and performance standards for government websites, emphasizing progressive enhancement approaches.",
+                category: "politics",
+                image: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=400&h=200&fit=crop",
+                publishDate: "2024-01-13",
+                readTime: 8,
+                likes: 167,
+                comments: 28,
+                author: "Dr. Elizabeth Harper"
+            }
+        ];
+
+        let currentArticles = [];
+        let streamingInProgress = false;
+
+        // Stream articles function (simulates real streaming)
+        async function streamArticles() {
+            if (streamingInProgress) return;
+
+            streamingInProgress = true;
+            lastRenderStart = performance.now(); // Start timing this render operation
+            updateStatus('📡 Streaming articles... Each article is pure JSON!', 'info');
+
+            const container = document.getElementById('articlesContainer');
+            let newArticlesCount = 0;
+
+            // Ensure balanced category representation
+            const categories = ['technology', 'science', 'business', 'politics'];
+            const articlesPerCategory = Math.floor(3 / categories.length); // At least 1 from each if possible
+            let selectedArticles = [];
+
+            // Get at least one article from each category
+            categories.forEach(category => {
+                const categoryArticles = sampleArticles.filter(article => article.category === category);
+                if (categoryArticles.length > 0) {
+                    const randomArticle = categoryArticles[Math.floor(Math.random() * categoryArticles.length)];
+                    selectedArticles.push({ ...randomArticle, id: Date.now() + selectedArticles.length });
+                }
+            });
+
+            // If we have less than 3, fill with random articles
+            while (selectedArticles.length < 3) {
+                const randomArticle = sampleArticles[Math.floor(Math.random() * sampleArticles.length)];
+                // Avoid duplicates by checking titles
+                if (!selectedArticles.some(selected => selected.title === randomArticle.title)) {
+                    selectedArticles.push({ ...randomArticle, id: Date.now() + selectedArticles.length });
+                }
+            }
+
+            // Stream the selected articles
+            for (let i = 0; i < selectedArticles.length; i++) {
+                const article = selectedArticles[i];
+
+                // Calculate JSON payload size
+                const jsonPayload = JSON.stringify(article);
+                totalPayloadSize += new Blob([jsonPayload]).size;
+
+                // Create article element directly using Juris's native rendering
+                const articleElement = juris.domRenderer.render({
+                    article: {
+                        className: 'article fade-in',
+                        'data-article-id': article.id,
+                        'data-category': article.category,
+                        children: [
+                            {
+                                img: {
+                                    className: 'article-image',
+                                    src: article.image,
+                                    alt: article.title,
+                                    loading: 'lazy'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'article-content',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'article-meta',
+                                                children: [
+                                                    {
+                                                        span: {
+                                                            className: 'category-tag',
+                                                            text: article.category.charAt(0).toUpperCase() + article.category.slice(1),
+                                                            onclick: function (event) {
+                                                                event.stopPropagation();
+                                                                const category = event.target.textContent.toLowerCase();
+
+                                                                // Update navigation
+                                                                document.querySelectorAll('.nav-item').forEach(item => {
+                                                                    item.classList.remove('active');
+                                                                    if (item.dataset.category === category) {
+                                                                        item.classList.add('active');
+                                                                    }
+                                                                });
+
+                                                                if (!document.querySelector('.nav-item.active')) {
+                                                                    document.querySelector('.nav-item[data-category="all"]').classList.add('active');
+                                                                }
+
+                                                                filterArticles(category);
+                                                                showEnhancementStatus(`🏷️ Filtering by ${category}`);
+                                                            }
+                                                        }
+                                                    },
+                                                    {
+                                                        span: {
+                                                            text: article.publishDate
+                                                        }
+                                                    },
+                                                    {
+                                                        span: {
+                                                            text: `${article.readTime} min read`
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            h2: {
+                                                className: 'article-title',
+                                                text: article.title
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'article-excerpt',
+                                                text: article.excerpt
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'article-actions',
+                                                children: [
+                                                    {
+                                                        div: {
+                                                            className: 'article-engagement',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'engagement-btn like-btn',
+                                                                        'data-article-id': article.id,
+                                                                        text: `❤️ ${article.likes}`
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'engagement-btn comment-btn',
+                                                                        'data-article-id': article.id,
+                                                                        text: `💬 ${article.comments}`
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'engagement-btn bookmark-btn',
+                                                                        'data-article-id': article.id,
+                                                                        text: '🔖 Bookmark'
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'engagement-btn share-btn',
+                                                                        'data-article-id': article.id,
+                                                                        text: '🔗 Share'
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                });
+
+                if (articleElement) {
+                    container.appendChild(articleElement);
+                    currentArticles.push(article);
+                    articleCount++;
+                    newArticlesCount++;
+                }
+            }
+
+            // Update stats with current render time
+            updatePerformanceStats();
+            updateStatus(`✅ Streamed ${newArticlesCount} articles with balanced categories!`, 'success');
+
+            // Auto-enhance immediately after streaming
+            if (!enhancementActive) {
+                enhanceArticles();
+            }
+
+            streamingInProgress = false;
+        }
+
+        // Enhance articles with Juris reactivity
+        function enhanceArticles() {
+            if (enhancementActive) {
+                updateStatus('⚠️ Articles already enhanced!', 'info');
+                return;
+            }
+
+            updateStatus('✨ Enhancing articles with Juris reactivity...', 'info');
+
+            // Debug: Log category tags before enhancement
+            console.log('Category tags before enhancement:',
+                Array.from(document.querySelectorAll('.category-tag')).map(el => ({
+                    element: el,
+                    textContent: el.textContent,
+                    innerHTML: el.innerHTML
+                }))
+            );
+
+            // Enhance like buttons
+            juris.enhance('.like-btn', (context) => ({
+                onclick: (event) => {
+                    const articleId = event.target.dataset.articleId;
+                    const liked = context.getState(`articles.${articleId}.liked`, false);
+                    const likes = context.getState(`articles.${articleId}.likes`,
+                        parseInt(event.target.textContent.replace(/[^\d]/g, '')) || 0);
+
+                    const newLiked = !liked;
+                    const newLikes = newLiked ? likes + 1 : likes - 1;
+
+                    context.setState(`articles.${articleId}.liked`, newLiked);
+                    context.setState(`articles.${articleId}.likes`, newLikes);
+
+                    event.target.textContent = `❤️ ${newLikes}`;
+                    event.target.classList.toggle('liked', newLiked);
+
+                    // Visual feedback
+                    event.target.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        event.target.style.transform = 'scale(1)';
+                    }, 200);
+                }
+            }));
+
+            // Enhance bookmark buttons
+            juris.enhance('.bookmark-btn', (context) => ({
+                onclick: (event) => {
+                    const articleId = event.target.dataset.articleId;
+                    const bookmarked = context.getState(`articles.${articleId}.bookmarked`, false);
+
+                    context.setState(`articles.${articleId}.bookmarked`, !bookmarked);
+
+                    event.target.textContent = !bookmarked ? '🔖 Bookmarked' : '🔖 Bookmark';
+                    event.target.classList.toggle('bookmarked', !bookmarked);
+                }
+            }));
+
+            // Enhance share buttons
+            juris.enhance('.share-btn', (context) => ({
+                onclick: (event) => {
+                    const articleId = event.target.dataset.articleId;
+                    const article = currentArticles.find(a => a.id == articleId);
+
+                    if (navigator.share && article) {
+                        navigator.share({
+                            title: article.title,
+                            text: article.excerpt,
+                            url: window.location.href
+                        });
+                    } else {
+                        // Fallback
+                        navigator.clipboard.writeText(window.location.href);
+                        event.target.textContent = '✅ Copied!';
+                        setTimeout(() => {
+                            event.target.textContent = '🔗 Share';
+                        }, 2000);
+                    }
+                }
+            }));
+
+            // Enhance comment buttons
+            juris.enhance('.comment-btn', (context) => ({
+                onclick: (event) => {
+                    const articleId = event.target.dataset.articleId;
+                    const article = currentArticles.find(a => a.id == articleId);
+
+                    if (article) {
+                        alert(`Comments for: "${article.title}"\n\nThis would open a comment system in a real application.`);
+                    }
+                }
+            }));
+
+            // Enhance navigation
+            juris.enhance('.nav-item', (context) => ({
+                onclick: (event) => {
+                    event.preventDefault();
+
+                    // Update active state
+                    document.querySelectorAll('.nav-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    event.target.classList.add('active');
+
+                    const category = event.target.dataset.category;
+                    filterArticles(category);
+                }
+            }));
+
+            // Enhance trending items
+            juris.enhance('.trending-item', (context) => ({
+                onclick: (event) => {
+                    const title = event.currentTarget.querySelector('.trending-title').textContent;
+                    const views = event.currentTarget.querySelector('.trending-meta').textContent;
+
+                    // Simulate navigation to trending article
+                    alert(`Opening trending article:\n\n"${title}"\n\n${views}\n\nIn a real app, this would navigate to the full article.`);
+
+                    // Visual feedback
+                    event.currentTarget.style.transform = 'scale(0.98)';
+                    setTimeout(() => {
+                        event.currentTarget.style.transform = 'translateX(5px)';
+                    }, 150);
+
+                    // Update view count (simulate real-time engagement)
+                    const metaEl = event.currentTarget.querySelector('.trending-meta');
+                    const currentViews = parseFloat(metaEl.textContent.replace('K views', ''));
+                    const newViews = (currentViews + 0.1).toFixed(1);
+                    metaEl.textContent = `${newViews}K views`;
+
+                    // Track in state
+                    const trendingId = title.replace(/\s+/g, '-').toLowerCase();
+                    const clicks = context.getState(`trending.${trendingId}.clicks`, 0);
+                    context.setState(`trending.${trendingId}.clicks`, clicks + 1);
+                }
+            }));
+
+            // DON'T enhance category tags - they have click handlers in JSON
+            // juris.enhance('.category-tag', ...); // Removed to prevent text clearing
+
+            enhancementActive = true;
+            updateStatus('🎉 All articles enhanced with full Juris reactivity!', 'success');
+            updatePerformanceStats();
+
+            // Show enhancement status
+            showEnhancementStatus('✨ Enhanced with Juris');
+
+            // Debug: Log category tags after enhancement
+            setTimeout(() => {
+                console.log('Category tags after enhancement:',
+                    Array.from(document.querySelectorAll('.category-tag')).map(el => ({
+                        element: el,
+                        textContent: el.textContent,
+                        innerHTML: el.innerHTML,
+                        enhanced: el.dataset.jurisEnhanced
+                    }))
+                );
+            }, 100);
+        }
+
+        // Filter articles by category
+        function filterArticles(category) {
+            const articles = document.querySelectorAll('.article');
+
+            articles.forEach(article => {
+                const articleCategory = article.dataset.category;
+                const shouldShow = category === 'all' || articleCategory === category;
+
+                article.style.display = shouldShow ? 'block' : 'none';
+
+                if (shouldShow) {
+                    article.style.animation = 'none';
+                    article.offsetHeight; // Trigger reflow
+                    article.style.animation = 'fadeInUp 0.6s ease forwards';
+                }
+            });
+        }
+
+        // Show JSON payload
+        function showJSON() {
+            const viewer = document.getElementById('jsonViewer');
+            const isVisible = viewer.style.display !== 'none';
+
+            if (isVisible) {
+                viewer.style.display = 'none';
+                return;
+            }
+
+            if (currentArticles.length === 0) {
+                updateStatus('⚠️ Stream some articles first to see JSON!', 'info');
+                return;
+            }
+
+            const sampleArticle = currentArticles[0];
+            const jsonString = JSON.stringify(sampleArticle, null, 2);
+
+            viewer.innerHTML = `<pre>${jsonString}</pre>`;
+            viewer.style.display = 'block';
+
+            updateStatus(`📄 Showing JSON for article "${sampleArticle.title}" (${new Blob([jsonString]).size} bytes)`, 'info');
+        }
+
+        // Clear all articles
+        function clearArticles() {
+            document.getElementById('articlesContainer').innerHTML = '';
+            currentArticles = [];
+            articleCount = 0;
+            totalPayloadSize = 0;
+            enhancementActive = false;
+            lastRenderStart = 0; // Reset render timing
+
+            updatePerformanceStats();
+            updateStatus('🗑️ All articles cleared. Ready to stream fresh content!', 'info');
+        }
+
+        // Update status indicator
+        function updateStatus(message, type) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.textContent = message;
+            indicator.className = `status-indicator status-${type}`;
+        }
+
+        // Update performance statistics
+        function updatePerformanceStats() {
+            document.getElementById('articleCount').textContent = articleCount;
+            document.getElementById('payloadSize').textContent = `${(totalPayloadSize / 1024).toFixed(1)} KB`;
+
+            // Calculate current render time (time since last render started)
+            const currentRenderTime = lastRenderStart > 0 ?
+                (performance.now() - lastRenderStart).toFixed(1) :
+                (performance.now() - startTime).toFixed(1);
+
+            document.getElementById('avgRenderTime').textContent = `${currentRenderTime}ms`;
+
+            const enhancedCount = enhancementActive ? articleCount : 0;
+            document.getElementById('enhancementCount').textContent = `${enhancedCount} enhanced`;
+        }
+
+        // Show enhancement status notification
+        function showEnhancementStatus(message) {
+            const status = document.getElementById('enhancementStatus');
+            status.textContent = message;
+            status.classList.add('show');
+
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize trending content
+        function initializeTrending() {
+            const trending = [
+                { title: "Revolutionary Object DOM Architecture", views: "15.2K" },
+                { title: "68% Performance Improvement Study", views: "12.8K" },
+                { title: "Progressive Enhancement Success Stories", views: "9.4K" },
+                { title: "Framework-Agnostic Development Guide", views: "7.1K" },
+                { title: "JSON Streaming Best Practices", views: "5.9K" }
+            ];
+
+            const container = document.getElementById('trendingContent');
+            container.innerHTML = trending.map((item, index) => `
+                <div class="trending-item">
+                    <div class="trending-number">${index + 1}</div>
+                    <div class="trending-content">
+                        <div class="trending-title">${item.title}</div>
+                        <div class="trending-meta">${item.views} views</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Performance tracking
+        //window.addEventListener('load', () => {
+        const loadTime = (performance.now() - startTime).toFixed(1);
+        document.getElementById('renderTime').textContent = `${loadTime}ms`;
+
+        // Initialize trending sidebar
+        initializeTrending();
+
+        // Auto-stream initial articles immediately
+        streamArticles();
+        //});
+
+        // Auto-enhance immediately after articles are streamed
+        // This will be called from within streamArticles() instead of a timeout
+    </script>
+</body>
+
+</html>

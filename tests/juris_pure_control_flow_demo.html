@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Pure Control Flow Demo</title>
+    <script src="juris.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 4px;
+        }
+        
+        .btn:hover { background: #005c99; }
+        .btn.secondary { background: #6c757d; }
+        .btn.danger { background: #dc3545; }
+        .btn.success { background: #28a745; }
+        
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+            background: #fafafa;
+        }
+        
+        .input-group {
+            margin: 10px 0;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+        
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .hidden { display: none !important; }
+        .visible { display: block !important; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .flex {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .flex-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .badge {
+            background: #007acc;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .badge.warning { background: #ffc107; color: #000; }
+        .badge.danger { background: #dc3545; }
+        .badge.success { background: #28a745; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        // Pure Control Flow Components with Component Injection
+
+        // 1. Conditional Renderer - Accepts injected components
+        const ConditionalRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: () => {
+                        const condition = typeof props.condition === 'function' 
+                            ? props.condition() 
+                            : props.condition;
+                        
+                        if (condition) {
+                            return props.whenTrue ? 
+                                (Array.isArray(props.whenTrue) ? props.whenTrue : [props.whenTrue]) : 
+                                [];
+                        }
+                        
+                        return props.whenFalse ? 
+                            (Array.isArray(props.whenFalse) ? props.whenFalse : [props.whenFalse]) : 
+                            [];
+                    }
+                }
+            })
+        });
+
+        // 2. Switch/Case Renderer - Accepts injected components for each case
+        const SwitchRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: () => {
+                        const value = typeof props.value === 'function' 
+                            ? props.value() 
+                            : props.value;
+                        
+                        // Look for exact match first
+                        if (props[value]) {
+                            const match = props[value];
+                            return Array.isArray(match) ? match : [match];
+                        }
+                        
+                        // Fallback to default
+                        if (props.default) {
+                            return Array.isArray(props.default) ? props.default : [props.default];
+                        }
+                        
+                        return [];
+                    }
+                }
+            })
+        });
+
+        // 3. List Renderer - Accepts injected component template
+        const ListRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: props.containerClass || '',
+                    children: () => {
+                        const items = typeof props.items === 'function' 
+                            ? props.items() 
+                            : props.items || [];
+                        
+                        if (items.length === 0) {
+                            return props.empty ? 
+                                (Array.isArray(props.empty) ? props.empty : [props.empty]) : 
+                                [];
+                        }
+                        
+                        if (props.itemComponent && props.itemProps) {
+                            return items.map((item, index) => ({
+                                [props.itemComponent]: {
+                                    key: item.id || index,
+                                    ...props.itemProps(item, index)
+                                }
+                            }));
+                        }
+                        
+                        return items.map((item, index) => ({
+                            div: {
+                                key: item.id || index,
+                                text: typeof item === 'object' ? JSON.stringify(item) : item
+                            }
+                        }));
+                    }
+                }
+            })
+        });
+
+        // 4. Route Renderer - Accepts injected components for each route
+        const RouteRenderer = (props, context) => {
+            const { getState } = context;
+            
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const currentRoute = getState('router.currentRoute', '/');
+                            
+                            // Look for exact route match
+                            if (props[currentRoute]) {
+                                const match = props[currentRoute];
+                                return Array.isArray(match) ? match : [match];
+                            }
+                            
+                            // Fallback to 404
+                            if (props.notFound) {
+                                return Array.isArray(props.notFound) ? props.notFound : [props.notFound];
+                            }
+                            
+                            return [{ div: { text: '404 - Route not found' } }];
+                        }
+                    }
+                })
+            };
+        };
+
+        // 5. Async Renderer - Accepts injected components for each state
+        const AsyncRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: () => {
+                        const loading = typeof props.loading === 'function' 
+                            ? props.loading() 
+                            : props.loading;
+                        const error = typeof props.error === 'function' 
+                            ? props.error() 
+                            : props.error;
+                        const data = typeof props.data === 'function' 
+                            ? props.data() 
+                            : props.data;
+                        
+                        if (loading) {
+                            return props.loadingComponent ? 
+                                (Array.isArray(props.loadingComponent) ? props.loadingComponent : [props.loadingComponent]) : 
+                                [{ div: { className: 'loading', text: 'Loading...' } }];
+                        }
+                        
+                        if (error) {
+                            return props.errorComponent ? 
+                                (Array.isArray(props.errorComponent) ? props.errorComponent : [props.errorComponent]) : 
+                                [{ div: { className: 'error', text: `Error: ${error}` } }];
+                        }
+                        
+                        if (data !== null && data !== undefined) {
+                            return props.successComponent ? 
+                                (Array.isArray(props.successComponent) ? props.successComponent : [props.successComponent]) : 
+                                [{ div: { text: 'Data loaded successfully' } }];
+                        }
+                        
+                        return props.emptyComponent ? 
+                            (Array.isArray(props.emptyComponent) ? props.emptyComponent : [props.emptyComponent]) : 
+                            [];
+                    }
+                }
+            })
+        });
+
+        // 6. Permission Renderer - Accepts injected components
+        const PermissionRenderer = (props, context) => {
+            const { getState } = context;
+            
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const userRole = getState('user.role', 'guest');
+                            const allowedRoles = props.allowedRoles || ['user'];
+                            
+                            if (allowedRoles.includes(userRole)) {
+                                return props.authorized ? 
+                                    (Array.isArray(props.authorized) ? props.authorized : [props.authorized]) : 
+                                    [];
+                            }
+                            
+                            return props.unauthorized ? 
+                                (Array.isArray(props.unauthorized) ? props.unauthorized : [props.unauthorized]) : 
+                                [{ div: { className: 'error', text: 'Access denied' } }];
+                        }
+                    }
+                })
+            };
+        };
+
+        // 7. Form State Controller - Still uses render props for complex state injection
+        const FormStateController = (props, context) => {
+            const { getState, setState } = context;
+            const formKey = props.formKey || 'form';
+            
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const formData = getState(`${formKey}.data`, {});
+                            const errors = getState(`${formKey}.errors`, {});
+                            const isSubmitting = getState(`${formKey}.isSubmitting`, false);
+                            
+                            if (typeof props.children === 'function') {
+                                const formHelpers = {
+                                    setValue: (field, value) => setState(`${formKey}.data.${field}`, value),
+                                    getValue: (field, defaultValue = '') => getState(`${formKey}.data.${field}`, defaultValue),
+                                    setError: (field, error) => setState(`${formKey}.errors.${field}`, error),
+                                    clearError: (field) => setState(`${formKey}.errors.${field}`, null),
+                                    setSubmitting: (value) => setState(`${formKey}.isSubmitting`, value),
+                                    reset: () => {
+                                        setState(`${formKey}.data`, {});
+                                        setState(`${formKey}.errors`, {});
+                                        setState(`${formKey}.isSubmitting`, false);
+                                    },
+                                    formData,
+                                    errors,
+                                    isSubmitting
+                                };
+                                
+                                const result = props.children(formHelpers);
+                                return Array.isArray(result) ? result : [result];
+                            }
+                            
+                            return props.children ? 
+                                (Array.isArray(props.children) ? props.children : [props.children]) : 
+                                [];
+                        }
+                    }
+                })
+            };
+        };
+
+        // 8. Multi State Renderer - Shows different components based on multiple conditions
+        const MultiStateRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: () => {
+                        // Check conditions in order and return first match
+                        if (props.conditions) {
+                            for (const condition of props.conditions) {
+                                const test = typeof condition.when === 'function' 
+                                    ? condition.when() 
+                                    : condition.when;
+                                
+                                if (test) {
+                                    return condition.render ? 
+                                        (Array.isArray(condition.render) ? condition.render : [condition.render]) : 
+                                        [];
+                                }
+                            }
+                        }
+                        
+                        // No conditions matched, return fallback
+                        return props.fallback ? 
+                            (Array.isArray(props.fallback) ? props.fallback : [props.fallback]) : 
+                            [];
+                    }
+                }
+            })
+        });
+
+        // UI Components for injection
+        const SuccessMessage = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'success',
+                    text: props.text || '✅ Success!'
+                }
+            })
+        });
+
+        const ErrorMessage = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'error',
+                    text: props.text || '❌ Error!'
+                }
+            })
+        });
+
+        const LoadingSpinner = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'loading',
+                    text: props.text || '⏳ Loading...'
+                }
+            })
+        });
+
+        const InfoCard = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'card',
+                    text: props.text || 'ℹ️ Information'
+                }
+            })
+        });
+
+        const AdminPanel = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'success',
+                    text: '⚙️ Admin Panel - Secret admin content!'
+                }
+            })
+        });
+
+        const AccessDenied = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'error',
+                    text: '🚫 Access denied - Admin only!'
+                }
+            })
+        });
+
+        const HomePage = (props, context) => ({
+            render: () => ({
+                div: {
+                    text: '🏠 Welcome to the Home page!'
+                }
+            })
+        });
+
+        const AboutPage = (props, context) => ({
+            render: () => ({
+                div: {
+                    text: '📄 About us - We build amazing apps with Juris!'
+                }
+            })
+        });
+
+        const NotFoundPage = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'error',
+                    text: '404 - Page not found!'
+                }
+            })
+        });
+
+        const ListItem = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'list-item',
+                    children: [
+                        {
+                            div: {
+                                children: [
+                                    { span: { text: props.item.name } },
+                                    { span: { 
+                                        className: `badge ${props.item.status === 'active' ? 'success' : 'warning'}`,
+                                        text: props.item.status
+                                    }}
+                                ]
+                            }
+                        },
+                        { Button: {
+                            text: 'Remove',
+                            variant: 'danger',
+                            onClick: () => props.onRemove(props.item.id)
+                        }}
+                    ]
+                }
+            })
+        });
+
+        const EmptyListMessage = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'card',
+                    text: '📝 No items yet. Click "Add Item" to start!'
+                }
+            })
+        });
+
+        const ThemeDisplay = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'card',
+                    style: props.style || {},
+                    text: props.text || 'Theme preview'
+                }
+            })
+        });
+
+        const AsyncDataDisplay = (props, context) => {
+            const { getState } = context;
+            
+            return {
+                render: () => ({
+                    div: {
+                        className: 'success',
+                        text: () => {
+                            const data = getState('async.data', {});
+                            return `✅ ${data.message} (${data.timestamp})`;
+                        }
+                    }
+                })
+            };
+        };
+
+        const Button = (props, context) => ({
+            render: () => ({
+                button: {
+                    className: () => `btn ${props.variant || ''}`,
+                    text: () => typeof props.text === 'function' ? props.text() : (props.text || 'Button'),
+                    onclick: props.onClick || (() => {}),
+                    disabled: () => typeof props.disabled === 'function' ? props.disabled() : props.disabled
+                }
+            })
+        });
+
+        const Input = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'input-group',
+                    children: [
+                        props.label ? { label: { text: props.label } } : null,
+                        {
+                            input: {
+                                type: props.type || 'text',
+                                placeholder: props.placeholder || '',
+                                value: () => typeof props.value === 'function' ? props.value() : (props.value || ''),
+                                oninput: props.onInput || (() => {})
+                            }
+                        },
+                        props.error ? {
+                            div: {
+                                className: 'error',
+                                text: () => typeof props.error === 'function' ? props.error() : props.error
+                            }
+                        } : null
+                    ].filter(Boolean)
+                }
+            })
+        });
+
+        const Card = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: `section ${props.className || ''}`,
+                    children: [
+                        props.title ? { h3: { text: props.title } } : null,
+                        ...(Array.isArray(props.children) ? props.children : [props.children])
+                    ].filter(Boolean)
+                }
+            })
+        });
+
+        // Demo Application Components
+
+        const NavigationDemo = (props, context) => {
+            const { getState, setState } = context;
+            
+            return {
+                render: () => ({
+                    Card: {
+                        title: 'Route-based Navigation Demo',
+                        children: [
+                            {
+                                div: {
+                                    className: 'flex',
+                                    children: [
+                                        { Button: {
+                                            text: 'Home',
+                                            variant: () => getState('router.currentRoute', '/') === '/' ? 'success' : '',
+                                            onClick: () => setState('router.currentRoute', '/')
+                                        }},
+                                        { Button: {
+                                            text: 'About',
+                                            variant: () => getState('router.currentRoute', '/') === '/about' ? 'success' : '',
+                                            onClick: () => setState('router.currentRoute', '/about')
+                                        }},
+                                        { Button: {
+                                            text: 'Admin',
+                                            variant: () => getState('router.currentRoute', '/') === '/admin' ? 'success' : '',
+                                            onClick: () => setState('router.currentRoute', '/admin')
+                                        }},
+                                        { Button: {
+                                            text: '404',
+                                            variant: () => getState('router.currentRoute', '/') === '/notfound' ? 'success' : '',
+                                            onClick: () => setState('router.currentRoute', '/notfound')
+                                        }}
+                                    ]
+                                }
+                            },
+                            {
+                                RouteRenderer: {
+                                    routes: {
+                                        '/': { div: { text: '🏠 Welcome to the Home page!' } },
+                                        '/about': { div: { text: '📄 About us - We build amazing apps with Juris!' } },
+                                        '/admin': {
+                                            PermissionRenderer: {
+                                                allowedRoles: ['admin'],
+                                                children: { div: { text: '⚙️ Admin Panel - Secret admin content!' } },
+                                                fallback: { div: { className: 'error', text: '🚫 Access denied - Admin only!' } }
+                                            }
+                                        },
+                                        '404': { div: { className: 'error', text: '404 - Page not found!' } }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const ConditionalDemo = (props, context) => {
+            const { getState, setState } = context;
+            
+            return {
+                render: () => ({
+                    Card: {
+                        title: 'Conditional Rendering Demo',
+                        children: [
+                            {
+                                div: {
+                                    className: 'flex',
+                                    children: [
+                                        { Button: {
+                                            text: () => getState('demo.showContent', false) ? 'Hide Content' : 'Show Content',
+                                            onClick: () => setState('demo.showContent', !getState('demo.showContent', false))
+                                        }},
+                                        { Button: {
+                                            text: 'Toggle User Role',
+                                            variant: 'secondary',
+                                            onClick: () => {
+                                                const currentRole = getState('user.role', 'guest');
+                                                setState('user.role', currentRole === 'admin' ? 'guest' : 'admin');
+                                            }
+                                        }}
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    text: () => `Current user role: ${getState('user.role', 'guest')}`
+                                }
+                            },
+                            {
+                                ConditionalRenderer: {
+                                    condition: () => getState('demo.showContent', false),
+                                    children: {
+                                        div: {
+                                            className: 'success',
+                                            text: '✅ This content is conditionally visible!'
+                                        }
+                                    },
+                                    fallback: {
+                                        div: {
+                                            className: 'card',
+                                            text: '💡 Click "Show Content" to see the hidden content'
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const SwitchDemo = (props, context) => {
+            const { getState, setState } = context;
+            
+            return {
+                render: () => ({
+                    Card: {
+                        title: 'Switch/Case Rendering Demo',
+                        children: [
+                            {
+                                div: {
+                                    className: 'input-group',
+                                    children: [
+                                        { label: { text: 'Select Theme:' } },
+                                        {
+                                            select: {
+                                                value: () => getState('demo.theme', 'light'),
+                                                onchange: (e) => setState('demo.theme', e.target.value),
+                                                children: [
+                                                    { option: { value: 'light', text: 'Light Theme' } },
+                                                    { option: { value: 'dark', text: 'Dark Theme' } },
+                                                    { option: { value: 'colorful', text: 'Colorful Theme' } },
+                                                    { option: { value: 'minimal', text: 'Minimal Theme' } }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                SwitchRenderer: {
+                                    value: () => getState('demo.theme', 'light'),
+                                    cases: {
+                                        'light': { div: { className: 'card', text: '☀️ Light theme selected - Clean and bright!' } },
+                                        'dark': { div: { className: 'card', style: { background: '#333', color: 'white' }, text: '🌙 Dark theme selected - Easy on the eyes!' } },
+                                        'colorful': { div: { className: 'card', style: { background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)', color: 'white' }, text: '🌈 Colorful theme selected - Vibrant and fun!' } },
+                                        'minimal': { div: { className: 'card', style: { border: '1px solid #ccc', background: 'white' }, text: '⚪ Minimal theme selected - Simple and clean!' } },
+                                        'default': { div: { className: 'error', text: 'Unknown theme selected!' } }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const ListDemo = (props, context) => {
+            const { getState, setState } = context;
+            
+            const addItem = () => {
+                const items = getState('demo.items', []);
+                const newItem = {
+                    id: Date.now(),
+                    name: `Item ${items.length + 1}`,
+                    status: Math.random() > 0.5 ? 'active' : 'inactive'
+                };
+                setState('demo.items', [...items, newItem]);
+            };
+            
+            const removeItem = (id) => {
+                const items = getState('demo.items', []);
+                setState('demo.items', items.filter(item => item.id !== id));
+            };
+            
+            return {
+                render: () => ({
+                    Card: {
+                        title: 'List Rendering Demo',
+                        children: [
+                            {
+                                div: {
+                                    className: 'flex',
+                                    children: [
+                                        { Button: {
+                                            text: 'Add Item',
+                                            onClick: addItem
+                                        }},
+                                        { Button: {
+                                            text: 'Clear All',
+                                            variant: 'danger',
+                                            onClick: () => setState('demo.items', [])
+                                        }}
+                                    ]
+                                }
+                            },
+                            {
+                                ListRenderer: {
+                                    items: () => getState('demo.items', []),
+                                    emptyState: {
+                                        div: {
+                                            className: 'card',
+                                            text: '📝 No items yet. Click "Add Item" to start!'
+                                        }
+                                    },
+                                    renderItem: (item, index) => ({
+                                        div: {
+                                            key: item.id,
+                                            className: 'list-item',
+                                            children: [
+                                                {
+                                                    div: {
+                                                        children: [
+                                                            { span: { text: item.name } },
+                                                            { span: { 
+                                                                className: `badge ${item.status === 'active' ? 'success' : 'warning'}`,
+                                                                text: item.status
+                                                            }}
+                                                        ]
+                                                    }
+                                                },
+                                                { Button: {
+                                                    text: 'Remove',
+                                                    variant: 'danger',
+                                                    onClick: () => removeItem(item.id)
+                                                }}
+                                            ]
+                                        }
+                                    })
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const AsyncDemo = (props, context) => {
+            const { getState, setState } = context;
+            
+            const loadData = async () => {
+                setState('async.loading', true);
+                setState('async.error', null);
+                setState('async.data', null);
+                
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    if (Math.random() < 0.3) {
+                        throw new Error('Random API failure for demo');
+                    }
+                    
+                    const data = { message: 'Data loaded successfully!', timestamp: new Date().toLocaleTimeString() };
+                    setState('async.data', data);
+                } catch (error) {
+                    setState('async.error', error.message);
+                } finally {
+                    setState('async.loading', false);
+                }
+            };
+            
+            return {
+                render: () => ({
+                    Card: {
+                        title: 'Async State Rendering Demo',
+                        children: [
+                            { Button: {
+                                text: 'Load Data',
+                                onClick: loadData,
+                                disabled: () => getState('async.loading', false)
+                            }},
+                            {
+                                AsyncRenderer: {
+                                    loading: () => getState('async.loading', false),
+                                    error: () => getState('async.error', null),
+                                    data: () => getState('async.data', null),
+                                    loadingComponent: {
+                                        div: {
+                                            className: 'loading',
+                                            text: '⏳ Loading data from API...'
+                                        }
+                                    },
+                                    errorComponent: {
+                                        div: {
+                                            className: 'error',
+                                            text: () => `❌ ${getState('async.error', '')}`
+                                        }
+                                    },
+                                    successComponent: {
+                                        div: {
+                                            className: 'success',
+                                            text: () => {
+                                                const data = getState('async.data', {});
+                                                return `✅ ${data.message} (${data.timestamp})`;
+                                            }
+                                        }
+                                    },
+                                    emptyComponent: {
+                                        div: {
+                                            className: 'card',
+                                            text: '💡 Click "Load Data" to fetch some data'
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const FormDemo = (props, context) => {
+            return {
+                render: () => ({
+                    Card: {
+                        title: 'Form State Controller Demo',
+                        children: {
+                            FormStateController: {
+                                formKey: 'userForm',
+                                children: (form) => [
+                                    { Input: {
+                                        label: 'Name:',
+                                        value: () => form.getValue('name'),
+                                        onInput: (e) => form.setValue('name', e.target.value),
+                                        error: () => form.errors.name
+                                    }},
+                                    { Input: {
+                                        label: 'Email:',
+                                        type: 'email',
+                                        value: () => form.getValue('email'),
+                                        onInput: (e) => form.setValue('email', e.target.value),
+                                        error: () => form.errors.email
+                                    }},
+                                    {
+                                        div: {
+                                            className: 'flex',
+                                            children: [
+                                                { Button: {
+                                                    text: 'Submit',
+                                                    disabled: () => form.isSubmitting,
+                                                    onClick: async () => {
+                                                        form.setSubmitting(true);
+                                                        
+                                                        // Validate
+                                                        let isValid = true;
+                                                        if (!form.getValue('name')) {
+                                                            form.setError('name', 'Name is required');
+                                                            isValid = false;
+                                                        } else {
+                                                            form.clearError('name');
+                                                        }
+                                                        
+                                                        if (!form.getValue('email')) {
+                                                            form.setError('email', 'Email is required');
+                                                            isValid = false;
+                                                        } else {
+                                                            form.clearError('email');
+                                                        }
+                                                        
+                                                        if (isValid) {
+                                                            await new Promise(resolve => setTimeout(resolve, 1000));
+                                                            alert(`Form submitted! Name: ${form.getValue('name')}, Email: ${form.getValue('email')}`);
+                                                        }
+                                                        
+                                                        form.setSubmitting(false);
+                                                    }
+                                                }},
+                                                { Button: {
+                                                    text: 'Reset',
+                                                    variant: 'secondary',
+                                                    onClick: form.reset
+                                                }}
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        ConditionalRenderer: {
+                                            condition: () => form.isSubmitting,
+                                            children: {
+                                                div: {
+                                                    className: 'loading',
+                                                    text: '⏳ Submitting form...'
+                                                }
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                })
+            };
+        };
+
+        // PURE CONTROL FLOW MAIN LAYOUT - Components injected at declaration level!
+        const App = (props, context) => {
+            const { getState, setState } = context;
+            
+            // Helper functions for complex logic
+            const addItem = () => {
+                const items = getState('demo.items', []);
+                const newItem = {
+                    id: Date.now(),
+                    name: `Item ${items.length + 1}`,
+                    status: Math.random() > 0.5 ? 'active' : 'inactive'
+                };
+                setState('demo.items', [...items, newItem]);
+            };
+            
+            const removeItem = (id) => {
+                const items = getState('demo.items', []);
+                setState('demo.items', items.filter(item => item.id !== id));
+            };
+            
+            const loadAsyncData = async () => {
+                setState('async.loading', true);
+                setState('async.error', null);
+                setState('async.data', null);
+                
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    if (Math.random() < 0.3) {
+                        throw new Error('Random API failure for demo');
+                    }
+                    
+                    const data = { message: 'Data loaded successfully!', timestamp: new Date().toLocaleTimeString() };
+                    setState('async.data', data);
+                } catch (error) {
+                    setState('async.error', error.message);
+                } finally {
+                    setState('async.loading', false);
+                }
+            };
+            
+            return {
+                render: () => ({
+                    div: { // ← ONLY allowed div (root container)
+                        children: [
+                            // Header
+                            { h1: { text: 'Juris Pure Control Flow with Component Injection' } },
+                            { p: { text: 'All conditional logic components have their child components injected at the layout level - no need to dig into components to see what they render!' } },
+                            
+                            // 1. Route-based Navigation with injected route components
+                            { Card: {
+                                title: 'Route-based Navigation (Component Injection)',
+                                children: [
+                                    {
+                                        div: {
+                                            className: 'flex',
+                                            children: [
+                                                { Button: {
+                                                    text: 'Home',
+                                                    variant: () => getState('router.currentRoute', '/') === '/' ? 'success' : '',
+                                                    onClick: () => setState('router.currentRoute', '/')
+                                                }},
+                                                { Button: {
+                                                    text: 'About',
+                                                    variant: () => getState('router.currentRoute', '/') === '/about' ? 'success' : '',
+                                                    onClick: () => setState('router.currentRoute', '/about')
+                                                }},
+                                                { Button: {
+                                                    text: 'Admin',
+                                                    variant: () => getState('router.currentRoute', '/') === '/admin' ? 'success' : '',
+                                                    onClick: () => setState('router.currentRoute', '/admin')
+                                                }},
+                                                { Button: {
+                                                    text: '404',
+                                                    variant: () => getState('router.currentRoute', '/') === '/notfound' ? 'success' : '',
+                                                    onClick: () => setState('router.currentRoute', '/notfound')
+                                                }}
+                                            ]
+                                        }
+                                    },
+                                    // 🎯 COMPONENTS INJECTED HERE - visible at layout level!
+                                    { RouteRenderer: {
+                                        '/': { HomePage: {} },
+                                        '/about': { AboutPage: {} },
+                                        '/admin': { PermissionRenderer: {
+                                            allowedRoles: ['admin'],
+                                            authorized: { AdminPanel: {} },
+                                            unauthorized: { AccessDenied: {} }
+                                        }},
+                                        notFound: { NotFoundPage: {} }
+                                    }}
+                                ]
+                            }},
+                            
+                            // 2. Conditional Rendering with injected components
+                            { Card: {
+                                title: 'Conditional Rendering (Component Injection)',
+                                children: [
+                                    {
+                                        div: {
+                                            className: 'flex',
+                                            children: [
+                                                { Button: {
+                                                    text: () => getState('demo.showContent', false) ? 'Hide Content' : 'Show Content',
+                                                    onClick: () => setState('demo.showContent', !getState('demo.showContent', false))
+                                                }},
+                                                { Button: {
+                                                    text: 'Toggle User Role',
+                                                    variant: 'secondary',
+                                                    onClick: () => {
+                                                        const currentRole = getState('user.role', 'guest');
+                                                        setState('user.role', currentRole === 'admin' ? 'guest' : 'admin');
+                                                    }
+                                                }}
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        div: {
+                                            text: () => `Current user role: ${getState('user.role', 'guest')}`
+                                        }
+                                    },
+                                    // 🎯 COMPONENTS INJECTED HERE - clear what shows when!
+                                    { ConditionalRenderer: {
+                                        condition: () => getState('demo.showContent', false),
+                                        whenTrue: { SuccessMessage: { text: '✅ This content is conditionally visible!' } },
+                                        whenFalse: { InfoCard: { text: '💡 Click "Show Content" to see the hidden content' } }
+                                    }}
+                                ]
+                            }},
+                            
+                            // 3. Switch/Case Rendering with injected components
+                            { Card: {
+                                title: 'Switch/Case Rendering (Component Injection)',
+                                children: [
+                                    {
+                                        div: {
+                                            className: 'input-group',
+                                            children: [
+                                                { label: { text: 'Select Theme:' } },
+                                                {
+                                                    select: {
+                                                        value: () => getState('demo.theme', 'light'),
+                                                        onchange: (e) => setState('demo.theme', e.target.value),
+                                                        children: [
+                                                            { option: { value: 'light', text: 'Light Theme' } },
+                                                            { option: { value: 'dark', text: 'Dark Theme' } },
+                                                            { option: { value: 'colorful', text: 'Colorful Theme' } },
+                                                            { option: { value: 'minimal', text: 'Minimal Theme' } }
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    // 🎯 COMPONENTS INJECTED HERE - all theme options visible!
+                                    { SwitchRenderer: {
+                                        value: () => getState('demo.theme', 'light'),
+                                        light: { ThemeDisplay: { text: '☀️ Light theme selected - Clean and bright!' } },
+                                        dark: { ThemeDisplay: { 
+                                            text: '🌙 Dark theme selected - Easy on the eyes!',
+                                            style: { background: '#333', color: 'white' }
+                                        }},
+                                        colorful: { ThemeDisplay: { 
+                                            text: '🌈 Colorful theme selected - Vibrant and fun!',
+                                            style: { background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)', color: 'white' }
+                                        }},
+                                        minimal: { ThemeDisplay: { 
+                                            text: '⚪ Minimal theme selected - Simple and clean!',
+                                            style: { border: '1px solid #ccc', background: 'white' }
+                                        }},
+                                        default: { ErrorMessage: { text: 'Unknown theme selected!' } }
+                                    }}
+                                ]
+                            }},
+                            
+                            // 4. List Rendering with injected item component
+                            { Card: {
+                                title: 'List Rendering (Component Injection)',
+                                children: [
+                                    {
+                                        div: {
+                                            className: 'flex',
+                                            children: [
+                                                { Button: {
+                                                    text: 'Add Item',
+                                                    onClick: addItem
+                                                }},
+                                                { Button: {
+                                                    text: 'Clear All',
+                                                    variant: 'danger',
+                                                    onClick: () => setState('demo.items', [])
+                                                }}
+                                            ]
+                                        }
+                                    },
+                                    // 🎯 COMPONENTS INJECTED HERE - ListItem and EmptyListMessage visible!
+                                    { ListRenderer: {
+                                        items: () => getState('demo.items', []),
+                                        empty: { EmptyListMessage: {} },
+                                        itemComponent: 'ListItem',
+                                        itemProps: (item, index) => ({
+                                            item: item,
+                                            onRemove: removeItem
+                                        })
+                                    }}
+                                ]
+                            }},
+                            
+                            // 5. Async State Rendering with injected state components
+                            { Card: {
+                                title: 'Async State Rendering (Component Injection)',
+                                children: [
+                                    { Button: {
+                                        text: 'Load Data',
+                                        onClick: loadAsyncData,
+                                        disabled: () => getState('async.loading', false)
+                                    }},
+                                    // 🎯 COMPONENTS INJECTED HERE - all async states visible!
+                                    { AsyncRenderer: {
+                                        loading: () => getState('async.loading', false),
+                                        error: () => getState('async.error', null),
+                                        data: () => getState('async.data', null),
+                                        loadingComponent: { LoadingSpinner: { text: '⏳ Loading data from API...' } },
+                                        errorComponent: { ErrorMessage: { text: () => `❌ ${getState('async.error', '')}` } },
+                                        successComponent: { AsyncDataDisplay: {} },
+                                        emptyComponent: { InfoCard: { text: '💡 Click "Load Data" to fetch some data' } }
+                                    }}
+                                ]
+                            }},
+                            
+                            // 6. Multi-State Complex Logic with injected components
+                            { Card: {
+                                title: 'Multi-State Rendering (Component Injection)',
+                                children: [
+                                    {
+                                        div: {
+                                            className: 'flex',
+                                            children: [
+                                                { Button: {
+                                                    text: 'Set Loading',
+                                                    onClick: () => {
+                                                        setState('multiState.loading', true);
+                                                        setState('multiState.hasData', false);
+                                                        setState('multiState.hasError', false);
+                                                    }
+                                                }},
+                                                { Button: {
+                                                    text: 'Set Success',
+                                                    variant: 'success',
+                                                    onClick: () => {
+                                                        setState('multiState.loading', false);
+                                                        setState('multiState.hasData', true);
+                                                        setState('multiState.hasError', false);
+                                                    }
+                                                }},
+                                                { Button: {
+                                                    text: 'Set Error',
+                                                    variant: 'danger',
+                                                    onClick: () => {
+                                                        setState('multiState.loading', false);
+                                                        setState('multiState.hasData', false);
+                                                        setState('multiState.hasError', true);
+                                                    }
+                                                }},
+                                                { Button: {
+                                                    text: 'Reset',
+                                                    variant: 'secondary',
+                                                    onClick: () => {
+                                                        setState('multiState.loading', false);
+                                                        setState('multiState.hasData', false);
+                                                        setState('multiState.hasError', false);
+                                                    }
+                                                }}
+                                            ]
+                                        }
+                                    },
+                                    // 🎯 COMPONENTS INJECTED HERE - complex conditions with priority!
+                                    { MultiStateRenderer: {
+                                        conditions: [
+                                            {
+                                                when: () => getState('multiState.loading', false),
+                                                render: { LoadingSpinner: { text: '⏳ Processing your request...' } }
+                                            },
+                                            {
+                                                when: () => getState('multiState.hasError', false),
+                                                render: { ErrorMessage: { text: '❌ Something went wrong!' } }
+                                            },
+                                            {
+                                                when: () => getState('multiState.hasData', false),
+                                                render: { SuccessMessage: { text: '✅ Operation completed successfully!' } }
+                                            }
+                                        ],
+                                        fallback: { InfoCard: { text: '💡 Click any button above to see different states' } }
+                                    }}
+                                ]
+                            }}
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Initialize Juris
+        const juris = new Juris({
+            layout: { App: {} },
+            components: {
+                App,
+                // Control Flow Components
+                ConditionalRenderer,
+                SwitchRenderer,
+                ListRenderer,
+                RouteRenderer,
+                AsyncRenderer,
+                PermissionRenderer,
+                FormStateController,
+                MultiStateRenderer,
+                // UI Components
+                Button,
+                Input,
+                Card,
+                // Injected Components
+                SuccessMessage,
+                ErrorMessage,
+                LoadingSpinner,
+                InfoCard,
+                AdminPanel,
+                AccessDenied,
+                HomePage,
+                AboutPage,
+                NotFoundPage,
+                ListItem,
+                EmptyListMessage,
+                ThemeDisplay,
+                AsyncDataDisplay
+            },
+            states: {
+                router: { currentRoute: '/' },
+                user: { role: 'guest' },
+                demo: {
+                    showContent: false,
+                    theme: 'light',
+                    items: []
+                },
+                async: {
+                    loading: false,
+                    error: null,
+                    data: null
+                },
+                multiState: {
+                    loading: false,
+                    hasData: false,
+                    hasError: false
+                },
+                userForm: {
+                    data: {},
+                    errors: {},
+                    isSubmitting: false
+                }
+            }
+        });
+
+        // Render the app
+        juris.render('#app');
+
+        // Expose for debugging
+        window.juris = juris;
+    </script>
+</body>
+</html>

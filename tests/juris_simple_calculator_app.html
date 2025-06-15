@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Calculator - Juris Framework</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .calculator {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(255, 107, 53, 0.15);
+            border: 1px solid rgba(255, 107, 53, 0.1);
+            width: 100%;
+            min-width: 500px;
+        }
+
+        .calculator-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-weight: 300;
+        }
+
+        .display {
+            background: #fff4f1;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .display-operation {
+            font-size: 0.875rem;
+            color: #999;
+            margin-bottom: 0.25rem;
+            min-height: 1rem;
+        }
+
+        .display-result {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #ff6b35;
+            font-family: 'Monaco', 'Courier New', monospace;
+            word-break: break-all;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+        }
+
+        .btn {
+            height: 60px;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-number {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #e9ecef;
+        }
+
+        .btn-number:hover {
+            background: #e9ecef;
+            border-color: #dee2e6;
+        }
+
+        .btn-operator {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .btn-operator:hover {
+            background: #e55a2b;
+        }
+
+        .btn-operator.active {
+            background: #d94d1f;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-equals {
+            background: #ff6b35;
+            color: white;
+            grid-column: span 2;
+        }
+
+        .btn-equals:hover {
+            background: #e55a2b;
+        }
+
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #5a6268;
+        }
+
+        .btn-zero {
+            grid-column: span 2;
+        }
+
+        .history {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #fff4f1;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 107, 53, 0.1);
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .history-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .clear-history {
+            background: none;
+            border: none;
+            color: #ff6b35;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s;
+        }
+
+        .clear-history:hover {
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .history-item {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.25rem;
+            padding: 0.25rem 0;
+            border-bottom: 1px solid rgba(255, 107, 53, 0.1);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .history-operation {
+            color: #999;
+        }
+
+        .history-result {
+            color: #ff6b35;
+            font-weight: 600;
+        }
+
+        .empty-history {
+            text-align: center;
+            color: #999;
+            font-size: 0.875rem;
+            padding: 1rem 0;
+        }
+
+        @media (max-width: 480px) {
+            .calculator {
+                padding: 1rem;
+                max-width: 280px;
+            }
+
+            .btn {
+                height: 50px;
+                font-size: 1rem;
+            }
+
+            .display-result {
+                font-size: 1.5rem;
+            }
+
+            .keypad {
+                gap: 0.5rem;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .display-result {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"></div>
+
+    <script src="juris.js"></script>
+    <script>
+        // Simple Calculator Component
+        const Calculator = (props, context) => {
+            const { getState, setState } = context;
+
+            const inputNumber = (num) => {
+                const current = getState('display', '0');
+                const operator = getState('operator', '');
+                const waitingForOperand = getState('waitingForOperand', false);
+
+                if (waitingForOperand) {
+                    setState('display', num);
+                    setState('waitingForOperand', false);
+                } else {
+                    setState('display', current === '0' ? num : current + num);
+                }
+            };
+
+            const inputOperator = (nextOperator) => {
+                const inputValue = parseFloat(getState('display', '0'));
+                const currentValue = getState('value', null);
+                const operator = getState('operator', '');
+
+                if (currentValue === null) {
+                    setState('value', inputValue);
+                } else if (operator) {
+                    const result = calculate(currentValue, inputValue, operator);
+                    setState('display', String(result));
+                    setState('value', result);
+                } else {
+                    setState('value', inputValue);
+                }
+
+                setState('waitingForOperand', true);
+                setState('operator', nextOperator);
+            };
+
+            const calculate = (firstValue, secondValue, operator) => {
+                switch (operator) {
+                    case '+':
+                        return firstValue + secondValue;
+                    case '-':
+                        return firstValue - secondValue;
+                    case '×':
+                        return firstValue * secondValue;
+                    case '÷':
+                        return secondValue !== 0 ? firstValue / secondValue : 0;
+                    default:
+                        return secondValue;
+                }
+            };
+
+            const performCalculation = () => {
+                const inputValue = parseFloat(getState('display', '0'));
+                const currentValue = getState('value', null);
+                const operator = getState('operator', '');
+
+                if (currentValue !== null && operator) {
+                    const result = calculate(currentValue, inputValue, operator);
+
+                    // Add to history
+                    const history = getState('history', []);
+                    const operation = `${currentValue} ${operator} ${inputValue}`;
+                    const historyItem = {
+                        id: Date.now(),
+                        operation,
+                        result
+                    };
+                    setState('history', [historyItem, ...history.slice(0, 9)]); // Keep last 10
+
+                    setState('display', String(result));
+                    setState('value', null);
+                    setState('operator', '');
+                    setState('waitingForOperand', true);
+                }
+            };
+
+            const clearAll = () => {
+                setState('display', '0');
+                setState('value', null);
+                setState('operator', '');
+                setState('waitingForOperand', false);
+            };
+
+            const clearEntry = () => {
+                setState('display', '0');
+            };
+
+            const inputDecimal = () => {
+                const display = getState('display', '0');
+                const waitingForOperand = getState('waitingForOperand', false);
+
+                if (waitingForOperand) {
+                    setState('display', '0.');
+                    setState('waitingForOperand', false);
+                } else if (display.indexOf('.') === -1) {
+                    setState('display', display + '.');
+                }
+            };
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'calculator',
+                        children: [
+                            {
+                                h1: {
+                                    className: 'calculator-title',
+                                    text: 'Simple Calculator'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'display',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'display-operation',
+                                                text: () => {
+                                                    const value = getState('value', null);
+                                                    const operator = getState('operator', '');
+
+                                                    if (value !== null && operator) {
+                                                        return `${value} ${operator}`;
+                                                    }
+                                                    return '';
+                                                }
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'display-result',
+                                                text: () => {
+                                                    const display = getState('display', '0');
+                                                    // Format large numbers
+                                                    const num = parseFloat(display);
+                                                    if (!isNaN(num)) {
+                                                        if (Math.abs(num) >= 1000000) {
+                                                            return num.toExponential(2);
+                                                        }
+                                                        return num.toLocaleString();
+                                                    }
+                                                    return display;
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'keypad',
+                                    children: [
+                                        // Row 1
+                                        {
+                                            button: {
+                                                className: 'btn btn-clear',
+                                                text: 'AC',
+                                                onclick: clearAll
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-clear',
+                                                text: 'CE',
+                                                onclick: clearEntry
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-operator',
+                                                text: '%',
+                                                onclick: () => {
+                                                    const display = parseFloat(getState('display', '0'));
+                                                    setState('display', String(display / 100));
+                                                }
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: () => {
+                                                    const currentOp = getState('operator', '');
+                                                    return currentOp === '÷' ? 'btn btn-operator active' : 'btn btn-operator';
+                                                },
+                                                text: '÷',
+                                                onclick: () => inputOperator('÷')
+                                            }
+                                        },
+
+                                        // Row 2
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '7',
+                                                onclick: () => inputNumber('7')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '8',
+                                                onclick: () => inputNumber('8')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '9',
+                                                onclick: () => inputNumber('9')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: () => {
+                                                    const currentOp = getState('operator', '');
+                                                    return currentOp === '×' ? 'btn btn-operator active' : 'btn btn-operator';
+                                                },
+                                                text: '×',
+                                                onclick: () => inputOperator('×')
+                                            }
+                                        },
+
+                                        // Row 3
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '4',
+                                                onclick: () => inputNumber('4')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '5',
+                                                onclick: () => inputNumber('5')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '6',
+                                                onclick: () => inputNumber('6')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: () => {
+                                                    const currentOp = getState('operator', '');
+                                                    return currentOp === '-' ? 'btn btn-operator active' : 'btn btn-operator';
+                                                },
+                                                text: '-',
+                                                onclick: () => inputOperator('-')
+                                            }
+                                        },
+
+                                        // Row 4
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '1',
+                                                onclick: () => inputNumber('1')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '2',
+                                                onclick: () => inputNumber('2')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '3',
+                                                onclick: () => inputNumber('3')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: () => {
+                                                    const currentOp = getState('operator', '');
+                                                    return currentOp === '+' ? 'btn btn-operator active' : 'btn btn-operator';
+                                                },
+                                                text: '+',
+                                                onclick: () => inputOperator('+')
+                                            }
+                                        },
+
+                                        // Row 5
+                                        {
+                                            button: {
+                                                className: 'btn btn-number btn-zero',
+                                                text: '0',
+                                                onclick: () => inputNumber('0')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-number',
+                                                text: '.',
+                                                onclick: inputDecimal
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-equals',
+                                                text: '=',
+                                                onclick: performCalculation
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'history',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'history-title',
+                                                children: [
+                                                    {
+                                                        span: { text: 'History' }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            className: 'clear-history',
+                                                            text: 'Clear',
+                                                            onclick: () => setState('history', [])
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                children: () => {
+                                                    const history = getState('history', []);
+
+                                                    if (history.length === 0) {
+                                                        return [{
+                                                            div: {
+                                                                className: 'empty-history',
+                                                                text: 'No calculations yet'
+                                                            }
+                                                        }];
+                                                    }
+
+                                                    return history.map(item => ({
+                                                        div: {
+                                                            key: item.id,
+                                                            className: 'history-item',
+                                                            children: [
+                                                                {
+                                                                    span: {
+                                                                        className: 'history-operation',
+                                                                        text: item.operation
+                                                                    }
+                                                                },
+                                                                {
+                                                                    span: {
+                                                                        className: 'history-result',
+                                                                        text: item.result.toLocaleString()
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    }));
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // Initialize Juris app
+        const juris = new Juris({
+            components: {
+                Calculator
+            },
+
+            layout: {
+                div: {
+                    children: [{ Calculator: {} }]
+                }
+            },
+
+            states: {
+                display: '0',
+                value: null,
+                operator: '',
+                waitingForOperand: false,
+                history: []
+            }
+        });
+
+        // Render the app
+        juris.render('#app');
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            const { key } = e;
+
+            if (key >= '0' && key <= '9') {
+                e.preventDefault();
+                juris.getAPI().inputNumber(key);
+            } else if (['+', '-'].includes(key)) {
+                e.preventDefault();
+                juris.getAPI().inputOperator(key === '+' ? '+' : '-');
+            } else if (key === '*') {
+                e.preventDefault();
+                juris.getAPI().inputOperator('×');
+            } else if (key === '/') {
+                e.preventDefault();
+                juris.getAPI().inputOperator('÷');
+            } else if (key === 'Enter' || key === '=') {
+                e.preventDefault();
+                juris.getAPI().performCalculation();
+            } else if (key === '.') {
+                e.preventDefault();
+                juris.getAPI().inputDecimal();
+            } else if (key === 'Escape') {
+                e.preventDefault();
+                juris.getAPI().clearAll();
+            } else if (key === 'Backspace') {
+                e.preventDefault();
+                juris.getAPI().clearEntry();
+            }
+        });
+
+        // Expose calculator functions for keyboard support
+        juris.getAPI = () => {
+            const setState = juris.setState.bind(juris);
+            const getState = juris.getState.bind(juris);
+
+            return {
+                inputNumber: (num) => {
+                    const current = getState('display', '0');
+                    const operator = getState('operator', '');
+                    const waitingForOperand = getState('waitingForOperand', false);
+
+                    if (waitingForOperand) {
+                        setState('display', num);
+                        setState('waitingForOperand', false);
+                    } else {
+                        setState('display', current === '0' ? num : current + num);
+                    }
+                },
+
+                inputOperator: (nextOperator) => {
+                    const inputValue = parseFloat(getState('display', '0'));
+                    const currentValue = getState('value', null);
+                    const operator = getState('operator', '');
+
+                    if (currentValue === null) {
+                        setState('value', inputValue);
+                    } else if (operator) {
+                        const result = calculate(currentValue, inputValue, operator);
+                        setState('display', String(result));
+                        setState('value', result);
+                    } else {
+                        setState('value', inputValue);
+                    }
+
+                    setState('waitingForOperand', true);
+                    setState('operator', nextOperator);
+                },
+
+                performCalculation: () => {
+                    const inputValue = parseFloat(getState('display', '0'));
+                    const currentValue = getState('value', null);
+                    const operator = getState('operator', '');
+
+                    if (currentValue !== null && operator) {
+                        const result = calculate(currentValue, inputValue, operator);
+
+                        const history = getState('history', []);
+                        const operation = `${currentValue} ${operator} ${inputValue}`;
+                        const historyItem = {
+                            id: Date.now(),
+                            operation,
+                            result
+                        };
+                        setState('history', [historyItem, ...history.slice(0, 9)]);
+
+                        setState('display', String(result));
+                        setState('value', null);
+                        setState('operator', '');
+                        setState('waitingForOperand', true);
+                    }
+                },
+
+                clearAll: () => {
+                    setState('display', '0');
+                    setState('value', null);
+                    setState('operator', '');
+                    setState('waitingForOperand', false);
+                },
+
+                clearEntry: () => {
+                    setState('display', '0');
+                },
+
+                inputDecimal: () => {
+                    const display = getState('display', '0');
+                    const waitingForOperand = getState('waitingForOperand', false);
+
+                    if (waitingForOperand) {
+                        setState('display', '0.');
+                        setState('waitingForOperand', false);
+                    } else if (display.indexOf('.') === -1) {
+                        setState('display', display + '.');
+                    }
+                }
+            };
+
+            function calculate(firstValue, secondValue, operator) {
+                switch (operator) {
+                    case '+':
+                        return firstValue + secondValue;
+                    case '-':
+                        return firstValue - secondValue;
+                    case '×':
+                        return firstValue * secondValue;
+                    case '÷':
+                        return secondValue !== 0 ? firstValue / secondValue : 0;
+                    default:
+                        return secondValue;
+                }
+            }
+        };
+
+        // Global access for debugging
+        window.juris = juris;
+
+        console.log('🧮 Simple Calculator Ready!');
+        console.log('⌨️ Keyboard support enabled');
+        console.log('💡 Try: Use number keys, +, -, *, /, Enter, Escape');
+        console.log('📊 Current state:', juris.stateManager.state);
+    </script>
+</body>
+
+</html>

@@ -1,3177 +1,2616 @@
 /**
- * Caution: This is not  just a framework, its also a platform. 
- * Juris (JavaScript Unified Reactive Interface Solution) 
- * transforms web development through its comprehensive object-first architecture that makes 
- * reactivity an intentional choice rather than an automatic behavior. By expressing interfaces 
- * as pure JavaScript objects where functions explicitly define reactivity, Juris delivers a 
+ * Caution: This is not just a framework, its a paradigm-shifting platform.
+ * Juris (JavaScript Unified Reactive Interface Solution)
+ * Transforms web development through its comprehensive object-first architecture that makes
+ * reactivity an intentional choice rather than an automatic behavior. By expressing interfaces
+ * as pure JavaScript objects where functions explicitly define reactivity, Juris delivers a
  * complete solution for applications that are universally deployable, precisely controlled,
  * and designed from the ground up for seamless AI collaboration—all while maintaining the 
  * simplicity and debuggability of native JavaScript patterns.
  * 
  * Author: Resti Guay
  * Maintained by: Juris Github Team
- * Version: 0.1.1
+ * Version: 0.3.1-optimized-rendermode
  * License: MIT
+ * GitHub: https://github.com/jurisjs/juris
+ * Website: https://jurisjs.com
+ * Documentation: https://jurisjs.com/#docs
  */
-class Juris {
-    constructor(config = {}) {
-        // Core state
-        this.state = config.states || {};
-        this.components = new Map();
-        this.services = config.services || {};
-        this.layout = config.layout;
-        this.middleware = config.middleware || [];
-
-        this.xssProtection = {
-            enabled: config.xssProtection?.enabled !== false, // Default: enabled
-            strictMode: config.xssProtection?.strictMode || false,
-            customSanitizer: config.xssProtection?.customSanitizer || null
-        };
-        
-        // Router configuration
-        this.router = config.router;
-        this.routes = {};
-        this.routeGuards = {};
-        this.routeMiddleware = [];
-        this.routeParams = {};
-        this.currentRoute = '/';
-        
-        // State management
-        this.subscribers = new Map();
-        this.elementSubscriptions = new WeakMap();
-        this.currentlyTracking = null;
-        
-        // External subscribers
-        this.externalSubscribers = new Map();
-        
-        // Enhancement system with memory management
-        this.selectorObservers = new Map();
-        this.enhancementQueue = new Set();
-        this.cleanupScheduled = false;
-        this.trackedElements = new Set();
-        this.isDestroyed = false;
-        
-        // Performance optimization
-        this.updateBatches = new Map();
-        this.batchTimeout = null;
-        
-        // Component lifecycle management
-        this.componentInstances = new Map();
-        this.componentApis = new WeakMap();
-        this.lifecycleCleanup = new WeakMap();
-        this.mountedComponents = new Set();
-
-        
-        this.headlessComponents = new Map();
-        this.headlessCleanup = new Map();
-        // Register components
-        if (config.components) {
-            Object.entries(config.components).forEach(([name, component]) => {
-                this.registerComponent(name, component);
-            });
-        }
-        
-        // Register components from services (for backwards compatibility)
-        if (config.services) {
-            //this.registerComponentsFromServices(config.services);
-        }
-        
-        // Setup router if enabled
-        if (this.router) {
-            this.setupRouter();
-        }
-        
-        // Setup cleanup handlers
-        this.setupCleanupHandlers();
-        
-        console.log('🚀 Juris framework initialized');
-    }
-    
-    // =================================================================
-    // LIFECYCLE AND CLEANUP MANAGEMENT
-    // =================================================================    
-    setupCleanupHandlers() {
-        // Page unload cleanup
-        if (typeof window !== 'undefined') {
-            window.addEventListener('beforeunload', () => {
-                this.destroy();
-            });
-            
-            // Visibility change cleanup for mobile
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    this.pauseObservers();
-                } else {
-                    this.resumeObservers();
-                }
-            });
-        }
-        
-        // Periodic cleanup of dead references
-        this.schedulePeriodicCleanup();
-    }
-    
-    destroy() {
-        if (this.isDestroyed) return;
-        
-        console.log('🔄 Destroying Juris framework...');
-        this.isDestroyed = true;
-        
-        // Unmount all components
-        this.mountedComponents.forEach(instanceId => {
-            const instance = this.componentInstances.get(instanceId);
-            if (instance) {
-                this.triggerUnmountHook(instance.element);
-            }
-        });
-        
-        // Stop all observers
-        this.stopAllObservers();
-        
-        // Clear all subscriptions
-        this.subscribers.clear();
-        this.externalSubscribers.clear();
-        
-        // Clear enhancement tracking
-        this.trackedElements.clear();
-        this.enhancementQueue.clear();
-        
-        // Clear batched updates
-        if (this.batchTimeout) {
-            clearTimeout(this.batchTimeout);
-        }
-        this.updateBatches.clear();
-        
-        // Clear component tracking
-        this.componentInstances.clear();
-        this.mountedComponents.clear();
-        
-        // Clear periodic cleanup
-        if (this.cleanupInterval) {
-            clearInterval(this.cleanupInterval);
-        }
-        
-        console.log('✅ Juris framework destroyed and cleaned up');
-    }
-    
-    schedulePeriodicCleanup() {
-        if (typeof window === 'undefined') return;
-        
-        this.cleanupInterval = setInterval(() => {
-            this.performCleanup();
-        }, 30000); // Every 30 seconds
-    }
-    
-    performCleanup() {
-        if (this.isDestroyed) return;
-        
-        // Clean up dead element references
-        const deadElements = new Set();
-        this.trackedElements.forEach(item => {
-            if (item.ref && !item.ref.deref()) {
-                if (item.cleanup) item.cleanup();
-                deadElements.add(item);
-            }
-        });
-        
-        deadElements.forEach(item => this.trackedElements.delete(item));
-        
-        // Clean up disconnected observers
-        this.selectorObservers.forEach((observer, selector) => {
-            if (!document.querySelector(selector)) {
-                observer.disconnect();
-                this.selectorObservers.delete(selector);
-            }
-        });
-        
-        // Clean up disconnected component instances
-        const disconnectedInstances = new Set();
-        this.componentInstances.forEach((instance, instanceId) => {
-            if (instance.element && !instance.element.isConnected) {
-                disconnectedInstances.add(instanceId);
-            }
-        });
-        
-        disconnectedInstances.forEach(instanceId => {
-            this.componentInstances.delete(instanceId);
-            this.mountedComponents.delete(instanceId);
-        });
-        
-        if (deadElements.size > 0 || disconnectedInstances.size > 0) {
-            console.log(`🧹 Cleaned up ${deadElements.size} dead references and ${disconnectedInstances.size} disconnected components`);
-        }
-    }
-    
+(function () {
+    'use strict';
 
     /**
-     * Simple HTML sanitizer that removes the most dangerous XSS vectors
+     * Utility functions
      */
-    sanitizeHTML(html, options = {}) {
-        if (!this.xssProtection.enabled && !options.force) {
-            return html;
-        }
-        
-        if (typeof html !== 'string') {
-            return '';
-        }
-        
-        // Use custom sanitizer if provided
-        if (this.xssProtection.customSanitizer) {
-            return this.xssProtection.customSanitizer(html, options);
-        }
-        
-        // Create temporary container for safe parsing
-        const container = document.createElement('div');
-        container.innerHTML = html;
-        
-        // Remove dangerous elements and attributes
-        this.removeDangerousContent(container);
-        
-        return container.innerHTML;
+    function isValidPath(path) {
+        return typeof path === 'string' && path.trim().length > 0 && !path.includes('..');
     }
 
-    /**
-     * Remove the most dangerous XSS vectors
-     */
-    removeDangerousContent(element) {
-        // Remove script tags completely
-        const scripts = element.querySelectorAll('script');
-        scripts.forEach(script => script.remove());
-        
-        // Remove dangerous elements
-        const dangerousSelectors = [
-            'object', 'embed', 'applet', 'iframe', 'frame', 'frameset',
-            'meta', 'link[rel="stylesheet"]', 'style'
-        ];
-        
-        dangerousSelectors.forEach(selector => {
-            const elements = element.querySelectorAll(selector);
-            elements.forEach(el => el.remove());
-        });
-        
-        // Remove dangerous attributes from all elements
-        const allElements = element.querySelectorAll('*');
-        allElements.forEach(el => this.sanitizeElementAttributes(el));
+    function getPathParts(path) {
+        return path.split('.').filter(Boolean);
     }
 
-    /**
-     * Sanitize attributes on a single element
-     */
-    sanitizeElementAttributes(element) {
-        const dangerousAttributes = [
-            'onload', 'onerror', 'onclick', 'onmouseover', 'onfocus', 'onblur',
-            'onchange', 'onsubmit', 'onreset', 'onselect', 'onunload'
-        ];
-        
-        // Remove event handler attributes
-        dangerousAttributes.forEach(attr => {
-            if (element.hasAttribute(attr)) {
-                element.removeAttribute(attr);
-            }
-        });
-        
-        // Check all attributes for dangerous patterns
-        Array.from(element.attributes).forEach(attr => {
-            const name = attr.name.toLowerCase();
-            const value = attr.value;
-            
-            // Remove any attribute starting with 'on'
-            if (name.startsWith('on')) {
-                element.removeAttribute(name);
-                return;
-            }
-            
-            // Sanitize href and src attributes
-            if (name === 'href' || name === 'src') {
-                if (this.isDangerousUrl(value)) {
-                    element.removeAttribute(name);
+    function deepEquals(a, b) {
+        if (a === b) return true;
+        if (a == null || b == null) return false;
+        if (typeof a !== typeof b) return false;
+
+        if (typeof a === 'object') {
+            if (Array.isArray(a) !== Array.isArray(b)) return false;
+            const keysA = Object.keys(a);
+            const keysB = Object.keys(b);
+            if (keysA.length !== keysB.length) return false;
+
+            for (let key of keysA) {
+                if (!keysB.includes(key) || !deepEquals(a[key], b[key])) {
+                    return false;
                 }
             }
-            
-            // Remove attributes with javascript: or other dangerous protocols
-            if (this.containsDangerousContent(value)) {
-                element.removeAttribute(name);
-            }
-        });
+            return true;
+        }
+
+        return false;
     }
 
     /**
-     * Check if URL contains dangerous protocols
+     * State Manager - Handles reactive state with middleware support
      */
-    isDangerousUrl(url) {
-        if (!url || typeof url !== 'string') return false;
-        
-        const dangerous = /^(javascript|vbscript|data|file):/i;
-        return dangerous.test(url.trim());
-    }
+    class StateManager {
+        constructor(initialState = {}, middleware = []) {
+            this.state = { ...initialState };
+            this.middleware = [...middleware];
+            this.subscribers = new Map();
+            this.externalSubscribers = new Map();
+            this.currentTracking = null;
+            this.isUpdating = false;
 
-    /**
-     * Check if content contains dangerous patterns
-     */
-    containsDangerousContent(content) {
-        if (!content || typeof content !== 'string') return false;
-        
-        const dangerousPatterns = [
-            /javascript:/i,
-            /vbscript:/i,
-            /on\w+\s*=/i,  // event handlers
-            /<script/i,
-            /expression\s*\(/i  // CSS expressions
-        ];
-        
-        return dangerousPatterns.some(pattern => pattern.test(content));
-    }
+            // Batch update system
+            this.updateQueue = [];
+            this.batchTimeout = null;
+            this.batchUpdateInProgress = false;
+            this.maxBatchSize = 50;
+            this.batchDelayMs = 0;
+        }
 
-    // =================================================================
-    //  OBSERVER SYSTEM
-    // =================================================================
-    
-    enhance(selector, definitionFn, options = {}) {
-        if (this.isDestroyed) return;
-        
-        const config = { 
-            useObserver: true, 
-            debounce: null,
-            throttle: null,
-            scope: null,
-            ...options 
-        };
-        
-        // Enhance existing elements
-        const scope = config.scope ? document.querySelector(config.scope) : document;
-        const elements = scope.querySelectorAll(selector);
-        
-        elements.forEach(element => {
-            this.enhanceSingleElement(element, definitionFn, config);
-        });
-        
-        // Setup observer for future elements
-        if (config.useObserver) {
-            this.observeForSelector(selector, definitionFn, config);
-        }
-        
-        return () => this.stopEnhancementObserver(selector);
-    }
-    
-    observeForSelector(selector, definitionFn, config = {}) {
-        if (this.selectorObservers.has(selector)) {
-            return;
-        }
-        
-        const targetContainer = config.scope 
-            ? document.querySelector(config.scope)
-            : document.querySelector('#app') || document.body;
-            
-        if (!targetContainer) {
-            console.warn(`Juris: Cannot find container for selector ${selector}`);
-            return;
-        }
-        
-        const observer = new MutationObserver(this.createDebouncedMutationHandler(
-            selector, definitionFn, config
-        ));
-        
-        observer.observe(targetContainer, { 
-            childList: true, 
-            subtree: true,
-            attributes: false,
-            characterData: false
-        });
-        
-        this.selectorObservers.set(selector, {
-            observer,
-            container: targetContainer,
-            config
-        });
-        
-        console.log(`👁️ Observing ${selector} in`, targetContainer);
-    }
-    
-    createDebouncedMutationHandler(selector, definitionFn, config) {
-        let timeoutId;
-        const delay = config.debounce || 16;
-        
-        return (mutations) => {
-            if (this.isDestroyed) return;
-            
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                this.processMutationsForSelector(mutations, selector, definitionFn, config);
-            }, delay);
-        };
-    }
-    
-    processMutationsForSelector(mutations, selector, definitionFn, config) {
-        const elementsToEnhance = new Set();
-        
-        mutations.forEach(mutation => {
-            mutation.addedNodes.forEach(node => {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    if (node.matches && node.matches(selector)) {
-                        elementsToEnhance.add(node);
-                    }
-                    
-                    if (node.querySelectorAll) {
-                        const children = node.querySelectorAll(selector);
-                        children.forEach(child => elementsToEnhance.add(child));
-                    }
-                }
-            });
-        });
-        
-        elementsToEnhance.forEach(element => {
-            if (!element.hasAttribute('data-juris-enhanced')) {
-                this.enhanceSingleElement(element, definitionFn, config);
-            }
-        });
-    }
-    
-    enhanceSingleElement(element, definitionFn, config = {}) {
-        if (this.isDestroyed || element.hasAttribute('data-juris-enhanced')) {
-            return;
-        }
-        
-        try {
-            const props = {
-                element,
-                id: element.id,
-                className: element.className,
-                tagName: element.tagName.toLowerCase(),
-                dataset: { ...element.dataset }
-            };
-            
-            // Use unified context creation
-            const context = this.createContext();
-            
-            const definition = definitionFn(props, context);
-            this.applyDefinitionToElement(element, definition, context);
-            
-            element.setAttribute('data-juris-enhanced', 'true');
-            this.trackElement(element);
-            
-        } catch (error) {
-            console.error('Enhancement error:', error);
-        }
-    }
-    
-    trackElement(element) {
-        if (typeof WeakRef === 'undefined') return;
-        
-        const elementRef = new WeakRef(element);
-        const cleanup = () => {
-            this.cleanupElement(element);
-        };
-        
-        this.trackedElements.add({ ref: elementRef, cleanup });
-    }
-    
-    stopEnhancementObserver(selector) {
-        const observerData = this.selectorObservers.get(selector);
-        if (observerData) {
-            observerData.observer.disconnect();
-            this.selectorObservers.delete(selector);
-            console.log(`🛑 Stopped observing ${selector}`);
-        }
-    }
-    
-    stopAllObservers() {
-        this.selectorObservers.forEach(({ observer }, selector) => {
-            observer.disconnect();
-        });
-        this.selectorObservers.clear();
-        console.log('🛑 All observers stopped');
-    }
-    
-    pauseObservers() {
-        this.selectorObservers.forEach(({ observer }) => {
-            observer.disconnect();
-        });
-        console.log('⏸️ Observers paused');
-    }
-    
-    resumeObservers() {
-        this.selectorObservers.forEach((observerData, selector) => {
-            const { observer, container, config } = observerData;
-            if (container && container.isConnected) {
-                observer.observe(container, { 
-                    childList: true, 
-                    subtree: true,
-                    attributes: false,
-                    characterData: false
-                });
-            }
-        });
-        console.log('▶️ Observers resumed');
-    }
-    
-    // =================================================================
-    //  STATE MANAGEMENT
-    // =================================================================
-    
-    setState(path, value, context = {}) {
-        if (this.isDestroyed) return;
-        
-        const oldValue = this.getState(path);
-        
-        // Run middleware
-        let finalValue = value;
-        for (const middleware of this.middleware) {
-            const result = middleware({ path, oldValue, newValue: finalValue, context, juris: this });
-            if (result !== undefined) {
-                finalValue = result;
-            }
-        }
-        
-        // Set the value
-        const keys = path.split('.');
-        let current = this.state;
-        
-        for (let i = 0; i < keys.length - 1; i++) {
-            const key = keys[i];
-            if (current[key] === undefined) {
-                current[key] = {};
-            }
-            current = current[key];
-        }
-        
-        current[keys[keys.length - 1]] = finalValue;
-        
-        // Batch updates for performance
-        if (oldValue !== finalValue) {
-            this.scheduleUpdate(path);
-        }
-    }
-    
-    scheduleUpdate(path) {
-        if (!this.updateBatches.has(path)) {
-            this.updateBatches.set(path, true);
-        }
-        
-        if (this.batchTimeout) return;
-        
-        this.batchTimeout = setTimeout(() => {
-            this.flushUpdates();
-        }, 0);
-    }
-    
-    flushUpdates() {
-        if (this.isDestroyed) return;
-        
-        const pathsToUpdate = Array.from(this.updateBatches.keys());
-        this.updateBatches.clear();
-        this.batchTimeout = null;
-        
-        pathsToUpdate.forEach(path => {
-            this.triggerSubscribersForPath(path);
-            this.triggerExternalSubscribers(path, this.getState(path), null);
-        });
-    }
-    
-    triggerSubscribersForPath(changedPath) {
-        if (this.isDestroyed) return;
-        
-        const exactSubscribers = this.subscribers.get(changedPath);
-        if (exactSubscribers) {
-            exactSubscribers.forEach(updateFn => {
-                try {
-                    updateFn();
-                } catch (error) {
-                    console.error('Subscriber error:', error);
-                }
-            });
-        }
-        
-        // Trigger parent path subscribers
-        const pathParts = changedPath.split('.');
-        for (let i = pathParts.length - 1; i > 0; i--) {
-            const parentPath = pathParts.slice(0, i).join('.');
-            const parentSubscribers = this.subscribers.get(parentPath);
-            if (parentSubscribers) {
-                parentSubscribers.forEach(updateFn => {
-                    try {
-                        updateFn();
-                    } catch (error) {
-                        console.error('Parent subscriber error:', error);
-                    }
-                });
-            }
-        }
-    }
-    
-    getState(path, defaultValue = null) {
-        // Track the base path
-        if (this.currentlyTracking) {
-            this.currentlyTracking.add(path);
-        }
-        
-        // Navigate to the value
-        const keys = path.split('.');
-        let current = this.state;
-        
-        for (const key of keys) {
-            if (current[key] === undefined) {
+        getState(path, defaultValue = null) {
+            if (!isValidPath(path)) {
+                console.warn('Invalid state path:', path);
                 return defaultValue;
             }
-            current = current[key];
-        }
-        
-        // If defaultValue is an object (not array), track all its properties
-        if (defaultValue && 
-            typeof defaultValue === 'object' && 
-            !Array.isArray(defaultValue) && 
-            this.currentlyTracking) {
-            
-            this.trackObjectProperties(path, defaultValue);
-        }
-        
-        // If the returned value is an object and we have a default object, 
-        // also track the actual object properties
-        if (current && 
-            typeof current === 'object' && 
-            !Array.isArray(current) && 
-            defaultValue && 
-            typeof defaultValue === 'object' && 
-            !Array.isArray(defaultValue) && 
-            this.currentlyTracking) {
-            
-            this.trackObjectProperties(path, current);
-        }
-        
-        return current;
-    }
-    
 
-    useState(path, defaultValue = null) {
-        // Initialize with default value if needed
-        const currentValue = this.getState(path, defaultValue);
-        if (currentValue === null && defaultValue !== null) {
-            this.setState(path, defaultValue);
-        }
-        
-        const getter = () => this.getState(path, defaultValue);
-        
-        const setter = (value) => {
-            let finalValue = value;
-            
-            // Support functional updates like React
-            if (typeof value === 'function') {
-                const currentValue = this.getState(path, defaultValue);
-                finalValue = value(currentValue);
+            if (this.currentTracking) {
+                this.currentTracking.add(path);
             }
-            
-            // Use normal setState - let Juris handle reactivity
-            this.setState(path, finalValue);
-            
-            return finalValue;
-        };
-        
-        return [getter, setter];
-    }
-    // Helper method to track all properties of an object
-    trackObjectProperties(basePath, obj) {
-        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-            return;
-        }
-        
-        Object.keys(obj).forEach(key => {
-            const childPath = `${basePath}.${key}`;
-            this.currentlyTracking.add(childPath);
-            
-            // Recursively track nested object properties
-            const childValue = obj[key];
-            if (childValue && typeof childValue === 'object' && !Array.isArray(childValue)) {
-                this.trackObjectProperties(childPath, childValue);
-            }
-        });
-    }
-    
-    subscribe(path, callback) {
-        if (this.isDestroyed) return () => {};
-        
-        if (!this.externalSubscribers.has(path)) {
-            this.externalSubscribers.set(path, new Set());
-        }
-        this.externalSubscribers.get(path).add(callback);
-        
-        return () => {
-            const pathSubscribers = this.externalSubscribers.get(path);
-            if (pathSubscribers) {
-                pathSubscribers.delete(callback);
-                if (pathSubscribers.size === 0) {
-                    this.externalSubscribers.delete(path);
+
+            const parts = getPathParts(path);
+            let current = this.state;
+
+            for (const part of parts) {
+                if (current == null || current[part] === undefined) {
+                    return defaultValue;
                 }
+                current = current[part];
             }
-        };
-    }
-    
-    subscribeInternal(path, updateFn) {
-        if (this.isDestroyed) return () => {};
-        
-        if (!this.subscribers.has(path)) {
-            this.subscribers.set(path, new Set());
+
+            return current;
         }
-        this.subscribers.get(path).add(updateFn);
-        
-        return () => {
-            const pathSubscribers = this.subscribers.get(path);
-            if (pathSubscribers) {
-                pathSubscribers.delete(updateFn);
-                if (pathSubscribers.size === 0) {
-                    this.subscribers.delete(path);
-                }
-            }
-        };
-    }
-    
-    triggerExternalSubscribers(path, newValue, oldValue) {
-        if (this.isDestroyed) return;
-        
-        const pathSubscribers = this.externalSubscribers.get(path);
-        if (pathSubscribers) {
-            pathSubscribers.forEach(callback => {
-                try {
-                    callback(newValue, oldValue, path);
-                } catch (error) {
-                    console.error('External subscriber error:', error);
-                }
-            });
-        }
-    }
-    
-    // =================================================================
-    //  REACTIVITY SYSTEM
-    // =================================================================
-    
-    createReactiveAttribute(element, attributeName, valueFn) {
-        if (this.isDestroyed) return;
-        
-        const dependencies = new Set();
-        this.currentlyTracking = dependencies;
-        
-        const updateAttribute = () => {
-            if (this.isDestroyed) return;
-            
-            try {
-                // Reset tracking for this update
-                dependencies.clear();
-                this.currentlyTracking = dependencies;
-                
-                const value = valueFn();
-                this.currentlyTracking = null;
-                
-                this.applyAttributeValue(element, attributeName, value);
-                
-            } catch (error) {
-                this.currentlyTracking = null;
-                console.error(`Error updating attribute ${attributeName}:`, error);
-            }
-        };
-        
-        // Initial call to establish dependencies
-        updateAttribute();
-        this.currentlyTracking = null;
-        
-        // Subscribe to all tracked dependencies
-        const unsubscribeFns = Array.from(dependencies).map(path => 
-            this.subscribeInternal(path, updateAttribute)
-        );
-        
-        if (!this.elementSubscriptions.has(element)) {
-            this.elementSubscriptions.set(element, new Set());
-        }
-        this.elementSubscriptions.get(element).add({ unsubscribeFns });
-        
-        return () => {
-            unsubscribeFns.forEach(unsub => unsub());
-        };
-    }
-    
-    applyAttributeValue(element, attributeName, value) {
-        if (attributeName === 'textContent') {
-            element.textContent = value;
-        } else if (attributeName === 'innerHTML' || attributeName === 'html') {
-            // SECURITY FIX: Sanitize HTML content
-            const sanitizedValue = this.sanitizeHTML(value);
-            
-            // Clean up existing children before setting innerHTML
-            Array.from(element.children).forEach(child => {
-                this.cleanupElement(child);
-            });
-            element.innerHTML = sanitizedValue;
-        } else if (attributeName === 'dangerousHtml') {
-            // SECURITY FIX: Always sanitize, even when marked as "dangerous"
-            if (this.xssProtection.strictMode) {
-                console.warn('🚨 dangerousHtml blocked in strict mode. Use customSanitizer if needed.');
+
+        setState(path, value, context = {}) {
+            if (!isValidPath(path)) {
+                console.warn('Invalid state path:', path);
                 return;
             }
-            
-            const sanitizedValue = this.sanitizeHTML(value, { force: true });
-            Array.from(element.children).forEach(child => {
-                this.cleanupElement(child);
-            });
-            element.innerHTML = sanitizedValue;
-        } else if (attributeName === 'children') {
-            while (element.firstChild) {
-                this.cleanupElement(element.firstChild);
-                element.removeChild(element.firstChild);
-            }
-            
-            if (Array.isArray(value)) {
-                value.forEach((child, index) => {
-                    const childElement = this.renderUIObject(child, null);
-                    if (childElement) {
-                        element.appendChild(childElement);
-                    }
-                });
-            }
-        } else if (attributeName.startsWith('style.')) {
-            const styleProp = attributeName.substring(6);
-            element.style[styleProp] = this.sanitizeCSSValue(value);
-        } else if (attributeName === 'value') {
-            // FIX: Handle input value properly
-            element.value = value;
-        } else if (this.isAttribute(attributeName)) {
-            if (value === null || value === undefined || value === false) {
-                element.removeAttribute(attributeName);
-            } else if (value === true) {
-                element.setAttribute(attributeName, '');
-            } else {
-                const sanitizedValue = this.sanitizeAttributeValue(attributeName, String(value));
-                element.setAttribute(attributeName, sanitizedValue);
-            }
-        } else {
-            element[attributeName] = value;
-        }
-    }
-    
-    /**
-     * Sanitize CSS values to prevent CSS-based XSS
-     */
-    sanitizeCSSValue(value) {
-        if (!value || typeof value !== 'string') return value;
-        
-        // Remove dangerous CSS patterns
-        const dangerousCSS = [
-            /javascript:/gi,
-            /expression\s*\(/gi,
-            /behavior\s*:/gi,
-            /@import/gi,
-            /binding\s*:/gi
-        ];
-        
-        let sanitized = value;
-        dangerousCSS.forEach(pattern => {
-            sanitized = sanitized.replace(pattern, '');
-        });
-        
-        return sanitized;
-    }
 
-    /**
-     * Sanitize individual attribute values
-     */
-    sanitizeAttributeValue(attributeName, value) {
-        if (!value || typeof value !== 'string') return value;
-        
-        // For URL attributes, check for dangerous protocols
-        const urlAttributes = ['href', 'src', 'action', 'formaction', 'cite', 'background'];
-        if (urlAttributes.includes(attributeName.toLowerCase())) {
-            if (this.isDangerousUrl(value)) {
-                console.warn(`🚨 Dangerous URL blocked in ${attributeName}: ${value}`);
-                return '';
+            if (this._hasCircularUpdate(path)) {
+                return;
             }
-        }
-        
-        // Remove dangerous content patterns
-        if (this.containsDangerousContent(value)) {
-            console.warn(`🚨 Dangerous content blocked in ${attributeName}: ${value}`);
-            return value.replace(/javascript:/gi, '').replace(/on\w+\s*=/gi, '');
-        }
-        
-        return value;
-    }
 
-    cleanupElement(element) {
-        if (!element) return;
-        
-        // Trigger component unmount if this is a component
-        if (element.hasAttribute && element.hasAttribute('data-component-instance')) {
-            this.triggerUnmountHook(element);
-        }
-        
-        // Cleanup subscriptions
-        const subscriptions = this.elementSubscriptions.get(element);
-        if (subscriptions) {
-            subscriptions.forEach(({ unsubscribeFns }) => {
-                unsubscribeFns.forEach(unsub => unsub());
-            });
-            this.elementSubscriptions.delete(element);
-        }
-        
-        // Cleanup child elements
-        if (element.children) {
-            Array.from(element.children).forEach(child => {
-                this.cleanupElement(child);
-            });
-        }
-    }
-    
-    // =================================================================
-    // COMPONENT SYSTEM WITH LIFECYCLE SUPPORT
-    // =================================================================
-    
-    registerComponent(name, componentFn) {
-        this.components.set(name, componentFn);
-        //console.log(`📦 Component registered: ${name}`);
-        
-        // NEW: Call onRegistered hook if it exists
-        this.triggerRegisteredHook(name, componentFn);
-    }
-    
-    // =================================================================
-    // NEW METHODS
-    // =================================================================
+            const oldValue = this.getState(path);
 
-    async triggerRegisteredHook(componentName, componentFn) {
-        try {
-            // Use unified context creation
-            const context = this.createContext();
-            
-            // Call the component function to check for onRegistered hook
-            const componentResult = componentFn({}, context);
-            
-            if (componentResult && typeof componentResult.onRegistered === 'function') {
-                console.log(`🔄 Calling onRegistered for: ${componentName}`);
-                
-                // Call the onRegistered hook with the same parameters
-                const cleanupFn = await componentResult.onRegistered({}, context);
-                
-                // Store the component instance and cleanup function for headless components
-                this.headlessComponents.set(componentName, {
-                    name: componentName,
-                    componentFn,
-                    componentResult,
-                    context,
-                    registered: true
-                });
-                
-                // Store cleanup function if returned
-                if (typeof cleanupFn === 'function') {
-                    this.headlessCleanup.set(componentName, cleanupFn);
-                }
-                
-                console.log(`✅ onRegistered completed for: ${componentName}`);
-            }
-            
-        } catch (error) {
-            console.error(`❌ onRegistered error for ${componentName}:`, error);
-        }
-    }
-
-    async cleanupHeadlessComponents() {
-        console.log('🔄 Cleaning up headless components...');
-        
-        // Call cleanup functions for all headless components
-        for (const [componentName, cleanupFn] of this.headlessCleanup) {
-            try {
-                console.log(`🔄 Cleaning up headless component: ${componentName}`);
-                await cleanupFn();
-                console.log(`✅ Cleaned up headless component: ${componentName}`);
-            } catch (error) {
-                console.error(`❌ Cleanup error for headless component ${componentName}:`, error);
-            }
-        }
-        
-        // Clear headless component tracking
-        this.headlessComponents.clear();
-        this.headlessCleanup.clear();
-        
-        console.log('✅ All headless components cleaned up');
-    }
-
-    getHeadlessComponents(filter = null) {
-        const components = [];
-        
-        this.headlessComponents.forEach((instance, componentName) => {
-            const componentInfo = {
-                name: componentName,
-                registered: instance.registered,
-                hasCleanup: this.headlessCleanup.has(componentName),
-                context: instance.context
-            };
-            
-            if (filter) {
-                if (typeof filter === 'string') {
-                    if (componentName === filter) {
-                        components.push(componentInfo);
-                    }
-                } else if (typeof filter === 'function') {
-                    if (filter(componentInfo)) {
-                        components.push(componentInfo);
-                    }
-                }
-            } else {
-                components.push(componentInfo);
-            }
-        });
-        
-        return components;
-    }
-
-    getHeadlessComponent(componentName) {
-        return this.headlessComponents.get(componentName) || null;
-    }
-    // TODO:// usage is already removed, for removal in next version, impact is internal
-    registerComponentsFromServices(services) {
-        const findComponents = (obj, prefix = '') => {
-            Object.entries(obj).forEach(([key, value]) => {
-                if (typeof value === 'function' && key !== key.toLowerCase()) {
-                    this.registerComponent(key, value);
-                } else if (typeof value === 'object' && value !== null) {
-                    findComponents(value, prefix ? `${prefix}.${key}` : key);
-                }
-            });
-        };
-        
-        findComponents(services);
-    }
-    
-    renderComponent(componentName, props, parentProps = null) {
-        const componentFn = this.components.get(componentName);
-        
-        if (!componentFn) {
-            console.error(`❌ Component not found: ${componentName}`);
-            return this.createErrorElement(`Component not found: ${componentName}`);
-        }
-        
-        try {
-            // Create auto-resolving props proxy
-            const autoProps = this.createAutoResolvingProps(props);
-            
-            // Use unified context creation
-            const context = this.createContext();
-            
-            const componentResult = componentFn(autoProps, context);
-            
-            if (!componentResult || typeof componentResult !== 'object') {
-                console.error(`❌ Component ${componentName} must return an object`);
-                return this.createErrorElement(`Component ${componentName} returned invalid result`);
-            }
-            
-            // Handle lifecycle components vs legacy components
-            let uiStructure;
-            let lifecycleHooks = {};
-            let componentApi = {};
-            
-            if (typeof componentResult.render === 'function') {
-                uiStructure = componentResult.render();
-                
-                ['onMount', 'onUpdate', 'onBeforeUpdate', 'onUnmount', 'onError', 'onRegistered'].forEach(hook => {
-                    if (typeof componentResult[hook] === 'function') {
-                        lifecycleHooks[hook] = componentResult[hook];
-                    }
-                });
-                
-                Object.keys(componentResult).forEach(key => {
-                    if (key !== 'render' && !key.startsWith('on') && typeof componentResult[key] === 'function') {
-                        componentApi[key] = componentResult[key];
-                    }
-                });
-            } else {
-                uiStructure = componentResult;
-                
-                ['onMount', 'onUpdate', 'onBeforeUpdate', 'onUnmount', 'onError', 'onRegistered'].forEach(hook => {
-                    if (typeof componentResult[hook] === 'function') {
-                        lifecycleHooks[hook] = componentResult[hook];
-                    }
-                });
-            }
-            
-            if (!uiStructure) {
-                console.error(`❌ Component ${componentName} render method returned nothing`);
-                return this.createErrorElement(`Component ${componentName} render failed`);
-            }
-            
-            const element = this.renderUIObject(uiStructure, componentName);
-            
-            if (element) {
-                const instanceId = `${componentName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                element.setAttribute('data-component-instance', instanceId);
-                element.setAttribute('data-component-name', componentName);
-                
-                this.componentInstances.set(instanceId, {
-                    name: componentName,
-                    element,
-                    props: autoProps, // Store the auto-resolving props
-                    lifecycle: lifecycleHooks,
-                    api: componentApi,
-                    mounted: false,
-                    context
-                });
-                
-                if (Object.keys(componentApi).length > 0) {
-                    this.componentApis.set(element, componentApi);
-                }
-                
-                setTimeout(() => this.triggerMountHook(instanceId), 0);
-            }
-            
-            return element;
-            
-        } catch (error) {
-            console.error(`❌ Component ${componentName} error:`, error);
-            const element = this.createErrorElement(`Component Error: ${componentName} - ${error.message}`);
-            this.triggerErrorHook(element, error, props, this.createContext());
-            return element;
-        }
-    }
-    
-    createAutoResolvingProps(props) {
-        const autoProps = {};
-        
-        for (const [key, value] of Object.entries(props || {})) {
-            if (typeof value === 'function') {
-                // For functions, create a getter that calls the function
-                Object.defineProperty(autoProps, key, {
-                    get: () => {
-                        try {
-                            return value();
-                        } catch (error) {
-                            console.error(`Error resolving prop ${key}:`, error);
-                            return null;
-                        }
-                    },
-                    enumerable: true,
-                    configurable: true
-                });
-            } else {
-                // For static values, create a getter that returns the value
-                Object.defineProperty(autoProps, key, {
-                    get: () => value,
-                    enumerable: true,
-                    configurable: true
-                });
-            }
-        }
-        
-        return autoProps;
-    }
-    
-    createErrorElement(message) {
-        const element = document.createElement('div');
-        element.className = 'juris-component-error';
-        element.style.cssText = 'color: red; border: 1px solid red; padding: 8px; margin: 4px;';
-        element.textContent = message;
-        return element;
-    }
-    
-    // =================================================================
-    // LIFECYCLE HOOK EXECUTION
-    // =================================================================
-    
-    async triggerMountHook(instanceId) {
-        const instance = this.componentInstances.get(instanceId);
-        if (!instance || this.isDestroyed || !instance.element.isConnected) {
-            return;
-        }
-        
-        if (instance.lifecycle.onMount && !instance.mounted) {
-            try {
-                console.log(`🔄 Mounting ${instance.name}`);
-                
-                const cleanup = await instance.lifecycle.onMount(instance.element, instance.props, instance.context);
-                
-                if (typeof cleanup === 'function') {
-                    this.lifecycleCleanup.set(instance.element, cleanup);
-                }
-                
-                instance.mounted = true;
-                this.mountedComponents.add(instanceId);
-                
-                console.log(`✅ Mounted ${instance.name}`);
-                
-            } catch (error) {
-                console.error(`❌ Mount error for ${instance.name}:`, error);
-                this.triggerErrorHook(instance.element, error, instance.props, instance.context);
-            }
-        }
-    }
-    
-    async triggerUpdateHook(instanceId, newProps) {
-        const instance = this.componentInstances.get(instanceId);
-        if (!instance || this.isDestroyed) return false;
-        
-        const oldProps = instance.props;
-        
-        try {
-            // onBeforeUpdate hook
-            if (instance.lifecycle.onBeforeUpdate) {
-                console.log(`🔄 Before update ${instance.name}`);
-                const shouldUpdate = await instance.lifecycle.onBeforeUpdate(instance.element, newProps, oldProps, instance.context);
-                
-                if (shouldUpdate === false) {
-                    console.log(`🛑 Update cancelled for ${instance.name}`);
-                    return false;
-                }
-            }
-            
-            // onUpdate hook
-            if (instance.lifecycle.onUpdate) {
-                console.log(`🔄 Updating ${instance.name}`);
-                await instance.lifecycle.onUpdate(instance.element, newProps, oldProps, instance.context);
-                console.log(`✅ Updated ${instance.name}`);
-            }
-            
-            // Update stored props
-            instance.props = newProps;
-            
-            return true;
-            
-        } catch (error) {
-            console.error(`❌ Update error for ${instance.name}:`, error);
-            this.triggerErrorHook(instance.element, error, newProps, instance.context);
-            return false;
-        }
-    }
-    
-    async triggerUnmountHook(element) {
-        if (this.isDestroyed) return;
-        
-        const instanceId = element.getAttribute('data-component-instance');
-        const instance = this.componentInstances.get(instanceId);
-        
-        if (instance && instance.mounted) {
-            try {
-                console.log(`🔄 Unmounting ${instance.name}`);
-                
-                if (instance.lifecycle.onUnmount) {
-                    await instance.lifecycle.onUnmount(element, instance.props, instance.context);
-                }
-                
-                // Run mount cleanup function
-                const cleanup = this.lifecycleCleanup.get(element);
-                if (cleanup && typeof cleanup === 'function') {
-                    await cleanup();
-                }
-                
-                console.log(`✅ Unmounted ${instance.name}`);
-                
-            } catch (error) {
-                console.error(`❌ Unmount error for ${instance.name}:`, error);
-            }
-        }
-        
-        // Clean up tracking
-        if (instanceId) {
-            this.componentInstances.delete(instanceId);
-            this.mountedComponents.delete(instanceId);
-        }
-        this.componentApis.delete(element);
-        this.lifecycleCleanup.delete(element);
-    }
-    
-    triggerErrorHook(element, error, props, context) {
-        const instanceId = element.getAttribute && element.getAttribute('data-component-instance');
-        const instance = instanceId ? this.componentInstances.get(instanceId) : null;
-        
-        if (instance && instance.lifecycle.onError) {
-            try {
-                console.log(`🔄 Error hook for ${instance.name}`);
-                instance.lifecycle.onError(error, element, props, context);
-                console.log(`✅ Error handled for ${instance.name}`);
-            } catch (hookError) {
-                console.error(`❌ Error hook failed for ${instance.name}:`, hookError);
-            }
-        }
-    }
-    
-    // =================================================================
-    // COMPONENT API MANAGEMENT
-    // =================================================================
-    
-    getComponents(filter = null) {
-        const components = [];
-        this.componentInstances.forEach((instance, instanceId) => {
-            const componentInfo = {
-                id: instanceId,
-                name: instance.name,
-                element: instance.element,
-                props: instance.props,
-                mounted: instance.mounted,
-                api: instance.api,
-                lifecycle: Object.keys(instance.lifecycle),
-                isConnected: instance.element ? instance.element.isConnected : false
-            };
-            
-            if (filter) {
-                if (typeof filter === 'string') {
-                    // Filter by component name
-                    if (instance.name === filter) {
-                        components.push(componentInfo);
-                    }
-                } else if (typeof filter === 'function') {
-                    // Filter by function
-                    if (filter(componentInfo)) {
-                        components.push(componentInfo);
-                    }
-                } else if (typeof filter === 'object') {
-                    // Filter by criteria object
-                    let matches = true;
-                    Object.keys(filter).forEach(key => {
-                        if (componentInfo[key] !== filter[key]) {
-                            matches = false;
-                        }
+            let finalValue = value;
+            for (const middleware of this.middleware) {
+                try {
+                    const result = middleware({
+                        path,
+                        oldValue,
+                        newValue: finalValue,
+                        context,
+                        state: this.state
                     });
-                    if (matches) {
-                        components.push(componentInfo);
+                    if (result !== undefined) {
+                        finalValue = result;
+                    }
+                } catch (error) {
+                    console.error('Middleware error:', error);
+                }
+            }
+
+            if (deepEquals(oldValue, finalValue)) {
+                return;
+            }
+
+            const parts = getPathParts(path);
+            let current = this.state;
+
+            for (let i = 0; i < parts.length - 1; i++) {
+                const part = parts[i];
+                if (current[part] == null || typeof current[part] !== 'object') {
+                    current[part] = {};
+                }
+                current = current[part];
+            }
+
+            current[parts[parts.length - 1]] = finalValue;
+
+            if (!this.isUpdating) {
+                this.isUpdating = true;
+
+                if (!this.currentlyUpdating) {
+                    this.currentlyUpdating = new Set();
+                }
+                this.currentlyUpdating.add(path);
+
+                this._notifySubscribers(path, finalValue, oldValue);
+                this._notifyExternalSubscribers(path, finalValue, oldValue);
+
+                this.currentlyUpdating.delete(path);
+                this.isUpdating = false;
+            }
+        }
+
+        _processBatchedUpdates() {
+            if (this.batchUpdateInProgress || this.updateQueue.length === 0) {
+                return;
+            }
+
+            this.batchUpdateInProgress = true;
+
+            if (this.batchTimeout) {
+                clearTimeout(this.batchTimeout);
+                this.batchTimeout = null;
+            }
+
+            const batchSize = Math.min(this.maxBatchSize, this.updateQueue.length);
+            const currentBatch = this.updateQueue.splice(0, batchSize);
+
+            try {
+                const pathGroups = new Map();
+
+                currentBatch.forEach(update => {
+                    if (!pathGroups.has(update.path)) {
+                        pathGroups.set(update.path, []);
+                    }
+                    pathGroups.get(update.path).push(update);
+                });
+
+                pathGroups.forEach((updates, path) => {
+                    const latestUpdate = updates[updates.length - 1];
+                    this.setState(latestUpdate.path, latestUpdate.value, latestUpdate.context);
+                });
+
+            } catch (error) {
+                console.error('Error processing batched updates:', error);
+            } finally {
+                this.batchUpdateInProgress = false;
+
+                if (this.updateQueue.length > 0) {
+                    setTimeout(() => this._processBatchedUpdates(), 0);
+                }
+            }
+        }
+
+        configureBatching(options = {}) {
+            this.maxBatchSize = options.maxBatchSize || this.maxBatchSize;
+            this.batchDelayMs = options.batchDelayMs !== undefined ? options.batchDelayMs : this.batchDelayMs;
+        }
+
+        _queueUpdate(path, value, context) {
+            this.updateQueue.push({ path, value, context, timestamp: Date.now() });
+
+            if (this.updateQueue.length > this.maxBatchSize * 2) {
+                console.warn('Update queue is getting large, processing immediately');
+                this._processBatchedUpdates();
+                return;
+            }
+
+            if (!this.batchTimeout) {
+                this.batchTimeout = setTimeout(() => {
+                    this._processBatchedUpdates();
+                }, this.batchDelayMs);
+            }
+        }
+
+        subscribe(path, callback) {
+            if (!this.externalSubscribers.has(path)) {
+                this.externalSubscribers.set(path, new Set());
+            }
+            this.externalSubscribers.get(path).add(callback);
+
+            return () => {
+                const subs = this.externalSubscribers.get(path);
+                if (subs) {
+                    subs.delete(callback);
+                    if (subs.size === 0) {
+                        this.externalSubscribers.delete(path);
                     }
                 }
-            } else {
-                components.push(componentInfo);
+            };
+        }
+
+        subscribeInternal(path, callback) {
+            if (!this.subscribers.has(path)) {
+                this.subscribers.set(path, new Set());
             }
-        });
-        
-        return components;
+            this.subscribers.get(path).add(callback);
+
+            return () => {
+                const subs = this.subscribers.get(path);
+                if (subs) {
+                    subs.delete(callback);
+                    if (subs.size === 0) {
+                        this.subscribers.delete(path);
+                    }
+                }
+            };
+        }
+
+        _notifySubscribers(path, newValue, oldValue) {
+            this._triggerPathSubscribers(path);
+
+            const parts = getPathParts(path);
+            for (let i = parts.length - 1; i > 0; i--) {
+                const parentPath = parts.slice(0, i).join('.');
+                this._triggerPathSubscribers(parentPath);
+            }
+
+            const prefix = path ? path + '.' : '';
+            const allSubscriberPaths = new Set([
+                ...this.subscribers.keys(),
+                ...this.externalSubscribers.keys()
+            ]);
+
+            allSubscriberPaths.forEach(subscriberPath => {
+                if (subscriberPath.startsWith(prefix) && subscriberPath !== path) {
+                    this._triggerPathSubscribers(subscriberPath);
+                }
+            });
+        }
+
+        _notifyExternalSubscribers(path, newValue, oldValue) {
+            const subs = this.externalSubscribers.get(path);
+            if (subs) {
+                subs.forEach(callback => {
+                    try {
+                        callback(newValue, oldValue, path);
+                    } catch (error) {
+                        console.error('External subscriber error:', error);
+                    }
+                });
+            }
+        }
+
+        _triggerPathSubscribers(path) {
+            const subs = this.subscribers.get(path);
+            if (subs) {
+                const subscribersCopy = new Set(subs);
+
+                subscribersCopy.forEach(callback => {
+                    try {
+                        const oldTracking = this.currentTracking;
+                        const newTracking = new Set();
+                        this.currentTracking = newTracking;
+
+                        callback();
+
+                        this.currentTracking = oldTracking;
+
+                        newTracking.forEach(newPath => {
+                            const existingSubs = this.subscribers.get(newPath);
+                            if (!existingSubs || !existingSubs.has(callback)) {
+                                this.subscribeInternal(newPath, callback);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Subscriber error:', error);
+                        this.currentTracking = oldTracking;
+                    }
+                });
+            }
+        }
+
+        _hasCircularUpdate(path) {
+            if (!this.currentlyUpdating) {
+                this.currentlyUpdating = new Set();
+            }
+
+            if (this.currentlyUpdating.has(path)) {
+                console.warn(`Circular dependency detected for path: ${path}`);
+                return true;
+            }
+
+            return false;
+        }
+
+        startTracking() {
+            const dependencies = new Set();
+            this.currentTracking = dependencies;
+            return dependencies;
+        }
+
+        endTracking() {
+            const tracking = this.currentTracking;
+            this.currentTracking = null;
+            return tracking || new Set();
+        }
     }
-    
-    getComponent(selector) {
-        let element;
-        
-        if (typeof selector === 'string') {
-            // Find by component name
-            element = document.querySelector(`[data-component-name="${selector}"]`);
-            if (!element) {
-                // Try CSS selector
-                element = document.querySelector(selector);
+
+    /**
+     * Headless Manager - Enhanced with better lifecycle management
+     */
+    class HeadlessManager {
+        constructor(juris) {
+            this.juris = juris;
+            this.components = new Map();
+            this.instances = new Map();
+            this.context = {};
+            this.initQueue = new Set();
+            this.lifecycleHooks = new Map();
+        }
+
+        register(name, componentFn, options = {}) {
+            this.components.set(name, { fn: componentFn, options });
+
+            if (options.autoInit) {
+                this.initQueue.add(name);
             }
-        } else if (selector instanceof HTMLElement) {
-            element = selector;
-        } else {
-            console.warn(`Invalid selector type: ${typeof selector}. Expected string or HTMLElement.`);
-            return null;
         }
-        
-        if (!element) {
-            console.warn(`Component not found: ${selector}`);
-            return null;
-        }
-        
-        const api = this.componentApis.get(element);
-        const instanceId = element.getAttribute('data-component-instance');
-        const instance = instanceId ? this.componentInstances.get(instanceId) : null;
-        
-        if (api) {
-            return api;
-        } else if (instance) {
-            return instance.api;
-        }
-        
-        console.warn(`Component API not found for: ${selector}`);
-        return null;
-    }
-    
-    updateComponent(componentSelector, newProps = {}, options = {}) {
-        const { forceUpdate = false, mergeProps = true } = options;
-        
-        let element;
-        if (typeof componentSelector === 'string') {
-            element = document.querySelector(`[data-component-name="${componentSelector}"]`);
-            if (!element) {
-                element = document.querySelector(componentSelector);
+
+        initialize(name, props = {}) {
+            const component = this.components.get(name);
+            if (!component) {
+                console.warn(`Headless component '${name}' not found`);
+                return null;
             }
-        } else if (componentSelector instanceof HTMLElement) {
-            element = componentSelector;
-        } else {
-            console.warn(`Invalid component selector type: ${typeof componentSelector}`);
-            return false;
+
+            try {
+                const context = this.juris.createHeadlessContext();
+                const instance = component.fn(props, context);
+
+                if (!instance || typeof instance !== 'object') {
+                    console.warn(`Headless component '${name}' must return an object`);
+                    return null;
+                }
+
+                this.instances.set(name, instance);
+
+                if (instance.hooks) {
+                    this.lifecycleHooks.set(name, instance.hooks);
+                }
+
+                if (instance.api) {
+                    this.context[name] = instance.api;
+
+                    if (!this.juris.headlessAPIs) {
+                        this.juris.headlessAPIs = {};
+                    }
+                    this.juris.headlessAPIs[name] = instance.api;
+
+                    this.juris._updateComponentContexts();
+                }
+
+                if (instance.hooks?.onRegister) {
+                    try {
+                        instance.hooks.onRegister();
+                    } catch (error) {
+                        console.error(`Error in onRegister for headless component '${name}':`, error);
+                    }
+                }
+
+                return instance;
+            } catch (error) {
+                console.error(`Error initializing headless component '${name}':`, error);
+                return null;
+            }
         }
-        
-        if (!element) {
-            console.warn(`Component not found: ${componentSelector}`);
-            return false;
+
+        initializeQueued() {
+            this.initQueue.forEach(name => {
+                if (!this.instances.has(name)) {
+                    const component = this.components.get(name);
+                    this.initialize(name, component.options || {});
+                }
+            });
+            this.initQueue.clear();
         }
-        
-        const instanceId = element.getAttribute('data-component-instance');
-        const instance = instanceId ? this.componentInstances.get(instanceId) : null;
-        
-        if (!instance) {
-            console.warn(`Component instance not found for: ${componentSelector}`);
-            return false;
+
+        getInstance(name) {
+            return this.instances.get(name);
         }
-        
-        try {
-            const oldProps = instance.props;
-            const finalProps = mergeProps ? { ...oldProps, ...newProps } : newProps;
-            
-            console.log(`🔄 Updating component: ${instance.name}`, { oldProps, newProps: finalProps });
-            
-            // Update stored props
-            instance.props = finalProps;
-            
-            // Trigger update hook if available
-            if (instance.lifecycle.onUpdate || forceUpdate) {
-                const updateResult = this.triggerUpdateHook(instanceId, finalProps);
-                
-                if (updateResult === false) {
-                    // Update was cancelled, revert props
-                    instance.props = oldProps;
-                    console.log(`🛑 Component update cancelled: ${instance.name}`);
-                    return false;
+
+        getAPI(name) {
+            return this.context[name];
+        }
+
+        getAllAPIs() {
+            return { ...this.context };
+        }
+
+        reinitialize(name, props = {}) {
+            if (this.instances.has(name)) {
+                const instance = this.instances.get(name);
+                if (instance.hooks?.onUnregister) {
+                    try {
+                        instance.hooks.onUnregister();
+                    } catch (error) {
+                        console.error(`Error in onUnregister for '${name}':`, error);
+                    }
                 }
             }
-            
-            // Force re-render by triggering state change
-            const forceUpdatePath = `component.${instanceId}.lastUpdate`;
-            this.setState(forceUpdatePath, Date.now());
-            
-            console.log(`✅ Component updated: ${instance.name}`);
-            return true;
-            
-        } catch (error) {
-            console.error(`Error updating component ${instance.name}:`, error);
-            return false;
+
+            if (this.context[name]) {
+                delete this.context[name];
+            }
+            if (this.juris.headlessAPIs?.[name]) {
+                delete this.juris.headlessAPIs[name];
+            }
+
+            this.instances.delete(name);
+            this.lifecycleHooks.delete(name);
+
+            return this.initialize(name, props);
+        }
+
+        cleanup() {
+            this.instances.forEach((instance, name) => {
+                if (instance.hooks?.onUnregister) {
+                    try {
+                        instance.hooks.onUnregister();
+                    } catch (error) {
+                        console.error(`Error in onUnregister for '${name}':`, error);
+                    }
+                }
+            });
+            this.instances.clear();
+            this.context = {};
+            this.lifecycleHooks.clear();
+
+            if (this.juris.headlessAPIs) {
+                this.juris.headlessAPIs = {};
+            }
+        }
+
+        getStatus() {
+            return {
+                registered: Array.from(this.components.keys()),
+                initialized: Array.from(this.instances.keys()),
+                queued: Array.from(this.initQueue),
+                apis: Object.keys(this.context)
+            };
         }
     }
-    
-    removeComponent(componentSelector, options = {}) {
-        const { cleanup = true, triggerUnmount = true } = options;
-        
-        let element;
-        if (typeof componentSelector === 'string') {
-            element = document.querySelector(`[data-component-name="${componentSelector}"]`);
+
+    /**
+     * Component Manager - Handles UI components with lifecycle
+     */
+    class ComponentManager {
+        constructor(juris) {
+            this.juris = juris;
+            this.components = new Map();
+            this.instances = new WeakMap();
+            this.componentCounters = new Map(); // Track instances per component name
+            this.componentStates = new WeakMap();
+        }
+
+        register(name, componentFn) {
+            this.components.set(name, componentFn);
+        }
+
+        create(name, props = {}) {
+            const componentFn = this.components.get(name);
+            if (!componentFn) {
+                console.error(`Component '${name}' not found`);
+                return null;
+            }
+
+            try {
+                if (!this.componentCounters.has(name)) {
+                    this.componentCounters.set(name, 0);
+                }
+                const currentCount = this.componentCounters.get(name);
+                const instanceIndex = currentCount + 1;
+                this.componentCounters.set(name, instanceIndex);
+                const componentId = `${name}_${instanceIndex}`;
+                const componentStates = new Set();
+
+                const context = this.juris.createContext();
+
+                // Add newState function to context
+                context.newState = (key, initialValue) => {
+                    const statePath = `__local.${componentId}.${key}`;
+
+                    // Set initial value if not exists
+                    if (this.juris.stateManager.getState(statePath, Symbol('not-found')) === Symbol('not-found')) {
+                        this.juris.stateManager.setState(statePath, initialValue);
+                    }
+
+                    // Track this state for cleanup
+                    componentStates.add(statePath);
+
+                    const getter = () => this.juris.stateManager.getState(statePath, initialValue);
+                    const setter = (value) => this.juris.stateManager.setState(statePath, value);
+
+                    return [getter, setter];
+                };
+
+                const result = componentFn(props, context);
+
+                if (result && typeof result === 'object') {
+                    // Check for lifecycle component first
+                    if (result.onMount || result.onUpdate || result.onUnmount ||
+                        (typeof result.render === 'function' && (result.onMount !== undefined || result.onUpdate !== undefined || result.onUnmount !== undefined))) {
+                        return this._createLifecycleComponent(result, name, props, componentStates);
+                    }
+
+                    // Check for render function pattern
+                    if (typeof result.render === 'function' && !result.onMount && !result.onUpdate && !result.onUnmount) {
+                        const renderResult = result.render();
+                        console.log(`Render function for '${name}' returned:`, renderResult);
+                        const element = this.juris.domRenderer.render(renderResult);
+                        if (element && componentStates.size > 0) {
+                            this.componentStates.set(element, componentStates);
+                        }
+                        return element;
+                    }
+
+                    // Direct VDOM return - check if it has valid tag names
+                    const keys = Object.keys(result);
+                    if (keys.length === 1) {
+                        const tagName = keys[0];
+                        // Valid HTML tag names or registered components
+                        if (typeof tagName === 'string' && tagName.length > 0) {
+                            const element = this.juris.domRenderer.render(result);
+                            if (element && componentStates.size > 0) {
+                                this.componentStates.set(element, componentStates);
+                            }
+                            return element;
+                        }
+                    }
+                }
+
+                // Fallback
+                console.warn(`Component '${name}' returned unexpected structure, attempting to render:`, result);
+                const element = this.juris.domRenderer.render(result);
+                if (element && componentStates.size > 0) {
+                    this.componentStates.set(element, componentStates);
+                }
+                return element;
+
+            } catch (error) {
+                console.error(`Error creating component '${name}':`, error);
+                return this._createErrorElement(error);
+            }
+        }
+
+        // Helper method to detect VDOM structure
+        _isVDOMStructure(obj) {
+            if (!obj || typeof obj !== 'object') return false;
+
+            const keys = Object.keys(obj);
+            if (keys.length !== 1) return false;
+
+            const tagName = keys[0];
+
+            // Check if it's a valid HTML tag name or component name
+            return typeof tagName === 'string' &&
+                (this.juris.componentManager.components.has(tagName) ||
+                    /^[a-zA-Z][a-zA-Z0-9-]*$/.test(tagName));
+        }
+
+        _createLifecycleComponent(componentResult, name, props, componentStates) {
+            const instance = {
+                name,
+                props,
+                hooks: componentResult.hooks || {},
+                api: componentResult.api || {},
+                render: componentResult.render
+            };
+
+            const element = this.juris.domRenderer.render(instance.render());
+            if (element) {
+                this.instances.set(element, instance);
+
+                // Store component states for cleanup
+                if (componentStates && componentStates.size > 0) {
+                    this.componentStates.set(element, componentStates);
+                }
+
+                if (instance.hooks.onMount) {
+                    setTimeout(() => {
+                        if (element.isConnected) {
+                            try {
+                                instance.hooks.onMount();
+                            } catch (error) {
+                                console.error(`onMount error in ${name}:`, error);
+                            }
+                        }
+                    }, 0);
+                }
+            }
+
+            return element;
+        }
+
+        updateInstance1(element, newProps) {
+            const instance = this.instances.get(element);
+            if (!instance) return;
+
+            const oldProps = instance.props;
+            instance.props = newProps;
+
+            if (instance.hooks.onUpdate) {
+                try {
+                    instance.hooks.onUpdate(oldProps, newProps);
+                } catch (error) {
+                    console.error(`onUpdate error in ${instance.name}:`, error);
+                }
+            }
+
+            try {
+                const newContent = instance.render();
+                this.juris.domRenderer.updateElementContent(element, newContent);
+            } catch (error) {
+                console.error(`Re-render error in ${instance.name}:`, error);
+            }
+        }
+
+        cleanup(element) {
+            const instance = this.instances.get(element);
+            if (instance && instance.hooks.onUnmount) {
+                try {
+                    instance.hooks.onUnmount();
+                } catch (error) {
+                    console.error(`onUnmount error in ${instance.name}:`, error);
+                }
+            }
+
+            // Cleanup component local states
+            const states = this.componentStates.get(element);
+            if (states) {
+                states.forEach(statePath => {
+                    // Remove from global state
+                    const pathParts = statePath.split('.');
+                    let current = this.juris.stateManager.state;
+                    for (let i = 0; i < pathParts.length - 1; i++) {
+                        if (current[pathParts[i]]) {
+                            current = current[pathParts[i]];
+                        } else {
+                            return; // Path doesn't exist
+                        }
+                    }
+                    delete current[pathParts[pathParts.length - 1]];
+                });
+                this.componentStates.delete(element);
+            }
+
+            this.instances.delete(element);
+        }
+
+        _createErrorElement(error) {
+            const element = document.createElement('div');
+            element.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6;';
+            element.textContent = `Component Error: ${error.message}`;
+            return element;
+        }
+    }
+
+    /**
+     * OPTIMIZED DOM Renderer with renderMode support
+     */
+    class DOMRenderer {
+        constructor(juris) {
+            this.juris = juris;
+            this.subscriptions = new WeakMap();
+            this.eventMap = {
+                ondoubleclick: 'dblclick',
+                onmousedown: 'mousedown',
+                onmouseup: 'mouseup',
+                onmouseover: 'mouseover',
+                onmouseout: 'mouseout',
+                onmousemove: 'mousemove',
+                onkeydown: 'keydown',
+                onkeyup: 'keyup',
+                onkeypress: 'keypress',
+                onfocus: 'focus',
+                onblur: 'blur',
+                onchange: 'change',
+                oninput: 'input',
+                onsubmit: 'submit',
+                onload: 'load',
+                onresize: 'resize',
+                onscroll: 'scroll'
+            };
+
+            // VDOM-style optimizations
+            this.elementCache = new Map();
+            this.recyclePool = new Map();
+            this.renderQueue = [];
+            this.isRendering = false;
+            this.scheduledRender = null;
+
+            // Performance settings
+            this.batchSize = 20;
+            this.recyclePoolSize = 100;
+
+            // RENDER MODE: Choose between fine-grained and batch rendering
+            this.renderMode = 'fine-grained'; // 'batch' or 'fine-grained'
+            this.failureCount = 0;
+            this.maxFailures = 3;
+        }
+
+        // PUBLIC: Set render mode
+        setRenderMode(mode) {
+            if (mode === 'fine-grained' || mode === 'batch') {
+                this.renderMode = mode;
+                console.log(`Juris: Render mode set to '${mode}'`);
+                if (mode === 'fine-grained') {
+                    console.log('  → Using direct DOM updates (more compatible)');
+                } else {
+                    console.log('  → Using VDOM-style reconciliation (higher performance)');
+                }
+            } else {
+                console.warn(`Invalid render mode '${mode}'. Use 'fine-grained' or 'batch'`);
+            }
+        }
+
+        getRenderMode() {
+            return this.renderMode;
+        }
+
+        isFineGrained() {
+            return this.renderMode === 'fine-grained';
+        }
+
+        isBatchMode() {
+            return this.renderMode === 'batch';
+        }
+
+        // DEPRECATED: Legacy method names for backward compatibility
+        setLegacyMode(enabled) {
+            console.warn('setLegacyMode() is deprecated. Use setRenderMode() instead.');
+            this.setRenderMode(enabled ? 'fine-grained' : 'batch');
+        }
+
+        isLegacyMode() {
+            console.warn('isLegacyMode() is deprecated. Use isFineGrained() instead.');
+            return this.isFineGrained();
+        }
+
+        render(vnode) {
+            if (!vnode || typeof vnode !== 'object') {
+                return null;
+            }
+
+            // ✅ NEW: Handle arrays of vnodes
+            if (Array.isArray(vnode)) {
+                //console.log('DOMRenderer.render received array:', vnode);
+                const fragment = document.createDocumentFragment();
+                vnode.forEach(child => {
+                    const childElement = this.render(child);
+                    if (childElement) {
+                        fragment.appendChild(childElement);
+                    }
+                });
+                return fragment;
+            }
+
+            // Debug log
+            //console.log('DOMRenderer.render received:', vnode);
+
+            const tagName = Object.keys(vnode)[0];
+            const props = vnode[tagName] || {};
+
+            // Debug log
+            //console.log('Extracted tagName:', tagName, 'type:', typeof tagName);
+
+            // Check if it's a registered component
+            if (this.juris.componentManager.components.has(tagName)) {
+                const parentTracking = this.juris.stateManager.currentTracking;
+                this.juris.stateManager.currentTracking = null;
+
+                const result = this.juris.componentManager.create(tagName, props);
+
+                this.juris.stateManager.currentTracking = parentTracking;
+                return result;
+            }
+
+            // Validate tagName before creating element
+            if (typeof tagName !== 'string' || tagName.length === 0) {
+                console.error('Invalid tagName:', tagName, 'from vnode:', vnode);
+                return null;
+            }
+
+            // FINE-GRAINED MODE: Use direct DOM updates
+            if (this.renderMode === 'fine-grained') {
+                return this._createElementFineGrained(tagName, props);
+            }
+
+            // BATCH MODE: Try optimized reconciliation with automatic fallback
+            try {
+                const key = props.key || this._generateKey(tagName, props);
+                const cachedElement = this.elementCache.get(key);
+
+                if (cachedElement && this._canReuseElement(cachedElement, tagName, props)) {
+                    this._updateElementProperties(cachedElement, props);
+                    return cachedElement;
+                }
+
+                return this._createElementOptimized(tagName, props, key);
+            } catch (error) {
+                console.warn('Batch rendering failed, falling back to fine-grained mode:', error.message);
+                this.failureCount++;
+
+                if (this.failureCount >= this.maxFailures) {
+                    console.log('Too many batch failures, switching to fine-grained mode permanently');
+                    this.renderMode = 'fine-grained';
+                }
+
+                return this._createElementFineGrained(tagName, props);
+            }
+        }
+
+        // FINE-GRAINED: Direct DOM manipulation method
+        _createElementFineGrained(tagName, props) {
+            // Debug logging to catch the issue
+            /*console.log('_createElementFineGrained called with:', {
+                tagName: tagName,
+                tagNameType: typeof tagName,
+                props: props
+            });*/
+
+            // Validate inputs
+            if (typeof tagName !== 'string') {
+                console.error('Invalid tagName in _createElementFineGrained:', tagName);
+                return null;
+            }
+
+            const element = document.createElement(tagName);
+            const subscriptions = [];
+            const eventListeners = [];
+
+            Object.keys(props).forEach(key => {
+                const value = props[key];
+
+                if (key === 'children') {
+                    this._handleChildrenFineGrained(element, value, subscriptions);
+                } else if (key === 'text') {
+                    this._handleText(element, value, subscriptions);
+                } else if (key === 'style') {
+                    this._handleStyleFineGrained(element, value, subscriptions);
+                } else if (key.startsWith('on')) {
+                    this._handleEvent(element, key, value, eventListeners);
+                } else if (typeof value === 'function') {
+                    this._handleReactiveAttribute(element, key, value, subscriptions);
+                } else if (key !== 'key') {
+                    this._setStaticAttribute(element, key, value);
+                }
+            });
+
+            if (subscriptions.length > 0 || eventListeners.length > 0) {
+                this.subscriptions.set(element, { subscriptions, eventListeners });
+            }
+
+            return element;
+        }
+
+        _handleChildrenFineGrained(element, children, subscriptions) {
+            if (typeof children === 'function') {
+                const updateChildren = () => {
+                    try {
+                        const result = children();
+                        if (result !== "ignore") {
+                            this._updateChildrenFineGrained(element, result);
+                        }
+                    } catch (error) {
+                        console.error('Error in children function:', error);
+                    }
+                };
+
+                this._createReactiveUpdate(element, updateChildren, subscriptions);
+            } else {
+                this._updateChildrenFineGrained(element, children);
+            }
+        }
+
+        _updateChildrenFineGrained(element, children) {
+            if (children === "ignore") {
+                return;
+            }
+
+            const childrenToRemove = Array.from(element.children);
+            childrenToRemove.forEach(child => {
+                this.cleanup(child);
+            });
+
+            element.textContent = '';
+
+            const fragment = document.createDocumentFragment();
+
+            if (Array.isArray(children)) {
+                children.forEach(child => {
+                    const childElement = this.render(child);
+                    if (childElement) {
+                        fragment.appendChild(childElement);
+                    }
+                });
+            } else if (children) {
+                const childElement = this.render(children);
+                if (childElement) {
+                    fragment.appendChild(childElement);
+                }
+            }
+
+            if (fragment.hasChildNodes()) {
+                element.appendChild(fragment);
+            }
+        }
+
+        _handleStyleFineGrained(element, style, subscriptions) {
+            if (typeof style === 'function') {
+                this._createReactiveUpdate(element, () => {
+                    const styleObj = style();
+                    if (typeof styleObj === 'object') {
+                        Object.assign(element.style, styleObj);
+                    }
+                }, subscriptions);
+
+                const initialStyle = style();
+                if (typeof initialStyle === 'object') {
+                    Object.assign(element.style, initialStyle);
+                }
+            } else if (typeof style === 'object') {
+                Object.assign(element.style, style);
+            }
+        }
+
+        // BATCH MODE: Optimized element creation
+        _createElementOptimized(tagName, props, key) {
+            let element = this._getRecycledElement(tagName);
+
             if (!element) {
-                element = document.querySelector(componentSelector);
+                element = document.createElement(tagName);
             }
-        } else if (componentSelector instanceof HTMLElement) {
-            element = componentSelector;
-        } else {
-            console.warn(`Invalid component selector type: ${typeof componentSelector}`);
+
+            if (key) {
+                this.elementCache.set(key, element);
+                element._jurisKey = key;
+            }
+
+            const subscriptions = [];
+            const eventListeners = [];
+
+            this._processProperties(element, props, subscriptions, eventListeners);
+
+            if (subscriptions.length > 0 || eventListeners.length > 0) {
+                this.subscriptions.set(element, { subscriptions, eventListeners });
+            }
+
+            return element;
+        }
+
+        _processProperties(element, props, subscriptions, eventListeners) {
+            Object.keys(props).forEach(key => {
+                const value = props[key];
+
+                if (key === 'children') {
+                    this._handleChildrenOptimized(element, value, subscriptions);
+                } else if (key === 'text') {
+                    this._handleText(element, value, subscriptions);
+                } else if (key === 'innerHTML') {
+                    if (typeof value === 'function') {
+                        this._handleReactiveAttribute(element, key, value, subscriptions);
+                    } else {
+                        element.innerHTML = value;
+                    }
+                } else if (key === 'style') {
+                    this._handleStyle(element, value, subscriptions);
+                } else if (key.startsWith('on')) {
+                    this._handleEvent(element, key, value, eventListeners);
+                } else if (typeof value === 'function') {
+                    this._handleReactiveAttribute(element, key, value, subscriptions);
+                } else if (key !== 'key') {
+                    this._setStaticAttribute(element, key, value);
+                }
+            });
+        }
+
+        _handleChildrenOptimized(element, children, subscriptions) {
+            if (typeof children === 'function') {
+                let lastChildrenState = null;
+                let childElements = [];
+                let useOptimizedPath = true;
+
+                const updateChildren = () => {
+                    try {
+                        const newChildren = children();
+                        if (newChildren !== "ignore" && !this._childrenEqual(lastChildrenState, newChildren)) {
+                            if (useOptimizedPath) {
+                                try {
+                                    childElements = this._reconcileChildren(element, childElements, newChildren);
+                                    lastChildrenState = newChildren;
+                                } catch (error) {
+                                    console.warn('Reconciliation failed, falling back to safe rendering:', error.message);
+                                    useOptimizedPath = false;
+                                    this._updateChildrenSafe(element, newChildren);
+                                    lastChildrenState = newChildren;
+                                }
+                            } else {
+                                this._updateChildrenSafe(element, newChildren);
+                                lastChildrenState = newChildren;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error in children function:', error);
+                        useOptimizedPath = false;
+                        try {
+                            this._updateChildrenSafe(element, []);
+                        } catch (fallbackError) {
+                            console.error('Even safe fallback failed:', fallbackError);
+                        }
+                    }
+                };
+
+                this._createReactiveUpdate(element, updateChildren, subscriptions);
+
+                try {
+                    const initialChildren = children();
+                    childElements = this._reconcileChildren(element, [], initialChildren);
+                    lastChildrenState = initialChildren;
+                } catch (error) {
+                    console.warn('Initial reconciliation failed, using safe method:', error.message);
+                    useOptimizedPath = false;
+                    const initialChildren = children();
+                    this._updateChildrenSafe(element, initialChildren);
+                    lastChildrenState = initialChildren;
+                }
+
+            } else {
+                try {
+                    this._reconcileChildren(element, [], children);
+                } catch (error) {
+                    console.warn('Static reconciliation failed, using safe method:', error.message);
+                    this._updateChildrenSafe(element, children);
+                }
+            }
+        }
+
+        _updateChildrenSafe(element, children) {
+            if (children === "ignore") {
+                return;
+            }
+
+            const childrenToRemove = Array.from(element.children);
+            childrenToRemove.forEach(child => {
+                try {
+                    this.cleanup(child);
+                } catch (error) {
+                    console.warn('Error cleaning up child:', error);
+                }
+            });
+
+            element.textContent = '';
+
+            const fragment = document.createDocumentFragment();
+
+            if (Array.isArray(children)) {
+                children.forEach(child => {
+                    try {
+                        const childElement = this.render(child);
+                        if (childElement && childElement !== element) {
+                            fragment.appendChild(childElement);
+                        }
+                    } catch (error) {
+                        console.warn('Error rendering child:', error);
+                    }
+                });
+            } else if (children) {
+                try {
+                    const childElement = this.render(children);
+                    if (childElement && childElement !== element) {
+                        fragment.appendChild(childElement);
+                    }
+                } catch (error) {
+                    console.warn('Error rendering single child:', error);
+                }
+            }
+
+            try {
+                if (fragment.hasChildNodes()) {
+                    element.appendChild(fragment);
+                }
+            } catch (error) {
+                console.error('Failed to append fragment, trying individual children:', error);
+                Array.from(fragment.children).forEach(child => {
+                    try {
+                        if (child && child !== element) {
+                            element.appendChild(child);
+                        }
+                    } catch (individualError) {
+                        console.warn('Failed to append individual child:', individualError);
+                    }
+                });
+            }
+        }
+
+        _reconcileChildren(parent, oldChildren, newChildren) {
+            if (!Array.isArray(newChildren)) {
+                newChildren = newChildren ? [newChildren] : [];
+            }
+
+            const newChildElements = [];
+            const fragment = document.createDocumentFragment();
+
+            const oldChildrenByKey = new Map();
+            oldChildren.forEach((child, index) => {
+                const key = child._jurisKey || `auto-${index}`;
+                oldChildrenByKey.set(key, child);
+            });
+
+            const usedElements = new Set();
+
+            newChildren.forEach((newChild, index) => {
+                if (!newChild || typeof newChild !== 'object') return;
+
+                const tagName = Object.keys(newChild)[0];
+                const props = newChild[tagName] || {};
+
+                const key = props.key || this._generateKey(tagName, props, index);
+
+                const existingElement = oldChildrenByKey.get(key);
+
+                if (existingElement &&
+                    !usedElements.has(existingElement) &&
+                    this._canReuseElement(existingElement, tagName, props) &&
+                    !this._wouldCreateCircularReference(parent, existingElement)) {
+
+                    if (existingElement.parentNode) {
+                        existingElement.parentNode.removeChild(existingElement);
+                    }
+
+                    this._updateElementProperties(existingElement, props);
+                    newChildElements.push(existingElement);
+                    fragment.appendChild(existingElement);
+                    usedElements.add(existingElement);
+                    oldChildrenByKey.delete(key);
+                } else {
+                    const newElement = this.render(newChild);
+                    if (newElement && !this._wouldCreateCircularReference(parent, newElement)) {
+                        newElement._jurisKey = key;
+                        newChildElements.push(newElement);
+                        fragment.appendChild(newElement);
+                    }
+                }
+            });
+
+            oldChildrenByKey.forEach(unusedChild => {
+                if (!usedElements.has(unusedChild)) {
+                    this._recycleElement(unusedChild);
+                }
+            });
+
+            try {
+                parent.textContent = '';
+                if (fragment.hasChildNodes()) {
+                    parent.appendChild(fragment);
+                }
+            } catch (error) {
+                console.error('Error in reconcileChildren:', error);
+                parent.textContent = '';
+                newChildElements.forEach(child => {
+                    try {
+                        if (child && !this._wouldCreateCircularReference(parent, child)) {
+                            parent.appendChild(child);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to append child, skipping:', e);
+                    }
+                });
+            }
+
+            return newChildElements;
+        }
+
+        _wouldCreateCircularReference(parent, child) {
+            if (!parent || !child) return false;
+            if (parent === child) return true;
+
+            try {
+                let current = parent.parentNode;
+                while (current) {
+                    if (current === child) {
+                        return true;
+                    }
+                    current = current.parentNode;
+                }
+
+                if (child.contains && child.contains(parent)) {
+                    return true;
+                }
+
+                if (child.children) {
+                    for (let descendant of child.children) {
+                        if (this._wouldCreateCircularReference(parent, descendant)) {
+                            return true;
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.warn('Error checking circular reference, assuming unsafe:', error);
+                return true;
+            }
+
             return false;
         }
-        
-        if (!element) {
-            console.warn(`Component not found: ${componentSelector}`);
+
+        _canReuseElement(element, tagName, props) {
+            return element.tagName.toLowerCase() === tagName.toLowerCase();
+        }
+
+        _updateElementProperties(element, props) {
+            Object.keys(props).forEach(key => {
+                if (key === 'key' || key === 'children' || key === 'text' || key === 'style') {
+                    return;
+                }
+
+                const value = props[key];
+                if (typeof value !== 'function') {
+                    this._setStaticAttribute(element, key, value);
+                }
+            });
+        }
+
+        _childrenEqual(oldChildren, newChildren) {
             return false;
         }
-        
-        const instanceId = element.getAttribute('data-component-instance');
-        const instance = instanceId ? this.componentInstances.get(instanceId) : null;
-        
-        try {
-            console.log(`🔄 Removing component: ${instance ? instance.name : 'unknown'}`);
-            
-            // Trigger unmount hook if requested
-            if (triggerUnmount && instance && instance.mounted) {
-                this.triggerUnmountHook(element);
+
+        _generateKey(tagName, props, index = null) {
+            if (props.key) {
+                return props.key;
             }
-            
-            // Remove from DOM
+
+            const keyProps = ['id', 'className', 'text'];
+            const keyParts = [tagName];
+
+            keyProps.forEach(prop => {
+                if (props[prop] && typeof props[prop] !== 'function') {
+                    keyParts.push(`${prop}:${props[prop]}`);
+                }
+            });
+
+            if (index !== null) {
+                keyParts.push(`idx:${index}`);
+            }
+
+            const propsHash = this._hashProps(props);
+            keyParts.push(`hash:${propsHash}`);
+
+            return keyParts.join('|');
+        }
+
+        _hashProps(props) {
+            const str = JSON.stringify(props, (key, value) => {
+                return typeof value === 'function' ? '[function]' : value;
+            });
+
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(36);
+        }
+
+        _getRecycledElement(tagName) {
+            const pool = this.recyclePool.get(tagName);
+            if (pool && pool.length > 0) {
+                const element = pool.pop();
+                this._resetElement(element);
+                return element;
+            }
+            return null;
+        }
+
+        _recycleElement(element) {
+            if (!element || !element.tagName) return;
+
+            const tagName = element.tagName.toLowerCase();
+
             if (element.parentNode) {
                 element.parentNode.removeChild(element);
             }
-            
-            // Cleanup tracking if requested
-            if (cleanup) {
-                this.cleanupElement(element);
-                
-                if (instanceId) {
-                    this.componentInstances.delete(instanceId);
-                    this.mountedComponents.delete(instanceId);
-                }
-            }
-            
-            console.log(`✅ Component removed: ${instance ? instance.name : 'unknown'}`);
-            return true;
-            
-        } catch (error) {
-            console.error(`Error removing component:`, error);
-            return false;
-        }
-    }
-    
-    getComponentInfo(componentSelector) {
-        let element;
-        if (typeof componentSelector === 'string') {
-            element = document.querySelector(`[data-component-name="${componentSelector}"]`);
-            if (!element) {
-                element = document.querySelector(componentSelector);
-            }
-        } else if (componentSelector instanceof HTMLElement) {
-            element = componentSelector;
-        } else {
-            console.warn(`Invalid component selector type: ${typeof componentSelector}`);
-            return null;
-        }
-        
-        if (!element) {
-            return null;
-        }
-        
-        const instanceId = element.getAttribute('data-component-instance');
-        const instance = instanceId ? this.componentInstances.get(instanceId) : null;
-        
-        if (!instance) {
-            return null;
-        }
-        
-        return {
-            id: instanceId,
-            name: instance.name,
-            element: instance.element,
-            props: instance.props,
-            mounted: instance.mounted,
-            api: instance.api,
-            lifecycle: instance.lifecycle,
-            context: instance.context,
-            isConnected: instance.element.isConnected,
-            parentComponent: this.getParentComponent(element),
-            childComponents: this.getChildComponents(element),
-            stateKeys: this.getComponentStateKeys(instanceId)
-        };
-    }
-    
-    scanComponentElementProps(componentSelector, options = {}) {
-        const { includeChildren = false, includeEvents = true, includeReactive = true } = options;
-        
-        let element;
-        if (typeof componentSelector === 'string') {
-            element = document.querySelector(`[data-component-name="${componentSelector}"]`);
-            if (!element) {
-                element = document.querySelector(componentSelector);
-            }
-        } else if (componentSelector instanceof HTMLElement) {
-            element = componentSelector;
-        } else {
-            console.warn(`Invalid component selector type: ${typeof componentSelector}`);
-            return null;
-        }
-        
-        if (!element) {
-            console.warn(`Component element not found: ${componentSelector}`);
-            return null;
-        }
-        
-        const instanceId = element.getAttribute('data-component-instance');
-        const instance = instanceId ? this.componentInstances.get(instanceId) : null;
-        
-        const scanElement = (el, depth = 0) => {
-            const elementInfo = {
-                tagName: el.tagName.toLowerCase(),
-                id: el.id || null,
-                className: el.className || null,
-                depth,
-                attributes: {},
-                events: {},
-                reactive: {},
-                isComponent: el.hasAttribute('data-component-instance'),
-                componentName: el.getAttribute('data-component-name') || null,
-                element: el
-            };
-            
-            // Scan all attributes
-            Array.from(el.attributes).forEach(attr => {
-                if (attr.name.startsWith('on') && includeEvents) {
-                    // Event attribute
-                    const eventType = attr.name.substring(2).toLowerCase();
-                    elementInfo.events[eventType] = {
-                        isInvocable: true,
-                        type: 'event',
-                        source: 'attribute',
-                        canSimulate: true,
-                        value: attr.value
-                    };
-                } else {
-                    // Regular attribute
-                    elementInfo.attributes[attr.name] = {
-                        value: attr.value,
-                        isInvocable: false,
-                        type: 'attribute'
-                    };
-                }
-            });
-            
-            // Scan element properties for events (if includeEvents)
-            if (includeEvents) {
-                // Get all own properties and prototype properties up to HTMLElement
-                const props = new Set();
-                let current = el;
-                
-                // Collect own properties
-                Object.getOwnPropertyNames(current).forEach(prop => props.add(prop));
-                
-                // Check collected properties for event handlers
-                props.forEach(prop => {
-                    if (prop.startsWith('on') && prop.length > 2) {
-                        const eventType = prop.substring(2).toLowerCase();
-                        
-                        // Check if there's an actual handler assigned
-                        if (typeof el[prop] === 'function' || el[prop] !== null) {
-                            if (!elementInfo.events[eventType]) {
-                                elementInfo.events[eventType] = {
-                                    isInvocable: true,
-                                    type: 'event',
-                                    source: 'property',
-                                    canSimulate: true,
-                                    hasHandler: typeof el[prop] === 'function'
-                                };
-                            } else {
-                                // Merge with existing (attribute-based) event info
-                                elementInfo.events[eventType].source = 'both';
-                                elementInfo.events[eventType].hasHandler = typeof el[prop] === 'function';
-                            }
-                        }
-                    }
-                });
-            }
-            
-            // Scan for reactive subscriptions (if includeReactive)
-            if (includeReactive) {
-                const subscriptions = this.elementSubscriptions.get(el);
-                if (subscriptions && subscriptions.size > 0) {
-                    let reactiveIndex = 0;
-                    subscriptions.forEach((subscription) => {
-                        const propName = `reactive_${reactiveIndex}`;
-                        elementInfo.reactive[propName] = {
-                            isInvocable: false,
-                            type: 'reactive',
-                            hasUnsubscribe: Array.isArray(subscription.unsubscribeFns) && subscription.unsubscribeFns.length > 0,
-                            subscriptionCount: Array.isArray(subscription.unsubscribeFns) ? subscription.unsubscribeFns.length : 0
-                        };
-                        reactiveIndex++;
-                    });
-                }
-            }
-            
-            const result = {
-                element: elementInfo,
-                children: []
-            };
-            
-            // Recursively scan children if requested
-            if (includeChildren && el.children.length > 0) {
-                Array.from(el.children).forEach(child => {
-                    result.children.push(scanElement(child, depth + 1));
-                });
-            }
-            
-            return result;
-        };
-        
-        return {
-            component: {
-                id: instanceId,
-                name: instance ? instance.name : 'unknown',
-                mounted: instance ? instance.mounted : false,
-                props: instance ? instance.props : {},
-                api: instance ? Object.keys(instance.api) : [],
-                lifecycleHooks: instance ? Object.keys(instance.lifecycle) : []
-            },
-            scan: scanElement(element),
-            metadata: {
-                timestamp: Date.now(),
-                options: {
-                    includeChildren,
-                    includeEvents,
-                    includeReactive
-                },
-                totalElements: includeChildren ? element.querySelectorAll('*').length + 1 : 1
-            }
-        };
-    }
-    
-    createContext(additionalMethods = {}) {
-        const baseContext = {
-            setState: (path, value, context) => this.setState(path, value, context),
-            getState: (path, defaultValue) => this.getState(path, defaultValue),
-            navigate: (path) => this.navigate(path),
-            subscribe: (path, callback) => this.subscribe(path, callback),
-            services: this.services,
-            
-            // NEW: Add useState to context
-            useState: (path, defaultValue) => this.useState(path, defaultValue),
-            
-            // Component management APIs
-            getComponents: (filter) => this.getComponents(filter),
-            getComponent: (selector) => this.getComponent(selector),
-            updateComponent: (selector, newProps, options) => this.updateComponent(selector, newProps, options),
-            removeComponent: (selector, options) => this.removeComponent(selector, options),
-            getComponentInfo: (selector) => this.getComponentInfo(selector),
-            scanComponentElementProps: (selector, options) => this.scanComponentElementProps(selector, options),
-            invokeElementProp: (element, propName, ...args) => this.invokeElementProp(element, propName, ...args),
-            
-            // Framework instance access for advanced usage
-            juris: this
-        };
-        
-        this.headlessComponents.forEach((instance, componentName) => {
-            if (instance.componentResult) {
-                baseContext[componentName] = instance.componentResult;
-            }
-        });
-        // Merge any additional methods or overrides
-        return { ...baseContext, ...additionalMethods };
-    }
 
-    invokeElementProp(elementSelector, propName, ...args) {
-        let element;
-        if (typeof elementSelector === 'string') {
-            element = document.querySelector(elementSelector);
-        } else if (elementSelector instanceof HTMLElement) {
-            element = elementSelector;
-        } else {
-            console.warn(`Invalid element selector type: ${typeof elementSelector}`);
-            return false;
-        }
-        
-        if (!element) {
-            console.warn(`Element not found: ${elementSelector}`);
-            return false;
-        }
-        
-        try {
-            // TRULY GENERIC EVENT HANDLER INVOCATION
-            if (propName.startsWith('on')) {
-                const eventType = propName.substring(2).toLowerCase();
-                
-                // Build event configuration
-                const eventConfig = { 
-                    bubbles: true, 
-                    cancelable: true 
-                };
-                
-                // Merge any provided event properties
-                if (args.length > 0 && typeof args[0] === 'object') {
-                    Object.assign(eventConfig, args[0]);
-                }
-                
-                // Create event using generic Event constructor
-                // Let the browser handle event type specifics
-                const event = new Event(eventType, eventConfig);
-                
-                // Copy any additional properties from args to the event object
-                if (args.length > 0 && typeof args[0] === 'object') {
-                    Object.keys(args[0]).forEach(key => {
-                        if (!eventConfig.hasOwnProperty(key)) {
-                            try {
-                                event[key] = args[0][key];
-                            } catch (e) {
-                                // Some properties might be read-only, ignore silently
-                            }
-                        }
-                    });
-                }
-                
-                console.log(`🔄 Invoking event: ${eventType} on`, element);
-                const result = element.dispatchEvent(event);
-                return result;
-                
-            } else if (element[propName] && typeof element[propName] === 'function') {
-                // Direct method invocation
-                console.log(`🔄 Invoking method: ${propName} on`, element);
-                return element[propName](...args);
-                
-            } else if (element[propName] !== undefined) {
-                // Property access/setting
-                if (args.length === 0) {
-                    // Get property value
-                    console.log(`🔄 Getting property: ${propName} from`, element);
-                    return element[propName];
-                } else {
-                    // Set property value
-                    console.log(`🔄 Setting property: ${propName} on`, element);
-                    element[propName] = args[0];
-                    return true;
-                }
-            } else {
-                console.warn(`Property ${propName} does not exist on element`, element);
-                return false;
+            if (!this.recyclePool.has(tagName)) {
+                this.recyclePool.set(tagName, []);
             }
-            
-        } catch (error) {
-            console.error(`Error invoking ${propName}:`, error);
-            return false;
-        }
-    }
-    
-    // Helper methods for component info
-    getParentComponent(element) {
-        const parentComponentEl = element.parentElement?.closest('[data-component-instance]');
-        if (parentComponentEl && parentComponentEl !== element) {
-            const parentInstanceId = parentComponentEl.getAttribute('data-component-instance');
-            const parentInstance = this.componentInstances.get(parentInstanceId);
-            return parentInstance ? {
-                id: parentInstanceId,
-                name: parentInstance.name,
-                element: parentComponentEl
-            } : null;
-        }
-        return null;
-    }
-    
-    getChildComponents(element) {
-        const childComponentEls = element.querySelectorAll('[data-component-instance]');
-        const children = [];
-        
-        childComponentEls.forEach(childEl => {
-            const childInstanceId = childEl.getAttribute('data-component-instance');
-            const childInstance = this.componentInstances.get(childInstanceId);
-            if (childInstance) {
-                children.push({
-                    id: childInstanceId,
-                    name: childInstance.name,
-                    element: childEl
-                });
-            }
-        });
-        
-        return children;
-    }
-    
-    getComponentStateKeys(instanceId) {
-        // Find state keys that might be related to this component
-        const stateKeys = [];
-        const findKeys = (obj, prefix = '') => {
-            Object.keys(obj).forEach(key => {
-                const fullPath = prefix ? `${prefix}.${key}` : key;
-                if (typeof obj[key] === 'object' && obj[key] !== null) {
-                    findKeys(obj[key], fullPath);
-                } else {
-                    stateKeys.push(fullPath);
-                }
-            });
-        };
-        
-        findKeys(this.state);
-        return stateKeys;
-    }
-    
-    // Alias for backward compatibility
-    getAllComponents() {
-        return this.getComponents();
-    }
-    
-    // =================================================================
-    // UI RENDERING SYSTEM
-    // =================================================================
-    
-    isAttribute(key) {
-        return key.startsWith('data-') ||      
-               key.startsWith('aria-') ||      
-               key.includes('-') ||            
-               this.isCustomAttribute(key);    
-    }
-    
-    isCustomAttribute(key) {
-        const testElement = document.createElement('div');
-        return !(key in testElement) && !key.startsWith('on') && 
-               !['text', 'children', 'style', 'setState', 'getState', 'navigate', 'services', 'routeParams'].includes(key);
-    }
 
-    handleElementEvent(element, eventKey, handler, injectedProps) {
-        const eventName = eventKey.substring(2).toLowerCase();
-        element.addEventListener(eventName, (e) => handler(e, injectedProps));
-    }
+            const pool = this.recyclePool.get(tagName);
 
-    handleDefinitionEvent(element, eventKey, handler, context) {
-        const eventName = eventKey.substring(2).toLowerCase();
-        element.addEventListener(eventName, (e) => handler(e, context));
-    }
-
-    applyDefinitionToElement(element, definition, context) {
-        Object.keys(definition).forEach(key => {
-            const value = definition[key];
-            
-            if (key === 'text') {
-                if (typeof value === 'function') {
-                    this.createReactiveAttribute(element, 'textContent', () => value(context));
-                } else {
-                    element.textContent = value;
-                }
-            } else if (key === 'children') {
-                if (typeof value === 'function') {
-                    this.createReactiveAttribute(element, 'children', () => value(context));
-                } else if (Array.isArray(value)) {
-                    while (element.firstChild) {
-                        this.cleanupElement(element.firstChild);
-                        element.removeChild(element.firstChild);
-                    }
-                    value.forEach(child => {
-                        const childElement = this.renderUIObject(child, null);
-                        if (childElement) {
-                            element.appendChild(childElement);
-                        }
-                    });
-                }
-            } else if (key.startsWith('on') && typeof value === 'function') {
-                // UNIFIED EVENT HANDLING - Remove onClick special case
-                this.handleDefinitionEvent(element, key, value, context);
-            } else if (key === 'style' && typeof value === 'object') {
-                Object.keys(value).forEach(styleProp => {
-                    const styleValue = value[styleProp];
-                    if (typeof styleValue === 'function') {
-                        this.createReactiveAttribute(element, `style.${styleProp}`, () => styleValue(context));
-                    } else {
-                        element.style[styleProp] = styleValue;
-                    }
-                });
-            } else if (typeof value === 'function') {
-                this.createReactiveAttribute(element, key, () => value(context));
-            } else if (value !== null && value !== undefined && typeof value !== 'object') {
-                if (this.isAttribute(key)) {
-                    if (value === true) {
-                        element.setAttribute(key, '');
-                    } else if (value === false) {
-                        element.removeAttribute(key);
-                    } else {
-                        element.setAttribute(key, String(value));
-                    }
-                } else {
-                    element[key] = value;
-                }
-            }
-        });
-        
-        element.setAttribute('data-juris-enhanced', 'true');
-    }
-
-
-    createElement(tagName, props = {}) {
-        if (this.isDestroyed) return null;
-        
-        const element = document.createElement(tagName);
-        element.setAttribute('data-created', Date.now());
-        
-        const injectedProps = {
-            ...props,
-            setState: (path, value, context) => this.setState(path, value, context),
-            getState: (path, defaultValue) => this.getState(path, defaultValue),
-            navigate: (path) => this.navigate(path),
-            services: this.services
-        };
-        
-        injectedProps.getState.juris = this;
-        
-        // Handle text content
-        if (injectedProps.text) {
-            if (typeof injectedProps.text === 'function') {
-                this.createReactiveAttribute(element, 'textContent', () => injectedProps.text(injectedProps));
-            } else {
-                element.textContent = injectedProps.text;
+            if (pool.length < this.recyclePoolSize) {
+                this.cleanup(element);
+                this._resetElement(element);
+                pool.push(element);
             }
         }
-        
-        // Handle HTML content (innerHTML)
-        if (injectedProps.html || injectedProps.dangerousHtml) {
-            const htmlValue = injectedProps.html || injectedProps.dangerousHtml;
-            if (typeof htmlValue === 'function') {
-                this.createReactiveAttribute(element, 'innerHTML', () => this.sanitizeHTML(htmlValue(injectedProps)));
-            } else {
-                element.innerHTML = this.sanitizeHTML(htmlValue);
-            }
-        }
-        
-        // Handle events
-        Object.keys(injectedProps).forEach(key => {
-            if (key.startsWith('on') && typeof injectedProps[key] === 'function') {
-                const eventName = key.substring(2).toLowerCase();
-                element.addEventListener(eventName, (e) => injectedProps[key](e, injectedProps));
-            }
-        });
-        
-        // Handle styles
-        if (injectedProps.style) {
-            Object.keys(injectedProps.style).forEach(key => {
-                const value = injectedProps.style[key];
-                if (typeof value === 'function') {
-                    this.createReactiveAttribute(element, `style.${key}`, () => value(injectedProps));
-                } else {
-                    element.style[key] = value;
+
+        _resetElement(element) {
+            element.textContent = '';
+            element.className = '';
+            element.removeAttribute('style');
+
+            const attributesToKeep = ['id', 'data-juris-key'];
+            const attributes = Array.from(element.attributes);
+
+            attributes.forEach(attr => {
+                if (!attributesToKeep.includes(attr.name)) {
+                    element.removeAttribute(attr.name);
                 }
             });
         }
-        
-        // Handle other properties and attributes
-        Object.keys(injectedProps).forEach(key => {
-            if (['text', 'html', 'dangerousHtml', 'style', 'children', 'setState', 'getState', 'navigate', 'services', 'routeParams'].includes(key) || 
-                key.startsWith('on')) {
-                return;
-            }
-            
-            const value = injectedProps[key];
-            
-            if (typeof value === 'function') {
-                this.createReactiveAttribute(element, key, () => value(injectedProps));
-            } else if (value !== null && value !== undefined && typeof value !== 'object') {
-                if (this.isAttribute(key)) {
-                    if (value === true) {
-                        element.setAttribute(key, '');
-                    } else if (value === false) {
-                        element.removeAttribute(key);
-                    } else {
-                        element.setAttribute(key, String(value));
+
+        _handleText(element, text, subscriptions) {
+            if (typeof text === 'function') {
+                let lastTextValue = null;
+
+                this._createReactiveUpdate(element, () => {
+                    const newTextValue = text();
+                    if (newTextValue !== lastTextValue) {
+                        element.textContent = newTextValue;
+                        lastTextValue = newTextValue;
                     }
-                } else {
-                    element[key] = value;
-                }
-            }
-        });
-        
-        // Handle children (only if no HTML content)
-        if (injectedProps.children && !injectedProps.html && !injectedProps.dangerousHtml) {
-            if (typeof injectedProps.children === 'function') {
-                this.createReactiveAttribute(element, 'children', () => {
-                    const childrenResult = injectedProps.children(injectedProps);
-                    return childrenResult;
-                });
+                }, subscriptions);
+
+                const initialValue = text();
+                element.textContent = initialValue;
+                lastTextValue = initialValue;
             } else {
-                const children = injectedProps.children;
-                if (Array.isArray(children)) {
-                    children.forEach(child => {
-                        const childElement = this.renderUIObject(child, null);
-                        if (childElement) {
-                            element.appendChild(childElement);
-                        }
-                    });
-                }
+                element.textContent = text;
             }
         }
-        
-        return element;
-    }
-    
-    applyDefinitionToElement(element, definition, context) {
-        Object.keys(definition).forEach(key => {
-            const value = definition[key];
-            
-            if (key === 'text') {
-                if (typeof value === 'function') {
-                    this.createReactiveAttribute(element, 'textContent', () => value(context));
-                } else {
-                    element.textContent = value;
-                }
-            } else if (key === 'html' || key === 'dangerousHtml') {
-                if (typeof value === 'function') {
-                    this.createReactiveAttribute(element, 'innerHTML', () => this.sanitizeHTML(value(context)));
-                } else {
-                    element.innerHTML = this.sanitizeHTML(value);
-                }
-            } else if (key === 'children') {
-                // Only process children if no HTML content
-                if (!definition.html && !definition.dangerousHtml) {
-                    if (typeof value === 'function') {
-                        this.createReactiveAttribute(element, 'children', () => value(context));
-                    } else if (Array.isArray(value)) {
-                        while (element.firstChild) {
-                            this.cleanupElement(element.firstChild);
-                            element.removeChild(element.firstChild);
-                        }
-                        value.forEach(child => {
-                            const childElement = this.renderUIObject(child, null);
-                            if (childElement) {
-                                element.appendChild(childElement);
+
+        _handleStyle(element, style, subscriptions) {
+            if (typeof style === 'function') {
+                let lastStyleState = null;
+
+                this._createReactiveUpdate(element, () => {
+                    const styleObj = style();
+                    if (!this._styleObjectsEqual(styleObj, lastStyleState)) {
+                        const cssText = this._styleObjectToCssText(styleObj);
+                        element.style.cssText = cssText;
+                        lastStyleState = { ...styleObj };
+                    }
+                }, subscriptions);
+
+                const initialStyle = style();
+                const cssText = this._styleObjectToCssText(initialStyle);
+                element.style.cssText = cssText;
+                lastStyleState = { ...initialStyle };
+
+            } else if (typeof style === 'object') {
+                const reactiveProps = {};
+                const staticProps = {};
+
+                Object.keys(style).forEach(prop => {
+                    if (typeof style[prop] === 'function') {
+                        reactiveProps[prop] = style[prop];
+                    } else {
+                        staticProps[prop] = style[prop];
+                    }
+                });
+
+                Object.assign(element.style, staticProps);
+
+                if (Object.keys(reactiveProps).length > 0) {
+                    const lastValues = {};
+
+                    this._createReactiveUpdate(element, () => {
+                        const changes = {};
+                        let hasChanges = false;
+
+                        Object.keys(reactiveProps).forEach(prop => {
+                            const newValue = reactiveProps[prop]();
+                            if (newValue !== lastValues[prop]) {
+                                changes[prop] = newValue;
+                                lastValues[prop] = newValue;
+                                hasChanges = true;
                             }
                         });
-                    }
-                }
-            } else if (key.startsWith('on') && typeof value === 'function') {
-                const eventName = key.substring(2).toLowerCase();
-                element.addEventListener(eventName, (e) => value(e, context));
-            } else if (key === 'style' && typeof value === 'object') {
-                Object.keys(value).forEach(styleProp => {
-                    const styleValue = value[styleProp];
-                    if (typeof styleValue === 'function') {
-                        this.createReactiveAttribute(element, `style.${styleProp}`, () => styleValue(context));
-                    } else {
-                        element.style[styleProp] = styleValue;
-                    }
-                });
-            } else if (typeof value === 'function') {
-                this.createReactiveAttribute(element, key, () => value(context));
-            } else if (value !== null && value !== undefined && typeof value !== 'object') {
-                if (this.isAttribute(key)) {
-                    if (value === true) {
-                        element.setAttribute(key, '');
-                    } else if (value === false) {
-                        element.removeAttribute(key);
-                    } else {
-                        element.setAttribute(key, String(value));
-                    }
-                } else {
-                    element[key] = value;
-                }
-            }
-        });
-        
-        element.setAttribute('data-juris-enhanced', 'true');
-    }
-    
-    renderUIObject(obj, componentName = null) {
-        if (!obj || typeof obj !== 'object' || this.isDestroyed) {
-            return null;
-        }
-        
-        const tagName = Object.keys(obj)[0];
-        const props = obj[tagName];
-        
-        if (this.components.has(tagName)) {
-            return this.renderComponent(tagName, props, componentName);
-        }
-        
-        const element = this.createElement(tagName, props);
-        
-        if (componentName && element) {
-            element.setAttribute('data-juris-parent-component', componentName);
-        }
-        
-        return element;
-    }
-    
-    render(container = '#app') {
-        if (this.isDestroyed) return;
-        
-        const containerEl = typeof container === 'string' 
-            ? document.querySelector(container) 
-            : container;
-        
-        if (!containerEl) {
-            console.error('Juris: Container not found:', container);
-            return;
-        }
-        
-        // Clean up existing content
-        Array.from(containerEl.children).forEach(child => this.cleanupElement(child));
-        containerEl.innerHTML = '';
-        
-        try {
-            let uiObject = this.layout;
-            
-            if (!uiObject) {
-                containerEl.innerHTML = '<p>No layout found</p>';
-                return;
-            }
-            
-            const element = this.renderUIObject(uiObject);
-            
-            if (element) {
-                containerEl.appendChild(element);
-                console.log('✅ Layout rendered successfully');
-            } else {
-                console.error('❌ Layout render failed');
-                containerEl.innerHTML = '<div class="error">Render failed - element is null</div>';
-            }
-        } catch (error) {
-            console.error('Render error:', error);
-            containerEl.innerHTML = `<div class="error">Render error: ${error.message}</div>`;
-        }
-    }
-    
-    // =================================================================
-    // ROUTER SYSTEM
-    // =================================================================
-    
-    setupRouter() {
-        // Extract config with defaults
-        const { mode = 'hash', base = '', routes = {}, guards = {}, middleware = [], 
-                lazy = {}, transitions = true, scrollBehavior = 'top', maxHistorySize = 50 } = this.router;
-        
-        Object.assign(this, { routingMode: mode, basePath: base, lazyComponents: lazy, 
-                             enableTransitions: transitions, scrollBehavior, maxHistorySize,
-                             routeHistory: [], routeGuards: guards, routeMiddleware: middleware });
-        
-        // Process and store routes
-        this.routes = Object.fromEntries(
-            Object.entries(routes).map(([path, config]) => [path, this.normalizeRouteConfig(config)])
-        );
-        
-        // Register built-in components
-        ['Router', 'RouterOutlet', 'RouterLink'].forEach(name => 
-            this.registerComponent(name, (props, context) => this[`create${name}Component`](props, context))
-        );
-        
-        // Setup event listeners
-        if (typeof window !== 'undefined') {
-            this.setupEventListeners();
-            setTimeout(() => this.handleRouteChange(null, { initial: true }), 0);
-        }
-        
-        this.currentRoute = this.getCurrentRoute();
-        this.setState('router.currentRoute', this.currentRoute);
-        this.setState('router.isLoading', false);
-        
-        console.log(`🚀 Router initialized in ${mode} mode`);
-    }
 
+                        if (hasChanges) {
+                            Object.assign(element.style, changes);
+                        }
+                    }, subscriptions);
 
-    /**
-     * Unified event listener setup
-     */
-    setupEventListeners() {
-        const eventMap = {
-            history: ['popstate', (e) => this.handleRouteChange(e.state)],
-            hash: ['hashchange', () => this.handleRouteChange()]
-        };
-        
-        const [event, handler] = eventMap[this.routingMode] || [];
-        if (event) window.addEventListener(event, handler);
-        
-        // History mode link interception
-        if (this.routingMode === 'history') {
-            document.addEventListener('click', (e) => this.handleLinkClick(e));
-        }
-        
-        // Unified beforeunload handler
-        window.addEventListener('beforeunload', (e) => {
-            if (this.getState('router.hasUnsavedChanges', false)) {
-                e.preventDefault();
-                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-            }
-        });
-    }
-    normalizeRouteConfig(config) {
-        if (typeof config === 'string') return { component: config };
-        
-        return {
-            component: config.component,
-            guards: [].concat(config.guards || config.guard || []),
-            loadData: config.loadData,
-            meta: config.meta || {},
-            params: config.params || {},
-            query: config.query || {},
-            children: config.children || {},
-            lazy: config.lazy || false,
-            transitions: config.transitions,
-            beforeEnter: config.beforeEnter,
-            beforeLeave: config.beforeLeave,
-            redirectTo: config.redirectTo,
-            alias: config.alias
-        };
-    }
-    
-    matchRoute(path) {
-        const { pathname, query, hash } = this.parseUrl(path);
-        
-        // Check redirects and aliases first
-        const redirect = this.checkRedirects(pathname);
-        if (redirect) return { redirect };
-        
-        const alias = this.checkAliases(pathname);
-        if (alias) {
-            return this.buildMatchResult(alias.originalPath, {}, query, hash, this.routes[alias.originalPath], { alias: alias.alias });
-        }
-        
-        // Exact match check
-        if (this.routes[pathname]) {
-            return this.buildMatchResult(pathname, {}, query, hash, this.routes[pathname], { exact: true });
-        }
-        
-        // Pattern matching
-        for (const [pattern, config] of Object.entries(this.routes)) {
-            const match = this.matchPattern(pattern, pathname);
-            if (match) {
-                try {
-                    const validatedParams = this.validateParams(match.params, config.params);
-                    const validatedQuery = this.validateParams(query, config.query);
-                    return this.buildMatchResult(pattern, validatedParams, validatedQuery, hash, config, { matchType: match.type });
-                } catch (error) {
-                    console.warn(`Validation failed for ${pattern}:`, error.message);
-                    continue;
-                }
-            }
-        }
-        
-        return null;
-    }
-    /**
-     * : Unified parameter validation for both route and query params
-     */
-    validateParams(params, configParams = {}) {
-        if (!configParams || Object.keys(configParams).length === 0) return params;
-        
-        const result = { ...params };
-        const errors = [];
-        
-        for (const [key, config] of Object.entries(configParams)) {
-            const value = params[key];
-            
-            // Required check
-            if (config.required && (value === undefined || value === null || value === '')) {
-                errors.push(`Parameter '${key}' is required`);
-                continue;
-            }
-            
-            // Apply default
-            let processedValue = value ?? config.default;
-            if (processedValue === undefined || processedValue === null) {
-                result[key] = processedValue;
-                continue;
-            }
-            
-            // Type transformation and validation
-            try {
-                result[key] = this.transformValue(processedValue, config, key);
-            } catch (error) {
-                errors.push(error.message);
-            }
-        }
-        
-        if (errors.length > 0) throw new Error(`Validation failed: ${errors.join(', ')}`);
-        return result;
-    }
-
-    /**
-     * : Consolidated value transformation with all validation rules
-     */
-    transformValue(value, config, paramName) {
-        let transformed = value;
-        
-        // Type conversion
-        const typeMap = {
-            number: () => { const n = Number(value); if (isNaN(n)) throw new Error(`'${paramName}' must be a number`); return n; },
-            int: () => { const n = parseInt(value, 10); if (isNaN(n)) throw new Error(`'${paramName}' must be an integer`); return n; },
-            float: () => { const n = parseFloat(value); if (isNaN(n)) throw new Error(`'${paramName}' must be a float`); return n; },
-            boolean: () => typeof value === 'boolean' ? value : ['true', '1', 'yes'].includes(String(value).toLowerCase()),
-            date: () => { const d = new Date(value); if (isNaN(d.getTime())) throw new Error(`'${paramName}' must be a valid date`); return d; },
-            string: () => String(value)
-        };
-        
-        if (config.type && typeMap[config.type]) {
-            transformed = typeMap[config.type]();
-        }
-        
-        // Validation rules
-        const validators = [
-            () => config.pattern && !new RegExp(config.pattern).test(String(transformed)) && `'${paramName}' does not match pattern`,
-            () => config.enum && !config.enum.includes(transformed) && `'${paramName}' must be one of: ${config.enum.join(', ')}`,
-            () => typeof transformed === 'number' && config.min !== undefined && transformed < config.min && `'${paramName}' must be at least ${config.min}`,
-            () => typeof transformed === 'number' && config.max !== undefined && transformed > config.max && `'${paramName}' must be at most ${config.max}`,
-            () => typeof transformed === 'string' && config.minLength !== undefined && transformed.length < config.minLength && `'${paramName}' must be at least ${config.minLength} characters`,
-            () => typeof transformed === 'string' && config.maxLength !== undefined && transformed.length > config.maxLength && `'${paramName}' must be at most ${config.maxLength} characters`
-        ];
-        
-        for (const validator of validators) {
-            const error = validator();
-            if (error) throw new Error(error);
-        }
-        
-        return transformed;
-    }
-
-    // =================================================================
-    //  URL PARSING AND BUILDING
-    // =================================================================
-
-    /**
-     * : Enhanced URL parsing with query array support
-     */
-    parseUrl(url) {
-        const [pathAndQuery, hash] = url.split('#');
-        const [pathname, queryString] = pathAndQuery.split('?');
-        return {
-            pathname: pathname || '/',
-            query: this.parseQueryString(queryString || ''),
-            hash: hash || ''
-        };
-    }
-
-/**
- * : Streamlined query string parsing
- */
-parseQueryString(queryString) {
-    if (!queryString) return {};
-    
-    return queryString.split('&').reduce((params, param) => {
-        const [key, value = ''] = param.split('=').map(decodeURIComponent);
-        if (!key) return params;
-        
-        // Handle arrays and objects
-        if (key.includes('[')) {
-            const [arrayKey, index] = key.match(/([^[]+)\[([^\]]*)\]/) || [];
-            if (arrayKey) {
-                if (!params[arrayKey]) params[arrayKey] = index === '' ? [] : {};
-                if (index === '') {
-                    params[arrayKey].push(value);
-                } else {
-                    params[arrayKey][index] = value;
-                }
-                return params;
-            }
-        }
-        
-        // Handle duplicate keys
-        if (params[key] !== undefined) {
-            params[key] = Array.isArray(params[key]) ? [...params[key], value] : [params[key], value];
-        } else {
-            params[key] = value;
-        }
-        
-        return params;
-    }, {});
-}
-
-/**
- * : Streamlined query string building
- */
-buildQueryString(params) {
-    return Object.entries(params)
-        .filter(([, value]) => value !== null && value !== undefined)
-        .flatMap(([key, value]) => {
-            if (Array.isArray(value)) {
-                return value.map(v => `${encodeURIComponent(key)}[]=${encodeURIComponent(v)}`);
-            }
-            if (typeof value === 'object') {
-                return Object.entries(value).map(([subKey, subValue]) => 
-                    `${encodeURIComponent(key)}[${encodeURIComponent(subKey)}]=${encodeURIComponent(subValue)}`
-                );
-            }
-            return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-        })
-        .join('&');
-}
-
-// =================================================================
-//  NAVIGATION
-// =================================================================
-
-/**
- * : Unified navigation for all modes
- */
-navigate(path, options = {}) {
-    if (typeof window === 'undefined') return;
-    
-    const { replace = false, query, hash, force = false, silent = false } = options;
-    
-    // Build complete URL
-    let fullPath = path;
-    if (query) fullPath += (fullPath.includes('?') ? '&' : '?') + this.buildQueryString(query);
-    if (hash) fullPath += '#' + hash;
-    
-    // Guard check
-    if (!force && !silent && !this.runNavigationGuards(this.currentRoute, fullPath)) return false;
-    
-    // Mode-specific navigation
-    const navigators = {
-        history: () => {
-            const url = this.basePath + fullPath;
-            window.history[replace ? 'replaceState' : 'pushState'](options.state, '', url);
-            if (!silent) this.handleRouteChange(options.state);
-        },
-        hash: () => {
-            if (replace) {
-                const newUrl = window.location.href.split('#')[0] + '#' + fullPath;
-                window.history.replaceState(null, '', newUrl);
-                if (!silent) this.handleRouteChange();
-            } else {
-                window.location.hash = fullPath;
-            }
-        },
-        memory: () => {
-            if (replace && this.routeHistory.length > 0) {
-                this.routeHistory[this.routeHistory.length - 1] = fullPath;
-            } else {
-                this.routeHistory.push(fullPath);
-                if (this.routeHistory.length > this.maxHistorySize) this.routeHistory.shift();
-            }
-            if (!silent) {
-                this.currentRoute = fullPath;
-                this.handleRouteChange();
-            }
-        }
-    };
-    
-    navigators[this.routingMode]?.();
-    return true;
-}
-
-/**
- * : Unified current route detection
- */
-getCurrentRoute() {
-    if (typeof window === 'undefined') return this.routeHistory[this.routeHistory.length - 1] || '/';
-    
-    const routeMap = {
-        history: () => window.location.pathname.replace(this.basePath, '') + window.location.search + window.location.hash || '/',
-        hash: () => { const hash = window.location.hash; return hash.startsWith('#') ? hash.substring(1) : '/'; },
-        memory: () => this.routeHistory[this.routeHistory.length - 1] || '/'
-    };
-    
-    return routeMap[this.routingMode]?.() || '/';
-}
-
-// =================================================================
-//  ROUTE CHANGE HANDLING
-// =================================================================
-
-/**
- * : Streamlined route change handling
- */
-async handleRouteChange(historyState = null, options = {}) {
-    if (this.isDestroyed) return;
-    
-    const { initial = false, force = false } = options;
-    const newPath = this.getCurrentRoute();
-    const currentPath = this.getState('router.currentRoute', '/');
-    
-    if (!force && newPath === currentPath && !initial) return;
-    
-    console.log(`🔄 Route change: ${currentPath} → ${newPath}`);
-    
-    // Unsaved changes check
-    if (!initial && !force && this.getState('router.hasUnsavedChanges', false)) {
-        if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
-            this.revertNavigation(currentPath);
-            return;
-        }
-        this.setState('router.hasUnsavedChanges', false);
-    }
-    
-    this.setState('router.isLoading', true);
-    this.setState('router.error', null);
-    
-    try {
-        const matchResult = this.matchRoute(newPath);
-        
-        // Handle redirects
-        if (matchResult?.redirect) {
-            console.log(`🔄 Redirecting to: ${matchResult.redirect}`);
-            this.navigate(matchResult.redirect, { replace: true });
-            return;
-        }
-        
-        // Handle 404
-        if (!matchResult) {
-            this.handleRouteNotFound(newPath);
-            return;
-        }
-        
-        const { route, params, query, hash, config } = matchResult;
-        
-        // Run guards
-        if (!(await this.runGuards(config, params, { route: newPath, from: currentPath, to: newPath, query, hash, historyState }))) {
-            this.revertNavigation(currentPath);
-            return;
-        }
-        
-        // Load component and data
-        if (config.component) await this.loadRouteComponent(config.component, config);
-        if (config.loadData) await this.loadRouteData(config.loadData, { params, query, route: newPath });
-        
-        // Update state and render
-        this.updateRouteState(newPath, params, query, hash, route, historyState);
-        this.handleScrollBehavior(newPath, currentPath);
-        
-        if (this.enableTransitions && config.transitions) {
-            await this.performRouteTransition(currentPath, newPath, config.transitions);
-        }
-        
-        this.render();
-        console.log(`✅ Route changed successfully: ${newPath}`);
-        
-    } catch (error) {
-        console.error('❌ Route change error:', error);
-        this.setState('router.error', error.message);
-    } finally {
-        this.setState('router.isLoading', false);
-    }
-}
-
-// =================================================================
-//  COMPONENT CREATION
-// =================================================================
-
-/**
- * : Streamlined Router component
- */
-createRouterComponent(props, context) {
-    return {
-        render: () => {
-            const state = ['currentRoute', 'isLoading', 'error', 'notFound', 'params', 'query']
-                .reduce((acc, key) => ({ ...acc, [key]: context.getState(`router.${key}`, key === 'params' || key === 'query' ? {} : key === 'currentRoute' ? '/' : false) }), {});
-            
-            // Handle loading, error, and 404 states
-            const stateComponents = {
-                loading: () => props.loadingComponent ? { [props.loadingComponent]: {} } : { div: { className: 'router-loading', text: 'Loading...' } },
-                error: () => props.errorComponent ? { [props.errorComponent]: { error: state.error } } : this.createErrorComponent(state.error),
-                notFound: () => props.notFoundComponent ? { [props.notFoundComponent]: { route: state.currentRoute } } : this.createNotFoundComponent(state.currentRoute)
-            };
-            
-            if (state.isLoading) return stateComponents.loading();
-            if (state.error) return stateComponents.error();
-            if (state.notFound) return stateComponents.notFound();
-            
-            // Render matched component
-            const matchResult = this.matchRoute(state.currentRoute);
-            if (!matchResult) return { div: { text: 'No route matched' } };
-            
-            const { config } = matchResult;
-            const componentName = config.component;
-            
-            if (!componentName || !this.components.has(componentName)) {
-                return this.createErrorComponent(`Component not found: ${componentName}`);
-            }
-            
-            return { [componentName]: { ...props, routeParams: state.params, routeQuery: state.query, routePath: state.currentRoute } };
-        }
-    };
-}
-
-/**
- * : Streamlined RouterLink component
- */
-createRouterLinkComponent(props, context) {
-    return {
-        render: () => {
-            const { to, params = {}, query = {}, replace = false, exact = false, activeClass = 'router-link-active', ...otherProps } = props;
-            
-            // Build href
-            let href = to;
-            try {
-                href = this.buildRoute(to, params, query);
-            } catch (error) {
-                href = to; // Fallback
-            }
-            
-            // Check active state
-            const currentRoute = context.getState('router.currentRoute', '/');
-            const isActive = exact ? currentRoute === href : currentRoute.startsWith(href);
-            
-            return {
-                a: {
-                    ...otherProps,
-                    href,
-                    className: `${otherProps.className || ''} ${isActive && activeClass ? activeClass : ''}`.trim(),
-                    onClick: (e) => {
-                        e.preventDefault();
-                        this.navigate(href, { replace });
-                        if (otherProps.onClick) otherProps.onClick(e);
-                    }
-                }
-            };
-        }
-    };
-}
-
-// =================================================================
-//  UTILITY METHODS
-// =================================================================
-
-/**
- * : Consolidated helper methods
- */
-buildMatchResult(route, params, query, hash, config, meta = {}) {
-    return { route, params, query, hash, config, ...meta };
-}
-
-createErrorComponent(message) {
-    return {
-        div: {
-            className: 'juris-component-error',
-            style: 'color: red; border: 1px solid red; padding: 8px; margin: 4px;',
-            text: message
-        }
-    };
-}
-
-createNotFoundComponent(route) {
-    return {
-        div: {
-            className: 'router-not-found',
-            children: [
-                { h1: { style: { fontSize: '4rem' }, text: '404' } },
-                { h2: { text: 'Page Not Found' } },
-                { p: { text: `The route "${route}" does not exist.` } },
-                { a: { href: '#/', text: '🏠 Go Home' } }
-            ]
-        }
-    };
-}
-
-checkRedirects(path) {
-    for (const [routePath, config] of Object.entries(this.routes)) {
-        if (config.redirectTo && routePath === path) return config.redirectTo;
-    }
-    return null;
-}
-
-checkAliases(path) {
-    for (const [routePath, config] of Object.entries(this.routes)) {
-        if (config.alias) {
-            const aliases = Array.isArray(config.alias) ? config.alias : [config.alias];
-            if (aliases.includes(path)) return { originalPath: routePath, alias: path };
-        }
-    }
-    return null;
-}
-
-buildRoute(routeName, params = {}, query = {}) {
-    let path = routeName;
-    Object.entries(params).forEach(([key, value]) => {
-        path = path.replace(`:${key}`, encodeURIComponent(value));
-    });
-    if (Object.keys(query).length > 0) path += '?' + this.buildQueryString(query);
-    return path;
-}
-
-runNavigationGuards(from, to) {
-    // Simplified guard implementation
-    return true;
-}
-
-revertNavigation(previousPath) {
-    const revertMap = {
-        history: () => window.history.replaceState(null, '', this.basePath + previousPath),
-        hash: () => window.location.hash = previousPath,
-        memory: () => this.routeHistory.length > 1 && this.routeHistory.pop()
-    };
-    revertMap[this.routingMode]?.();
-    this.setState('router.isLoading', false);
-}
-
-handleRouteNotFound(path) {
-    console.warn(`❌ Route not found: ${path}`);
-    const notFoundRoute = this.routes['*'] || this.routes['/404'] || this.routes['404'];
-    
-    if (notFoundRoute) {
-        this.setState('router.currentRoute', path);
-        this.setState('router.notFound', true);
-    } else {
-        this.setState('router.error', `Route not found: ${path}`);
-    }
-    this.setState('router.isLoading', false);
-    this.render();
-}
-
-updateRouteState(newPath, params, query, hash, route, historyState) {
-    this.currentRoute = newPath;
-    this.routeParams = params;
-    
-    ['currentRoute', 'params', 'query', 'hash', 'route', 'historyState'].forEach((key, i) => {
-        this.setState(`router.${key}`, [newPath, params, query, hash, route, historyState][i]);
-    });
-    
-    this.setState('router.notFound', false);
-    this.setState('router.isLoading', false);
-    
-    // Update page title
-    const config = this.routes[route];
-    if (config?.meta?.title) {
-        document.title = config.meta.title.replace(/\{([^}]+)\}/g, (match, path) => {
-            const keys = path.split('.');
-            let value = { params, query };
-            for (const key of keys) value = value?.[key];
-            return value !== undefined ? String(value) : match;
-        });
-    }
-}
-
-handleScrollBehavior(newPath, currentPath) {
-    if (typeof window === 'undefined') return;
-    
-    const behaviors = {
-        top: () => window.scrollTo(0, 0),
-        none: () => {},
-        maintain: () => {}
-    };
-    
-    if (typeof this.scrollBehavior === 'function') {
-        const position = this.scrollBehavior(newPath, currentPath);
-        if (position) window.scrollTo(position.x || 0, position.y || 0);
-    } else {
-        behaviors[this.scrollBehavior]?.();
-    }
-}
-
-handleLinkClick(event) {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    
-    const link = event.target.closest('a');
-    if (!link) return;
-    
-    const href = link.getAttribute('href');
-    if (!href || href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:') || 
-        link.hasAttribute('data-router-ignore') || link.target === '_blank') return;
-    
-    event.preventDefault();
-    this.navigate(href);
-}
-
-// Lazy loading and data loading methods (simplified)
-async loadRouteComponent(componentName, routeConfig) {
-    if (this.components.has(componentName)) return this.components.get(componentName);
-    
-    const lazyConfig = routeConfig.lazy || this.lazyComponents?.[componentName];
-    if (lazyConfig) {
-        try {
-            this.setState('router.isLoading', true);
-            const loader = typeof lazyConfig === 'function' ? lazyConfig : lazyConfig.loader;
-            const module = await loader();
-            const component = module.default || module[componentName] || module;
-            
-            if (typeof component === 'function') {
-                this.registerComponent(componentName, component);
-                console.log(`✅ Lazy loaded component: ${componentName}`);
-                return component;
-            }
-        } catch (error) {
-            console.error(`❌ Failed to load component ${componentName}:`, error);
-            this.setState('router.error', `Failed to load component: ${error.message}`);
-            throw error;
-        } finally {
-            this.setState('router.isLoading', false);
-        }
-    }
-    
-    throw new Error(`Component not found: ${componentName}`);
-}
-
-async loadRouteData(loadDataConfig, context) {
-    try {
-        const dataLoader = typeof loadDataConfig === 'string' ? this.routeGuards[loadDataConfig] : loadDataConfig;
-        if (dataLoader) {
-            console.log('🔄 Loading route data...');
-            await dataLoader({
-                ...context,
-                setState: (path, value, context) => this.setState(path, value, context),
-                getState: (path, defaultValue) => this.getState(path, defaultValue),
-                services: this.services
-            });
-            console.log('✅ Route data loaded');
-        }
-    } catch (error) {
-        console.error('❌ Route data loading failed:', error);
-        throw new Error(`Data loading failed: ${error.message}`);
-    }
-}
-
-async runGuards(config, params, context) {
-    const guards = config.guards || [];
-    
-    for (const guardName of guards) {
-        const guardFn = typeof guardName === 'string' ? this.routeGuards[guardName] : guardName;
-        if (guardFn) {
-            const result = await guardFn({
-                ...context,
-                params,
-                navigate: (path) => this.navigate(path),
-                getState: (path, defaultValue) => this.getState(path, defaultValue),
-                setState: (path, value, context) => this.setState(path, value, context)
-            });
-            
-            if (result === false) return false;
-        }
-    }
-    
-    return true;
-}
-
-performRouteTransition(fromRoute, toRoute, transitionConfig) {
-    // Simplified transition implementation
-    return Promise.resolve();
-}
-
-createRouterOutletComponent(props, context) {
-    return {
-        render: () => {
-            const nestedRoute = context.getState('router.nestedRoute');
-            const outletName = props.name || 'default';
-            
-            if (!nestedRoute?.[outletName]) {
-                return props.fallback || { div: { text: '' } };
-            }
-            
-            const routeInfo = nestedRoute[outletName];
-            return {
-                [routeInfo.component]: {
-                    ...props,
-                    routeParams: routeInfo.params,
-                    routeQuery: routeInfo.query
-                }
-            };
-        }
-    };
-}
-    /**
- * : Unified pattern matching for all route types
- */
-matchPattern(pattern, path) {
-    // Wildcard routes
-    if (pattern.includes('*')) {
-        const basePattern = pattern.substring(0, pattern.indexOf('*'));
-        if (path.startsWith(basePattern)) {
-            return { params: { wildcard: path.substring(basePattern.length) }, type: 'wildcard' };
-        }
-    }
-    
-    // Regex routes
-    if (pattern.startsWith('RegExp:')) {
-        try {
-            const regex = new RegExp(pattern.substring(7));
-            const match = path.match(regex);
-            if (match) {
-                const params = {};
-                match.slice(1).forEach((value, index) => params[`match${index}`] = value);
-                return { params, type: 'regex' };
-            }
-        } catch (error) {
-            console.error('Invalid regex pattern:', pattern, error);
-        }
-    }
-    
-    // Parameter routes (handles both required and optional)
-    if (pattern.includes(':')) {
-        const patternParts = pattern.split('/');
-        const pathParts = path.split('/');
-        
-        if (patternParts.length !== pathParts.length) return null;
-        
-        const params = {};
-        for (let i = 0; i < patternParts.length; i++) {
-            const patternPart = patternParts[i];
-            const pathPart = pathParts[i];
-            
-            if (patternPart.startsWith(':')) {
-                const paramMatch = patternPart.match(/:(\w+)([?+*])?/);
-                if (paramMatch) {
-                    const [, paramName, modifier] = paramMatch;
-                    if (modifier === '?' && !pathPart) {
-                        params[paramName] = undefined;
-                    } else {
-                        params[paramName] = decodeURIComponent(pathPart);
-                    }
-                }
-            } else if (patternPart !== pathPart) {
-                return null;
-            }
-        }
-        
-        return { params, type: 'parameter' };
-    }
-    
-    return null;
-}
-
-    extractParams(pattern, path) {
-        const patternParts = pattern.split('/');
-        const pathParts = path.split('/');
-        
-        if (patternParts.length !== pathParts.length) {
-            return null;
-        }
-        
-        const params = {};
-        for (let i = 0; i < patternParts.length; i++) {
-            const patternPart = patternParts[i];
-            const pathPart = pathParts[i];
-            
-            if (patternPart.startsWith(':')) {
-                const paramName = patternPart.substring(1);
-                params[paramName] = pathPart;
-            } else if (patternPart !== pathPart) {
-                return null;
-            }
-        }
-        
-        return params;
-    }
-    
-    async runGuards(routeConfig, params, context) {
-        const guards = [];
-        
-        if (typeof routeConfig === 'object' && routeConfig.guard) {
-            guards.push(routeConfig.guard);
-        }
-        if (typeof routeConfig === 'object' && routeConfig.guards) {
-            guards.push(...routeConfig.guards);
-        }
-        
-        for (const middleware of this.routeMiddleware) {
-            if (this.matchesMiddlewarePath(middleware.path, context.route)) {
-                if (middleware.guard) {
-                    guards.push(middleware.guard);
-                }
-            }
-        }
-        
-        for (const guardName of guards) {
-            const guardFn = typeof guardName === 'string' ? this.routeGuards[guardName] : guardName;
-            if (guardFn) {
-                const result = await guardFn({
-                    ...context,
-                    params,
-                    route: context.route,
-                    navigate: (path) => this.navigate(path),
-                    getState: (path, defaultValue) => this.getState(path, defaultValue),
-                    setState: (path, value, context) => this.setState(path, value, context)
-                });
-                
-                if (result === false) {
-                    return false;
-                }
-            }
-        }
-        
-        return true;
-    }
-    
-    matchesMiddlewarePath(middlewarePath, currentRoute) {
-        if (middlewarePath.endsWith('/*')) {
-            const basePath = middlewarePath.slice(0, -2);
-            return currentRoute.startsWith(basePath);
-        }
-        return middlewarePath === currentRoute;
-    }
-    
-    async handleRouteChange() {
-        if (this.isDestroyed) return;
-        
-        const newPath = this.getRouteFromHash();
-        const currentPath = this.getState('router.currentRoute', '/');
-        
-        if (this.getState('router.hasUnsavedChanges', false)) {
-            const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?');
-            if (!confirmed) {
-                window.location.hash = currentPath;
-                return;
-            }
-            this.setState('router.hasUnsavedChanges', false);
-        }
-        
-        this.setState('router.isLoading', true);
-        this.setState('router.error', null);
-        
-        try {
-            const matchResult = this.matchRoute(newPath);
-            
-            if (!matchResult) {
-                this.setState('router.error', `Route not found: ${newPath}`);
-                this.setState('router.isLoading', false);
-                return;
-            }
-            
-            const { route, params, config } = matchResult;
-            
-            const guardsPassed = await this.runGuards(config, params, {
-                route: newPath,
-                from: currentPath,
-                to: newPath
-            });
-            
-            if (!guardsPassed) {
-                window.location.hash = currentPath;
-                this.setState('router.isLoading', false);
-                return;
-            }
-            
-            if (typeof config === 'object' && config.loadData) {
-                const dataLoader = typeof config.loadData === 'string' 
-                    ? this.routeGuards[config.loadData] 
-                    : config.loadData;
-                
-                if (dataLoader) {
-                    await dataLoader({
-                        params,
-                        route: newPath,
-                        getState: (path, defaultValue) => this.getState(path, defaultValue),
-                        setState: (path, value, context) => this.setState(path, value, context)
+                    Object.keys(reactiveProps).forEach(prop => {
+                        const value = reactiveProps[prop]();
+                        element.style[prop] = value;
+                        lastValues[prop] = value;
                     });
                 }
             }
-            
-            this.currentRoute = newPath;
-            this.routeParams = params;
-            this.setState('router.currentRoute', newPath);
-            this.setState('router.params', params);
-            this.setState('router.isLoading', false);
-            
-            this.render();
-            
-        } catch (error) {
-            console.error('Route change error:', error);
-            this.setState('router.error', error.message);
-            this.setState('router.isLoading', false);
+        }
+
+        _styleObjectsEqual(style1, style2) {
+            if (style1 === style2) return true;
+            if (!style1 || !style2) return false;
+
+            const keys1 = Object.keys(style1);
+            const keys2 = Object.keys(style2);
+
+            if (keys1.length !== keys2.length) return false;
+
+            for (let key of keys1) {
+                if (style1[key] !== style2[key]) return false;
+            }
+
+            return true;
+        }
+
+        _styleObjectToCssText(styleObj) {
+            if (!styleObj || typeof styleObj !== 'object') return '';
+
+            return Object.entries(styleObj)
+                .map(([prop, value]) => {
+                    const cssProp = prop.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+                    return `${cssProp}: ${value}`;
+                })
+                .join('; ');
+        }
+
+        _handleEvent(element, eventName, handler, eventListeners) {
+            if (eventName === 'onclick') {
+                element.style.touchAction = 'manipulation';
+                element.style.userSelect = 'none';
+                element.style.webkitTapHighlightColor = 'transparent';
+                element.style.webkitTouchCallout = 'none';
+
+                element.addEventListener('click', handler);
+                eventListeners.push({ eventName: 'click', handler });
+
+                let touchStartTime = 0;
+                let touchMoved = false;
+                let startX = 0;
+                let startY = 0;
+
+                const touchStart = (e) => {
+                    touchStartTime = Date.now();
+                    touchMoved = false;
+                    if (e.touches && e.touches[0]) {
+                        startX = e.touches[0].clientX;
+                        startY = e.touches[0].clientY;
+                    }
+                };
+
+                const touchMove = (e) => {
+                    if (e.touches && e.touches[0]) {
+                        const deltaX = Math.abs(e.touches[0].clientX - startX);
+                        const deltaY = Math.abs(e.touches[0].clientY - startY);
+                        if (deltaX > 10 || deltaY > 10) {
+                            touchMoved = true;
+                        }
+                    }
+                };
+
+                const touchEnd = (e) => {
+                    const touchDuration = Date.now() - touchStartTime;
+                    if (!touchMoved && touchDuration < 300) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handler(e);
+                    }
+                };
+
+                element.addEventListener('touchstart', touchStart, { passive: true });
+                element.addEventListener('touchmove', touchMove, { passive: true });
+                element.addEventListener('touchend', touchEnd, { passive: false });
+
+                eventListeners.push({ eventName: 'touchstart', handler: touchStart });
+                eventListeners.push({ eventName: 'touchmove', handler: touchMove });
+                eventListeners.push({ eventName: 'touchend', handler: touchEnd });
+
+            } else {
+                const actualEventName = this.eventMap[eventName.toLowerCase()] || eventName.slice(2).toLowerCase();
+                element.addEventListener(actualEventName, handler);
+                eventListeners.push({ eventName: actualEventName, handler });
+            }
+        }
+
+        _handleReactiveAttribute(element, attr, valueFn, subscriptions) {
+            let lastValue = null;
+
+            this._createReactiveUpdate(element, () => {
+                const newValue = valueFn();
+                if (newValue !== lastValue) {
+                    this._setStaticAttribute(element, attr, newValue);
+                    lastValue = newValue;
+                }
+            }, subscriptions);
+
+            const initialValue = valueFn();
+            this._setStaticAttribute(element, attr, initialValue);
+            lastValue = initialValue;
+        }
+
+        _setStaticAttribute(element, attr, value) {
+            if (attr === 'children' || attr === 'key') {
+                return;
+            }
+
+            // ✅ Handle function values for specific attributes
+            if (typeof value === 'function') {
+                if (attr === 'value' && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT')) {
+                    // For form elements, evaluate the function and set the value
+                    element.value = value();
+                    return;
+                }
+                // For other attributes with functions, they should be handled by _handleReactiveAttribute
+                console.warn(`Function value for attribute '${attr}' should be handled reactively`);
+                return;
+            }
+
+            if (attr === 'className') {
+                element.className = value;
+            } else if (attr === 'htmlFor') {
+                element.setAttribute('for', value);
+            } else if (attr === 'tabIndex') {
+                element.tabIndex = value;
+            } else if (attr.startsWith('data-') || attr.startsWith('aria-')) {
+                element.setAttribute(attr, value);
+            } else if (attr in element && typeof element[attr] !== 'function') {
+                try {
+                    const descriptor = Object.getOwnPropertyDescriptor(element, attr) ||
+                        Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), attr);
+
+                    if (!descriptor || descriptor.writable !== false) {
+                        element[attr] = value;
+                    } else {
+                        element.setAttribute(attr, value);
+                    }
+                } catch (error) {
+                    element.setAttribute(attr, value);
+                }
+            } else {
+                element.setAttribute(attr, value);
+            }
+        }
+
+        _createReactiveUpdate(element, updateFn, subscriptions) {
+            const dependencies = this.juris.stateManager.startTracking();
+
+            const originalTracking = this.juris.stateManager.currentTracking;
+            this.juris.stateManager.currentTracking = dependencies;
+
+            try {
+                updateFn();
+            } catch (error) {
+                console.error('Error capturing dependencies:', error);
+            } finally {
+                this.juris.stateManager.currentTracking = originalTracking;
+            }
+
+            dependencies.forEach(path => {
+                const unsubscribe = this.juris.stateManager.subscribeInternal(path, updateFn);
+                subscriptions.push(unsubscribe);
+            });
+        }
+
+        _updateChildren(element, children) {
+            if (children === "ignore") {
+                return;
+            }
+
+            try {
+                if (Array.isArray(children)) {
+                    const currentChildElements = Array.from(element.children);
+                    this._reconcileChildren(element, currentChildElements, children);
+                } else {
+                    const childrenArray = children ? [children] : [];
+                    const currentChildElements = Array.from(element.children);
+                    this._reconcileChildren(element, currentChildElements, childrenArray);
+                }
+            } catch (error) {
+                console.warn('Reconciliation failed in _updateChildren, using safe fallback:', error.message);
+                this._updateChildrenSafe(element, children);
+            }
+        }
+
+        updateElementContent(element, newContent) {
+            this._updateChildren(element, [newContent]);
+        }
+
+        cleanup(element) {
+            this.juris.componentManager.cleanup(element);
+
+            const data = this.subscriptions.get(element);
+            if (data) {
+                if (data.subscriptions) {
+                    data.subscriptions.forEach(unsubscribe => {
+                        try {
+                            unsubscribe();
+                        } catch (error) {
+                            console.warn('Error during subscription cleanup:', error);
+                        }
+                    });
+                }
+
+                if (data.eventListeners) {
+                    data.eventListeners.forEach(({ eventName, handler }) => {
+                        try {
+                            element.removeEventListener(eventName, handler);
+                        } catch (error) {
+                            console.warn('Error during event listener cleanup:', error);
+                        }
+                    });
+                }
+
+                this.subscriptions.delete(element);
+            }
+
+            if (element._jurisKey) {
+                this.elementCache.delete(element._jurisKey);
+            }
+
+            try {
+                const children = Array.from(element.children || []);
+                children.forEach(child => {
+                    try {
+                        this.cleanup(child);
+                    } catch (error) {
+                        console.warn('Error cleaning up child element:', error);
+                    }
+                });
+            } catch (error) {
+                console.warn('Error during children cleanup:', error);
+            }
+
+            if (element.removeAttribute) {
+                try {
+                    element.removeAttribute('data-juris-enhanced');
+                    element.removeAttribute('data-juris-component');
+                    element.removeAttribute('data-juris-key');
+                } catch (error) {
+                    // Ignore errors for elements that might be detached
+                }
+            }
         }
     }
-    
-    createRouterComponent(props, context) {
-        // Capture 'this' reference for use in component methods
-        const juris = this;
-        
-        return {
-            render() {
-                const currentRoute = context.getState('router.currentRoute', '/');
-                const isLoading = context.getState('router.isLoading', false);
-                const error = context.getState('router.error', null);
-                const params = context.getState('router.params', {});
+
+    /**
+ * DOM Enhancer - Refactored to reuse DOMRenderer methods and reduce duplication
+ */
+class DOMEnhancer {
+    constructor(juris) {
+        this.juris = juris;
+        this.observers = new Map();
+        this.enhancedElements = new WeakSet();
+        this.enhancementRules = new Map();
+        this.nestedEnhancements = new WeakMap(); // Track nested enhancements per container
+
+        this.performanceOptions = {
+            debounceMs: 5,
+            batchUpdates: true,
+            observeSubtree: true,
+            observeAttributes: true,
+            observeChildList: true
+        };
+
+        this.pendingEnhancements = new Set();
+        this.enhancementTimer = null;
+    }
+
+    enhance(selector, definition, options = {}) {
+        const config = {
+            ...this.performanceOptions,
+            ...options
+        };
+
+        // Check if definition is a function that might return nested selectors
+        if (typeof definition === 'function') {
+            try {
+                const testContext = this.juris.createContext();
+                const testResult = definition(testContext);
                 
-                if (isLoading) {
-                    return {
-                        div: {
-                            className: 'loading',
-                            text: 'Loading...'
-                        }
-                    };
+                if (this._isNestedSelectorDefinition(testResult)) {
+                    return this._enhanceWithNestedSelectors(selector, definition, config);
                 }
-                
-                if (error) {
-                    return {
-                        div: {
-                            className: 'error',
-                            children: () => [{
-                                h3: { text: 'Router Error' }
-                            }, {
-                                p: { text: error }
-                            }, {
-                                button: {
-                                    text: 'Go Home',
-                                    onClick: () => juris.navigate('/')
-                                }
-                            }]
-                        }
-                    };
-                }
-                
-                const matchResult = juris.matchRoute(currentRoute);
-                if (!matchResult) {
-                    return {
-                        div: {
-                            className: 'error',
-                            text: `404 - Route not found: ${currentRoute}`
-                        }
-                    };
-                }
-                
-                const { config } = matchResult;
-                const componentName = typeof config === 'string' ? config : config.component;
-                
-                if (!componentName || !juris.components.has(componentName)) {
-                    return {
-                        div: {
-                            className: 'error',
-                            text: `Component not found: ${componentName}`
-                        }
-                    };
-                }
-                
-                return {
-                    [componentName]: { ...props, routeParams: params }
-                };
+            } catch (error) {
+                console.warn('Failed to test definition, using original enhancement:', error);
             }
+        }
+
+        // Use original enhancement logic
+        this.enhancementRules.set(selector, { definition, config });
+        this._processElementsWithBatching(
+            selector, 
+            (element) => this._enhanceElement(element, definition, config),
+            config
+        );
+
+        if (config.observeNewElements !== false) {
+            this._setupMutationObserver(
+                selector, 
+                (mutations) => this._processMutations(mutations, selector, definition, config),
+                config
+            );
+        }
+
+        return () => this._unenhance(selector);
+    }
+
+    // ===== NESTED SELECTOR ENHANCEMENT =====
+
+    _isNestedSelectorDefinition(definition) {
+        if (!definition || typeof definition !== 'object') return false;
+        
+        // Check if all keys look like CSS selectors and values are objects
+        return Object.keys(definition).every(key => {
+            return typeof key === 'string' && 
+                   key.match(/^[.#\[\]:\w\s>+~-]+$/) && // CSS selector pattern
+                   typeof definition[key] === 'object' &&
+                   definition[key] !== null &&
+                   !Array.isArray(definition[key]);
+        });
+    }
+
+    _enhanceWithNestedSelectors(containerSelector, definitionFn, config) {
+        this.enhancementRules.set(containerSelector, { 
+            definitionFn, 
+            config, 
+            type: 'nested' 
+        });
+
+        this._processElementsWithBatching(
+            containerSelector,
+            (container) => this._enhanceContainer(container, definitionFn, config),
+            config
+        );
+
+        if (config.observeNewElements !== false) {
+            this._setupMutationObserver(
+                containerSelector,
+                (mutations) => this._processNestedMutations(mutations, containerSelector, definitionFn, config),
+                config,
+                `nested_${containerSelector}`
+            );
+        }
+
+        return () => this._unenhanceNested(containerSelector);
+    }
+
+    _enhanceContainer(container, definitionFn, config) {
+        if (this.enhancedElements.has(container)) {
+            return;
+        }
+
+        try {
+            this._trackEnhancement(container, 'container');
+            
+            const context = this.juris.createContext(container);
+            const nestedDefinition = definitionFn(context);
+            
+            if (!this._isNestedSelectorDefinition(nestedDefinition)) {
+                console.warn('Definition function must return nested selector object');
+                this.enhancedElements.delete(container);
+                return;
+            }
+
+            // Store container enhancements for cleanup
+            const containerEnhancements = new Map();
+            this.nestedEnhancements.set(container, containerEnhancements);
+
+            // Process each nested selector
+            Object.entries(nestedDefinition).forEach(([nestedSelector, enhancement]) => {
+                this._enhanceNestedSelector(
+                    container, 
+                    nestedSelector, 
+                    enhancement, 
+                    context, 
+                    containerEnhancements,
+                    config
+                );
+            });
+
+            if (config.onEnhanced) {
+                config.onEnhanced(container, context);
+            }
+
+        } catch (error) {
+            console.error('Error enhancing container:', error);
+            this.enhancedElements.delete(container);
+        }
+    }
+
+    _enhanceNestedSelector(container, nestedSelector, enhancement, context, containerEnhancements, config) {
+        const elements = container.querySelectorAll(nestedSelector);
+        const enhancedElements = new Set();
+        
+        // Use unified batch processing
+        this._batchEnhance(
+            Array.from(elements),
+            (element) => this._enhanceNestedElement(element, enhancement, context, enhancedElements),
+            config
+        );
+
+        containerEnhancements.set(nestedSelector, {
+            enhancement,
+            context,
+            enhancedElements
+        });
+    }
+
+    _enhanceNestedElement(element, enhancement, context, enhancedElementsSet) {
+        if (this.enhancedElements.has(element)) {
+            return;
+        }
+
+        try {
+            this._trackEnhancement(element, 'nested');
+            enhancedElementsSet.add(element);
+            
+            // Convert element-aware functions before using existing enhancement logic
+            const processedEnhancement = this._processElementAwareFunctions(element, enhancement);
+            
+            const subscriptions = [];
+            const eventListeners = [];
+
+            // REUSE DOMRenderer methods directly
+            this._applyEnhancementUsingRenderer(element, processedEnhancement, subscriptions, eventListeners);
+
+            if (subscriptions.length > 0 || eventListeners.length > 0) {
+                this.juris.domRenderer.subscriptions.set(element, { subscriptions, eventListeners });
+            }
+
+        } catch (error) {
+            console.error('Error enhancing nested element:', error);
+            this.enhancedElements.delete(element);
+        }
+    }
+
+    _processElementAwareFunctions(element, enhancement) {
+        const processed = {};
+        
+        Object.entries(enhancement).forEach(([property, value]) => {
+            if (typeof value === 'function') {
+                try {
+                    // Test if this is an element-aware function
+                    const testResult = value(element);
+                    if (typeof testResult === 'function') {
+                        // This is an element-aware function: (el) => (actualHandler)
+                        processed[property] = testResult;
+                    } else {
+                        // Regular function, use as-is
+                        processed[property] = value;
+                    }
+                } catch (error) {
+                    // If error during test, treat as regular function
+                    processed[property] = value;
+                }
+            } else {
+                processed[property] = value;
+            }
+        });
+        
+        return processed;
+    }
+
+    // ===== UNIFIED CORE METHODS =====
+
+    /**
+     * Unified batch enhancement for any type of element
+     */
+    _batchEnhance(elements, enhancementFn, config) {
+        const elementsToProcess = elements.filter(element => !this.enhancedElements.has(element));
+        if (elementsToProcess.length === 0) return;
+        
+        elementsToProcess.forEach(enhancementFn);
+    }
+
+    /**
+     * Unified element processing with optional batching
+     */
+    _processElementsWithBatching(selector, enhancementFn, config) {
+        const elements = document.querySelectorAll(selector);
+        
+        if (config.batchUpdates && elements.length > 1) {
+            this._batchEnhance(Array.from(elements), enhancementFn, config);
+        } else {
+            elements.forEach(enhancementFn);
+        }
+    }
+
+    /**
+     * Unified mutation observer setup
+     */
+    _setupMutationObserver(selector, processingFn, config, observerKey = selector) {
+        if (this.observers.has(observerKey)) {
+            return;
+        }
+
+        const observer = new MutationObserver((mutations) => {
+            if (config.debounceMs > 0) {
+                this._debouncedProcessMutations(mutations, processingFn, config);
+            } else {
+                processingFn(mutations);
+            }
+        });
+
+        const observerConfig = {
+            childList: config.observeChildList,
+            subtree: config.observeSubtree,
+            attributes: config.observeAttributes,
+            attributeOldValue: config.observeAttributes
+        };
+
+        observer.observe(document.body, observerConfig);
+        this.observers.set(observerKey, observer);
+    }
+
+    /**
+     * Unified debounced mutation processing
+     */
+    _debouncedProcessMutations(mutations, processingFn, config) {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        this.pendingEnhancements.add({ 
+                            node, 
+                            processingFn, 
+                            config,
+                            timestamp: Date.now()
+                        });
+                    }
+                });
+            }
+        });
+
+        if (this.enhancementTimer) {
+            clearTimeout(this.enhancementTimer);
+        }
+
+        this.enhancementTimer = setTimeout(() => {
+            this._processPendingEnhancements();
+            this.enhancementTimer = null;
+        }, config.debounceMs);
+    }
+
+    /**
+     * Unified enhancement tracking
+     */
+    _trackEnhancement(element, type = 'default') {
+        this.enhancedElements.add(element);
+        element.setAttribute(`data-juris-enhanced-${type}`, Date.now());
+    }
+
+    // ===== ORIGINAL ENHANCEMENT METHODS =====
+
+    _enhanceElement(element, definition, config) {
+        if (this.enhancedElements.has(element)) {
+            return;
+        }
+
+        try {
+            this._trackEnhancement(element, 'default');
+
+            let actualDefinition = definition;
+            if (typeof definition === 'function') {
+                const context = this.juris.createContext(element);
+
+                try {
+                    actualDefinition = definition(context);
+
+                    if (!actualDefinition || typeof actualDefinition !== 'object') {
+                        console.warn('Enhancement function must return a definition object');
+                        this.enhancedElements.delete(element);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error in enhancement function:', error);
+                    this.enhancedElements.delete(element);
+                    return;
+                }
+            }
+
+            const subscriptions = [];
+            const eventListeners = [];
+
+            // REUSE DOMRenderer methods directly
+            this._applyEnhancementUsingRenderer(element, actualDefinition, subscriptions, eventListeners);
+
+            if (subscriptions.length > 0 || eventListeners.length > 0) {
+                this.juris.domRenderer.subscriptions.set(element, { subscriptions, eventListeners });
+            }
+
+            if (config.onEnhanced) {
+                const context = this.juris.createContext(element);
+                config.onEnhanced(element, context);
+            }
+
+        } catch (error) {
+            console.error('Error enhancing element:', error);
+            this.enhancedElements.delete(element);
+        }
+    }
+
+    /**
+     * Apply enhancement using DOMRenderer methods - REUSES ALL EXISTING RENDERER LOGIC
+     */
+    _applyEnhancementUsingRenderer(element, definition, subscriptions, eventListeners) {
+        const renderer = this.juris.domRenderer;
+
+        Object.keys(definition).forEach(key => {
+            const value = definition[key];
+
+            try {
+                if (key === 'children') {
+                    // REUSE: DOMRenderer children handling
+                    if (renderer.isFineGrained()) {
+                        renderer._handleChildrenFineGrained(element, value, subscriptions);
+                    } else {
+                        renderer._handleChildrenOptimized(element, value, subscriptions);
+                    }
+                } else if (key === 'text') {
+                    // REUSE: DOMRenderer text handling
+                    renderer._handleText(element, value, subscriptions);
+                } else if (key === 'innerHTML') {
+                    // REUSE: DOMRenderer reactive attribute handling
+                    if (typeof value === 'function') {
+                        renderer._handleReactiveAttribute(element, key, value, subscriptions);
+                    } else {
+                        element.innerHTML = value;
+                    }
+                } else if (key === 'style') {
+                    // REUSE: DOMRenderer style handling
+                    renderer._handleStyle(element, value, subscriptions);
+                } else if (key.startsWith('on')) {
+                    // REUSE: DOMRenderer event handling
+                    renderer._handleEvent(element, key, value, eventListeners);
+                } else if (typeof value === 'function') {
+                    // REUSE: DOMRenderer reactive attribute handling
+                    renderer._handleReactiveAttribute(element, key, value, subscriptions);
+                } else {
+                    // REUSE: DOMRenderer static attribute handling
+                    renderer._setStaticAttribute(element, key, value);
+                }
+            } catch (error) {
+                console.error(`Error processing enhancement property '${key}':`, error);
+            }
+        });
+    }
+
+    // ===== MUTATION PROCESSING =====
+
+    _processMutations(mutations, selector, definition, config) {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        this._enhanceNewNode(node, selector, definition, config);
+                    }
+                });
+            }
+        });
+    }
+
+    _processNestedMutations(mutations, containerSelector, definitionFn, config) {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if new node is a container
+                        if (node.matches && node.matches(containerSelector)) {
+                            this._enhanceContainer(node, definitionFn, config);
+                        }
+                        
+                        if (node.querySelectorAll) {
+                            const newContainers = node.querySelectorAll(containerSelector);
+                            newContainers.forEach(container => {
+                                this._enhanceContainer(container, definitionFn, config);
+                            });
+                        }
+
+                        // Enhanced nested elements within existing containers
+                        this._enhanceNewNodeInContainers(node);
+                    }
+                });
+            }
+        });
+    }
+
+    _enhanceNewNodeInContainers(node) {
+        // Find all enhanced containers
+        const containers = document.querySelectorAll('[data-juris-enhanced-container]');
+        
+        containers.forEach(container => {
+            if (!container.contains(node)) return;
+            
+            const containerEnhancements = this.nestedEnhancements.get(container);
+            if (!containerEnhancements) return;
+
+            // Check each nested selector against the new node
+            containerEnhancements.forEach((enhancementData, nestedSelector) => {
+                const { enhancement, context, enhancedElements } = enhancementData;
+                
+                if (node.matches && node.matches(nestedSelector)) {
+                    this._enhanceNestedElement(node, enhancement, context, enhancedElements);
+                }
+                
+                if (node.querySelectorAll) {
+                    const matchingChildren = node.querySelectorAll(nestedSelector);
+                    matchingChildren.forEach(child => {
+                        this._enhanceNestedElement(child, enhancement, context, enhancedElements);
+                    });
+                }
+            });
+        });
+    }
+
+    _enhanceNewNode(node, selector, definition, config) {
+        if (node.matches && node.matches(selector)) {
+            this._enhanceElement(node, definition, config);
+        }
+
+        if (node.querySelectorAll) {
+            const matchingElements = node.querySelectorAll(selector);
+            matchingElements.forEach(element => {
+                this._enhanceElement(element, definition, config);
+            });
+        }
+    }
+
+    _processPendingEnhancements() {
+        const enhancements = Array.from(this.pendingEnhancements);
+        this.pendingEnhancements.clear();
+
+        // Group enhancements by processing function to batch similar operations
+        const processingGroups = new Map();
+        
+        enhancements.forEach(({ node, processingFn, config }) => {
+            if (!processingGroups.has(processingFn)) {
+                processingGroups.set(processingFn, { nodes: [], config });
+            }
+            processingGroups.get(processingFn).nodes.push(node);
+        });
+
+        // Process each group
+        processingGroups.forEach(({ nodes, config }, processingFn) => {
+            const mutations = [{
+                type: 'childList',
+                addedNodes: nodes
+            }];
+            
+            try {
+                processingFn(mutations);
+            } catch (error) {
+                console.error('Error processing pending enhancements:', error);
+            }
+        });
+    }
+
+    // ===== CLEANUP METHODS - REUSE DOMRenderer.cleanup =====
+
+    _unenhance(selector) {
+        const observer = this.observers.get(selector);
+        if (observer) {
+            observer.disconnect();
+            this.observers.delete(selector);
+        }
+
+        this.enhancementRules.delete(selector);
+
+        const elements = document.querySelectorAll(`${selector}[data-juris-enhanced-default]`);
+        elements.forEach(element => {
+            this._cleanupEnhancedElement(element);
+        });
+    }
+
+    _unenhanceNested(containerSelector) {
+        const observerKey = `nested_${containerSelector}`;
+        const observer = this.observers.get(observerKey);
+        if (observer) {
+            observer.disconnect();
+            this.observers.delete(observerKey);
+        }
+
+        this.enhancementRules.delete(containerSelector);
+
+        const containers = document.querySelectorAll(`${containerSelector}[data-juris-enhanced-container]`);
+        containers.forEach(container => {
+            this._cleanupNestedContainer(container);
+        });
+    }
+
+    _cleanupNestedContainer(container) {
+        const containerEnhancements = this.nestedEnhancements.get(container);
+        if (containerEnhancements) {
+            containerEnhancements.forEach((enhancementData) => {
+                enhancementData.enhancedElements.forEach(element => {
+                    this._cleanupEnhancedElement(element);
+                });
+            });
+            this.nestedEnhancements.delete(container);
+        }
+
+        this.enhancedElements.delete(container);
+        container.removeAttribute('data-juris-enhanced-container');
+    }
+
+    _cleanupEnhancedElement(element) {
+        // REUSE: DOMRenderer cleanup method
+        this.juris.domRenderer.cleanup(element);
+        this.enhancedElements.delete(element);
+        element.removeAttribute('data-juris-enhanced-default');
+        element.removeAttribute('data-juris-enhanced-nested');
+        element.removeAttribute('data-juris-enhanced-container');
+    }
+
+    // ===== PUBLIC API =====
+
+    configure(options) {
+        Object.assign(this.performanceOptions, options);
+    }
+
+    getStats() {
+        const enhancedElements = document.querySelectorAll('[data-juris-enhanced-default]').length;
+        const enhancedContainers = document.querySelectorAll('[data-juris-enhanced-container]').length;
+        const enhancedNested = document.querySelectorAll('[data-juris-enhanced-nested]').length;
+
+        return {
+            enhancementRules: this.enhancementRules.size,
+            activeObservers: this.observers.size,
+            pendingEnhancements: this.pendingEnhancements.size,
+            enhancedElements,
+            enhancedContainers,
+            enhancedNested,
+            totalEnhanced: enhancedElements + enhancedNested
         };
     }
-    
-    getRouteFromHash() {
-        if (typeof window === 'undefined') return '/';
-        const hash = window.location.hash;
-        return hash.startsWith('#') ? hash.substring(1) : '/';
-    }
-    
-    navigate(path) {
-        if (typeof window !== 'undefined') {
-            window.location.hash = path;
+
+    destroy() {
+        this.observers.forEach(observer => observer.disconnect());
+        this.observers.clear();
+        this.enhancementRules.clear();
+
+        if (this.enhancementTimer) {
+            clearTimeout(this.enhancementTimer);
+            this.enhancementTimer = null;
         }
+
+        const enhancedElements = document.querySelectorAll('[data-juris-enhanced-default], [data-juris-enhanced-nested]');
+        enhancedElements.forEach(element => {
+            this._cleanupEnhancedElement(element);
+        });
+
+        const enhancedContainers = document.querySelectorAll('[data-juris-enhanced-container]');
+        enhancedContainers.forEach(container => {
+            this._cleanupNestedContainer(container);
+        });
     }
 }
 
-// Export for use
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Juris;
-}
+    /**
+    * Main Juris class with renderMode support
+    */
+    class Juris {
+        constructor(config = {}) {
+            this.services = config.services || {};
+            this.layout = config.layout;
+
+            this.stateManager = new StateManager(config.states || {}, config.middleware || []);
+            this.headlessManager = new HeadlessManager(this);
+            this.componentManager = new ComponentManager(this);
+            this.domRenderer = new DOMRenderer(this);
+            this.domEnhancer = new DOMEnhancer(this);
+
+
+            if (config.headlessComponents) {
+                Object.entries(config.headlessComponents).forEach(([name, config]) => {
+                    if (typeof config === 'function') {
+                        this.headlessManager.register(name, config);
+                    } else {
+                        this.headlessManager.register(name, config.fn, config.options);
+                    }
+                });
+            }
+            this.headlessManager.initializeQueued();
+
+            // RENDER MODE: Check config for render mode
+            if (config.renderMode === 'fine-grained') {
+                this.domRenderer.setRenderMode('fine-grained');
+            } else if (config.renderMode === 'batch') {
+                this.domRenderer.setRenderMode('batch');
+            }
+
+            // BACKWARD COMPATIBILITY: Support legacy config
+            if (config.legacyMode === true) {
+                console.warn('legacyMode is deprecated. Use renderMode: "fine-grained" instead.');
+                this.domRenderer.setRenderMode('fine-grained');
+            }
+
+            if (config.components) {
+                Object.entries(config.components).forEach(([name, component]) => {
+                    this.componentManager.register(name, component);
+                });
+            }
+
+        }
+
+        init() {
+
+        }
+        createHeadlessContext(element = null) {
+            const context = {
+                // Core state management
+                getState: (path, defaultValue) => this.stateManager.getState(path, defaultValue),
+                setState: (path, value, context) => this.stateManager.setState(path, value, context),
+                subscribe: (path, callback) => this.stateManager.subscribe(path, callback),
+
+                // Services access
+                services: this.services,
+                ...(this.services || {}),
+
+                // Access to other headless APIs
+                headless: this.headlessManager.context,
+                ...(this.headlessAPIs || {}),
+
+                // Component management
+                components: {
+                    register: (name, component) => this.componentManager.register(name, component),
+                    registerHeadless: (name, component, options) => this.headlessManager.register(name, component, options),
+                    get: (name) => this.componentManager.components.get(name),
+                    getHeadless: (name) => this.headlessManager.getInstance(name),
+                    initHeadless: (name, props) => this.headlessManager.initialize(name, props),
+                    reinitHeadless: (name, props) => this.headlessManager.reinitialize(name, props)
+                },
+
+                // Utilities
+                utils: {
+                    render: (container) => this.render(container),
+                    cleanup: () => this.cleanup(),
+                    forceRender: () => this.render(),
+                    getHeadlessStatus: () => this.headlessManager.getStatus()
+                },
+
+                // Direct access to Juris instance
+                juris: this
+            };
+
+            // ✅ Add element reference when provided
+            if (element) {
+                context.element = element;
+            }
+
+            return context;
+        }
+
+        // Create unified context with enhanced headless support
+        createContext(element = null) {
+            const context = {
+                // State management
+                getState: (path, defaultValue) => this.stateManager.getState(path, defaultValue),
+                setState: (path, value, context) => this.stateManager.setState(path, value, context),
+                subscribe: (path, callback) => this.stateManager.subscribe(path, callback),
+
+                // Services
+                services: this.services,
+                ...(this.services || {}),
+
+                // Direct access to all headless APIs
+                ...(this.headlessAPIs || {}),
+
+                // Headless components context
+                headless: this.headlessManager.context,
+
+                // Component management
+                components: {
+                    register: (name, component) => this.componentManager.register(name, component),
+                    registerHeadless: (name, component, options) => this.headlessManager.register(name, component, options),
+                    get: (name) => this.componentManager.components.get(name),
+                    getHeadless: (name) => this.headlessManager.getInstance(name),
+                    initHeadless: (name, props) => this.headlessManager.initialize(name, props),
+                    reinitHeadless: (name, props) => this.headlessManager.reinitialize(name, props),
+                    getHeadlessAPI: (name) => this.headlessManager.getAPI(name),
+                    getAllHeadlessAPIs: () => this.headlessManager.getAllAPIs()
+                },
+
+                // Utilities
+                utils: {
+                    render: (container) => this.render(container),
+                    cleanup: () => this.cleanup(),
+                    forceRender: () => this.render(),
+                    setRenderMode: (mode) => this.setRenderMode(mode),
+                    getRenderMode: () => this.getRenderMode(),
+                    isFineGrained: () => this.isFineGrained(),
+                    isBatchMode: () => this.isBatchMode(),
+                    getHeadlessStatus: () => this.headlessManager.getStatus(),
+                },
+
+                // Direct access
+                juris: this
+            };
+
+            // Add element reference when provided
+            if (element) {
+                context.element = element;
+            }
+
+            return context;
+        }
+
+        // Public API - State Management
+        getState(path, defaultValue) {
+            return this.stateManager.getState(path, defaultValue);
+        }
+
+        setState(path, value, context) {
+            return this.stateManager.setState(path, value, context);
+        }
+
+        subscribe(path, callback) {
+            return this.stateManager.subscribe(path, callback);
+        }
+
+        // Public API - Component Management
+        registerComponent(name, component) {
+            return this.componentManager.register(name, component);
+        }
+
+        registerHeadlessComponent(name, component, options) {
+            return this.headlessManager.register(name, component, options);
+        }
+
+        getComponent(name) {
+            return this.componentManager.components.get(name);
+        }
+
+        getHeadlessComponent(name) {
+            return this.headlessManager.getInstance(name);
+        }
+
+        initializeHeadlessComponent(name, props) {
+            return this.headlessManager.initialize(name, props);
+        }
+
+        // Public API - Render Mode Control
+        setRenderMode(mode) {
+            this.domRenderer.setRenderMode(mode);
+        }
+
+        getRenderMode() {
+            return this.domRenderer.getRenderMode();
+        }
+
+        isFineGrained() {
+            return this.domRenderer.isFineGrained();
+        }
+
+        isBatchMode() {
+            return this.domRenderer.isBatchMode();
+        }
+
+        // DEPRECATED: Legacy method names for backward compatibility
+        enableLegacyMode() {
+            console.warn('enableLegacyMode() is deprecated. Use setRenderMode("fine-grained") instead.');
+            this.setRenderMode('fine-grained');
+        }
+
+        disableLegacyMode() {
+            console.warn('disableLegacyMode() is deprecated. Use setRenderMode("batch") instead.');
+            this.setRenderMode('batch');
+        }
+
+        // Enhanced methods for headless component management
+        _updateComponentContexts() {
+            // This method can be called when headless components are added/removed
+            // to ensure all component contexts have access to updated APIs
+            if (this.headlessAPIs) {
+                // The contexts will get updated APIs on next render cycle
+                // due to the spread operator in createContext()
+            }
+        }
+
+        registerAndInitHeadless(name, componentFn, options = {}) {
+            this.headlessManager.register(name, componentFn, options);
+            return this.headlessManager.initialize(name, options);
+        }
+
+        getHeadlessStatus() {
+            return this.headlessManager.getStatus();
+        }
+
+        // Public API - Rendering
+        render(container = '#app') {
+            const containerEl = typeof container === 'string'
+                ? document.querySelector(container)
+                : container;
+
+            if (!containerEl) {
+                console.error('Container not found:', container);
+                return;
+            }
+
+            // Cleanup existing content
+            Array.from(containerEl.children).forEach(child => {
+                this.domRenderer.cleanup(child);
+            });
+            containerEl.innerHTML = '';
+
+            this.headlessManager.initializeQueued();
+
+            try {
+                if (!this.layout) {
+                    containerEl.innerHTML = '<p>No layout configured</p>';
+                    return;
+                }
+
+                const element = this.domRenderer.render(this.layout);
+                if (element) {
+                    containerEl.appendChild(element);
+                }
+            } catch (error) {
+                console.error('Render error:', error);
+                this._renderError(containerEl, error);
+            }
+        }
+
+        _renderError(container, error) {
+            const errorEl = document.createElement('div');
+            errorEl.style.cssText = 'color: red; border: 2px solid red; padding: 16px; margin: 8px; background: #ffe6e6;';
+            errorEl.innerHTML = `
+<h3>Render Error</h3>
+<p><strong>Message:</strong> ${error.message}</p>
+<pre style="background: #f5f5f5; padding: 8px; overflow: auto;">${error.stack || ''}</pre>
+`;
+            container.appendChild(errorEl);
+        }
+
+        // Public API - DOM Enhancement
+        enhance(selector, definition, options) {
+            return this.domEnhancer.enhance(selector, definition, options);
+        }
+
+        configureEnhancement(options) {
+            return this.domEnhancer.configure(options);
+        }
+
+        getEnhancementStats() {
+            return this.domEnhancer.getStats();
+        }
+
+        // Public API - Cleanup
+        cleanup() {
+            this.headlessManager.cleanup();
+        }
+
+        destroy() {
+            this.cleanup();
+            this.domEnhancer.destroy();
+            this.stateManager.subscribers.clear();
+            this.stateManager.externalSubscribers.clear();
+            this.componentManager.components.clear();
+            this.headlessManager.components.clear();
+        }
+    }
+
+    // Export Juris globally
+    if (typeof window !== 'undefined') {
+        window.Juris = Juris;
+        window.deepEquals = deepEquals;
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = Juris;
+        module.exports.deepEquals = deepEquals;
+    }
+
+})();

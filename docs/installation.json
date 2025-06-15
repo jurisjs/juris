@@ -1,0 +1,14 @@
+{
+    "title": "Installation",
+    "subtitle": "How to install and set up Juris",
+    "category": "Getting Started",
+    "order": 2,
+    "tags": [
+        "installation",
+        "setup",
+        "cdn",
+        "npm"
+    ],
+    "content": "<h2>CDN Installation<\/h2><p>The quickest way to get started:<\/p><pre><code>&lt;script src=\"https:\/\/jurisjs.com\/juris.js\"&gt;&lt;\/script&gt;<\/code><\/pre><h2>NPM Installation<\/h2><p>For Node.js projects:<\/p><pre><code>npm install juris-framework<\/code><\/pre>",
+    "markdown": false
+}

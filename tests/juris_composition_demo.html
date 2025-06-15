@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris - Limitless Component Composition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5em;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+        
+        .composition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .demo-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+        }
+        
+        .demo-section h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(45deg, #43e97b, #38f9d7);
+            color: white;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .dynamic-content {
+            min-height: 200px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+        
+        .widget {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .widget:hover {
+            transform: scale(1.02);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        .widget-title {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 1.1em;
+        }
+        
+        .widget-content {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+        
+        .chart-container {
+            height: 150px;
+            background: linear-gradient(45deg, #667eea20, #764ba220);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .form-field {
+            margin: 15px 0;
+        }
+        
+        .form-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .form-field input, .form-field select, .form-field textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .nested-component {
+            border-left: 4px solid #667eea;
+            padding-left: 20px;
+            margin: 15px 0;
+        }
+        
+        .recursive-tree {
+            margin-left: 20px;
+        }
+        
+        .tree-node {
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-active { background: #48bb78; }
+        .status-inactive { background: #ed8936; }
+        .status-error { background: #f56565; }
+        
+        .plugin-container {
+            border: 2px dashed #cbd5e0;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            color: #718096;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .performance-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.8em;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    
+    <script src="juris.js"></script>
+    <script>
+        // =================================================================
+        // COMPOSITION DEMO: LIMITLESS COMPONENT ARCHITECTURE
+        // =================================================================
+        
+        // Performance tracking
+        let renderCount = 0;
+        let componentCount = 0;
+        let stateChangeCount = 0;
+        
+        // =================================================================
+        // HIGHER-ORDER COMPONENTS (Unlimited Composition)
+        // =================================================================
+        
+        function withAuth(WrappedComponent, requiredRole = 'user') {
+            return function AuthWrapper(props, context) {
+                componentCount++;
+                return {
+                    hooks: {
+                        onMount: () => console.log(`🔐 Auth wrapper mounted for ${WrappedComponent.name}`)
+                    },
+                    render: () => {
+                        renderCount++;
+                        const user = context.getState('auth.user');
+                        const hasAccess = user && (user.role === requiredRole || user.role === 'admin');
+                        
+                        return hasAccess ? {
+                            [WrappedComponent.name]: { ...props, user }
+                        } : {
+                            div: {
+                                className: 'widget',
+                                children: [
+                                    { div: { text: '🔒 Access Denied', style: { textAlign: 'center', color: '#f56565', fontWeight: 'bold' } } },
+                                    { div: { text: `Required role: ${requiredRole}`, style: { textAlign: 'center', color: '#718096', fontSize: '0.9em', marginTop: '10px' } } }
+                                ]
+                            }
+                        };
+                    }
+                };
+            };
+        }
+        
+        function withLoading(WrappedComponent) {
+            return function LoadingWrapper(props, context) {
+                componentCount++;
+                return {
+                    render: () => {
+                        renderCount++;
+                        const isLoading = context.getState(`ui.loading.${WrappedComponent.name}`, false);
+                        
+                        return isLoading ? {
+                            div: {
+                                className: 'widget',
+                                children: [
+                                    { div: { text: '⏳ Loading...', style: { textAlign: 'center', color: '#667eea', fontWeight: 'bold' } } },
+                                    { div: { 
+                                        style: { 
+                                            width: '100%', 
+                                            height: '4px', 
+                                            background: '#e2e8f0', 
+                                            borderRadius: '2px',
+                                            marginTop: '15px',
+                                            overflow: 'hidden'
+                                        },
+                                        children: [{
+                                            div: {
+                                                style: {
+                                                    width: '30%',
+                                                    height: '100%',
+                                                    background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                                                    animation: 'loading 1.5s infinite',
+                                                    borderRadius: '2px'
+                                                }
+                                            }
+                                        }]
+                                    }}
+                                ]
+                            }
+                        } : {
+                            [WrappedComponent.name]: props
+                        };
+                    }
+                };
+            };
+        }
+        
+        function withErrorBoundary(WrappedComponent) {
+            return function ErrorBoundaryWrapper(props, context) {
+                componentCount++;
+                return {
+                    render: () => {
+                        renderCount++;
+                        const hasError = context.getState(`errors.${WrappedComponent.name}`, false);
+                        
+                        return hasError ? {
+                            div: {
+                                className: 'widget',
+                                style: { borderLeft: '4px solid #f56565' },
+                                children: [
+                                    { div: { text: '❌ Component Error', style: { color: '#f56565', fontWeight: 'bold' } } },
+                                    { div: { text: 'Something went wrong with this component', style: { color: '#718096', fontSize: '0.9em', marginTop: '10px' } } },
+                                    { button: { 
+                                        text: 'Retry',
+                                        className: 'btn-secondary',
+                                        style: { marginTop: '15px' },
+                                        onClick: () => context.setState(`errors.${WrappedComponent.name}`, false)
+                                    }}
+                                ]
+                            }
+                        } : {
+                            [WrappedComponent.name]: props
+                        };
+                    }
+                };
+            };
+        }
+        
+        // =================================================================
+        // DYNAMIC WIDGET FACTORY (Runtime Component Creation)
+        // =================================================================
+        
+        function WidgetFactory(props, context) {
+            componentCount++;
+            return {
+                hooks: {
+                    onMount: () => console.log('🏭 Widget Factory mounted')
+                },
+                api: {
+                    createWidget: (type, config) => {
+                        const widgets = context.getState('dashboard.widgets', []);
+                        const newWidget = {
+                            id: Date.now(),
+                            type,
+                            config: { ...config, key: Date.now() }
+                        };
+                        context.setState('dashboard.widgets', [...widgets, newWidget]);
+                    },
+                    removeWidget: (id) => {
+                        const widgets = context.getState('dashboard.widgets', []);
+                        context.setState('dashboard.widgets', widgets.filter(w => w.id !== id));
+                    }
+                },
+                render: () => {
+                    renderCount++;
+                    
+                    return {
+                        div: {
+                            children: () => {
+                                const widgets = context.getState('dashboard.widgets', []);
+                                return widgets.map(widget => {
+                                    // Dynamic component creation based on type
+                                    const ComponentName = widget.type;
+                                    return {
+                                        [ComponentName]: {
+                                            ...widget.config,
+                                            widgetId: widget.id,
+                                            onRemove: () => {
+                                                const currentWidgets = context.getState('dashboard.widgets', []);
+                                                context.setState('dashboard.widgets', currentWidgets.filter(w => w.id !== widget.id));
+                                            }
+                                        }
+                                    };
+                                });
+                            }
+                        }
+                    };
+                }
+            };
+        }
+        
+        // =================================================================
+        // RECURSIVE TREE COMPONENT (Infinite Nesting)
+        // =================================================================
+        
+        function TreeNode(props, context) {
+            componentCount++;
+            return {
+                api: {
+                    expand: () => context.setState(`tree.${props.id}.expanded`, true),
+                    collapse: () => context.setState(`tree.${props.id}.expanded`, false),
+                    addChild: (label) => {
+                        const children = context.getState(`tree.${props.id}.children`, []);
+                        const newChild = { id: Date.now(), label, children: [] };
+                        context.setState(`tree.${props.id}.children`, [...children, newChild]);
+                    }
+                },
+                render: () => {
+                    renderCount++;
+                    const expanded = context.getState(`tree.${props.id}.expanded`, false);
+                    const children = context.getState(`tree.${props.id}.children`, props.children || []);
+                    
+                    return {
+                        div: {
+                            className: 'tree-node',
+                            children: [
+                                {
+                                    div: {
+                                        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+                                        children: [
+                                            {
+                                                div: {
+                                                    style: { display: 'flex', alignItems: 'center', cursor: 'pointer', flex: '1' },
+                                                    onClick: () => context.setState(`tree.${props.id}.expanded`, !expanded),
+                                                    children: [
+                                                        { span: { text: expanded ? '🔽' : '▶️', style: { marginRight: '8px', fontSize: '0.8em' } } },
+                                                        { span: { text: props.label, fontWeight: '600' } },
+                                                        { span: { text: ` (${children.length})`, style: { color: '#718096', fontSize: '0.9em' } } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    style: { display: 'flex', gap: '5px' },
+                                                    children: [
+                                                        {
+                                                            button: {
+                                                                text: '➕',
+                                                                style: { 
+                                                                    padding: '4px 8px', 
+                                                                    fontSize: '12px',
+                                                                    background: '#4facfe',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer'
+                                                                },
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    const childCount = children.length;
+                                                                    const newChild = { id: Date.now(), label: `Child ${childCount + 1}`, children: [] };
+                                                                    context.setState(`tree.${props.id}.children`, [...children, newChild]);
+                                                                    context.setState(`tree.${props.id}.expanded`, true);
+                                                                }
+                                                            }
+                                                        },
+                                                        children.length > 0 && {
+                                                            button: {
+                                                                text: '🗑️',
+                                                                style: { 
+                                                                    padding: '4px 8px', 
+                                                                    fontSize: '12px',
+                                                                    background: '#f56565',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer'
+                                                                },
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    context.setState(`tree.${props.id}.children`, []);
+                                                                }
+                                                            }
+                                                        }
+                                                    ].filter(Boolean)
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                expanded && children.length > 0 && {
+                                    div: {
+                                        className: 'recursive-tree',
+                                        children: children.map(child => ({
+                                            TreeNode: {
+                                                id: child.id,
+                                                label: child.label,
+                                                children: child.children
+                                            }
+                                        }))
+                                    }
+                                }
+                            ].filter(Boolean)
+                        }
+                    };
+                }
+            };
+        }
+        
+        function TreeContainer(props, context) {
+            componentCount++;
+            return {
+                render: () => {
+                    renderCount++;
+                    
+                    return {
+                        div: {
+                            children: ()=>context.getState('tree.roots', []).length > 0 ? 
+                            context.getState('tree.roots', []).map(root => ({
+                                    TreeNode: {
+                                        id: root.id,
+                                        label: root.label,
+                                        children: root.children
+                                    }
+                                })) : 
+                                [{ div: { 
+                                    text: '🌳 No trees yet - click "Add Root" to start!',
+                                    style: { 
+                                        textAlign: 'center', 
+                                        color: '#718096', 
+                                        padding: '20px',
+                                        fontStyle: 'italic'
+                                    }
+                                }}]
+                        }
+                    };
+                }
+            };
+        }
+        
+        // =================================================================
+        // PLUGIN SYSTEM (Dynamic Component Loading)
+        // =================================================================
+        
+        function PluginContainer(props, context) {
+            componentCount++;
+            return {
+                hooks: {
+                    onMount: () => console.log('🔌 Plugin Container mounted')
+                },
+                api: {
+                    loadPlugin: (pluginName) => {
+                        const plugins = context.getState('plugins.loaded', []);
+                        if (!plugins.includes(pluginName)) {
+                            context.setState('plugins.loaded', [...plugins, pluginName]);
+                        }
+                    },
+                    unloadPlugin: (pluginName) => {
+                        const plugins = context.getState('plugins.loaded', []);
+                        context.setState('plugins.loaded', plugins.filter(p => p !== pluginName));
+                    }
+                },
+                render: () => {
+                    renderCount++;
+                    
+                    return {
+                        div: {
+                            className: 'plugin-container',
+                            children: () => {
+                                const loadedPlugins = context.getState('plugins.loaded', []);
+                                return loadedPlugins.length > 0 ? 
+                                    loadedPlugins.map(pluginName => ({
+                                        [pluginName]: { containerId: props.id }
+                                    })) : 
+                                    [{ div: { text: '🔌 No plugins loaded - try adding some!' } }];
+                            }
+                        }
+                    };
+                }
+            };
+        }
+        
+        // =================================================================
+        // SAMPLE WIDGETS & PLUGINS
+        // =================================================================
+        
+        function ChartWidget(props, context) {
+            componentCount++;
+            return {
+                render: () => {
+                    renderCount++;
+                    const data = context.getState(`widgets.chart.${props.widgetId}.data`, [10, 20, 30, 40]);
+                    
+                    return {
+                        div: {
+                            className: 'widget',
+                            children: [
+                                {
+                                    div: {
+                                        className: 'widget-header',
+                                        children: [
+                                            { div: { text: '📊 Chart Widget', className: 'widget-title' } },
+                                            { button: { 
+                                                text: '✕', 
+                                                onClick: props.onRemove,
+                                                style: { 
+                                                    background: 'none', 
+                                                    border: 'none', 
+                                                    cursor: 'pointer',
+                                                    color: '#f56565',
+                                                    fontWeight: 'bold'
+                                                }
+                                            }}
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'chart-container',
+                                        text: () => `Chart Data: [${context.getState(`widgets.chart.${props.widgetId}.data`, []).join(', ')}]`
+                                    }
+                                },
+                                {
+                                    button: {
+                                        text: '🔄 Refresh Data',
+                                        className: 'btn-primary',
+                                        style: { marginTop: '15px' },
+                                        onClick: () => {
+                                            const newData = Array.from({length: 4}, () => Math.floor(Math.random() * 100));
+                                            context.setState(`widgets.chart.${props.widgetId}.data`, newData);
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+        }
+        
+        function TableWidget(props, context) {
+            componentCount++;
+            return {
+                render: () => {
+                    renderCount++;
+                    
+                    return {
+                        div: {
+                            className: 'widget',
+                            children: [
+                                {
+                                    div: {
+                                        className: 'widget-header',
+                                        children: [
+                                            { div: { text: '📋 Table Widget', className: 'widget-title' } },
+                                            { button: { 
+                                                text: '✕', 
+                                                onClick: props.onRemove,
+                                                style: { 
+                                                    background: 'none', 
+                                                    border: 'none', 
+                                                    cursor: 'pointer',
+                                                    color: '#f56565',
+                                                    fontWeight: 'bold'
+                                                }
+                                            }}
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'widget-content',
+                                        children: () => {
+                                            const rows = context.getState(`widgets.table.${props.widgetId}.rows`, 3);
+                                            return Array.from({length: rows}, (_, i) => ({
+                                                div: {
+                                                    text: `Row ${i + 1}: Sample data entry`,
+                                                    style: { 
+                                                        padding: '8px 12px', 
+                                                        margin: '5px 0',
+                                                        background: i % 2 === 0 ? '#f8fafc' : 'white',
+                                                        borderRadius: '5px'
+                                                    }
+                                                }
+                                            }));
+                                        }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        style: { display: 'flex', gap: '10px', marginTop: '15px' },
+                                        children: [
+                                            {
+                                                button: {
+                                                    text: '➕ Add Row',
+                                                    className: 'btn-success',
+                                                    onClick: () => {
+                                                        const currentRows = context.getState(`widgets.table.${props.widgetId}.rows`, 3);
+                                                        context.setState(`widgets.table.${props.widgetId}.rows`, currentRows + 1);
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                button: {
+                                                    text: '➖ Remove Row',
+                                                    className: 'btn-warning',
+                                                    onClick: () => {
+                                                        const currentRows = context.getState(`widgets.table.${props.widgetId}.rows`, 3);
+                                                        if (currentRows > 1) {
+                                                            context.setState(`widgets.table.${props.widgetId}.rows`, currentRows - 1);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+        }
+        
+        // Sample Plugins
+        function WeatherPlugin(props, context) {
+            componentCount++;
+            return {
+                render: () => {
+                    renderCount++;
+                    
+                    return {
+                        div: {
+                            className: 'widget',
+                            children: [
+                                { div: { text: '🌤️ Weather Plugin', className: 'widget-title' } },
+                                { div: { 
+                                    text: () => `Temperature: ${context.getState('weather.temperature', 22)}°C`, 
+                                    style: { fontSize: '1.2em', margin: '10px 0' } 
+                                }},
+                                { button: {
+                                    text: '🔄 Update',
+                                    className: 'btn-primary',
+                                    onClick: () => context.setState('weather.temperature', Math.floor(Math.random() * 35 + 10))
+                                }}
+                            ]
+                        }
+                    };
+                }
+            };
+        }
+        
+        function NotesPlugin(props, context) {
+            componentCount++;
+            return {
+                render: () => {
+                    renderCount++;
+                    
+                    return {
+                        div: {
+                            className: 'widget',
+                            children: [
+                                { div: { text: '📝 Notes Plugin', className: 'widget-title' } },
+                                {
+                                    div: {
+                                        className: 'form-field',
+                                        children: [
+                                            { input: {
+                                                placeholder: 'Add a note...',
+                                                onKeyPress: (e) => {
+                                                    if (e.key === 'Enter' && e.target.value.trim()) {
+                                                        const currentNotes = context.getState('notes.list', []);
+                                                        const newNote = { id: Date.now(), text: e.target.value.trim() };
+                                                        context.setState('notes.list', [...currentNotes, newNote]);
+                                                        e.target.value = '';
+                                                    }
+                                                }
+                                            }}
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        children: () => context.getState('notes.list', []).map(note => ({
+                                            div: {
+                                                style: { 
+                                                    padding: '8px 12px', 
+                                                    margin: '5px 0',
+                                                    background: '#f8fafc',
+                                                    borderRadius: '5px',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                },
+                                                children: [
+                                                    { span: { text: note.text } },
+                                                    { button: {
+                                                        text: '✕',
+                                                        style: { 
+                                                            background: 'none', 
+                                                            border: 'none', 
+                                                            cursor: 'pointer',
+                                                            color: '#f56565'
+                                                        },
+                                                        onClick: () => {
+                                                            const currentNotes = context.getState('notes.list', []);
+                                                            context.setState('notes.list', currentNotes.filter(n => n.id !== note.id));
+                                                        }
+                                                    }}
+                                                ]
+                                            }
+                                        }))
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+        }
+        
+        // =================================================================
+        // FORM BUILDER (Dynamic Form Generation)
+        // =================================================================
+        
+        function FormBuilder(props, context) {
+            componentCount++;
+            return {
+                api: {
+                    addField: (type, label) => {
+                        const fields = context.getState('form.fields', []);
+                        const newField = { id: Date.now(), type, label, value: '' };
+                        context.setState('form.fields', [...fields, newField]);
+                    },
+                    removeField: (fieldId) => {
+                        const fields = context.getState('form.fields', []);
+                        context.setState('form.fields', fields.filter(f => f.id !== fieldId));
+                    }
+                },
+                render: () => {
+                    renderCount++;
+                    
+                    return {
+                        div: {
+                            className: 'widget',
+                            children: [
+                                { div: { text: '📝 Dynamic Form Builder', className: 'widget-title' } },
+                                {
+                                    div: {
+                                        className: 'controls',
+                                        children: [
+                                            { button: {
+                                                text: '➕ Text Field',
+                                                className: 'btn-primary',
+                                                onClick: () => {
+                                                    const fields = context.getState('form.fields', []);
+                                                    const newField = { id: Date.now(), type: 'text', label: `Field ${fields.length + 1}`, value: '' };
+                                                    context.setState('form.fields', [...fields, newField]);
+                                                }
+                                            }},
+                                            { button: {
+                                                text: '➕ Select Field',
+                                                className: 'btn-secondary',
+                                                onClick: () => {
+                                                    const fields = context.getState('form.fields', []);
+                                                    const newField = { id: Date.now(), type: 'select', label: `Select ${fields.length + 1}`, value: '', options: ['Option 1', 'Option 2'] };
+                                                    context.setState('form.fields', [...fields, newField]);
+                                                }
+                                            }},
+                                            { button: {
+                                                text: '➕ Textarea',
+                                                className: 'btn-success',
+                                                onClick: () => {
+                                                    const fields = context.getState('form.fields', []);
+                                                    const newField = { id: Date.now(), type: 'textarea', label: `Textarea ${fields.length + 1}`, value: '' };
+                                                    context.setState('form.fields', [...fields, newField]);
+                                                }
+                                            }}
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        children: () => context.getState('form.fields', []).map(field => ({
+                                            FormField: { field }
+                                        }))
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+        }
+        
+        function FormField(props, context) {
+            componentCount++;
+            const { field } = props;
+            
+            return {
+                render: () => {
+                    renderCount++;
+                    
+                    const fieldElement = {
+                        text: {
+                            input: {
+                                type: 'text',
+                                value: () => context.getState(`form.values.${field.id}`, field.value || ''),
+                                placeholder: `Enter ${field.label.toLowerCase()}...`,
+                                onInput: (e) => context.setState(`form.values.${field.id}`, e.target.value)
+                            }
+                        },
+                        select: {
+                            select: {
+                                value: () => context.getState(`form.values.${field.id}`, field.value || ''),
+                                onChange: (e) => context.setState(`form.values.${field.id}`, e.target.value),
+                                children: (field.options || []).map(option => ({
+                                    option: { value: option, text: option }
+                                }))
+                            }
+                        },
+                        textarea: {
+                            textarea: {
+                                value: () => context.getState(`form.values.${field.id}`, field.value || ''),
+                                placeholder: `Enter ${field.label.toLowerCase()}...`,
+                                onInput: (e) => context.setState(`form.values.${field.id}`, e.target.value),
+                                rows: 3
+                            }
+                        }
+                    };
+                    
+                    return {
+                        div: {
+                            className: 'form-field',
+                            children: [
+                                {
+                                    div: {
+                                        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+                                        children: [
+                                            { label: { text: field.label } },
+                                            { button: {
+                                                text: '✕',
+                                                style: { 
+                                                    background: 'none', 
+                                                    border: 'none', 
+                                                    cursor: 'pointer',
+                                                    color: '#f56565',
+                                                    padding: '4px'
+                                                },
+                                                onClick: () => {
+                                                    const fields = context.getState('form.fields', []);
+                                                    context.setState('form.fields', fields.filter(f => f.id !== field.id));
+                                                }
+                                            }}
+                                        ]
+                                    }
+                                },
+                                fieldElement[field.type] || fieldElement.text
+                            ]
+                        }
+                    };
+                }
+            };
+        }
+        
+        // =================================================================
+        // PERFORMANCE MONITOR
+        // =================================================================
+        
+        function PerformanceMonitor(props, context) {
+            componentCount++;
+            return {
+                hooks: {
+                    onMount: () => {
+                        setInterval(() => {
+                            context.setState('performance.renderCount', renderCount);
+                            context.setState('performance.componentCount', componentCount);
+                            context.setState('performance.stateChangeCount', stateChangeCount);
+                        }, 1000);
+                    }
+                },
+                render: () => {
+                    renderCount++;
+                    return {
+                        div: {
+                            className: 'demo-section',
+                            children: [
+                                { h2: { text: '📊 Live Performance Stats' } },
+                                {
+                                    div: {
+                                        className: 'performance-stats',
+                                        children: [
+                                            {
+                                                div: {
+                                                    className: 'stat-card',
+                                                    children: [
+                                                        { div: { text: () => context.getState('performance.renderCount', 0).toString(), className: 'stat-value' } },
+                                                        { div: { text: 'Renders', className: 'stat-label' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'stat-card',
+                                                    children: [
+                                                        { div: { text: () => context.getState('performance.componentCount', 0).toString(), className: 'stat-value' } },
+                                                        { div: { text: 'Components', className: 'stat-label' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'stat-card',
+                                                    children: [
+                                                        { div: { text: () => context.getState('dashboard.widgets', []).length.toString(), className: 'stat-value' } },
+                                                        { div: { text: 'Widgets', className: 'stat-label' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'stat-card',
+                                                    children: [
+                                                        { div: { text: () => context.getState('plugins.loaded', []).length.toString(), className: 'stat-value' } },
+                                                        { div: { text: 'Plugins', className: 'stat-label' } }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+        }
+        
+        // =================================================================
+        // MAIN LAYOUT
+        // =================================================================
+        
+        const layout = {
+            div: {
+                className: 'app-container',
+                children: [
+                    // Header
+                    {
+                        div: {
+                            className: 'header',
+                            children: [
+                                { h1: { text: '🚀 Juris: Limitless Component Composition' } },
+                                { p: { 
+                                    text: 'Demonstrating unlimited nesting, HOCs, dynamic creation, recursion, plugins & more',
+                                    style: { color: '#718096', fontSize: '1.1em' }
+                                }}
+                            ]
+                        }
+                    },
+                    
+                    // Performance Monitor
+                    { PerformanceMonitor: {} },
+                    
+                    // Main composition grid
+                    {
+                        div: {
+                            className: 'composition-grid',
+                            children: [
+                                // Dynamic Widget Factory
+                                {
+                                    div: {
+                                        className: 'demo-section',
+                                        children: [
+                                            { h2: { text: '🏭 Dynamic Widget Factory' } },
+                                            { p: { text: 'Runtime component creation and management', style: { color: '#718096', marginBottom: '20px' } } },
+                                            {
+                                                div: {
+                                                    className: 'controls',
+                                                    children: [
+                                                        { button: {
+                                                            text: '📊 Add Chart',
+                                                            className: 'btn-primary',
+                                                            onClick: () => {
+                                                                const widgets = juris.getState('dashboard.widgets', []);
+                                                                const newWidget = {
+                                                                    id: Date.now(),
+                                                                    type: 'ChartWidget',
+                                                                    config: { title: `Chart ${widgets.length + 1}` }
+                                                                };
+                                                                juris.setState('dashboard.widgets', [...widgets, newWidget]);
+                                                            }
+                                                        }},
+                                                        { button: {
+                                                            text: '📋 Add Table',
+                                                            className: 'btn-secondary',
+                                                            onClick: () => {
+                                                                const widgets = juris.getState('dashboard.widgets', []);
+                                                                const newWidget = {
+                                                                    id: Date.now(),
+                                                                    type: 'TableWidget',
+                                                                    config: { title: `Table ${widgets.length + 1}` }
+                                                                };
+                                                                juris.setState('dashboard.widgets', [...widgets, newWidget]);
+                                                            }
+                                                        }},
+                                                        { button: {
+                                                            text: '🗑️ Clear All',
+                                                            className: 'btn-warning',
+                                                            onClick: () => juris.setState('dashboard.widgets', [])
+                                                        }}
+                                                    ]
+                                                }
+                                            },
+                                            { WidgetFactory: {} }
+                                        ]
+                                    }
+                                },
+                                
+                                // Recursive Tree Component
+                                {
+                                    div: {
+                                        className: 'demo-section',
+                                        children: [
+                                            { h2: { text: '🌳 Infinite Recursive Tree' } },
+                                            { p: { text: 'Unlimited depth component nesting', style: { color: '#718096', marginBottom: '20px' } } },
+                                            {
+                                                div: {
+                                                    className: 'controls',
+                                                    children: [
+                                                        { button: {
+                                                            text: '🌱 Add Root',
+                                                            className: 'btn-success',
+                                                            onClick: () => {
+                                                                const roots = juris.getState('tree.roots', []);
+                                                                const newRoot = {
+                                                                    id: Date.now(),
+                                                                    label: `Root ${roots.length + 1}`,
+                                                                    children: []
+                                                                };
+                                                                juris.setState('tree.roots', [...roots, newRoot]);
+                                                            }
+                                                        }},
+                                                        { button: {
+                                                            text: '🔄 Reset Tree',
+                                                            className: 'btn-warning',
+                                                            onClick: () => {
+                                                                // Reset with sample tree
+                                                                juris.setState('tree.roots', [
+                                                                    {
+                                                                        id: 1,
+                                                                        label: 'Sample Root',
+                                                                        children: [
+                                                                            { id: 2, label: 'Child 1', children: [
+                                                                                { id: 3, label: 'Grandchild 1', children: [] },
+                                                                                { id: 4, label: 'Grandchild 2', children: [] }
+                                                                            ]},
+                                                                            { id: 5, label: 'Child 2', children: [] }
+                                                                        ]
+                                                                    }
+                                                                ]);
+                                                                juris.setState('tree.1.expanded', true);
+                                                                juris.setState('tree.2.expanded', true);
+                                                            }
+                                                        }},
+                                                        { button: {
+                                                            text: '🗑️ Clear All',
+                                                            className: 'btn-secondary',
+                                                            onClick: () => juris.setState('tree.roots', [])
+                                                        }}
+                                                    ]
+                                                }
+                                            },
+                                            { TreeContainer: {} }
+                                        ]
+                                    }
+                                },
+                                
+                                // Plugin System
+                                {
+                                    div: {
+                                        className: 'demo-section',
+                                        children: [
+                                            { h2: { text: '🔌 Plugin System' } },
+                                            { p: { text: 'Dynamic component loading & unloading', style: { color: '#718096', marginBottom: '20px' } } },
+                                            {
+                                                div: {
+                                                    className: 'controls',
+                                                    children: [
+                                                        { button: {
+                                                            text: '🌤️ Load Weather',
+                                                            className: 'btn-primary',
+                                                            onClick: () => {
+                                                                const plugins = juris.getState('plugins.loaded', []);
+                                                                if (!plugins.includes('WeatherPlugin')) {
+                                                                    juris.setState('plugins.loaded', [...plugins, 'WeatherPlugin']);
+                                                                }
+                                                            }
+                                                        }},
+                                                        { button: {
+                                                            text: '📝 Load Notes',
+                                                            className: 'btn-secondary',
+                                                            onClick: () => {
+                                                                const plugins = juris.getState('plugins.loaded', []);
+                                                                if (!plugins.includes('NotesPlugin')) {
+                                                                    juris.setState('plugins.loaded', [...plugins, 'NotesPlugin']);
+                                                                }
+                                                            }
+                                                        }},
+                                                        { button: {
+                                                            text: '🔌 Unload All',
+                                                            className: 'btn-warning',
+                                                            onClick: () => juris.setState('plugins.loaded', [])
+                                                        }}
+                                                    ]
+                                                }
+                                            },
+                                            { PluginContainer: { id: 'main-plugins' } }
+                                        ]
+                                    }
+                                },
+                                
+                                // Form Builder
+                                {
+                                    div: {
+                                        className: 'demo-section',
+                                        children: [
+                                            { h2: { text: '📝 Dynamic Form Builder' } },
+                                            { p: { text: 'Unlimited form field composition', style: { color: '#718096', marginBottom: '20px' } } },
+                                            { FormBuilder: {} }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    
+                    // HOC Demonstration
+                    {
+                        div: {
+                            className: 'demo-section',
+                            style: { marginTop: '30px' },
+                            children: [
+                                { h2: { text: '🎭 Higher-Order Components Demo' } },
+                                { p: { text: 'Components wrapped with auth, loading, and error boundaries', style: { color: '#718096', marginBottom: '20px' } } },
+                                {
+                                    div: {
+                                        className: 'controls',
+                                        children: [
+                                            { button: {
+                                                text: '👤 Login as User',
+                                                className: 'btn-primary',
+                                                onClick: () => juris.setState('auth.user', { name: 'John Doe', role: 'user' })
+                                            }},
+                                            { button: {
+                                                text: '👑 Login as Admin',
+                                                className: 'btn-secondary',
+                                                onClick: () => juris.setState('auth.user', { name: 'Admin', role: 'admin' })
+                                            }},
+                                            { button: {
+                                                text: '🚪 Logout',
+                                                className: 'btn-warning',
+                                                onClick: () => juris.setState('auth.user', null)
+                                            }},
+                                            { button: {
+                                                text: '⏳ Toggle Loading',
+                                                className: 'btn-success',
+                                                onClick: () => {
+                                                    const loading = juris.getState('ui.loading.SecureWidget', false);
+                                                    juris.setState('ui.loading.SecureWidget', !loading);
+                                                }
+                                            }}
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'composition-grid',
+                                        children: [
+                                            // Protected admin component
+                                            { 
+                                                [withAuth(withLoading(withErrorBoundary(ChartWidget)), 'admin').name]: { 
+                                                    widgetId: 'secure-chart',
+                                                    onRemove: () => console.log('Secure chart removed')
+                                                }
+                                            },
+                                            // Protected user component  
+                                            { 
+                                                [withAuth(withLoading(withErrorBoundary(TableWidget)), 'user').name]: { 
+                                                    widgetId: 'secure-table',
+                                                    onRemove: () => console.log('Secure table removed')
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        };
+        
+        // Create enhanced components by wrapping with HOCs
+        const SecureChartWidget = withAuth(withLoading(withErrorBoundary(ChartWidget)), 'admin');
+        const SecureTableWidget = withAuth(withLoading(withErrorBoundary(TableWidget)), 'user');
+        
+        // =================================================================
+        // INITIALIZE APPLICATION
+        // =================================================================
+        
+        const juris = new Juris({
+            layout: layout,
+            components: {
+                // Base components
+                WidgetFactory,
+                TreeNode,
+                TreeContainer,
+                PluginContainer,
+                FormBuilder,
+                FormField,
+                PerformanceMonitor,
+                
+                // Widgets
+                ChartWidget,
+                TableWidget,
+                
+                // Plugins
+                WeatherPlugin,
+                NotesPlugin,
+                
+                // HOC Components
+                SecureWidget: SecureChartWidget,
+                SecureTableWidget: SecureTableWidget
+            },
+            states: {
+                auth: {
+                    user: null
+                },
+                dashboard: {
+                    widgets: []
+                },
+                tree: {
+                    roots: [
+                        {
+                            id: 1,
+                            label: 'Root Node',
+                            children: [
+                                { id: 2, label: 'Child 1', children: [] },
+                                { id: 3, label: 'Child 2', children: [] }
+                            ]
+                        }
+                    ]
+                },
+                plugins: {
+                    loaded: []
+                },
+                form: {
+                    fields: [],
+                    values: {}
+                },
+                ui: {
+                    loading: {}
+                },
+                performance: {
+                    renderCount: 0,
+                    componentCount: 0,
+                    stateChangeCount: 0
+                }
+            },
+            middleware: [
+                // Performance tracking middleware
+                ({ path, oldValue, newValue }) => {
+                    stateChangeCount++;
+                    console.log(`🔄 State change: ${path}`, { oldValue, newValue });
+                    return newValue;
+                }
+            ]
+        });
+        
+        // Subscribe to key state changes
+        juris.subscribe('auth.user', (newUser, oldUser) => {
+            console.log('👤 Auth changed:', { from: oldUser?.name, to: newUser?.name });
+        });
+        
+        juris.subscribe('dashboard.widgets', (widgets) => {
+            console.log('🏭 Widget count:', widgets.length);
+        });
+        
+        // Render the application
+        juris.render('#app');
+        
+        // Add loading animation CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes loading {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(400%); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Demo automation
+        console.log('🚀 Juris Composition Demo loaded!');
+        console.log('🎮 Try the controls to see unlimited composition in action');
+        console.log('📊 Watch the performance stats update in real-time');
+        
+        // Auto-demo sequence
+        setTimeout(() => {
+            console.log('🎭 Starting auto-demo...');
+            juris.setState('auth.user', { name: 'Demo User', role: 'user' });
+        }, 2000);
+        
+        setTimeout(() => {
+            const widgets = juris.getState('dashboard.widgets', []);
+            juris.setState('dashboard.widgets', [...widgets, {
+                id: Date.now(),
+                type: 'ChartWidget',
+                config: { title: 'Auto-generated Chart' }
+            }]);
+        }, 4000);
+        
+        setTimeout(() => {
+            const plugins = juris.getState('plugins.loaded', []);
+            juris.setState('plugins.loaded', [...plugins, 'WeatherPlugin']);
+        }, 6000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Control Flow Component Library</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        .controls {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+
+        button,
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 4px;
+            font-size: 14px;
+        }
+
+        button:hover,
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        button:disabled,
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+
+        input,
+        select {
+            padding: 8px;
+            margin: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .warning {
+            color: #856404;
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .info {
+            color: #0c5460;
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .list-item {
+            padding: 10px;
+            border: 1px solid #eee;
+            margin: 5px 0;
+            border-radius: 4px;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .flex {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+
+        .step {
+            padding: 10px 20px;
+            background: #e9ecef;
+            border-radius: 20px;
+        }
+
+        .step.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .step.completed {
+            background: #28a745;
+            color: white;
+        }
+
+        .tabs {
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            display: inline-block;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom-color: #007bff;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .tab:hover {
+            background: #f8f9fa;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .retry-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .offline-banner {
+            background: #dc3545;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🏛️ Juris Control Flow Component Library</h1>
+        <p>Comprehensive collection of control flow components with proper component injection patterns.</p>
+
+        <div id="app"></div>
+    </div>
+
+    <!-- Include Juris Framework -->
+    <script src="juris.js"></script>
+
+    <script>
+        // ========================================
+        // CONTROL FLOW COMPONENTS LIBRARY
+        // ========================================
+
+        // 1. CONDITIONAL RENDERER - Component Injection Pattern
+        const ConditionalRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: () => {
+                        const condition = typeof props.condition === 'function'
+                            ? props.condition()
+                            : props.condition;
+
+                        if (condition) {
+                            return props.whenTrue ?
+                                (Array.isArray(props.whenTrue) ? props.whenTrue : [props.whenTrue]) :
+                                [];
+                        }
+
+                        return props.whenFalse ?
+                            (Array.isArray(props.whenFalse) ? props.whenFalse : [props.whenFalse]) :
+                            [];
+                    }
+                }
+            })
+        });
+
+        // 2. SWITCH RENDERER - Component Injection Pattern
+        const SwitchRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: () => {
+                        const value = typeof props.value === 'function'
+                            ? props.value()
+                            : props.value;
+
+                        // Look for exact match first
+                        if (props[value]) {
+                            const match = props[value];
+                            return Array.isArray(match) ? match : [match];
+                        }
+
+                        // Fallback to default
+                        if (props.default) {
+                            return Array.isArray(props.default) ? props.default : [props.default];
+                        }
+
+                        return [];
+                    }
+                }
+            })
+        });
+
+        // 3. LIST RENDERER - Component Injection Pattern
+        const ListRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: props.containerClass || '',
+                    children: () => {
+                        const items = typeof props.items === 'function'
+                            ? props.items()
+                            : props.items || [];
+
+                        if (items.length === 0) {
+                            return props.empty ?
+                                (Array.isArray(props.empty) ? props.empty : [props.empty]) :
+                                [];
+                        }
+
+                        if (props.itemComponent && props.itemProps) {
+                            return items.map((item, index) => ({
+                                [props.itemComponent]: {
+                                    key: item.id || index,
+                                    ...props.itemProps(item, index)
+                                }
+                            }));
+                        }
+
+                        return items.map((item, index) => ({
+                            div: {
+                                key: item.id || index,
+                                className: 'list-item',
+                                text: typeof item === 'object' ? JSON.stringify(item) : item
+                            }
+                        }));
+                    }
+                }
+            })
+        });
+
+        // 4. ASYNC RENDERER - Component Injection Pattern
+        const AsyncRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: () => {
+                        const loading = typeof props.loading === 'function'
+                            ? props.loading()
+                            : props.loading;
+                        const error = typeof props.error === 'function'
+                            ? props.error()
+                            : props.error;
+                        const data = typeof props.data === 'function'
+                            ? props.data()
+                            : props.data;
+
+                        if (loading) {
+                            return props.loadingComponent ?
+                                (Array.isArray(props.loadingComponent) ? props.loadingComponent : [props.loadingComponent]) :
+                                [{ div: { className: 'loading', text: 'Loading...' } }];
+                        }
+
+                        if (error) {
+                            return props.errorComponent ?
+                                (Array.isArray(props.errorComponent) ? props.errorComponent : [props.errorComponent]) :
+                                [{ div: { className: 'error', text: `Error: ${error}` } }];
+                        }
+
+                        if (data !== null && data !== undefined) {
+                            return props.successComponent ?
+                                (Array.isArray(props.successComponent) ? props.successComponent : [props.successComponent]) :
+                                [{ div: { text: 'Data loaded successfully' } }];
+                        }
+
+                        return props.emptyComponent ?
+                            (Array.isArray(props.emptyComponent) ? props.emptyComponent : [props.emptyComponent]) :
+                            [];
+                    }
+                }
+            })
+        });
+
+        // 5. STEP RENDERER (Wizard) - Component Injection Pattern
+        const StepRenderer = (props, context) => ({
+            render: () => {
+                const currentStep = typeof props.currentStep === 'function' ? props.currentStep() : (props.currentStep || 1);
+                const totalSteps = typeof props.totalSteps === 'function' ? props.totalSteps() : (props.totalSteps || Object.keys(props.steps || {}).length);
+                const steps = props.steps || {};
+
+                const stepIndicator = {
+                    div: {
+                        className: 'step-indicator',
+                        children: Array.from({ length: totalSteps }, (_, i) => {
+                            const stepNum = i + 1;
+                            let className = 'step';
+                            if (stepNum < currentStep) className += ' completed';
+                            if (stepNum === currentStep) className += ' active';
+
+                            return {
+                                div: {
+                                    className,
+                                    text: `Step ${stepNum}`
+                                }
+                            };
+                        })
+                    }
+                };
+
+                const currentStepContent = steps[currentStep] || { div: { text: `Step ${currentStep} content` } };
+
+                const navigation = props.navigation ? props.navigation : {
+                    div: {
+                        className: 'flex',
+                        children: [
+                            {
+                                button: {
+                                    text: 'Previous',
+                                    disabled: () => currentStep <= 1,
+                                    onclick: () => props.onPrevious && props.onPrevious(),
+                                    className: 'btn-secondary'
+                                }
+                            },
+                            {
+                                button: {
+                                    text: currentStep >= totalSteps ? 'Finish' : 'Next',
+                                    onclick: () => props.onNext && props.onNext(),
+                                    className: currentStep >= totalSteps ? 'btn-success' : ''
+                                }
+                            }
+                        ]
+                    }
+                };
+
+                return {
+                    div: {
+                        children: [
+                            stepIndicator,
+                            currentStepContent,
+                            navigation
+                        ]
+                    }
+                };
+            }
+        });
+
+        // 6. TAB RENDERER - Component Injection Pattern
+        const TabRenderer = (props, context) => ({
+            render: () => {
+                const activeTab = typeof props.activeTab === 'function' ? props.activeTab() : props.activeTab;
+                const tabs = props.tabs || {};
+                const tabNames = Object.keys(tabs);
+
+                const tabBar = {
+                    div: {
+                        className: 'tabs',
+                        children: tabNames.map(tabName => ({
+                            div: {
+                                className: () => `tab ${activeTab === tabName ? 'active' : ''}`,
+                                text: props.tabLabels ? props.tabLabels[tabName] || tabName : tabName,
+                                onclick: () => props.onTabChange && props.onTabChange(tabName)
+                            }
+                        }))
+                    }
+                };
+
+                const activeContent = tabs[activeTab] || { div: { text: 'No content' } };
+
+                return {
+                    div: {
+                        children: [
+                            tabBar,
+                            activeContent
+                        ]
+                    }
+                };
+            }
+        });
+
+        // 7. MODAL RENDERER - Component Injection Pattern
+        const ModalRenderer = (props, context) => ({
+            render: () => {
+                const isOpen = typeof props.isOpen === 'function' ? props.isOpen() : (props.isOpen || false);
+
+                if (!isOpen) {
+                    return { div: { children: [] } }; // Return empty instead of null
+                }
+
+                const modalType = typeof props.type === 'function' ? props.type() : (props.type || 'default');
+                const modals = props.modals || {};
+                const content = modals[modalType] || props.children || { div: { text: 'Modal content' } };
+
+                return {
+                    div: {
+                        children: [
+                            {
+                                div: {
+                                    className: 'modal-backdrop',
+                                    onclick: () => props.onClose && props.onClose()
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'modal',
+                                    children: [
+                                        content,
+                                        props.showCloseButton !== false ? {
+                                            button: {
+                                                text: 'Close',
+                                                onclick: () => props.onClose && props.onClose(),
+                                                className: 'btn-secondary'
+                                            }
+                                        } : null
+                                    ].filter(Boolean)
+                                }
+                            }
+                        ]
+                    }
+                };
+            }
+        });
+
+        // 8. MULTI STATE RENDERER - Component Injection Pattern
+        const MultiStateRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: () => {
+                        // Check conditions in order and return first match
+                        if (props.conditions) {
+                            for (const condition of props.conditions) {
+                                const test = typeof condition.when === 'function'
+                                    ? condition.when()
+                                    : condition.when;
+
+                                if (test) {
+                                    return condition.render ?
+                                        (Array.isArray(condition.render) ? condition.render : [condition.render]) :
+                                        [];
+                                }
+                            }
+                        }
+
+                        // No conditions matched, return fallback
+                        return props.fallback ?
+                            (Array.isArray(props.fallback) ? props.fallback : [props.fallback]) :
+                            [];
+                    }
+                }
+            })
+        });
+
+        // 9. PERMISSION RENDERER - Component Injection Pattern
+        const PermissionRenderer = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const userRole = typeof props.userRole === 'function' ? props.userRole() : (props.userRole || getState('user.role', 'guest'));
+                            const allowedRoles = props.allowedRoles || ['user'];
+
+                            if (allowedRoles.includes(userRole)) {
+                                return props.authorized ?
+                                    (Array.isArray(props.authorized) ? props.authorized : [props.authorized]) :
+                                    [];
+                            }
+
+                            return props.unauthorized ?
+                                (Array.isArray(props.unauthorized) ? props.unauthorized : [props.unauthorized]) :
+                                [{ div: { className: 'error', text: 'Access denied' } }];
+                        }
+                    }
+                })
+            };
+        };
+
+        // 10. RETRY RENDERER - Component Injection Pattern
+        const RetryRenderer = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: () => {
+                        const error = typeof props.error === 'function' ? props.error() : props.error;
+                        const retryCount = typeof props.retryCount === 'function' ? props.retryCount() : (props.retryCount || 0);
+                        const maxRetries = props.maxRetries || 3;
+                        const isRetrying = typeof props.isRetrying === 'function' ? props.isRetrying() : (props.isRetrying || false);
+
+                        if (error && retryCount < maxRetries) {
+                            return [{
+                                div: {
+                                    className: 'retry-container',
+                                    children: [
+                                        { div: { text: `Error: ${error}`, className: 'error' } },
+                                        { div: { text: `Attempt ${retryCount + 1} of ${maxRetries}` } },
+                                        isRetrying ?
+                                            { div: { text: 'Retrying...', className: 'loading' } } :
+                                            {
+                                                button: {
+                                                    text: 'Retry',
+                                                    onclick: () => props.onRetry && props.onRetry(),
+                                                    className: 'btn-secondary'
+                                                }
+                                            }
+                                    ]
+                                }
+                            }];
+                        } else if (error && retryCount >= maxRetries) {
+                            return props.maxRetriesReached ?
+                                (Array.isArray(props.maxRetriesReached) ? props.maxRetriesReached : [props.maxRetriesReached]) :
+                                [{ div: { text: 'Maximum retries exceeded', className: 'error' } }];
+                        } else {
+                            return props.children ?
+                                (Array.isArray(props.children) ? props.children : [props.children]) :
+                                [];
+                        }
+                    }
+                }
+            })
+        });
+
+        // 11. ROUTE RENDERER - Component Injection Pattern
+        const RouteRenderer = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const currentRoute = getState('router.currentRoute', '/');
+
+                            // Look for exact route match
+                            if (props[currentRoute]) {
+                                const match = props[currentRoute];
+                                return Array.isArray(match) ? match : [match];
+                            }
+
+                            // Fallback to 404
+                            if (props.notFound) {
+                                return Array.isArray(props.notFound) ? props.notFound : [props.notFound];
+                            }
+
+                            return [{ div: { text: '404 - Route not found' } }];
+                        }
+                    }
+                })
+            };
+        };
+
+        // ========================================
+        // UI COMPONENTS FOR INJECTION
+        // ========================================
+
+        const Button = (props, context) => ({
+            render: () => ({
+                button: {
+                    className: () => `btn ${typeof props.variant === 'function' ? props.variant() : (props.variant || '')}`,
+                    text: () => typeof props.text === 'function' ? props.text() : (props.text || 'Button'),
+                    onclick: props.onClick || (() => { }),
+                    disabled: () => typeof props.disabled === 'function' ? props.disabled() : (props.disabled || false)
+                }
+            })
+        });
+
+        const Card = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: `demo-section ${typeof props.className === 'function' ? props.className() : (props.className || '')}`,
+                    children: [
+                        props.title ? { h2: { text: typeof props.title === 'function' ? props.title() : props.title } } : null,
+                        ...(Array.isArray(props.children) ? props.children : [props.children])
+                    ].filter(Boolean)
+                }
+            })
+        });
+
+        const LoadingSpinner = (props, context) => ({
+            render: () => ({
+                div: {
+                    children: [
+                        { div: { className: 'spinner' } },
+                        props.text ? { div: { text: typeof props.text === 'function' ? props.text() : props.text, className: 'loading' } } : null
+                    ].filter(Boolean)
+                }
+            })
+        });
+
+        const ErrorMessage = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'error',
+                    text: () => typeof props.text === 'function' ? props.text() : (props.text || 'An error occurred')
+                }
+            })
+        });
+
+        const SuccessMessage = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'success',
+                    text: () => typeof props.text === 'function' ? props.text() : (props.text || 'Success!')
+                }
+            })
+        });
+
+        const InfoCard = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'card',
+                    text: () => typeof props.text === 'function' ? props.text() : (props.text || 'Information')
+                }
+            })
+        });
+
+        const AdminPanel = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'success',
+                    text: '⚙️ Admin Panel - Secret admin content!'
+                }
+            })
+        });
+
+        const AccessDenied = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'error',
+                    text: '🚫 Access denied - Admin only!'
+                }
+            })
+        });
+
+        const HomePage = (props, context) => ({
+            render: () => ({
+                div: { text: '🏠 Welcome to the Home page!' }
+            })
+        });
+
+        const AboutPage = (props, context) => ({
+            render: () => ({
+                div: { text: '📄 About us - We build amazing apps with Juris!' }
+            })
+        });
+
+        const NotFoundPage = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'error',
+                    text: '404 - Page not found!'
+                }
+            })
+        });
+
+        const ListItem = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'list-item',
+                    children: [
+                        { span: { text: props.item.text } },
+                        {
+                            Button: {
+                                text: 'Remove',
+                                variant: 'btn-danger',
+                                onClick: () => props.onRemove(props.item.id)
+                            }
+                        }
+                    ]
+                }
+            })
+        });
+
+        const EmptyListMessage = (props, context) => ({
+            render: () => ({
+                div: {
+                    className: 'card',
+                    text: '📝 No items yet. Click "Add Item" to start!'
+                }
+            })
+        });
+
+        const AsyncDataDisplay = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'success',
+                        text: () => {
+                            const data = getState('async.data', {});
+                            return `✅ ${data.message} (${data.timestamp})`;
+                        }
+                    }
+                })
+            };
+        };
+
+        // ========================================
+        // DEMO APPLICATION WITH COMPONENT INJECTION
+        // ========================================
+
+        const DemoApp = (props, context) => {
+            const { getState, setState } = context;
+
+            // Helper functions
+            const toggleLogin = () => {
+                const current = getState('demo.isLoggedIn', false);
+                setState('demo.isLoggedIn', !current);
+            };
+
+            const setUserRole = (role) => {
+                setState('demo.userRole', role);
+            };
+
+            const setAsyncState = (state) => {
+                setState('demo.async.loading', false);
+                setState('demo.async.error', null);
+                setState('demo.async.data', null);
+
+                if (state === 'loading') {
+                    setState('demo.async.loading', true);
+                } else if (state === 'error') {
+                    setState('demo.async.error', 'Failed to load data');
+                } else if (state === 'success') {
+                    setState('demo.async.data', { message: 'Data loaded successfully!', timestamp: new Date().toLocaleTimeString() });
+                }
+            };
+
+            const nextStep = () => {
+                const current = getState('demo.wizard.step', 1);
+                if (current < 4) {
+                    setState('demo.wizard.step', current + 1);
+                }
+            };
+
+            const prevStep = () => {
+                const current = getState('demo.wizard.step', 1);
+                if (current > 1) {
+                    setState('demo.wizard.step', current - 1);
+                }
+            };
+
+            const setActiveTab = (tab) => {
+                setState('demo.activeTab', tab);
+            };
+
+            const toggleModal = () => {
+                const current = getState('demo.modal.isOpen', false);
+                setState('demo.modal.isOpen', !current);
+            };
+
+            const addTodo = () => {
+                const todos = getState('demo.todos', []);
+                const newTodo = { id: Date.now(), text: `Todo item ${todos.length + 1}` };
+                setState('demo.todos', [...todos, newTodo]);
+            };
+
+            const removeTodo = (id) => {
+                const todos = getState('demo.todos', []);
+                setState('demo.todos', todos.filter(todo => todo.id !== id));
+            };
+
+            const retryOperation = () => {
+                const current = getState('demo.retry.count', 0);
+                setState('demo.retry.count', current + 1);
+                setState('demo.retry.isRetrying', true);
+
+                setTimeout(() => {
+                    setState('demo.retry.isRetrying', false);
+                    if (current >= 2) { // Succeed after 3 attempts
+                        setState('demo.retry.error', null);
+                        setState('demo.retry.success', true);
+                    }
+                }, 1000);
+            };
+
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            // Header
+                            { h1: { text: '🏛️ Juris Control Flow with Component Injection' } },
+                            { p: { text: 'All control flow components have their child components injected at the layout level - making the entire application flow visible and self-documenting!' } },
+
+                            // Global Controls
+                            {
+                                Card: {
+                                    title: '🎛️ Global Demo Controls',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'flex',
+                                                children: [
+                                                    {
+                                                        Button: {
+                                                            text: () => getState('demo.isLoggedIn', false) ? 'Logout' : 'Login',
+                                                            onClick: toggleLogin,
+                                                            variant: 'btn-secondary'
+                                                        }
+                                                    },
+                                                    {
+                                                        select: {
+                                                            onchange: (e) => setUserRole(e.target.value),
+                                                            children: [
+                                                                { option: { value: 'guest', text: 'Guest' } },
+                                                                { option: { value: 'user', text: 'User' } },
+                                                                { option: { value: 'admin', text: 'Admin' } }
+                                                            ]
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 1. ConditionalRenderer Demo
+                            {
+                                Card: {
+                                    title: '1. ConditionalRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Shows different injected components based on login state:' } },
+                                        // 🎯 COMPONENTS INJECTED HERE - visible at layout level!
+                                        {
+                                            ConditionalRenderer: {
+                                                condition: () => getState('demo.isLoggedIn', false),
+                                                whenTrue: { SuccessMessage: { text: '✅ You are logged in!' } },
+                                                whenFalse: { ErrorMessage: { text: '❌ Please log in' } }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 2. SwitchRenderer Demo
+                            {
+                                Card: {
+                                    title: '2. SwitchRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Shows different injected components based on user role:' } },
+                                        // 🎯 COMPONENTS INJECTED HERE - all role options visible!
+                                        {
+                                            SwitchRenderer: {
+                                                value: () => getState('demo.userRole', 'guest'),
+                                                admin: { AdminPanel: {} },
+                                                user: {
+                                                    Card: {
+                                                        title: '👤 User Dashboard',
+                                                        children: { div: { text: 'Standard user features' } }
+                                                    }
+                                                },
+                                                guest: {
+                                                    Card: {
+                                                        title: '👋 Welcome',
+                                                        children: { div: { text: 'Please create an account' } }
+                                                    }
+                                                },
+                                                default: { ErrorMessage: { text: 'Unknown role' } }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 3. AsyncRenderer Demo
+                            {
+                                Card: {
+                                    title: '3. AsyncRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Handles loading, error, and success states with injected components:' } },
+                                        {
+                                            div: {
+                                                className: 'flex',
+                                                children: [
+                                                    { Button: { text: 'Show Loading', onClick: () => setAsyncState('loading') } },
+                                                    { Button: { text: 'Show Error', onClick: () => setAsyncState('error'), variant: 'btn-danger' } },
+                                                    { Button: { text: 'Show Success', onClick: () => setAsyncState('success'), variant: 'btn-success' } },
+                                                    { Button: { text: 'Reset', onClick: () => setAsyncState('reset'), variant: 'btn-secondary' } }
+                                                ]
+                                            }
+                                        },
+                                        // 🎯 COMPONENTS INJECTED HERE - all async states visible!
+                                        {
+                                            AsyncRenderer: {
+                                                loading: () => getState('demo.async.loading', false),
+                                                error: () => getState('demo.async.error', null),
+                                                data: () => getState('demo.async.data', null),
+                                                loadingComponent: { LoadingSpinner: { text: 'Loading data...' } },
+                                                errorComponent: { ErrorMessage: { text: () => getState('demo.async.error', '') } },
+                                                successComponent: { AsyncDataDisplay: {} },
+                                                emptyComponent: { InfoCard: { text: 'Click a button to test async states' } }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 4. ListRenderer Demo
+                            {
+                                Card: {
+                                    title: '4. ListRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Renders lists with injected item components and empty states:' } },
+                                        {
+                                            div: {
+                                                className: 'flex',
+                                                children: [
+                                                    { Button: { text: 'Add Todo', onClick: addTodo, variant: 'btn-success' } },
+                                                    { Button: { text: 'Clear All', onClick: () => setState('demo.todos', []), variant: 'btn-danger' } }
+                                                ]
+                                            }
+                                        },
+                                        // 🎯 COMPONENTS INJECTED HERE - ListItem and EmptyListMessage visible!
+                                        {
+                                            ListRenderer: {
+                                                items: () => getState('demo.todos', []),
+                                                empty: { EmptyListMessage: {} },
+                                                itemComponent: 'ListItem',
+                                                itemProps: (todo, index) => ({
+                                                    item: todo,
+                                                    onRemove: removeTodo
+                                                })
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 5. StepRenderer Demo
+                            {
+                                Card: {
+                                    title: '5. StepRenderer (Wizard) - Component Injection',
+                                    children: [
+                                        { p: { text: 'Multi-step wizard with injected step components:' } },
+                                        // 🎯 COMPONENTS INJECTED HERE - all step content visible!
+                                        {
+                                            StepRenderer: {
+                                                currentStep: () => getState('demo.wizard.step', 1),
+                                                totalSteps: 4,
+                                                steps: {
+                                                    1: { Card: { title: 'Step 1: Personal Info', children: { div: { text: 'Enter your personal information here' } } } },
+                                                    2: { Card: { title: 'Step 2: Contact Details', children: { div: { text: 'Enter your contact information here' } } } },
+                                                    3: { Card: { title: 'Step 3: Preferences', children: { div: { text: 'Set your preferences here' } } } },
+                                                    4: { Card: { title: 'Step 4: Review', children: { div: { text: 'Review and confirm your information' } } } }
+                                                },
+                                                onNext: nextStep,
+                                                onPrevious: prevStep
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 6. TabRenderer Demo
+                            {
+                                Card: {
+                                    title: '6. TabRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Tabbed interface with injected tab content:' } },
+                                        // 🎯 COMPONENTS INJECTED HERE - all tab content visible!
+                                        {
+                                            TabRenderer: {
+                                                activeTab: () => getState('demo.activeTab', 'profile'),
+                                                tabs: {
+                                                    profile: { Card: { title: '👤 Profile', children: { div: { text: 'User profile information' } } } },
+                                                    settings: { Card: { title: '⚙️ Settings', children: { div: { text: 'Application settings' } } } },
+                                                    billing: { Card: { title: '💳 Billing', children: { div: { text: 'Billing and payment info' } } } }
+                                                },
+                                                onTabChange: setActiveTab
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 7. ModalRenderer Demo
+                            {
+                                Card: {
+                                    title: '7. ModalRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Modal dialogs with injected content:' } },
+                                        { Button: { text: 'Open Modal', onClick: toggleModal } },
+                                        // 🎯 COMPONENTS INJECTED HERE - modal content visible!
+                                        {
+                                            ModalRenderer: {
+                                                isOpen: () => getState('demo.modal.isOpen', false),
+                                                onClose: toggleModal,
+                                                children: {
+                                                    Card: {
+                                                        title: '🪟 Modal Dialog',
+                                                        children: { div: { text: 'This is a modal dialog! Click the backdrop or close button to dismiss.' } }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 8. PermissionRenderer Demo
+                            {
+                                Card: {
+                                    title: '8. PermissionRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Shows different injected components based on user role:' } },
+                                        // 🎯 COMPONENTS INJECTED HERE - authorized and unauthorized content visible!
+                                        {
+                                            PermissionRenderer: {
+                                                userRole: () => getState('demo.userRole', 'guest'),
+                                                allowedRoles: ['admin'],
+                                                authorized: { SuccessMessage: { text: '🔓 Admin-only content visible!' } },
+                                                unauthorized: { ErrorMessage: { text: '🔒 Admin access required' } }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 9. RetryRenderer Demo
+                            {
+                                Card: {
+                                    title: '9. RetryRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Handles retry logic with injected state components:' } },
+                                        {
+                                            div: {
+                                                className: 'flex',
+                                                children: [
+                                                    {
+                                                        Button: {
+                                                            text: 'Reset Demo',
+                                                            onClick: () => {
+                                                                setState('demo.retry.error', 'Connection failed');
+                                                                setState('demo.retry.count', 0);
+                                                                setState('demo.retry.success', false);
+                                                                setState('demo.retry.isRetrying', false);
+                                                            },
+                                                            variant: 'btn-secondary'
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        // 🎯 COMPONENTS INJECTED HERE - retry states visible!
+                                        {
+                                            RetryRenderer: {
+                                                error: () => getState('demo.retry.error', null),
+                                                retryCount: () => getState('demo.retry.count', 0),
+                                                maxRetries: 3,
+                                                isRetrying: () => getState('demo.retry.isRetrying', false),
+                                                onRetry: retryOperation,
+                                                children: {
+                                                    ConditionalRenderer: {
+                                                        condition: () => getState('demo.retry.success', false),
+                                                        whenTrue: { SuccessMessage: { text: '🎉 Operation completed successfully!' } },
+                                                        whenFalse: { InfoCard: { text: 'Everything is working normally' } }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 10. MultiStateRenderer Demo
+                            {
+                                Card: {
+                                    title: '10. MultiStateRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Complex conditional rendering with injected priority components:' } },
+                                        {
+                                            div: {
+                                                className: 'flex',
+                                                children: [
+                                                    {
+                                                        Button: {
+                                                            text: 'Simulate Offline',
+                                                            onClick: () => setState('demo.multistate.offline', !getState('demo.multistate.offline', false)),
+                                                            variant: 'btn-secondary'
+                                                        }
+                                                    },
+                                                    {
+                                                        Button: {
+                                                            text: 'Simulate Maintenance',
+                                                            onClick: () => setState('demo.multistate.maintenance', !getState('demo.multistate.maintenance', false)),
+                                                            variant: 'btn-secondary'
+                                                        }
+                                                    },
+                                                    {
+                                                        Button: {
+                                                            text: 'Simulate Update',
+                                                            onClick: () => setState('demo.multistate.updateAvailable', !getState('demo.multistate.updateAvailable', false)),
+                                                            variant: 'btn-secondary'
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        // 🎯 COMPONENTS INJECTED HERE - all priority conditions visible!
+                                        {
+                                            MultiStateRenderer: {
+                                                conditions: [
+                                                    {
+                                                        when: () => getState('demo.multistate.offline', false),
+                                                        render: { div: { text: '📡 You are offline', className: 'offline-banner' } }
+                                                    },
+                                                    {
+                                                        when: () => getState('demo.multistate.maintenance', false),
+                                                        render: { ErrorMessage: { text: '🔧 System under maintenance' } }
+                                                    },
+                                                    {
+                                                        when: () => getState('demo.multistate.updateAvailable', false),
+                                                        render: { div: { text: '🔄 Update available', className: 'warning' } }
+                                                    }
+                                                ],
+                                                fallback: { SuccessMessage: { text: '✅ All systems operational' } }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // 11. RouteRenderer Demo
+                            {
+                                Card: {
+                                    title: '11. RouteRenderer - Component Injection',
+                                    children: [
+                                        { p: { text: 'Client-side routing with injected route components:' } },
+                                        {
+                                            div: {
+                                                className: 'flex',
+                                                children: [
+                                                    { Button: { text: 'Home', onClick: () => setState('router.currentRoute', '/') } },
+                                                    { Button: { text: 'About', onClick: () => setState('router.currentRoute', '/about') } },
+                                                    { Button: { text: 'Admin', onClick: () => setState('router.currentRoute', '/admin') } },
+                                                    { Button: { text: '404', onClick: () => setState('router.currentRoute', '/notfound') } }
+                                                ]
+                                            }
+                                        },
+                                        // 🎯 COMPONENTS INJECTED HERE - all route components visible!
+                                        {
+                                            RouteRenderer: {
+                                                '/': { HomePage: {} },
+                                                '/about': { AboutPage: {} },
+                                                '/admin': {
+                                                    PermissionRenderer: {
+                                                        allowedRoles: ['admin'],
+                                                        authorized: { AdminPanel: {} },
+                                                        unauthorized: { AccessDenied: {} }
+                                                    }
+                                                },
+                                                notFound: { NotFoundPage: {} }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // ========================================
+        // INITIALIZE APPLICATION
+        // ========================================
+
+        // Initialize Juris with all components
+        const app = new Juris({
+            renderMode: 'fine-grained', // Use fine-grained mode for compatibility
+            layout: { DemoApp: {} },
+            components: {
+                // Control Flow Components
+                ConditionalRenderer,
+                SwitchRenderer,
+                ListRenderer,
+                AsyncRenderer,
+                StepRenderer,
+                TabRenderer,
+                ModalRenderer,
+                MultiStateRenderer,
+                PermissionRenderer,
+                RetryRenderer,
+                RouteRenderer,
+
+                // UI Components
+                Button,
+                Card,
+                LoadingSpinner,
+                ErrorMessage,
+                SuccessMessage,
+                InfoCard,
+                AdminPanel,
+                AccessDenied,
+                HomePage,
+                AboutPage,
+                NotFoundPage,
+                ListItem,
+                EmptyListMessage,
+                AsyncDataDisplay,
+
+                // Main App
+                DemoApp
+            }
+        });
+
+        // Set initial demo state
+        app.setState('demo.isLoggedIn', false);
+        app.setState('demo.userRole', 'guest');
+        app.setState('demo.activeTab', 'profile');
+        app.setState('demo.wizard.step', 1);
+        app.setState('demo.todos', []);
+        app.setState('demo.retry.error', 'Connection failed');
+        app.setState('router.currentRoute', '/');
+
+        // Render the application
+        app.render('#app');
+
+        // Expose app globally for debugging
+        window.jurisApp = app;
+
+        console.log('🏛️ Juris Control Flow Library loaded successfully!');
+        console.log('Available components:', Object.keys(app.componentManager.components));
+        console.log('Try: window.jurisApp to access the app instance');
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juris Framework Playground</title>
+  <script src="juris.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+
+    .playground {
+      display: grid;
+      grid-template-columns: 300px 1fr 1fr;
+      height: 100vh;
+      gap: 1px;
+      background: #333;
+    }
+
+    .sidebar {
+      background: #252526;
+      padding: 20px;
+      overflow-y: auto;
+      border-right: 1px solid #333;
+    }
+
+    .sidebar h2 {
+      color: #ffffff;
+      margin-bottom: 20px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .samples-list {
+      list-style: none;
+    }
+
+    .sample-item {
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      background: #2d2d30;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .sample-item:hover {
+      background: #3e3e42;
+      border-left-color: #007acc;
+    }
+
+    .sample-item.active {
+      background: #094771;
+      border-left-color: #007acc;
+      color: #ffffff;
+    }
+
+    .sample-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .sample-description {
+      font-size: 12px;
+      color: #cccccc;
+      line-height: 1.4;
+    }
+
+    .code-panel {
+      background: #1e1e1e;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      background: #2d2d30;
+      padding: 12px 16px;
+      border-bottom: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .run-button {
+      background: #007acc;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s ease;
+    }
+
+    .run-button:hover {
+      background: #106ba3;
+    }
+
+    .editor-container {
+      flex: 1;
+      position: relative;
+    }
+
+    .preview-panel {
+      background: #1e1e1e;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tabs {
+      display: flex;
+      background: #2d2d30;
+      border-bottom: 1px solid #333;
+    }
+
+    .tab {
+      padding: 12px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .tab:hover {
+      background: #3e3e42;
+    }
+
+    .tab.active {
+      border-bottom-color: #007acc;
+      background: #094771;
+      color: #ffffff;
+    }
+
+    .tab-content {
+      flex: 1;
+      display: none;
+      overflow: auto;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .preview-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+    }
+
+    .code-display {
+      background: #2d2d2d;
+      color: #d4d4d4;
+      padding: 20px;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow: auto;
+      border-radius: 4px;
+    }
+
+    .html-highlighted {
+      background: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    /* Override Prism Tomorrow theme to match our dark theme better */
+    pre[class*="language-"] {
+      background: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: 14px !important;
+      line-height: 1.5 !important;
+    }
+
+    code[class*="language-"] {
+      background: transparent !important;
+      color: #d4d4d4 !important;
+    }
+
+    .error-display {
+      background: #5a1d1d;
+      border: 1px solid #be1100;
+      color: #f48fb1;
+      padding: 16px;
+      margin: 16px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #cccccc;
+    }
+
+    /* Syntax highlighting */
+    .keyword {
+      color: #569cd6;
+    }
+
+    .string {
+      color: #ce9178;
+    }
+
+    .number {
+      color: #b5cea8;
+    }
+
+    .comment {
+      color: #6a9955;
+    }
+
+    .function {
+      color: #dcdcaa;
+    }
+
+    .property {
+      color: #9cdcfe;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="playground">
+    <!-- Sidebar with samples -->
+    <div class="sidebar">
+      <h2>Code Samples</h2>
+      <ul class="samples-list" id="samplesList">
+        <!-- Samples will be populated by JavaScript -->
+      </ul>
+    </div>
+
+    <!-- Code Editor Panel -->
+    <div class="code-panel">
+      <div class="panel-header">
+        <span class="panel-title">Code Editor</span>
+        <button class="run-button" id="runButton">Run Code</button>
+      </div>
+      <div class="editor-container">
+        <div id="editor" style="height: 100%; width: 100%;"></div>
+      </div>
+    </div>
+
+    <!-- Preview Panel -->
+    <div class="preview-panel">
+      <div class="tabs">
+        <div class="tab active" data-tab="preview">Preview</div>
+        <div class="tab" data-tab="html">HTML</div>
+        <div class="tab" data-tab="css">CSS</div>
+      </div>
+
+      <div class="tab-content active" id="preview-tab">
+        <iframe class="preview-frame" id="previewFrame"></iframe>
+      </div>
+
+      <div class="tab-content" id="html-tab">
+        <div class="code-display" id="htmlDisplay"></div>
+      </div>
+
+      <div class="tab-content" id="css-tab">
+        <div class="code-display" id="cssDisplay">/* Styles are inlined in this demo.
+          * In a real Juris app, you'd use CSS classes:
+          *
+          * .hello-container { ... }
+          * .counter-display { ... }
+          * .todo-app { ... }
+          *
+          * This promotes better performance by keeping
+          * JavaScript bundle sizes smaller.
+          */</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monaco Editor -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+
+  <!-- Prism.js for syntax highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+  <!-- JS Beautify for HTML formatting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.9/beautify-html.min.js"></script>
+
+
+  <script>
+    // Sample code data
+    const samples = [
+      {
+        id: 'hello-world',
+        title: 'Hello World',
+        description: 'Basic Juris component with reactive text',
+        code: `// Hello World Example
+const HelloWorld = (props, context) => {
+  const { getState, setState } = context;
+  
+  return {
+    render: () => ({
+      div: {
+        className: 'hello-container',
+        children: [
+          {
+            h1: {
+              text: () => getState('message', 'Hello, Juris!'),
+              style: { color: '#007acc', textAlign: 'center' }
+            }
+          },
+          {
+            input: {
+              type: 'text',
+              placeholder: 'Edit message...',
+              value: () => getState('message', 'Hello, Juris!'),
+              oninput: (e) => setState('message', e.target.value),
+              style: { 
+                padding: '10px', 
+                fontSize: '16px',
+                width: '100%',
+                marginTop: '20px'
+              }
+            }
+          }
+        ]
+      }
+    })
+  };
+};
+
+// Initialize Juris
+const juris = new Juris({
+  components: { HelloWorld },
+  layout: {
+    div: {
+      children: [{ HelloWorld: {} }]
+    }
+  },
+  states: {
+    message: 'Hello, Juris Framework!'
+  }
+});
+
+juris.render('#app');`
+      },
+      {
+        id: 'counter',
+        title: 'Interactive Counter',
+        description: 'Counter with increment/decrement buttons',
+        code: `// Interactive Counter Example
+const Counter = (props, context) => {
+  const { getState, setState } = context;
+  
+  return {
+    render: () => ({
+      div: {
+        className: 'counter-container',
+        style: { 
+          textAlign: 'center', 
+          padding: '40px',
+          fontFamily: 'Arial, sans-serif'
+        },
+        children: [
+          {
+            h2: {
+              text: 'Counter Example',
+              style: { marginBottom: '30px', color: '#333' }
+            }
+          },
+          {
+            div: {
+              className: 'counter-display',
+              style: {
+                fontSize: '48px',
+                fontWeight: 'bold',
+                margin: '20px 0',
+                color: '#007acc'
+              },
+              text: () => getState('count', 0).toString()
+            }
+          },
+          {
+            div: {
+              className: 'button-group',
+              style: { margin: '20px 0' },
+              children: [
+                {
+                  button: {
+                    text: '-',
+                    onclick: () => setState('count', getState('count', 0) - 1),
+                    style: {
+                      fontSize: '24px',
+                      padding: '10px 20px',
+                      margin: '0 10px',
+                      background: '#e74c3c',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer'
+                    }
+                  }
+                },
+                {
+                  button: {
+                    text: '+',
+                    onclick: () => setState('count', getState('count', 0) + 1),
+                    style: {
+                      fontSize: '24px',
+                      padding: '10px 20px',
+                      margin: '0 10px',
+                      background: '#27ae60',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer'
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            button: {
+              text: 'Reset',
+              onclick: () => setState('count', 0),
+              style: {
+                fontSize: '16px',
+                padding: '8px 16px',
+                margin: '10px',
+                background: '#95a5a6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer'
+              }
+            }
+          }
+        ]
+      }
+    })
+  };
+};
+
+// Initialize Juris
+const juris = new Juris({
+  components: { Counter },
+  layout: {
+    div: {
+      children: [{ Counter: {} }]
+    }
+  },
+  states: {
+    count: 0
+  }
+});
+
+juris.render('#app');`
+      },
+      {
+        id: 'todo-list',
+        title: 'Todo List',
+        description: 'Dynamic list with add/remove functionality',
+        code: `// Todo List Example
+const TodoItem = (props, context) => {
+  const { getState, setState } = context;
+  
+  return {
+    render: () => ({
+      li: {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px',
+          borderBottom: '1px solid #eee'
+        },
+        children: [
+          {
+            input: {
+              type: 'checkbox',
+              checked: () => getState(\`todos.\${props.todoId}.completed\`, false),
+              onchange: (e) => setState(\`todos.\${props.todoId}.completed\`, e.target.checked),
+              style: { marginRight: '10px' }
+            }
+          },
+          {
+            span: {
+              text: () => getState(\`todos.\${props.todoId}.text\`, ''),
+              style: () => ({
+                textDecoration: getState(\`todos.\${props.todoId}.completed\`, false) ? 'line-through' : 'none',
+                flex: 1,
+                color: getState(\`todos.\${props.todoId}.completed\`, false) ? '#999' : '#333'
+              })
+            }
+          },
+          {
+            button: {
+              text: '×',
+              onclick: () => {
+                const todos = getState('todoList', []);
+                const newTodos = todos.filter(id => id !== props.todoId);
+                setState('todoList', newTodos);
+                setState(\`todos.\${props.todoId}\`, undefined);
+              },
+              style: {
+                background: '#e74c3c',
+                color: 'white',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '5px 10px',
+                cursor: 'pointer',
+                marginLeft: '10px'
+              }
+            }
+          }
+        ]
+      }
+    })
+  };
+};
+
+const TodoApp = (props, context) => {
+  const { getState, setState } = context;
+  
+  return {
+    render: () => ({
+      div: {
+        className: 'todo-app',
+        style: { 
+          maxWidth: '500px', 
+          margin: '20px auto', 
+          padding: '20px',
+          fontFamily: 'Arial, sans-serif'
+        },
+        children: [
+          {
+            h1: {
+              text: 'Todo List',
+              style: { textAlign: 'center', color: '#333', marginBottom: '30px' }
+            }
+          },
+          {
+            div: {
+              className: 'add-todo',
+              style: { display: 'flex', marginBottom: '20px' },
+              children: [
+                {
+                  input: {
+                    type: 'text',
+                    placeholder: 'Add a new todo...',
+                    value: () => getState('newTodoText', ''),
+                    oninput: (e) => setState('newTodoText', e.target.value),
+                    onkeypress: (e) => {
+                      if (e.key === 'Enter') {
+                        const text = getState('newTodoText', '').trim();
+                        if (text) {
+                          const todoId = Date.now().toString();
+                          setState(\`todos.\${todoId}\`, { text, completed: false });
+                          setState('todoList', [...getState('todoList', []), todoId]);
+                          setState('newTodoText', '');
+                        }
+                      }
+                    },
+                    style: {
+                      flex: 1,
+                      padding: '10px',
+                      fontSize: '16px',
+                      border: '2px solid #ddd',
+                      borderRadius: '5px',
+                      marginRight: '10px'
+                    }
+                  }
+                },
+                {
+                  button: {
+                    text: 'Add',
+                    onclick: () => {
+                      const text = getState('newTodoText', '').trim();
+                      if (text) {
+                        const todoId = Date.now().toString();
+                        setState(\`todos.\${todoId}\`, { text, completed: false });
+                        setState('todoList', [...getState('todoList', []), todoId]);
+                        setState('newTodoText', '');
+                      }
+                    },
+                    style: {
+                      padding: '10px 20px',
+                      fontSize: '16px',
+                      background: '#007acc',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer'
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            ul: {
+              style: { 
+                listStyle: 'none', 
+                padding: 0,
+                border: '1px solid #ddd',
+                borderRadius: '5px',
+                minHeight: '200px'
+              },
+              children: () => {
+                const todoIds = getState('todoList', []);
+                if (todoIds.length === 0) {
+                  return [{
+                    li: {
+                      text: 'No todos yet. Add one above!',
+                      style: {
+                        padding: '20px',
+                        textAlign: 'center',
+                        color: '#999',
+                        fontStyle: 'italic'
+                      }
+                    }
+                  }];
+                }
+                return todoIds.map(todoId => ({
+                  TodoItem: { todoId, key: todoId }
+                }));
+              }
+            }
+          }
+        ]
+      }
+    })
+  };
+};
+
+// Initialize Juris
+const juris = new Juris({
+  components: { TodoApp, TodoItem },
+  layout: {
+    div: {
+      children: [{ TodoApp: {} }]
+    }
+  },
+  states: {
+    todos: {},
+    todoList: [],
+    newTodoText: ''
+  }
+});
+
+juris.render('#app');`
+      },
+      {
+        id: 'form-validation',
+        title: 'Form Validation',
+        description: 'Form with real-time validation',
+        code: `// Form Validation Example
+const FormApp = (props, context) => {
+  const { getState, setState } = context;
+  
+  const validateEmail = (email) => {
+    const re = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+    return re.test(email);
+  };
+  
+  const validateForm = () => {
+    const name = getState('form.name', '').trim();
+    const email = getState('form.email', '').trim();
+    const password = getState('form.password', '');
+    
+    const errors = {};
+    
+    if (!name) errors.name = 'Name is required';
+    if (!email) {
+      errors.email = 'Email is required';
+    } else if (!validateEmail(email)) {
+      errors.email = 'Please enter a valid email';
+    }
+    if (!password) {
+      errors.password = 'Password is required';
+    } else if (password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    setState('form.errors', errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  return {
+    render: () => ({
+      div: {
+        className: 'form-container',
+        style: {
+          maxWidth: '400px',
+          margin: '20px auto',
+          padding: '30px',
+          background: '#f9f9f9',
+          borderRadius: '8px',
+          fontFamily: 'Arial, sans-serif'
+        },
+        children: [
+          {
+            h2: {
+              text: 'Registration Form',
+              style: { textAlign: 'center', marginBottom: '30px', color: '#333' }
+            }
+          },
+          {
+            form: {
+              onsubmit: (e) => {
+                e.preventDefault();
+                if (validateForm()) {
+                  setState('form.submitted', true);
+                  setState('form.message', 'Form submitted successfully!');
+                }
+              },
+              children: [
+                // Name field
+                {
+                  div: {
+                    className: 'field-group',
+                    style: { marginBottom: '20px' },
+                    children: [
+                      {
+                        label: {
+                          text: 'Name:',
+                          style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' }
+                        }
+                      },
+                      {
+                        input: {
+                          type: 'text',
+                          value: () => getState('form.name', ''),
+                          oninput: (e) => {
+                            setState('form.name', e.target.value);
+                            validateForm();
+                          },
+                          style: () => ({
+                            width: '100%',
+                            padding: '10px',
+                            fontSize: '16px',
+                            border: \`2px solid \${getState('form.errors.name') ? '#e74c3c' : '#ddd'}\`,
+                            borderRadius: '4px'
+                          })
+                        }
+                      },
+                      {
+                        div: {
+                          className: 'error-message',
+                          text: () => getState('form.errors.name', ''),
+                          style: () => ({
+                            color: '#e74c3c',
+                            fontSize: '14px',
+                            marginTop: '5px',
+                            display: getState('form.errors.name') ? 'block' : 'none'
+                          })
+                        }
+                      }
+                    ]
+                  }
+                },
+                // Email field
+                {
+                  div: {
+                    className: 'field-group',
+                    style: { marginBottom: '20px' },
+                    children: [
+                      {
+                        label: {
+                          text: 'Email:',
+                          style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' }
+                        }
+                      },
+                      {
+                        input: {
+                          type: 'email',
+                          value: () => getState('form.email', ''),
+                          oninput: (e) => {
+                            setState('form.email', e.target.value);
+                            validateForm();
+                          },
+                          style: () => ({
+                            width: '100%',
+                            padding: '10px',
+                            fontSize: '16px',
+                            border: \`2px solid \${getState('form.errors.email') ? '#e74c3c' : '#ddd'}\`,
+                            borderRadius: '4px'
+                          })
+                        }
+                      },
+                      {
+                        div: {
+                          className: 'error-message',
+                          text: () => getState('form.errors.email', ''),
+                          style: () => ({
+                            color: '#e74c3c',
+                            fontSize: '14px',
+                            marginTop: '5px',
+                            display: getState('form.errors.email') ? 'block' : 'none'
+                          })
+                        }
+                      }
+                    ]
+                  }
+                },
+                // Password field
+                {
+                  div: {
+                    className: 'field-group',
+                    style: { marginBottom: '20px' },
+                    children: [
+                      {
+                        label: {
+                          text: 'Password:',
+                          style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' }
+                        }
+                      },
+                      {
+                        input: {
+                          type: 'password',
+                          value: () => getState('form.password', ''),
+                          oninput: (e) => {
+                            setState('form.password', e.target.value);
+                            validateForm();
+                          },
+                          style: () => ({
+                            width: '100%',
+                            padding: '10px',
+                            fontSize: '16px',
+                            border: \`2px solid \${getState('form.errors.password') ? '#e74c3c' : '#ddd'}\`,
+                            borderRadius: '4px'
+                          })
+                        }
+                      },
+                      {
+                        div: {
+                          className: 'error-message',
+                          text: () => getState('form.errors.password', ''),
+                          style: () => ({
+                            color: '#e74c3c',
+                            fontSize: '14px',
+                            marginTop: '5px',
+                            display: getState('form.errors.password') ? 'block' : 'none'
+                          })
+                        }
+                      }
+                    ]
+                  }
+                },
+                // Submit button
+                {
+                  button: {
+                    type: 'submit',
+                    text: 'Submit',
+                    style: () => ({
+                      width: '100%',
+                      padding: '12px',
+                      fontSize: '16px',
+                      background: Object.keys(getState('form.errors', {})).length === 0 ? '#27ae60' : '#95a5a6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    })
+                  }
+                },
+                // Success message
+                {
+                  div: {
+                    className: 'success-message',
+                    text: () => getState('form.message', ''),
+                    style: () => ({
+                      marginTop: '20px',
+                      padding: '10px',
+                      background: '#d4edda',
+                      color: '#155724',
+                      borderRadius: '4px',
+                      textAlign: 'center',
+                      display: getState('form.submitted') ? 'block' : 'none'
+                    })
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    })
+  };
+};
+
+// Initialize Juris
+const juris = new Juris({
+  components: { FormApp },
+  layout: {
+    div: {
+      children: [{ FormApp: {} }]
+    }
+  },
+  states: {
+    form: {
+      name: '',
+      email: '',
+      password: '',
+      errors: {},
+      submitted: false,
+      message: ''
+    }
+  }
+});
+
+juris.render('#app');`
+      }
+    ];
+
+    let editor;
+    let currentSample = samples[0];
+
+    // Initialize Monaco Editor
+    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+      editor = monaco.editor.create(document.getElementById('editor'), {
+        value: currentSample.code,
+        language: 'javascript',
+        theme: 'vs-dark',
+        fontSize: 14,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        wordWrap: 'on'
+      });
+
+      // Auto-resize editor
+      window.addEventListener('resize', () => {
+        editor.layout();
+      });
+    });
+
+    // Populate samples list
+    function populateSamples() {
+      const samplesList = document.getElementById('samplesList');
+      samplesList.innerHTML = '';
+
+      samples.forEach((sample, index) => {
+        const li = document.createElement('li');
+        li.className = `sample-item ${index === 0 ? 'active' : ''}`;
+        li.innerHTML = `
+                    <div class="sample-title">${sample.title}</div>
+                    <div class="sample-description">${sample.description}</div>
+                `;
+        li.addEventListener('click', () => selectSample(sample));
+        samplesList.appendChild(li);
+      });
+    }
+
+    // Select sample
+    function selectSample(sample) {
+      currentSample = sample;
+
+      // Update active state
+      document.querySelectorAll('.sample-item').forEach(item => item.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      // Update editor
+      if (editor) {
+        editor.setValue(sample.code);
+      }
+
+      // Run the sample
+      runCode();
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetTab = tab.dataset.tab;
+
+        // Update active tab
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        // Update active content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`${targetTab}-tab`).classList.add('active');
+      });
+    });
+
+    // Run code
+    function runCode() {
+      try {
+        const code = editor ? editor.getValue() : currentSample.code;
+
+        // Create iframe for isolated execution
+        const iframe = document.getElementById('previewFrame');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+        const html = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body { 
+                                margin: 0; 
+                                padding: 20px; 
+                                font-family: 'Segoe UI', Arial, sans-serif;
+                                background: white;
+                                color: #333;
+                            }
+                            #app { 
+                                min-height: 200px; 
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div id="app"></div>
+                        <script src="juris.js"><\/script>
+                        <script>
+                            try {
+                                ${code}
+                                
+                                // After execution, send the rendered HTML back to parent
+                                setTimeout(() => {
+                                    const appElement = document.getElementById('app');
+                                    if (appElement) {
+                                        const renderedHTML = appElement.innerHTML;
+                                        window.parent.postMessage({
+                                            type: 'rendered-html',
+                                            html: renderedHTML
+                                        }, '*');
+                                    }
+                                }, 100);
+                                
+                            } catch (error) {
+                                document.getElementById('app').innerHTML = \`
+                                    <div style="background: #ffebee; border: 1px solid #f44336; color: #c62828; padding: 16px; border-radius: 4px; font-family: monospace;">
+                                        <strong>Error:</strong> \${error.message}
+                                    </div>
+                                \`;
+                                console.error('Execution error:', error);
+                                
+                                // Send error HTML back to parent
+                                window.parent.postMessage({
+                                    type: 'rendered-html',
+                                    html: document.getElementById('app').innerHTML
+                                }, '*');
+                            }
+                        <\/script>
+                    </body>
+                    </html>
+                `;
+
+        iframeDoc.open();
+        iframeDoc.write(html);
+        iframeDoc.close();
+
+      } catch (error) {
+        console.error('Error running code:', error);
+        const iframe = document.getElementById('previewFrame');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(`
+                    <div style="padding: 20px; color: #c62828; font-family: monospace;">
+                        <h3>Error:</h3>
+                        <pre>${error.message}</pre>
+                    </div>
+                `);
+        iframeDoc.close();
+
+        // Show error in HTML tab
+        updateHTMLDisplay('<div>Error loading preview</div>');
+      }
+    }
+
+    // Update HTML display with actual rendered content
+    function updateHTMLDisplay(renderedHTML) {
+      const htmlDisplay = document.getElementById('htmlDisplay');
+
+      if (!renderedHTML) {
+        htmlDisplay.innerHTML = '<span style="color: #888;">No content rendered</span>';
+        return;
+      }
+
+      // Debug: Check if js-beautify loaded
+      console.log('js-beautify available:', typeof window.html_beautify);
+      console.log('Raw HTML:', renderedHTML);
+
+      // Use js-beautify to properly format the HTML
+      let formattedHTML;
+      try {
+        if (window.html_beautify) {
+          formattedHTML = html_beautify(renderedHTML, {
+            indent_size: 2,
+            indent_char: ' ',
+            max_preserve_newlines: 1,
+            preserve_newlines: true,
+            keep_array_indentation: false,
+            break_chained_methods: false,
+            indent_scripts: 'normal',
+            brace_style: 'collapse',
+            space_before_conditional: true,
+            unescape_strings: false,
+            jslint_happy: false,
+            end_with_newline: false,
+            wrap_line_length: 0,
+            indent_inner_html: true,
+            comma_first: false,
+            e4x: false,
+            indent_empty_lines: false
+          });
+          console.log('Beautified HTML:', formattedHTML);
+        } else {
+          // Enhanced fallback formatter
+          formattedHTML = manuallyFormatHTML(renderedHTML);
+          console.log('Manually formatted HTML:', formattedHTML);
+        }
+      } catch (error) {
+        console.error('Formatting error:', error);
+        formattedHTML = manuallyFormatHTML(renderedHTML);
+      }
+
+      // Create a code element for Prism highlighting
+      const codeElement = document.createElement('code');
+      codeElement.className = 'language-html';
+      codeElement.textContent = formattedHTML;
+
+      // Clear and append
+      htmlDisplay.innerHTML = '';
+      htmlDisplay.appendChild(codeElement);
+
+      // Apply Prism highlighting
+      if (window.Prism) {
+        Prism.highlightElement(codeElement);
+      }
+    }
+
+    // Manual HTML formatter as fallback
+    function manuallyFormatHTML(html) {
+      // Clean up and split by tags
+      let formatted = html
+        .replace(/>\s*</g, '><')  // Remove spaces between tags
+        .replace(/></g, '>\n<');   // Add newlines between tags
+
+      const lines = formatted.split('\n');
+      let indentLevel = 0;
+      const indentChar = '  ';
+      const result = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        // Check if this is a closing tag
+        if (line.startsWith('</')) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        }
+
+        // Add the indented line
+        result.push(indentChar.repeat(indentLevel) + line);
+
+        // Check if we need to increase indent for next line
+        if (line.startsWith('<') && !line.startsWith('</') && !line.endsWith('/>')) {
+          // Check if it's a self-closing tag
+          const tagMatch = line.match(/<(\w+)/);
+          if (tagMatch) {
+            const tagName = tagMatch[1].toLowerCase();
+            const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+
+            if (!selfClosingTags.includes(tagName)) {
+              // Check if the tag closes on the same line
+              if (!line.includes(`</${tagName}>`)) {
+                indentLevel++;
+              }
+            }
+          }
+        }
+      }
+
+      return result.join('\n');
+    }
+
+    // Listen for messages from iframe with rendered HTML
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'rendered-html') {
+        updateHTMLDisplay(event.data.html);
+      }
+    });
+
+    // Run button event
+    document.getElementById('runButton').addEventListener('click', runCode);
+
+    // Initialize
+    populateSamples();
+
+    // Auto-run first sample when editor is ready
+    const checkEditor = setInterval(() => {
+      if (editor) {
+        clearInterval(checkEditor);
+        runCode();
+      }
+    }, 100);
+  </script>
+</body>
+
+<script src="./juris.js"></script>
+
+</html>

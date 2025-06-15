@@ -1,0 +1,3516 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Store - Premium E-commerce Experience</title>
+
+    <!-- Styles -->
+    <style>
+        /* ==================== RESET & ROOT VARIABLES ==================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Orange theme colors */
+            --orange: #ff6b35;
+            --orange-light: #ff8c5a;
+            --orange-dark: #e55a2b;
+            --orange-pale: #fff4f1;
+
+            /* Semantic colors */
+            --primary: #ff6b35;
+            --primary-dark: #e55a2b;
+            --primary-light: #ff8c5a;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+
+            /* Grayscale */
+            --white: #ffffff;
+            --gray-50: #fafafa;
+            --gray-100: #f5f5f5;
+            --gray-200: #e5e5e5;
+            --gray-300: #d4d4d4;
+            --gray-400: #a3a3a3;
+            --gray-500: #6b7280;
+            --gray-600: #525252;
+            --gray-700: #404040;
+            --gray-800: #262626;
+            --gray-900: #171717;
+
+            /* Shadows */
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+            /* Borders */
+            --border-radius: 0.5rem;
+            --border-radius-lg: 0.75rem;
+            --border-radius-xl: 1rem;
+        }
+
+        /* ==================== BASE STYLES ==================== */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--gray-900);
+            background: var(--gray-50);
+            font-size: 14px;
+        }
+
+        /* ==================== LAYOUT ==================== */
+        .ecommerce-layout {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        @media (min-width: 640px) {
+            .container {
+                padding: 0 2rem;
+            }
+        }
+
+        /* ==================== HEADER ==================== */
+        .header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 4rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--orange);
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 1rem;
+        }
+
+        .nav {
+            display: none;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        @media (min-width: 768px) {
+            .nav {
+                display: flex;
+            }
+        }
+
+        .nav-link {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: var(--orange);
+        }
+
+        .nav-link.active {
+            color: var(--orange);
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1rem;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--orange);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .search-container {
+            position: relative;
+            display: none;
+        }
+
+        @media (min-width: 640px) {
+            .search-container {
+                display: block;
+            }
+        }
+
+        .search-input {
+            width: 300px;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--border-radius-lg);
+            font-size: 0.875rem;
+            background: var(--gray-50);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+            background: var(--white);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+            font-size: 1rem;
+        }
+
+        .cart-button {
+            position: relative;
+            background: none;
+            border: none;
+            color: var(--gray-600);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--border-radius);
+            transition: all 0.2s;
+        }
+
+        .cart-button:hover {
+            background: var(--gray-100);
+            color: var(--orange);
+        }
+
+        .cart-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--orange);
+            color: var(--white);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.125rem 0.375rem;
+            border-radius: 1rem;
+            min-width: 1.25rem;
+            text-align: center;
+        }
+
+        .mobile-menu-btn {
+            display: block;
+            background: none;
+            border: none;
+            color: var(--gray-600);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--border-radius);
+        }
+
+        @media (min-width: 768px) {
+            .mobile-menu-btn {
+                display: none;
+            }
+        }
+
+        /* ==================== MAIN CONTENT ==================== */
+        .main-content {
+            padding: 2rem 0;
+            min-height: calc(100vh - 8rem);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem 0;
+            }
+        }
+
+        /* ==================== HERO SECTION ==================== */
+        .hero {
+            background: linear-gradient(135deg, var(--orange-pale) 0%, var(--white) 100%);
+            padding: 4rem 0;
+            text-align: center;
+            margin-bottom: 3rem;
+            border-radius: var(--border-radius-xl);
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: var(--gray-900);
+            line-height: 1.1;
+        }
+
+        @media (min-width: 768px) {
+            .hero-title {
+                font-size: 3.5rem;
+            }
+        }
+
+        .hero-subtitle {
+            font-size: 1.125rem;
+            color: var(--gray-600);
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-cta {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        @media (min-width: 640px) {
+            .hero-cta {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+
+        /* ==================== PRODUCT GRID ==================== */
+        .products-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .products-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 1rem;
+            }
+        }
+
+        /* ==================== PRODUCT CARD ==================== */
+        .product-card {
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .product-card:hover {
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-4px);
+            border-color: var(--orange-light);
+        }
+
+        .product-image-container {
+            position: relative;
+            aspect-ratio: 1;
+            overflow: hidden;
+            background: var(--gray-100);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-image {
+            transform: scale(1.05);
+        }
+
+        .product-badge {
+            position: absolute;
+            top: 0.75rem;
+            left: 0.75rem;
+            background: var(--orange);
+            color: var(--white);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--border-radius);
+        }
+
+        .product-wishlist {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: var(--white);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: var(--shadow);
+        }
+
+        .product-wishlist:hover {
+            background: var(--orange);
+            color: var(--white);
+            transform: scale(1.1);
+        }
+
+        .product-content {
+            padding: 1.25rem;
+        }
+
+        .product-category {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .product-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .product-stars {
+            color: var(--warning);
+            font-size: 0.875rem;
+        }
+
+        .product-rating-text {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .product-price {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .product-price-current {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .product-price-original {
+            font-size: 1rem;
+            color: var(--gray-500);
+            text-decoration: line-through;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* ==================== BUTTONS ==================== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--orange);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--orange-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--orange);
+            border: 1px solid var(--orange);
+        }
+
+        .btn-outline:hover {
+            background: var(--orange);
+            color: var(--white);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-lg {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .btn-icon {
+            padding: 0.75rem;
+            aspect-ratio: 1;
+        }
+
+        /* ==================== CART SIDEBAR ==================== */
+        .cart-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .cart-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .cart-sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: var(--white);
+            box-shadow: var(--shadow-xl);
+            z-index: 1001;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (max-width: 480px) {
+            .cart-sidebar {
+                width: 100vw;
+                right: -100vw;
+            }
+        }
+
+        .cart-sidebar.open {
+            right: 0;
+        }
+
+        .cart-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .cart-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray-600);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: var(--border-radius);
+        }
+
+        .cart-close:hover {
+            background: var(--gray-100);
+        }
+
+        .cart-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .cart-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+            background: var(--gray-50);
+        }
+
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .cart-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray-500);
+        }
+
+        /* ==================== CART ITEMS ==================== */
+        .cart-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-item-image {
+            width: 80px;
+            height: 80px;
+            border-radius: var(--border-radius);
+            object-fit: cover;
+            background: var(--gray-100);
+        }
+
+        .cart-item-content {
+            flex: 1;
+        }
+
+        .cart-item-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+
+        .cart-item-price {
+            color: var(--orange);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .cart-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quantity-btn {
+            background: var(--gray-100);
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        .quantity-btn:hover {
+            background: var(--gray-200);
+        }
+
+        .quantity-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .quantity-display {
+            font-weight: 600;
+            min-width: 2rem;
+            text-align: center;
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0.25rem;
+            border-radius: var(--border-radius);
+        }
+
+        .remove-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* ==================== CATEGORIES ==================== */
+        .categories-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .category-btn {
+            background: var(--white);
+            border: 1px solid var(--gray-300);
+            color: var(--gray-700);
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius-lg);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .category-btn:hover {
+            border-color: var(--orange);
+            color: var(--orange);
+        }
+
+        .category-btn.active {
+            background: var(--orange);
+            color: var(--white);
+            border-color: var(--orange);
+        }
+
+        /* ==================== FILTERS ==================== */
+        .filters-section {
+            background: var(--white);
+            padding: 1.5rem;
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--gray-200);
+            margin-bottom: 2rem;
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .filters-title {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .filters-clear {
+            color: var(--orange);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .filter-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-label {
+            display: block;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .price-range {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .price-input {
+            width: 80px;
+            padding: 0.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+        }
+
+        /* ==================== PRODUCT DETAIL ==================== */
+        .product-detail {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .product-detail {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+        }
+
+        .product-gallery {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 640px) {
+            .product-gallery {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .gallery-thumbnails {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .gallery-thumbnails {
+                flex-direction: row;
+                order: 2;
+            }
+        }
+
+        .gallery-thumbnail {
+            width: 80px;
+            height: 80px;
+            border-radius: var(--border-radius);
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .gallery-thumbnail.active {
+            border-color: var(--orange);
+        }
+
+        .gallery-main {
+            aspect-ratio: 1;
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            background: var(--gray-100);
+        }
+
+        .gallery-main-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 1rem 0;
+        }
+
+        .product-detail-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 1rem;
+        }
+
+        .product-detail-price {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .product-detail-price-current {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--orange);
+        }
+
+        .product-detail-price-original {
+            font-size: 1.5rem;
+            color: var(--gray-500);
+            text-decoration: line-through;
+        }
+
+        .product-detail-description {
+            color: var(--gray-600);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .product-options {
+            margin-bottom: 2rem;
+        }
+
+        .option-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .option-label {
+            display: block;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.75rem;
+        }
+
+        .option-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .option-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--gray-300);
+            background: var(--white);
+            color: var(--gray-700);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            border-color: var(--orange);
+        }
+
+        .option-btn.active {
+            background: var(--orange);
+            color: var(--white);
+            border-color: var(--orange);
+        }
+
+        /* ==================== FOOTER ==================== */
+        .footer {
+            background: var(--gray-800);
+            color: var(--gray-300);
+            padding: 3rem 0 1rem;
+            margin-top: 3rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h3 {
+            color: var(--white);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .footer-section p,
+        .footer-section a {
+            color: var(--gray-400);
+            text-decoration: none;
+            line-height: 1.6;
+        }
+
+        .footer-section a:hover {
+            color: var(--orange);
+        }
+
+        .footer-bottom {
+            padding-top: 2rem;
+            border-top: 1px solid var(--gray-700);
+            text-align: center;
+            color: var(--gray-500);
+        }
+
+        /* ==================== UTILITIES ==================== */
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .text-xs {
+            font-size: 0.75rem;
+        }
+
+        .font-semibold {
+            font-weight: 600;
+        }
+
+        .font-bold {
+            font-weight: 700;
+        }
+
+        .mb-2 {
+            margin-bottom: 0.5rem;
+        }
+
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+
+        .mb-6 {
+            margin-bottom: 1.5rem;
+        }
+
+        .mt-4 {
+            margin-top: 1rem;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        .gap-4 {
+            gap: 1rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* ==================== RESPONSIVE UTILITIES ==================== */
+        @media (max-width: 767px) {
+            .hidden-mobile {
+                display: none !important;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .hidden-desktop {
+                display: none !important;
+            }
+        }
+
+        /* ==================== ANIMATIONS ==================== */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .slide-in-right {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        /* ==================== LOADING STATES ==================== */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--gray-200) 25%, var(--gray-100) 50%, var(--gray-200) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: var(--border-radius);
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* ==================== TOUCH OPTIMIZATIONS ==================== */
+        @media (max-width: 768px) {
+
+            button,
+            [onclick],
+            .btn,
+            .nav-link {
+                min-height: 44px !important;
+                touch-action: manipulation !important;
+                user-select: none !important;
+                -webkit-tap-highlight-color: transparent !important;
+                -webkit-touch-callout: none !important;
+            }
+
+            input,
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+        }
+
+        /* ==================== ACCESSIBILITY ==================== */
+        .btn:focus,
+        .nav-link:focus,
+        input:focus,
+        select:focus {
+            outline: 2px solid var(--orange);
+            outline-offset: 2px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="https://images.unsplash.com">
+
+    <!-- Meta tags for SEO -->
+    <meta name="description"
+        content="Premium e-commerce store built with Juris framework featuring the latest products at unbeatable prices.">
+    <meta name="keywords" content="ecommerce, shopping, electronics, clothing, accessories, juris framework">
+
+    <!-- Open Graph tags -->
+    <meta property="og:title" content="Juris Store - Premium E-commerce">
+    <meta property="og:description" content="Discover amazing products at unbeatable prices">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://your-domain.com">
+
+    <!-- Favicon -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#ff6b35">
+
+    <!-- Apple specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Juris Store">
+</head>
+
+<body>
+    <!-- App container -->
+    <div id="app">
+        <!-- Loading state -->
+        <div style="
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #6b7280;
+        ">
+            <div style="text-align: center;">
+                <div style="
+                    width: 60px; 
+                    height: 60px; 
+                    margin: 0 auto 1rem; 
+                    border: 4px solid #e5e5e5; 
+                    border-top: 4px solid #ff6b35; 
+                    border-radius: 50%; 
+                    animation: spin 1s linear infinite;
+                "></div>
+                <p>Loading Juris Store...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading animation styles -->
+    <style>
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+    <!-- Juris Framework -->
+    <script src="juris.js"></script>
+
+    <!-- Application Components -->
+    <!--<script src="components.js"></script -->
+
+    <!-- Application Logic -->
+    <!--<script src="app.js"></script -->
+
+    <!-- Service Worker for PWA capabilities (optional) -->
+    <script>
+
+        // ==================== HEADLESS COMPONENTS ====================
+
+        // Navigation Manager
+        const NavigationManager = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('🧭 NavigationManager initializing...');
+                        handleRouteChange();
+                        window.addEventListener('hashchange', handleRouteChange);
+                    }
+                },
+
+                api: {
+                    navigate: (route) => {
+                        window.location.hash = route;
+                        setState('ui.currentRoute', route);
+                        console.log('🧭 Navigated to:', route);
+                    }
+                }
+            };
+
+            function handleRouteChange() {
+                const hash = window.location.hash.substring(1) || '/';
+                setState('ui.currentRoute', hash);
+                console.log('🧭 Route changed to:', hash);
+            }
+        };
+
+        // Product Manager
+        const ProductManager = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('📦 ProductManager initializing...');
+                        loadProducts();
+                        loadCategories();
+                    }
+                },
+
+                api: {
+                    loadProduct: (productId) => loadProductDetail(productId),
+                    searchProducts: (query) => searchProducts(query),
+                    filterByCategory: (categoryId) => filterByCategory(categoryId),
+                    applyFilters: () => applyFilters(),
+                    clearFilters: () => clearFilters()
+                }
+            };
+
+            function loadProducts() {
+                // Mock product data
+                const products = [
+                    {
+                        id: '1',
+                        title: 'Premium Wireless Headphones',
+                        price: 299.99,
+                        originalPrice: 399.99,
+                        category: 'electronics',
+                        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop',
+                        images: [
+                            'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop',
+                            'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600&h=600&fit=crop'
+                        ],
+                        rating: 4.5,
+                        reviews: 128,
+                        badge: 'Sale',
+                        description: 'Experience premium sound quality with these wireless headphones featuring active noise cancellation and 30-hour battery life.',
+                        options: {
+                            color: ['Black', 'White', 'Silver'],
+                            size: ['Regular', 'Large']
+                        }
+                    },
+                    {
+                        id: '2',
+                        title: 'Smart Fitness Watch',
+                        price: 199.99,
+                        category: 'electronics',
+                        image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop',
+                        rating: 4.2,
+                        reviews: 89,
+                        description: 'Track your fitness goals with this advanced smartwatch featuring heart rate monitoring and GPS.',
+                        options: {
+                            color: ['Black', 'Rose Gold', 'Silver'],
+                            band: ['Sport', 'Leather', 'Metal']
+                        }
+                    },
+                    {
+                        id: '3',
+                        title: 'Organic Cotton T-Shirt',
+                        price: 29.99,
+                        originalPrice: 39.99,
+                        category: 'clothing',
+                        image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop',
+                        rating: 4.7,
+                        reviews: 245,
+                        badge: 'Eco-Friendly',
+                        description: 'Comfortable and sustainable organic cotton t-shirt perfect for everyday wear.',
+                        options: {
+                            size: ['XS', 'S', 'M', 'L', 'XL'],
+                            color: ['White', 'Black', 'Navy', 'Gray']
+                        }
+                    },
+                    {
+                        id: '4',
+                        title: 'Professional Coffee Maker',
+                        price: 149.99,
+                        category: 'home',
+                        image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=300&fit=crop',
+                        rating: 4.4,
+                        reviews: 167,
+                        description: 'Brew the perfect cup of coffee every time with this professional-grade coffee maker.',
+                        options: {
+                            capacity: ['6 cups', '12 cups'],
+                            color: ['Black', 'Stainless Steel']
+                        }
+                    },
+                    {
+                        id: '5',
+                        title: 'Leather Laptop Bag',
+                        price: 89.99,
+                        category: 'accessories',
+                        image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop',
+                        rating: 4.6,
+                        reviews: 78,
+                        description: 'Premium leather laptop bag with multiple compartments for organization.',
+                        options: {
+                            size: ['13"', '15"', '17"'],
+                            color: ['Brown', 'Black', 'Tan']
+                        }
+                    },
+                    {
+                        id: '6',
+                        title: 'Yoga Mat Pro',
+                        price: 49.99,
+                        category: 'sports',
+                        image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=300&h=300&fit=crop',
+                        rating: 4.8,
+                        reviews: 312,
+                        badge: 'Best Seller',
+                        description: 'Non-slip yoga mat with superior cushioning for all types of yoga practice.',
+                        options: {
+                            thickness: ['4mm', '6mm', '8mm'],
+                            color: ['Purple', 'Blue', 'Pink', 'Green']
+                        }
+                    }
+                ];
+
+                setState('products.all', products);
+                setState('products.filtered', products);
+                setState('products.featured', products.slice(0, 6));
+
+                console.log('📦 Products loaded:', products.length);
+            }
+
+            function loadCategories() {
+                const categories = [
+                    {
+                        id: 'electronics',
+                        name: 'Electronics',
+                        image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=300&h=300&fit=crop',
+                        productCount: 2
+                    },
+                    {
+                        id: 'clothing',
+                        name: 'Clothing',
+                        image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=300&h=300&fit=crop',
+                        productCount: 1
+                    },
+                    {
+                        id: 'home',
+                        name: 'Home & Kitchen',
+                        image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=300&fit=crop',
+                        productCount: 1
+                    },
+                    {
+                        id: 'accessories',
+                        name: 'Accessories',
+                        image: 'https://images.unsplash.com/photo-1584382296087-ac00c7263710?w=300&h=300&fit=crop',
+                        productCount: 1
+                    },
+                    {
+                        id: 'sports',
+                        name: 'Sports & Fitness',
+                        image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop',
+                        productCount: 1
+                    }
+                ];
+
+                setState('products.categories', categories);
+                console.log('📂 Categories loaded:', categories.length);
+            }
+
+            function loadProductDetail(productId) {
+                const products = getState('products.all', []);
+                const product = products.find(p => p.id === productId);
+
+                if (product) {
+                    setState('products.current', product);
+                    setState('ui.activeImage', 0);
+                    setState('ui.selectedOptions', {});
+                    console.log('📦 Product loaded:', product.title);
+                } else {
+                    console.warn('📦 Product not found:', productId);
+                }
+            }
+
+            function searchProducts(query) {
+                const allProducts = getState('products.all', []);
+
+                if (!query.trim()) {
+                    setState('products.filtered', allProducts);
+                    return;
+                }
+
+                const filtered = allProducts.filter(product =>
+                    product.title.toLowerCase().includes(query.toLowerCase()) ||
+                    product.category.toLowerCase().includes(query.toLowerCase()) ||
+                    product.description.toLowerCase().includes(query.toLowerCase())
+                );
+
+                setState('products.filtered', filtered);
+                console.log('🔍 Search results:', filtered.length);
+            }
+
+            function filterByCategory(categoryId) {
+                const allProducts = getState('products.all', []);
+                setState('ui.activeCategory', categoryId);
+
+                if (categoryId === 'all') {
+                    setState('products.filtered', allProducts);
+                } else {
+                    const filtered = allProducts.filter(product => product.category === categoryId);
+                    setState('products.filtered', filtered);
+                }
+
+                console.log('📂 Filtered by category:', categoryId);
+            }
+
+            function applyFilters() {
+                const allProducts = getState('products.all', []);
+                const minPrice = parseFloat(getState('filters.minPrice', '')) || 0;
+                const maxPrice = parseFloat(getState('filters.maxPrice', '')) || Infinity;
+                const activeCategory = getState('ui.activeCategory', 'all');
+
+                let filtered = allProducts;
+
+                // Category filter
+                if (activeCategory !== 'all') {
+                    filtered = filtered.filter(product => product.category === activeCategory);
+                }
+
+                // Price filter
+                filtered = filtered.filter(product =>
+                    product.price >= minPrice && product.price <= maxPrice
+                );
+
+                setState('products.filtered', filtered);
+                console.log('🔧 Filters applied, results:', filtered.length);
+            }
+
+            function clearFilters() {
+                setState('filters.minPrice', '');
+                setState('filters.maxPrice', '');
+                setState('ui.activeCategory', 'all');
+                setState('products.filtered', getState('products.all', []));
+                console.log('🔧 Filters cleared');
+            }
+        };
+
+        // Cart Manager
+        const CartManager = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('🛒 CartManager initializing...');
+                        loadCart();
+                    }
+                },
+
+                api: {
+                    addToCart: (product) => addToCart(product),
+                    removeFromCart: (cartId) => removeFromCart(cartId),
+                    updateQuantity: (cartId, quantity) => updateQuantity(cartId, quantity),
+                    clearCart: () => clearCart(),
+                    toggleCart: () => toggleCart(),
+                    closeCart: () => closeCart()
+                }
+            };
+
+            function loadCart() {
+                const savedCart = localStorage.getItem('juris_store_cart');
+                if (savedCart) {
+                    try {
+                        const cartData = JSON.parse(savedCart);
+                        setState('cart.items', cartData.items || []);
+                        updateCartStats();
+                        console.log('🛒 Cart loaded from storage');
+                    } catch (error) {
+                        console.warn('🛒 Failed to load cart:', error);
+                    }
+                }
+            }
+
+            function saveCart() {
+                const items = getState('cart.items', []);
+                localStorage.setItem('juris_store_cart', JSON.stringify({ items }));
+            }
+
+            function addToCart(product) {
+                const items = getState('cart.items', []);
+                const selectedOptions = getState('ui.selectedOptions', {});
+
+                // Create unique cart ID based on product and options
+                const optionsString = Object.entries(selectedOptions)
+                    .sort()
+                    .map(([key, value]) => `${key}:${value}`)
+                    .join('|');
+                const cartId = `${product.id}_${optionsString}`;
+
+                // Check if item already exists
+                const existingItemIndex = items.findIndex(item => item.cartId === cartId);
+
+                if (existingItemIndex !== -1) {
+                    // Update quantity
+                    const updatedItems = [...items];
+                    updatedItems[existingItemIndex].quantity += 1;
+                    setState('cart.items', updatedItems);
+                } else {
+                    // Add new item
+                    const newItem = {
+                        cartId,
+                        id: product.id,
+                        title: product.title,
+                        price: product.price,
+                        image: product.image,
+                        quantity: 1,
+                        selectedOptions
+                    };
+                    setState('cart.items', [...items, newItem]);
+                }
+
+                updateCartStats();
+                saveCart();
+
+                // Show cart briefly
+                setState('cart.isOpen', true);
+                setTimeout(() => setState('cart.isOpen', false), 2000);
+
+                console.log('🛒 Added to cart:', product.title);
+            }
+
+            function removeFromCart(cartId) {
+                const items = getState('cart.items', []);
+                const updatedItems = items.filter(item => item.cartId !== cartId);
+                setState('cart.items', updatedItems);
+                updateCartStats();
+                saveCart();
+                console.log('🛒 Removed from cart:', cartId);
+            }
+
+            function updateQuantity(cartId, quantity) {
+                if (quantity <= 0) {
+                    removeFromCart(cartId);
+                    return;
+                }
+
+                const items = getState('cart.items', []);
+                const updatedItems = items.map(item =>
+                    item.cartId === cartId ? { ...item, quantity } : item
+                );
+                setState('cart.items', updatedItems);
+                updateCartStats();
+                saveCart();
+                console.log('🛒 Updated quantity:', cartId, quantity);
+            }
+
+            function clearCart() {
+                setState('cart.items', []);
+                updateCartStats();
+                saveCart();
+                console.log('🛒 Cart cleared');
+            }
+
+            function updateCartStats() {
+                const items = getState('cart.items', []);
+                const itemCount = items.reduce((total, item) => total + item.quantity, 0);
+                const totalAmount = items.reduce((total, item) => total + (item.price * item.quantity), 0);
+
+                setState('cart.itemCount', itemCount);
+                setState('cart.totalAmount', totalAmount);
+            }
+
+            function toggleCart() {
+                const isOpen = getState('cart.isOpen', false);
+                setState('cart.isOpen', !isOpen);
+            }
+
+            function closeCart() {
+                setState('cart.isOpen', false);
+            }
+        };
+
+        // Wishlist Manager
+        const WishlistManager = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('❤️ WishlistManager initializing...');
+                        loadWishlist();
+                    }
+                },
+
+                api: {
+                    toggleWishlist: (productId) => toggleWishlist(productId),
+                    clearWishlist: () => clearWishlist()
+                }
+            };
+
+            function loadWishlist() {
+                const savedWishlist = localStorage.getItem('juris_store_wishlist');
+                if (savedWishlist) {
+                    try {
+                        const wishlistData = JSON.parse(savedWishlist);
+                        setState('wishlist.items', wishlistData.items || []);
+                        console.log('❤️ Wishlist loaded from storage');
+                    } catch (error) {
+                        console.warn('❤️ Failed to load wishlist:', error);
+                    }
+                }
+            }
+
+            function saveWishlist() {
+                const items = getState('wishlist.items', []);
+                localStorage.setItem('juris_store_wishlist', JSON.stringify({ items }));
+            }
+
+            function toggleWishlist(productId) {
+                const items = getState('wishlist.items', []);
+
+                if (items.includes(productId)) {
+                    // Remove from wishlist
+                    const updatedItems = items.filter(id => id !== productId);
+                    setState('wishlist.items', updatedItems);
+                    console.log('❤️ Removed from wishlist:', productId);
+                } else {
+                    // Add to wishlist
+                    setState('wishlist.items', [...items, productId]);
+                    console.log('❤️ Added to wishlist:', productId);
+                }
+
+                saveWishlist();
+            }
+
+            function clearWishlist() {
+                setState('wishlist.items', []);
+                saveWishlist();
+                console.log('❤️ Wishlist cleared');
+            }
+        };
+
+        // Theme Manager
+        const ThemeManager = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('🎨 ThemeManager initializing...');
+                        loadTheme();
+                    }
+                },
+
+                api: {
+                    toggleTheme: () => toggleTheme(),
+                    setTheme: (theme) => setTheme(theme)
+                }
+            };
+
+            function loadTheme() {
+                const savedTheme = localStorage.getItem('juris_store_theme') || 'light';
+                setState('ui.theme', savedTheme);
+                applyTheme(savedTheme);
+            }
+
+            function toggleTheme() {
+                const currentTheme = getState('ui.theme', 'light');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                setTheme(newTheme);
+            }
+
+            function setTheme(theme) {
+                setState('ui.theme', theme);
+                applyTheme(theme);
+                localStorage.setItem('juris_store_theme', theme);
+                console.log('🎨 Theme changed to:', theme);
+            }
+
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        };
+
+        // Analytics Manager
+        const AnalyticsManager = (props, context) => {
+            const { getState, setState } = context;
+
+            return {
+                hooks: {
+                    onRegister: () => {
+                        console.log('📊 AnalyticsManager initializing...');
+                        initializeAnalytics();
+                    }
+                },
+
+                api: {
+                    trackPageView: (page) => trackPageView(page),
+                    trackProductView: (productId) => trackProductView(productId),
+                    trackAddToCart: (productId) => trackAddToCart(productId),
+                    trackPurchase: (orderData) => trackPurchase(orderData),
+                    getAnalytics: () => getAnalytics()
+                }
+            };
+
+            function initializeAnalytics() {
+                // Initialize analytics data structure
+                const defaultAnalytics = {
+                    pageViews: {},
+                    productViews: {},
+                    cartActions: [],
+                    purchases: [],
+                    sessionStart: Date.now()
+                };
+
+                const savedAnalytics = localStorage.getItem('juris_store_analytics');
+                const analytics = savedAnalytics ? JSON.parse(savedAnalytics) : defaultAnalytics;
+
+                setState('analytics', analytics);
+            }
+
+            function saveAnalytics() {
+                const analytics = getState('analytics', {});
+                localStorage.setItem('juris_store_analytics', JSON.stringify(analytics));
+            }
+
+            function trackPageView(page) {
+                const analytics = getState('analytics', {});
+                const pageViews = analytics.pageViews || {};
+
+                pageViews[page] = (pageViews[page] || 0) + 1;
+
+                setState('analytics.pageViews', pageViews);
+                saveAnalytics();
+                console.log('📊 Page view tracked:', page);
+            }
+
+            function trackProductView(productId) {
+                const analytics = getState('analytics', {});
+                const productViews = analytics.productViews || {};
+
+                productViews[productId] = (productViews[productId] || 0) + 1;
+
+                setState('analytics.productViews', productViews);
+                saveAnalytics();
+                console.log('📊 Product view tracked:', productId);
+            }
+
+            function trackAddToCart(productId) {
+                const analytics = getState('analytics', {});
+                const cartActions = analytics.cartActions || [];
+
+                cartActions.push({
+                    action: 'add_to_cart',
+                    productId,
+                    timestamp: Date.now()
+                });
+
+                setState('analytics.cartActions', cartActions);
+                saveAnalytics();
+                console.log('📊 Add to cart tracked:', productId);
+            }
+
+            function trackPurchase(orderData) {
+                const analytics = getState('analytics', {});
+                const purchases = analytics.purchases || [];
+
+                purchases.push({
+                    ...orderData,
+                    timestamp: Date.now()
+                });
+
+                setState('analytics.purchases', purchases);
+                saveAnalytics();
+                console.log('📊 Purchase tracked:', orderData);
+            }
+
+            function getAnalytics() {
+                return getState('analytics', {});
+            }
+        };
+        // ==================== LAYOUT COMPONENTS ====================
+
+        const EcommerceLayout = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'ecommerce-layout',
+                        children: [
+                            { EcommerceHeader: {} },
+                            { MainContent: {} },
+                            { EcommerceFooter: {} },
+                            { CartSidebar: {} }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const EcommerceHeader = (props, context) => {
+            const { getState, headless } = context;
+
+            return {
+                render: () => ({
+                    header: {
+                        className: 'header',
+                        children: [{
+                            div: {
+                                className: 'container',
+                                children: [{
+                                    div: {
+                                        className: 'header-content',
+                                        children: [
+                                            {
+                                                a: {
+                                                    className: 'logo',
+                                                    href: '#/',
+                                                    onclick: (e) => {
+                                                        e.preventDefault();
+                                                        headless.NavigationManager.navigate('/');
+                                                    },
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                className: 'logo-icon',
+                                                                text: '🛒'
+                                                            }
+                                                        },
+                                                        {
+                                                            span: {
+                                                                text: 'Juris Store'
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                nav: {
+                                                    className: 'nav',
+                                                    children: [
+                                                        { NavLink: { route: '/', label: 'Home' } },
+                                                        { NavLink: { route: '/products', label: 'Products' } },
+                                                        { NavLink: { route: '/categories', label: 'Categories' } },
+                                                        { NavLink: { route: '/about', label: 'About' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'header-actions',
+                                                    children: [
+                                                        { SearchBox: {} },
+                                                        { CartButton: {} }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }]
+                            }
+                        }]
+                    }
+                })
+            };
+        };
+
+        const NavLink = (props, context) => {
+            const { getState, headless } = context;
+            const { route, label } = props;
+
+            return {
+                render: () => ({
+                    a: {
+                        className: () => {
+                            const currentRoute = getState('ui.currentRoute', '/');
+                            return currentRoute === route ? 'nav-link active' : 'nav-link';
+                        },
+                        href: `#${route}`,
+                        text: label,
+                        onclick: (e) => {
+                            e.preventDefault();
+                            headless.NavigationManager.navigate(route);
+                        }
+                    }
+                })
+            };
+        };
+
+        const SearchBox = (props, context) => {
+            const { getState, setState, headless } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'search-container',
+                        children: [
+                            {
+                                span: {
+                                    className: 'search-icon',
+                                    text: '🔍'
+                                }
+                            },
+                            {
+                                input: {
+                                    type: 'text',
+                                    className: 'search-input',
+                                    placeholder: 'Search products...',
+                                    value: () => getState('ui.searchQuery', ''),
+                                    oninput: (e) => {
+                                        setState('ui.searchQuery', e.target.value);
+                                        headless.ProductManager.searchProducts(e.target.value);
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const CartButton = (props, context) => {
+            const { getState, headless } = context;
+
+            return {
+                render: () => ({
+                    button: {
+                        className: 'cart-button',
+                        onclick: () => headless.CartManager.toggleCart(),
+                        children: [
+                            {
+                                span: {
+                                    text: '🛒'
+                                }
+                            },
+                            {
+                                span: {
+                                    className: () => {
+                                        const itemCount = getState('cart.itemCount', 0);
+                                        return itemCount > 0 ? 'cart-badge' : 'cart-badge hidden';
+                                    },
+                                    text: () => getState('cart.itemCount', 0).toString()
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const EcommerceFooter = (props, context) => {
+            return {
+                render: () => ({
+                    footer: {
+                        className: 'footer',
+                        children: [{
+                            div: {
+                                className: 'container',
+                                children: [
+                                    {
+                                        div: {
+                                            className: 'footer-content',
+                                            children: [
+                                                {
+                                                    div: {
+                                                        className: 'footer-section',
+                                                        children: [
+                                                            { h3: { text: 'Juris Store' } },
+                                                            { p: { text: 'Your premium e-commerce destination built with the Juris framework.' } }
+                                                        ]
+                                                    }
+                                                },
+                                                {
+                                                    div: {
+                                                        className: 'footer-section',
+                                                        children: [
+                                                            { h3: { text: 'Quick Links' } },
+                                                            { p: { children: [{ a: { href: '#/products', text: 'All Products' } }] } },
+                                                            { p: { children: [{ a: { href: '#/categories', text: 'Categories' } }] } },
+                                                            { p: { children: [{ a: { href: '#/about', text: 'About Us' } }] } }
+                                                        ]
+                                                    }
+                                                },
+                                                {
+                                                    div: {
+                                                        className: 'footer-section',
+                                                        children: [
+                                                            { h3: { text: 'Support' } },
+                                                            { p: { children: [{ a: { href: '#/contact', text: 'Contact Us' } }] } },
+                                                            { p: { children: [{ a: { href: '#/faq', text: 'FAQ' } }] } },
+                                                            { p: { children: [{ a: { href: '#/shipping', text: 'Shipping Info' } }] } }
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        div: {
+                                            className: 'footer-bottom',
+                                            children: [{
+                                                p: {
+                                                    text: '© 2024 Juris Store. Built with Juris Framework.'
+                                                }
+                                            }]
+                                        }
+                                    }
+                                ]
+                            }
+                        }]
+                    }
+                })
+            };
+        };
+
+        // ==================== MAIN CONTENT ROUTER ====================
+
+        const MainContent = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    main: {
+                        className: 'main-content',
+                        children: [{
+                            div: {
+                                className: 'container fade-in',
+                                children: () => {
+                                    const route = getState('ui.currentRoute', '/');
+                                    const segments = route.split('/').filter(Boolean);
+
+                                    switch (segments[0]) {
+                                        case '':
+                                            return [{ HomePage: {} }];
+                                        case 'products':
+                                            if (segments[1]) {
+                                                return [{ ProductDetail: { productId: segments[1] } }];
+                                            }
+                                            return [{ ProductsPage: {} }];
+                                        case 'categories':
+                                            if (segments[1]) {
+                                                return [{ CategoryPage: { categoryId: segments[1] } }];
+                                            }
+                                            return [{ CategoriesPage: {} }];
+                                        case 'cart':
+                                            return [{ CartPage: {} }];
+                                        case 'checkout':
+                                            return [{ CheckoutPage: {} }];
+                                        default:
+                                            return [{ HomePage: {} }];
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                })
+            };
+        };
+
+        // ==================== PAGE COMPONENTS ====================
+
+        const HomePage = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            { HeroSection: {} },
+                            { FeaturedProducts: {} },
+                            { CategoriesPreview: {} }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const HeroSection = (props, context) => {
+            const { headless } = context;
+
+            return {
+                render: () => ({
+                    section: {
+                        className: 'hero',
+                        children: [
+                            {
+                                h1: {
+                                    className: 'hero-title',
+                                    text: 'Welcome to Juris Store'
+                                }
+                            },
+                            {
+                                p: {
+                                    className: 'hero-subtitle',
+                                    text: 'Discover amazing products at unbeatable prices. Built with the power of Juris framework.'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'hero-cta',
+                                    children: [
+                                        {
+                                            button: {
+                                                className: 'btn btn-primary btn-lg',
+                                                text: 'Shop Now',
+                                                onclick: () => headless.NavigationManager.navigate('/products')
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-outline btn-lg',
+                                                text: 'Browse Categories',
+                                                onclick: () => headless.NavigationManager.navigate('/categories')
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const FeaturedProducts = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    section: {
+                        className: 'products-section',
+                        children: [
+                            {
+                                div: {
+                                    className: 'section-header',
+                                    children: [
+                                        {
+                                            h2: {
+                                                className: 'section-title',
+                                                text: 'Featured Products'
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-outline',
+                                                text: 'View All',
+                                                onclick: () => context.headless.NavigationManager.navigate('/products')
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'products-grid',
+                                    children: () => {
+                                        const products = getState('products.featured', []);
+                                        return products.slice(0, 6).map(product => ({
+                                            ProductCard: { product, key: product.id }
+                                        }));
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const ProductsPage = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            {
+                                h1: {
+                                    className: 'section-title mb-6',
+                                    text: 'All Products'
+                                }
+                            },
+                            { ProductFilters: {} },
+                            { CategoriesNav: {} },
+                            {
+                                div: {
+                                    className: 'products-grid',
+                                    children: () => {
+                                        const products = getState('products.filtered', []);
+                                        return products.map(product => ({
+                                            ProductCard: { product, key: product.id }
+                                        }));
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const ProductDetail = (props, context) => {
+            const { getState, setState, headless } = context;
+            const { productId } = props;
+
+            return {
+                hooks: {
+                    onMount: () => {
+                        headless.ProductManager.loadProduct(productId);
+                    }
+                },
+
+                render: () => ({
+                    div: {
+                        children: () => {
+                            const product = getState('products.current');
+
+                            if (!product) {
+                                return [{
+                                    div: {
+                                        className: 'text-center',
+                                        text: 'Loading product...'
+                                    }
+                                }];
+                            }
+
+                            return [
+                                {
+                                    div: {
+                                        className: 'product-detail',
+                                        children: [
+                                            { ProductGallery: { product } },
+                                            { ProductInfo: { product } }
+                                        ]
+                                    }
+                                },
+                                { RelatedProducts: { product } }
+                            ];
+                        }
+                    }
+                })
+            };
+        };
+
+        // ==================== PRODUCT COMPONENTS ====================
+
+        const ProductCard = (props, context) => {
+            const { getState, headless } = context;
+            const { product } = props;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'product-card',
+                        children: [
+                            {
+                                div: {
+                                    className: 'product-image-container',
+                                    onclick: () => headless.NavigationManager.navigate(`/products/${product.id}`),
+                                    children: [
+                                        {
+                                            img: {
+                                                className: 'product-image',
+                                                src: product.image,
+                                                alt: product.title,
+                                                loading: 'lazy'
+                                            }
+                                        },
+                                        ...(product.badge ? [{
+                                            span: {
+                                                className: 'product-badge',
+                                                text: product.badge
+                                            }
+                                        }] : []),
+                                        {
+                                            button: {
+                                                className: 'product-wishlist',
+                                                onclick: (e) => {
+                                                    e.stopPropagation();
+                                                    headless.WishlistManager.toggleWishlist(product.id);
+                                                },
+                                                children: [{
+                                                    span: {
+                                                        text: () => {
+                                                            const wishlist = getState('wishlist.items', []);
+                                                            return wishlist.includes(product.id) ? '❤️' : '🤍';
+                                                        }
+                                                    }
+                                                }]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'product-content',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'product-category',
+                                                text: product.category
+                                            }
+                                        },
+                                        {
+                                            h3: {
+                                                className: 'product-title',
+                                                text: product.title
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'product-rating',
+                                                children: [
+                                                    {
+                                                        span: {
+                                                            className: 'product-stars',
+                                                            text: '★'.repeat(Math.floor(product.rating)) + '☆'.repeat(5 - Math.floor(product.rating))
+                                                        }
+                                                    },
+                                                    {
+                                                        span: {
+                                                            className: 'product-rating-text',
+                                                            text: `(${product.reviews || 0} reviews)`
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'product-price',
+                                                children: [
+                                                    {
+                                                        span: {
+                                                            className: 'product-price-current',
+                                                            text: `${product.price}`
+                                                        }
+                                                    },
+                                                    ...(product.originalPrice ? [{
+                                                        span: {
+                                                            className: 'product-price-original',
+                                                            text: `${product.originalPrice}`
+                                                        }
+                                                    }] : [])
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'product-actions',
+                                                children: [
+                                                    {
+                                                        button: {
+                                                            className: 'btn btn-primary btn-full',
+                                                            text: 'Add to Cart',
+                                                            onclick: () => headless.CartManager.addToCart(product)
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const ProductGallery = (props, context) => {
+            const { getState, setState } = context;
+            const { product } = props;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'product-gallery',
+                        children: [
+                            {
+                                div: {
+                                    className: 'gallery-thumbnails',
+                                    children: () => {
+                                        const images = product.images || [product.image];
+                                        const activeImage = getState('ui.activeImage', 0);
+
+                                        return images.map((image, index) => ({
+                                            img: {
+                                                key: index,
+                                                className: index === activeImage ? 'gallery-thumbnail active' : 'gallery-thumbnail',
+                                                src: image,
+                                                alt: `${product.title} ${index + 1}`,
+                                                onclick: () => setState('ui.activeImage', index)
+                                            }
+                                        }));
+                                    }
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'gallery-main',
+                                    children: [{
+                                        img: {
+                                            className: 'gallery-main-image',
+                                            src: () => {
+                                                const images = product.images || [product.image];
+                                                const activeImage = getState('ui.activeImage', 0);
+                                                return images[activeImage] || product.image;
+                                            },
+                                            alt: product.title
+                                        }
+                                    }]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const ProductInfo = (props, context) => {
+            const { getState, setState, headless } = context;
+            const { product } = props;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'product-info',
+                        children: [
+                            {
+                                h1: {
+                                    className: 'product-detail-title',
+                                    text: product.title
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'product-detail-price',
+                                    children: [
+                                        {
+                                            span: {
+                                                className: 'product-detail-price-current',
+                                                text: `${product.price}`
+                                            }
+                                        },
+                                        ...(product.originalPrice ? [{
+                                            span: {
+                                                className: 'product-detail-price-original',
+                                                text: `${product.originalPrice}`
+                                            }
+                                        }] : [])
+                                    ]
+                                }
+                            },
+                            {
+                                p: {
+                                    className: 'product-detail-description',
+                                    text: product.description
+                                }
+                            },
+                            { ProductOptions: { product } },
+                            {
+                                div: {
+                                    className: 'flex gap-4',
+                                    children: [
+                                        {
+                                            button: {
+                                                className: 'btn btn-primary btn-lg flex-1',
+                                                text: 'Add to Cart',
+                                                onclick: () => {
+                                                    const selectedOptions = getState('ui.selectedOptions', {});
+                                                    headless.CartManager.addToCart({
+                                                        ...product,
+                                                        selectedOptions
+                                                    });
+                                                }
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-outline btn-lg btn-icon',
+                                                text: () => {
+                                                    const wishlist = getState('wishlist.items', []);
+                                                    return wishlist.includes(product.id) ? '❤️' : '🤍';
+                                                },
+                                                onclick: () => headless.WishlistManager.toggleWishlist(product.id)
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const ProductOptions = (props, context) => {
+            const { getState, setState } = context;
+            const { product } = props;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'product-options',
+                        children: () => {
+                            if (!product.options) return [];
+
+                            return Object.entries(product.options).map(([optionKey, optionValues]) => ({
+                                div: {
+                                    key: optionKey,
+                                    className: 'option-group',
+                                    children: [
+                                        {
+                                            span: {
+                                                className: 'option-label',
+                                                text: optionKey.charAt(0).toUpperCase() + optionKey.slice(1)
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'option-buttons',
+                                                children: optionValues.map(value => ({
+                                                    button: {
+                                                        key: value,
+                                                        className: () => {
+                                                            const selectedOptions = getState('ui.selectedOptions', {});
+                                                            return selectedOptions[optionKey] === value
+                                                                ? 'option-btn active'
+                                                                : 'option-btn';
+                                                        },
+                                                        text: value,
+                                                        onclick: () => {
+                                                            const currentOptions = getState('ui.selectedOptions', {});
+                                                            setState('ui.selectedOptions', {
+                                                                ...currentOptions,
+                                                                [optionKey]: value
+                                                            });
+                                                        }
+                                                    }
+                                                }))
+                                            }
+                                        }
+                                    ]
+                                }
+                            }));
+                        }
+                    }
+                })
+            };
+        };
+
+        // ==================== CART COMPONENTS ====================
+
+        const CartSidebar = (props, context) => {
+            const { getState, headless } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        children: [
+                            {
+                                div: {
+                                    className: () => {
+                                        const isOpen = getState('cart.isOpen', false);
+                                        return isOpen ? 'cart-overlay open' : 'cart-overlay';
+                                    },
+                                    onclick: () => headless.CartManager.closeCart()
+                                }
+                            },
+                            {
+                                div: {
+                                    className: () => {
+                                        const isOpen = getState('cart.isOpen', false);
+                                        return isOpen ? 'cart-sidebar open slide-in-right' : 'cart-sidebar';
+                                    },
+                                    children: [
+                                        { CartHeader: {} },
+                                        { CartContent: {} },
+                                        { CartFooter: {} }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const CartHeader = (props, context) => {
+            const { getState, headless } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'cart-header',
+                        children: [
+                            {
+                                h2: {
+                                    className: 'cart-title',
+                                    children: [
+                                        {
+                                            span: {
+                                                text: 'Shopping Cart '
+                                            }
+                                        },
+                                        {
+                                            span: {
+                                                text: () => `(${getState('cart.itemCount', 0)})`
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                button: {
+                                    className: 'cart-close',
+                                    text: '✕',
+                                    onclick: () => headless.CartManager.closeCart()
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const CartContent = (props, context) => {
+            const { getState } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'cart-content',
+                        children: () => {
+                            const items = getState('cart.items', []);
+
+                            if (items.length === 0) {
+                                return [{
+                                    div: {
+                                        className: 'cart-empty',
+                                        children: [
+                                            { p: { text: '🛒' } },
+                                            { p: { text: 'Your cart is empty' } },
+                                            { p: { text: 'Add some products to get started!' } }
+                                        ]
+                                    }
+                                }];
+                            }
+
+                            return items.map(item => ({
+                                CartItem: { item, key: item.cartId }
+                            }));
+                        }
+                    }
+                })
+            };
+        };
+
+        const CartItem = (props, context) => {
+            const { headless } = context;
+            const { item } = props;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'cart-item',
+                        children: [
+                            {
+                                img: {
+                                    className: 'cart-item-image',
+                                    src: item.image,
+                                    alt: item.title
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'cart-item-content',
+                                    children: [
+                                        {
+                                            h4: {
+                                                className: 'cart-item-title',
+                                                text: item.title
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'cart-item-price',
+                                                text: `${(item.price * item.quantity).toFixed(2)}`
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'cart-item-controls',
+                                                children: [
+                                                    {
+                                                        div: {
+                                                            className: 'quantity-controls',
+                                                            children: [
+                                                                {
+                                                                    button: {
+                                                                        className: 'quantity-btn',
+                                                                        text: '-',
+                                                                        disabled: item.quantity <= 1,
+                                                                        onclick: () => headless.CartManager.updateQuantity(item.cartId, item.quantity - 1)
+                                                                    }
+                                                                },
+                                                                {
+                                                                    span: {
+                                                                        className: 'quantity-display',
+                                                                        text: item.quantity.toString()
+                                                                    }
+                                                                },
+                                                                {
+                                                                    button: {
+                                                                        className: 'quantity-btn',
+                                                                        text: '+',
+                                                                        onclick: () => headless.CartManager.updateQuantity(item.cartId, item.quantity + 1)
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            className: 'remove-btn',
+                                                            text: '🗑️',
+                                                            onclick: () => headless.CartManager.removeFromCart(item.cartId)
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const CartFooter = (props, context) => {
+            const { getState, headless } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'cart-footer',
+                        children: () => {
+                            const items = getState('cart.items', []);
+
+                            if (items.length === 0) return [];
+
+                            const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+                            return [
+                                {
+                                    div: {
+                                        className: 'cart-total',
+                                        children: [
+                                            { span: { text: 'Total:' } },
+                                            { span: { text: `${total.toFixed(2)}` } }
+                                        ]
+                                    }
+                                },
+                                {
+                                    button: {
+                                        className: 'btn btn-primary btn-full btn-lg',
+                                        text: 'Checkout',
+                                        onclick: () => {
+                                            headless.CartManager.closeCart();
+                                            headless.NavigationManager.navigate('/checkout');
+                                        }
+                                    }
+                                }
+                            ];
+                        }
+                    }
+                })
+            };
+        };
+
+        // ==================== FILTER COMPONENTS ====================
+
+        const CategoriesNav = (props, context) => {
+            const { getState, headless } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'categories-nav',
+                        children: () => {
+                            const categories = getState('products.categories', []);
+                            const activeCategory = getState('ui.activeCategory', 'all');
+
+                            return [
+                                {
+                                    button: {
+                                        className: activeCategory === 'all' ? 'category-btn active' : 'category-btn',
+                                        text: 'All Products',
+                                        onclick: () => headless.ProductManager.filterByCategory('all')
+                                    }
+                                },
+                                ...categories.map(category => ({
+                                    button: {
+                                        key: category.id,
+                                        className: activeCategory === category.id ? 'category-btn active' : 'category-btn',
+                                        text: category.name,
+                                        onclick: () => headless.ProductManager.filterByCategory(category.id)
+                                    }
+                                }))
+                            ];
+                        }
+                    }
+                })
+            };
+        };
+
+        const ProductFilters = (props, context) => {
+            const { getState, setState, headless } = context;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'filters-section',
+                        children: [
+                            {
+                                div: {
+                                    className: 'filters-header',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'filters-title',
+                                                text: 'Filters'
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'filters-clear',
+                                                text: 'Clear All',
+                                                onclick: () => headless.ProductManager.clearFilters()
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'filter-group',
+                                    children: [
+                                        {
+                                            label: {
+                                                className: 'filter-label',
+                                                text: 'Price Range'
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'price-range',
+                                                children: [
+                                                    {
+                                                        input: {
+                                                            type: 'number',
+                                                            className: 'price-input',
+                                                            placeholder: 'Min',
+                                                            value: () => getState('filters.minPrice', ''),
+                                                            oninput: (e) => {
+                                                                setState('filters.minPrice', e.target.value);
+                                                                headless.ProductManager.applyFilters();
+                                                            }
+                                                        }
+                                                    },
+                                                    { span: { text: '-' } },
+                                                    {
+                                                        input: {
+                                                            type: 'number',
+                                                            className: 'price-input',
+                                                            placeholder: 'Max',
+                                                            value: () => getState('filters.maxPrice', ''),
+                                                            oninput: (e) => {
+                                                                setState('filters.maxPrice', e.target.value);
+                                                                headless.ProductManager.applyFilters();
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        // ==================== CATEGORY COMPONENTS ====================
+
+        const CategoriesPreview = (props, context) => {
+            const { getState, headless } = context;
+
+            return {
+                render: () => ({
+                    section: {
+                        className: 'products-section',
+                        children: [
+                            {
+                                div: {
+                                    className: 'section-header',
+                                    children: [
+                                        {
+                                            h2: {
+                                                className: 'section-title',
+                                                text: 'Shop by Category'
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                className: 'btn btn-outline',
+                                                text: 'All Categories',
+                                                onclick: () => headless.NavigationManager.navigate('/categories')
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'products-grid',
+                                    children: () => {
+                                        const categories = getState('products.categories', []);
+                                        return categories.slice(0, 4).map(category => ({
+                                            CategoryCard: { category, key: category.id }
+                                        }));
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const CategoryCard = (props, context) => {
+            const { headless } = context;
+            const { category } = props;
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'product-card',
+                        onclick: () => headless.NavigationManager.navigate(`/categories/${category.id}`),
+                        children: [
+                            {
+                                div: {
+                                    className: 'product-image-container',
+                                    children: [{
+                                        img: {
+                                            className: 'product-image',
+                                            src: category.image,
+                                            alt: category.name
+                                        }
+                                    }]
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'product-content',
+                                    children: [
+                                        {
+                                            h3: {
+                                                className: 'product-title',
+                                                text: category.name
+                                            }
+                                        },
+                                        {
+                                            p: {
+                                                className: 'text-sm text-gray-600',
+                                                text: `${category.productCount || 0} products`
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+
+        const RelatedProducts = (props, context) => {
+            const { getState } = context;
+            const { product } = props;
+
+            return {
+                render: () => ({
+                    section: {
+                        className: 'products-section',
+                        children: [
+                            {
+                                h2: {
+                                    className: 'section-title',
+                                    text: 'Related Products'
+                                }
+                            },
+                            {
+                                div: {
+                                    className: 'products-grid',
+                                    children: () => {
+                                        const allProducts = getState('products.all', []);
+                                        const related = allProducts
+                                            .filter(p => p.category === product.category && p.id !== product.id)
+                                            .slice(0, 4);
+
+                                        return related.map(relatedProduct => ({
+                                            ProductCard: { product: relatedProduct, key: relatedProduct.id }
+                                        }));
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+        // ==================== APPLICATION INITIALIZATION ====================
+
+        const juris = new Juris({
+            components: {
+                // Layout Components
+                EcommerceLayout,
+                EcommerceHeader,
+                NavLink,
+                SearchBox,
+                CartButton,
+                EcommerceFooter,
+                MainContent,
+
+                // Page Components
+                HomePage,
+                HeroSection,
+                FeaturedProducts,
+                ProductsPage,
+                ProductDetail,
+
+                // Product Components
+                ProductCard,
+                ProductGallery,
+                ProductInfo,
+                ProductOptions,
+                RelatedProducts,
+
+                // Cart Components
+                CartSidebar,
+                CartHeader,
+                CartContent,
+                CartItem,
+                CartFooter,
+
+                // Filter Components
+                CategoriesNav,
+                ProductFilters,
+
+                // Category Components
+                CategoriesPreview,
+                CategoryCard
+            },
+
+            headlessComponents: {
+                NavigationManager: {
+                    fn: NavigationManager,
+                    options: { autoInit: true }
+                },
+                ProductManager: {
+                    fn: ProductManager,
+                    options: { autoInit: true }
+                },
+                CartManager: {
+                    fn: CartManager,
+                    options: { autoInit: true }
+                },
+                WishlistManager: {
+                    fn: WishlistManager,
+                    options: { autoInit: true }
+                },
+                ThemeManager: {
+                    fn: ThemeManager,
+                    options: { autoInit: true }
+                },
+                AnalyticsManager: {
+                    fn: AnalyticsManager,
+                    options: { autoInit: true }
+                }
+            },
+
+            layout: {
+                div: {
+                    children: [{ EcommerceLayout: {} }]
+                }
+            },
+
+            states: {
+                ui: {
+                    currentRoute: '/',
+                    searchQuery: '',
+                    activeCategory: 'all',
+                    activeImage: 0,
+                    selectedOptions: {},
+                    theme: 'light'
+                },
+                products: {
+                    all: [],
+                    filtered: [],
+                    featured: [],
+                    current: null,
+                    categories: []
+                },
+                cart: {
+                    items: [],
+                    itemCount: 0,
+                    totalAmount: 0,
+                    isOpen: false
+                },
+                wishlist: {
+                    items: []
+                },
+                filters: {
+                    minPrice: '',
+                    maxPrice: ''
+                },
+                analytics: {
+                    pageViews: {},
+                    productViews: {},
+                    cartActions: [],
+                    purchases: []
+                }
+            }
+        });
+
+        // Start the application
+        juris.render('#app');
+
+        // Set up global event handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            // Close cart when clicking outside
+            document.addEventListener('click', (e) => {
+                const cartSidebar = document.querySelector('.cart-sidebar');
+                const cartButton = document.querySelector('.cart-button');
+
+                if (cartSidebar && !cartSidebar.contains(e.target) && !cartButton?.contains(e.target)) {
+                    const isOpen = juris.getState('cart.isOpen', false);
+                    if (isOpen) {
+                        juris.setState('cart.isOpen', false);
+                    }
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // ESC to close cart
+                if (e.key === 'Escape') {
+                    const isOpen = juris.getState('cart.isOpen', false);
+                    if (isOpen) {
+                        juris.setState('cart.isOpen', false);
+                    }
+                }
+
+                // Ctrl/Cmd + K for search
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    const searchInput = document.querySelector('.search-input');
+                    if (searchInput) {
+                        searchInput.focus();
+                    }
+                }
+            });
+
+            // Touch optimizations
+            const style = document.createElement('style');
+            style.textContent = `
+        @media (max-width: 768px) {
+            button, [onclick], .btn, .nav-link, .product-card {
+                touch-action: manipulation !important;
+                user-select: none !important;
+                -webkit-tap-highlight-color: transparent !important;
+                -webkit-touch-callout: none !important;
+            }
+            
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+        }
+    `;
+            document.head.appendChild(style);
+        });
+
+        // Analytics tracking
+        juris.subscribe('ui.currentRoute', (route) => {
+            juris.headless.AnalyticsManager.trackPageView(route);
+        });
+
+        juris.subscribe('products.current', (product) => {
+            if (product) {
+                juris.headless.AnalyticsManager.trackProductView(product.id);
+            }
+        });
+
+        // Global access for debugging and development
+        window.juris = juris;
+        window.store = {
+            navigate: (route) => juris.headless.NavigationManager.navigate(route),
+            addToCart: (product) => juris.headless.CartManager.addToCart(product),
+            searchProducts: (query) => juris.headless.ProductManager.searchProducts(query),
+            getCartItems: () => juris.getState('cart.items', []),
+            getAnalytics: () => juris.headless.AnalyticsManager.getAnalytics(),
+            exportData: () => {
+                const data = {
+                    cart: juris.getState('cart', {}),
+                    wishlist: juris.getState('wishlist', {}),
+                    analytics: juris.getState('analytics', {}),
+                    products: juris.getState('products', {})
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `juris-store-data-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                console.log('📊 Data exported successfully');
+            }
+        };
+
+        console.log('🚀 Juris Store Ready!');
+        console.log('🛒 Available routes:');
+        console.log('  - #/ (Home)');
+        console.log('  - #/products (All Products)');
+        console.log('  - #/products/{id} (Product Detail)');
+        console.log('  - #/categories (All Categories)');
+        console.log('  - #/categories/{id} (Category Products)');
+        console.log('  - #/cart (Shopping Cart)');
+        console.log('  - #/checkout (Checkout Process)');
+        console.log('💡 Tips:');
+        console.log('  - Use Ctrl/Cmd+K to focus search');
+        console.log('  - Use ESC to close cart sidebar');
+        console.log('  - Cart persists in localStorage');
+        console.log('  - Analytics tracking enabled');
+        console.log('  - window.store contains helper functions');
+        console.log('  - Fully responsive with touch optimization');
+        console.log('  - Orange accent theme integrated throughout');
+
+        // Register service worker for offline capabilities
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function (registration) {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(function (registrationError) {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+
+        // Add to home screen prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+
+            // Show install button or notification
+            console.log('💡 App can be installed');
+        });
+
+        // Performance monitoring
+        window.addEventListener('load', function () {
+            // Log performance metrics
+            if (typeof performance !== 'undefined' && performance.timing) {
+                const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                console.log('⚡ Page load time:', loadTime + 'ms');
+
+                // Track to analytics if available
+                if (window.juris && window.juris.headless.AnalyticsManager) {
+                    // You could track performance metrics here
+                }
+            }
+        });
+
+        // Error handling
+        window.addEventListener('error', function (e) {
+            console.error('🚨 Application error:', e.error);
+
+            // Show user-friendly error message
+            const app = document.getElementById('app');
+            if (app && !app.querySelector('.ecommerce-layout')) {
+                app.innerHTML = `
+                    <div style="
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        min-height: 100vh; 
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        color: #ef4444;
+                        text-align: center;
+                        padding: 2rem;
+                    ">
+                        <div>
+                            <h1 style="font-size: 2rem; margin-bottom: 1rem;">Oops! Something went wrong</h1>
+                            <p style="margin-bottom: 2rem; color: #6b7280;">We're having trouble loading the store. Please try refreshing the page.</p>
+                            <button onclick="window.location.reload()" style="
+                                background: #ff6b35; 
+                                color: white; 
+                                border: none; 
+                                padding: 0.75rem 1.5rem; 
+                                border-radius: 0.5rem; 
+                                cursor: pointer;
+                                font-size: 1rem;
+                            ">
+                                Refresh Page
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // Handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', function (e) {
+            console.error('🚨 Unhandled promise rejection:', e.reason);
+            e.preventDefault();
+        });
+
+        // Offline/Online detection
+        window.addEventListener('online', function () {
+            console.log('🌐 Back online');
+            // You could show a notification or refresh data
+        });
+
+        window.addEventListener('offline', function () {
+            console.log('📱 Gone offline');
+            // You could show an offline notification
+        });
+
+        // Visibility change detection (for analytics)
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                console.log('👁️ Page hidden');
+            } else {
+                console.log('👁️ Page visible');
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function (e) {
+            // Global shortcuts that work before app loads
+            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                // Allow normal refresh
+                return;
+            }
+
+            // Debug shortcuts (only in development)
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                // Toggle debug mode
+                console.log('🐛 Debug mode toggle');
+                document.body.classList.toggle('debug-mode');
+            }
+        });
+
+        // Touch device detection
+        function isTouchDevice() {
+            return (('ontouchstart' in window) ||
+                (navigator.maxTouchPoints > 0) ||
+                (navigator.msMaxTouchPoints > 0));
+        }
+
+        // Add touch class to body
+        if (isTouchDevice()) {
+            document.body.classList.add('touch-device');
+        }
+
+        // Reduced motion preference
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.body.classList.add('reduced-motion');
+        }
+
+        // Dark mode preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+
+        // Console welcome message
+        console.log(`
+        🛒 Welcome to Juris Store!
+        
+        Built with the Juris Framework
+        
+        🎨 Features:
+        - Orange accent theme (#ff6b35)
+        - Responsive design
+        - Shopping cart with persistence
+        - Product search and filtering
+        - Wishlist functionality
+        - Real-time analytics
+        - Touch-optimized interface
+        
+        🔧 Developer Tools:
+        - window.juris (main app instance)
+        - window.store (helper functions)
+        - Ctrl+Shift+D (debug mode)
+        - Ctrl/Cmd+K (focus search)
+        
+        📊 Analytics enabled
+        💾 Data persists in localStorage
+        `);
+    </script>
+</body>
+
+</html>

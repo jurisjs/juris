@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris useState Wrapper Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .app-container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .demo-section h2 {
+            margin-top: 0;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        button.secondary:hover {
+            background: #cbd5e0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"] {
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 200px;
+            margin-right: 10px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .counter-display {
+            font-size: 3em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            color: #667eea;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .todo-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .todo-item:hover {
+            background: #f7fafc;
+            transform: translateX(5px);
+        }
+
+        .todo-item.completed {
+            text-decoration: line-through;
+            opacity: 0.6;
+            background: #f0fff4;
+        }
+
+        .filter-buttons {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .filter-buttons button {
+            margin: 0 5px;
+        }
+
+        .stats {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .debug-panel {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        .debug-panel h3 {
+            color: #48bb78;
+            margin-top: 0;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        .color-option.selected {
+            border-color: #4a5568;
+            transform: scale(1.2);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <h1>🎯 Juris useState Wrapper Demo</h1>
+        <div id="app"></div>
+
+        <div class="debug-panel">
+            <h3>🔧 Debug Information</h3>
+            <div id="debug-info">Loading debug info...</div>
+        </div>
+    </div>
+
+    <!-- Include the Juris framework -->
+    <script src="juris.js"></script>
+
+    <script>
+        // ============================================================================
+        // HEADLESS COMPONENT: useState Wrapper with Direct Context Injection
+        // ============================================================================
+        function createStateManagerComponent(props, context) {
+            const stateCache = new Map();
+            const subscriberCache = new Map();
+
+            function useState(path, defaultValue = null) {
+                if (!path || typeof path !== 'string') {
+                    throw new Error('useState: path must be a non-empty string');
+                }
+
+                const getter = () => {
+                    if (stateCache.has(path)) {
+                        const cached = stateCache.get(path);
+                        const currentValue = context.getState(path, defaultValue);
+                        if (currentValue !== cached.value) {
+                            cached.value = currentValue;
+                        }
+                        return currentValue;
+                    }
+
+                    const value = context.getState(path, defaultValue);
+                    stateCache.set(path, { value, lastAccess: Date.now() });
+                    return value;
+                };
+
+                const setter = (newValue, updateContext = {}) => {
+                    if (typeof newValue === 'function') {
+                        const currentValue = context.getState(path, defaultValue);
+                        newValue = newValue(currentValue);
+                    }
+
+                    context.setState(path, newValue, {
+                        source: 'useState',
+                        path,
+                        ...updateContext
+                    });
+
+                    stateCache.set(path, { value: newValue, lastAccess: Date.now() });
+                };
+
+                if (props.debug) {
+                    getter.path = path;
+                    setter.path = path;
+                }
+
+                return [getter, setter];
+            }
+
+            function useSubscribe(path, callback) {
+                if (!subscriberCache.has(path)) {
+                    subscriberCache.set(path, new Set());
+                }
+
+                subscriberCache.get(path).add(callback);
+
+                const unsubscribe = context.subscribe(path, (newValue, oldValue, statePath) => {
+                    try {
+                        callback(newValue, oldValue, statePath);
+                    } catch (error) {
+                        console.error(`Error in useSubscribe callback for "${path}":`, error);
+                    }
+                });
+
+                return () => {
+                    unsubscribe();
+                    const subscribers = subscriberCache.get(path);
+                    if (subscribers) {
+                        subscribers.delete(callback);
+                        if (subscribers.size === 0) {
+                            subscriberCache.delete(path);
+                        }
+                    }
+                };
+            }
+
+            function useLocalState(initialValue) {
+                let value = initialValue;
+                const subscribers = new Set();
+
+                const getter = () => value;
+
+                const setter = (newValue) => {
+                    if (typeof newValue === 'function') {
+                        newValue = newValue(value);
+                    }
+
+                    if (newValue !== value) {
+                        const oldValue = value;
+                        value = newValue;
+
+                        subscribers.forEach(callback => {
+                            try {
+                                callback(newValue, oldValue);
+                            } catch (error) {
+                                console.error('Error in useLocalState subscriber:', error);
+                            }
+                        });
+                    }
+                };
+
+                getter.subscribe = (callback) => {
+                    subscribers.add(callback);
+                    return () => subscribers.delete(callback);
+                };
+
+                return [getter, setter];
+            }
+
+            const api = {
+                useState,
+                useSubscribe,
+                useLocalState,
+
+                clearCache: () => {
+                    stateCache.clear();
+                    subscriberCache.clear();
+                },
+                getCacheStats: () => ({
+                    stateCache: stateCache.size,
+                    subscriberCache: subscriberCache.size,
+                    totalSubscribers: Array.from(subscriberCache.values())
+                        .reduce((sum, set) => sum + set.size, 0)
+                }),
+
+                debug: {
+                    getStateCache: () => new Map(stateCache),
+                    getSubscriberCache: () => new Map(subscriberCache),
+                    listStatePaths: () => Array.from(stateCache.keys())
+                }
+            };
+
+            const hooks = {
+                onRegister: () => {
+                    console.log('🔧 State Manager headless component registered');
+
+                    // DIRECT INJECTION: Enhance createContext to include our APIs
+                    const juris = context.juris;
+                    const originalCreateContext = juris.createContext.bind(juris);
+                    const originalCreateHeadlessContext = juris.createHeadlessContext.bind(juris);
+
+                    juris.createContext = function () {
+                        const ctx = originalCreateContext();
+                        return { ...ctx, ...api };
+                    };
+
+                    juris.createHeadlessContext = function () {
+                        const ctx = originalCreateHeadlessContext();
+                        return { ...ctx, ...api };
+                    };
+
+                    console.log('✅ useState APIs injected into context creation methods');
+                    if (props.debug) {
+                        console.log('Available methods:', Object.keys(api));
+                    }
+                },
+
+                onUnregister: () => {
+                    stateCache.clear();
+                    subscriberCache.clear();
+                    console.log('🔧 State Manager headless component unregistered');
+                }
+            };
+
+            return { api, hooks };
+        }
+
+        // ============================================================================
+        // COMPONENTS USING useState
+        // ============================================================================
+
+        // Enhanced Counter Component
+        function CounterComponent(props, context) {
+            const [getCount, setCount] = context.useState('counter.value', 0);
+            const [getStep, setStep] = context.useState('counter.step', 1);
+            const [getTheme, setTheme] = context.useState('counter.theme', 'blue');
+
+            const themes = {
+                blue: '#667eea',
+                green: '#48bb78',
+                red: '#f56565',
+                purple: '#9f7aea',
+                orange: '#ed8936'
+            };
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'demo-section',
+                        children: [
+                            { h2: { text: '🔢 Enhanced Counter' } },
+
+                            // Counter Display
+                            {
+                                div: {
+                                    className: 'counter-display',
+                                    style: () => ({ color: themes[getTheme()] }),
+                                    text: () => getCount()
+                                }
+                            },
+
+                            // Step Controls
+                            {
+                                div: {
+                                    children: [
+                                        { span: { text: 'Step size: ' } },
+                                        {
+                                            button: {
+                                                text: '1',
+                                                className: () => getStep() === 1 ? '' : 'secondary',
+                                                onclick: () => setStep(1)
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                text: '5',
+                                                className: () => getStep() === 5 ? '' : 'secondary',
+                                                onclick: () => setStep(5)
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                text: '10',
+                                                className: () => getStep() === 10 ? '' : 'secondary',
+                                                onclick: () => setStep(10)
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // Counter Controls
+                            {
+                                div: {
+                                    style: { margin: '20px 0' },
+                                    children: [
+                                        {
+                                            button: {
+                                                text: () => `- ${getStep()}`,
+                                                onclick: () => setCount(count => count - getStep())
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                text: 'Reset',
+                                                className: 'secondary',
+                                                onclick: () => setCount(0)
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                text: () => `+ ${getStep()}`,
+                                                onclick: () => setCount(count => count + getStep())
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // Theme Picker
+                            {
+                                div: {
+                                    children: [
+                                        { h4: { text: 'Theme:' } },
+                                        {
+                                            div: {
+                                                className: 'color-picker',
+                                                children: Object.entries(themes).map(([name, color]) => ({
+                                                    div: {
+                                                        className: () => `color-option ${getTheme() === name ? 'selected' : ''}`,
+                                                        style: { backgroundColor: color },
+                                                        onclick: () => setTheme(name),
+                                                        title: name
+                                                    }
+                                                }))
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                hooks: {
+                    onMount: () => {
+                        console.log('Counter mounted with count:', getCount());
+                    }
+                }
+            };
+        }
+
+        // Advanced Todo Application
+        function TodoAppComponent(props, context) {
+            const [getTodos, setTodos] = context.useState('todos.list', []);
+            const [getInput, setInput] = context.useState('todos.input', '');
+            const [getFilter, setFilter] = context.useState('todos.filter', 'all');
+            const [getEditingId, setEditingId] = context.useState('todos.editing', null);
+
+            const addTodo = () => {
+                const text = getInput().trim();
+                if (text) {
+                    const newTodo = {
+                        id: Date.now(),
+                        text,
+                        completed: false,
+                        createdAt: new Date().toLocaleString()
+                    };
+                    setTodos(todos => [...todos, newTodo]);
+                    setInput('');
+                }
+            };
+
+            const toggleTodo = (id) => {
+                setTodos(todos => todos.map(todo =>
+                    todo.id === id ? { ...todo, completed: !todo.completed } : todo
+                ));
+            };
+
+            const deleteTodo = (id) => {
+                setTodos(todos => todos.filter(todo => todo.id !== id));
+            };
+
+            const clearCompleted = () => {
+                setTodos(todos => todos.filter(todo => !todo.completed));
+            };
+
+            const filteredTodos = () => {
+                const todos = getTodos();
+                const filter = getFilter();
+
+                if (filter === 'active') return todos.filter(t => !t.completed);
+                if (filter === 'completed') return todos.filter(t => t.completed);
+                return todos;
+            };
+
+            const stats = () => {
+                const todos = getTodos();
+                const completed = todos.filter(t => t.completed).length;
+                const active = todos.length - completed;
+                return { total: todos.length, completed, active };
+            };
+
+            return {
+                render: () => ({
+                    div: {
+                        className: 'demo-section',
+                        children: [
+                            { h2: { text: '📝 Advanced Todo App' } },
+
+                            // Add todo form
+                            {
+                                div: {
+                                    style: { marginBottom: '20px' },
+                                    children: [
+                                        {
+                                            input: {
+                                                type: 'text',
+                                                placeholder: 'What needs to be done?',
+                                                value: () => getInput(),
+                                                oninput: (e) => setInput(e.target.value),
+                                                onkeypress: (e) => {
+                                                    if (e.key === 'Enter') addTodo();
+                                                }
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                text: 'Add Todo',
+                                                onclick: addTodo,
+                                                disabled: () => !getInput().trim()
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // Filter buttons
+                            {
+                                div: {
+                                    className: 'filter-buttons',
+                                    children: [
+                                        ['all', 'All'],
+                                        ['active', 'Active'],
+                                        ['completed', 'Completed']
+                                    ].map(([filter, label]) => ({
+                                        button: {
+                                            text: label,
+                                            className: () => getFilter() === filter ? '' : 'secondary',
+                                            onclick: () => setFilter(filter)
+                                        }
+                                    }))
+                                }
+                            },
+
+                            // Todo list
+                            {
+                                div: {
+                                    children: () => {
+                                        const filtered = filteredTodos();
+                                        if (filtered.length === 0) {
+                                            return [{
+                                                div: {
+                                                    style: {
+                                                        textAlign: 'center',
+                                                        padding: '40px',
+                                                        color: '#a0aec0'
+                                                    },
+                                                    text: getFilter() === 'all' ?
+                                                        'No todos yet. Add one above!' :
+                                                        `No ${getFilter()} todos.`
+                                                }
+                                            }];
+                                        }
+
+                                        return filtered.map(todo => ({
+                                            div: {
+                                                key: todo.id,
+                                                className: `todo-item ${todo.completed ? 'completed' : ''}`,
+                                                children: [
+                                                    {
+                                                        div: {
+                                                            style: { flex: 1, cursor: 'pointer' },
+                                                            onclick: () => toggleTodo(todo.id),
+                                                            children: [
+                                                                {
+                                                                    div: {
+                                                                        style: { fontWeight: '600' },
+                                                                        text: todo.text
+                                                                    }
+                                                                },
+                                                                {
+                                                                    div: {
+                                                                        style: {
+                                                                            fontSize: '12px',
+                                                                            color: '#a0aec0',
+                                                                            marginTop: '4px'
+                                                                        },
+                                                                        text: `Created: ${todo.createdAt}`
+                                                                    }
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            text: '🗑️',
+                                                            onclick: (e) => {
+                                                                e.stopPropagation();
+                                                                deleteTodo(todo.id);
+                                                            },
+                                                            style: {
+                                                                background: '#fed7d7',
+                                                                color: '#c53030',
+                                                                padding: '5px 10px',
+                                                                fontSize: '12px'
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }));
+                                    }
+                                }
+                            },
+
+                            // Actions
+                            {
+                                div: {
+                                    style: { marginTop: '20px' },
+                                    children: [
+                                        {
+                                            button: {
+                                                text: 'Clear Completed',
+                                                className: 'secondary',
+                                                onclick: clearCompleted,
+                                                disabled: () => !getTodos().some(t => t.completed)
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                text: 'Mark All Complete',
+                                                className: 'secondary',
+                                                onclick: () => {
+                                                    setTodos(todos => todos.map(todo => ({
+                                                        ...todo,
+                                                        completed: true
+                                                    })));
+                                                },
+                                                disabled: () => getTodos().every(t => t.completed)
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+
+                            // Stats
+                            {
+                                div: {
+                                    className: 'stats',
+                                    text: () => {
+                                        const s = stats();
+                                        return `📊 Total: ${s.total} | Active: ${s.active} | Completed: ${s.completed}`;
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        }
+
+        // ============================================================================
+        // INITIALIZE JURIS WITH HEADLESS COMPONENT
+        // ============================================================================
+
+        const juris = new Juris({
+            // Register headless component for useState wrapper
+            headlessComponents: {
+                stateManager: {
+                    fn: createStateManagerComponent,
+                    options: {
+                        autoInit: true,
+                        debug: true
+                    }
+                }
+            },
+
+            // Register UI components
+            components: {
+                Counter: CounterComponent,
+                TodoApp: TodoAppComponent
+            },
+
+            // Main layout
+            layout: {
+                div: {
+                    children: [
+                        {
+                            div: {
+                                className: 'grid',
+                                children: [
+                                    { Counter: {} },
+                                    { TodoApp: {} }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        });
+
+        // Debug: Check if headless APIs are properly injected
+        setTimeout(() => {
+            console.log('=== Debugging Headless API Injection ===');
+            console.log('juris.headlessAPIs:', juris.headlessAPIs);
+            console.log('headlessManager.context:', juris.headlessManager.context);
+            console.log('headlessManager.getAllAPIs():', juris.headlessManager.getAllAPIs());
+
+            const testContext = juris.createContext();
+            console.log('Context has useState?', 'useState' in testContext);
+            console.log('Context keys:', Object.keys(testContext).sort());
+
+            if (!testContext.useState) {
+                console.warn('❌ useState not found in context - headless API injection failed');
+                console.log('Available headless APIs:', juris.headlessManager.getAllAPIs());
+            } else {
+                console.log('✅ useState successfully injected into context');
+            }
+        }, 50);
+
+        // Debug information updater
+        function updateDebugInfo() {
+            const debugDiv = document.getElementById('debug-info');
+            if (debugDiv) {
+                try {
+                    const stateManagerInstance = juris.getHeadlessComponent('stateManager');
+                    if (stateManagerInstance && stateManagerInstance.api) {
+                        const api = stateManagerInstance.api;
+                        const stats = api.getCacheStats();
+                        const paths = api.debug.listStatePaths();
+
+                        debugDiv.innerHTML = `
+                            <strong>useState Cache Stats:</strong><br>
+                            • Cached state paths: ${stats.stateCache}<br>
+                            • Active subscribers: ${stats.totalSubscribers}<br>
+                            • Tracked paths: [${paths.join(', ')}]<br><br>
+                            
+                            <strong>Current State Values:</strong><br>
+                            ${paths.map(path => {
+                            const value = juris.getState(path);
+                            return `• ${path}: ${JSON.stringify(value)}`;
+                        }).join('<br>') || 'No state paths tracked yet'}
+                        `;
+                    } else {
+                        debugDiv.innerHTML = `
+                            <strong>Headless Component Status:</strong><br>
+                            • State Manager: ${stateManagerInstance ? 'Found' : 'Not found'}<br>
+                            • API Available: ${stateManagerInstance?.api ? 'Yes' : 'No'}<br>
+                            • Registered Components: ${Object.keys(juris.componentManager.components).join(', ')}<br>
+                            • Headless APIs: ${Object.keys(juris.headlessManager.getAllAPIs()).join(', ')}
+                        `;
+                    }
+                } catch (error) {
+                    debugDiv.innerHTML = `<strong>Debug Error:</strong><br>${error.message}`;
+                }
+            }
+        }
+
+        // Render the application
+        juris.render('#app');
+
+        // Update debug info periodically
+        setInterval(updateDebugInfo, 1000);
+        updateDebugInfo(); // Initial call
+
+        console.log('🎯 Juris useState Demo loaded!');
+        console.log('Try interacting with the counter and todo app to see useState in action.');
+    </script>
+</body>
+
+</html>

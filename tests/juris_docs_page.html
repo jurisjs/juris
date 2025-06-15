@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Framework Documentation</title>
+
+    <style>
+        /* ===== VARIABLES ===== */
+        :root {
+            --orange: #ff6b35;
+            --orange-light: #ff8c5a;
+            --orange-dark: #e55a2b;
+            --orange-pale: #fff4f1;
+            --white: #ffffff;
+            --gray-50: #fafafa;
+            --gray-100: #f5f5f5;
+            --gray-200: #e5e5e5;
+            --gray-300: #d4d4d4;
+            --gray-400: #a3a3a3;
+            --gray-600: #525252;
+            --gray-700: #404040;
+            --gray-800: #262626;
+            --gray-900: #171717;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-2xl: 3rem;
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            --font-mono: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            --transition-normal: 0.2s ease;
+            --z-header: 100;
+            --z-sidebar: 90;
+            --z-overlay: 999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            line-height: 1.6;
+            color: var(--gray-900);
+            background: var(--white);
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== LAYOUT ===== */
+        .docs-layout {
+            display: grid;
+            grid-template-areas:
+                "header header"
+                "sidebar main";
+            grid-template-columns: 320px 1fr;
+            grid-template-rows: 65px 1fr;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 768px) {
+            .docs-layout {
+                grid-template-areas:
+                    "header"
+                    "main";
+                grid-template-columns: 1fr;
+                grid-template-rows: 65px 1fr;
+            }
+        }
+
+        /* ===== HEADER ===== */
+        .docs-header {
+            grid-area: header;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            padding: var(--space-md) var(--space-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: var(--z-header);
+            height: 65px;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--orange);
+            text-decoration: none;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray-700);
+            cursor: pointer;
+            padding: var(--space-sm);
+            border-radius: var(--radius-sm);
+        }
+
+        .header-nav {
+            display: flex;
+            gap: var(--space-xl);
+            align-items: center;
+        }
+
+        .header-nav .nav-link {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-weight: 400;
+            transition: color var(--transition-normal);
+            padding: var(--space-sm) 0;
+            font-size: 0.875rem;
+        }
+
+        .header-nav .nav-link:hover {
+            color: var(--orange);
+        }
+
+        .header-nav .nav-link.active {
+            color: var(--orange);
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .header-nav {
+                display: none;
+            }
+        }
+
+        /* ===== SIDEBAR ===== */
+        .docs-sidebar {
+            grid-area: sidebar;
+            background: var(--gray-50);
+            border-right: 1px solid var(--gray-200);
+            overflow-y: auto;
+            height: calc(100vh - 65px);
+        }
+
+        @media (max-width: 768px) {
+            .docs-sidebar {
+                position: fixed;
+                top: 65px;
+                left: -100%;
+                width: 100%;
+                height: calc(100vh - 65px);
+                z-index: var(--z-overlay);
+                transition: left var(--transition-normal);
+            }
+
+            .docs-sidebar.open {
+                left: 0;
+            }
+        }
+
+        .sidebar-content {
+            padding: var(--space-lg);
+        }
+
+        /* Search */
+        .search-container {
+            margin-bottom: var(--space-lg);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            background: var(--white);
+            transition: border-color var(--transition-normal);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        .search-results {
+            margin-top: var(--space-sm);
+            background: var(--white);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow);
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .search-results.visible {
+            display: block;
+        }
+
+        .search-result {
+            padding: var(--space-sm) var(--space-md);
+            border-bottom: 1px solid var(--gray-100);
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .search-result:hover {
+            background: var(--gray-50);
+        }
+
+        .search-result:last-child {
+            border-bottom: none;
+        }
+
+        .result-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-900);
+            margin-bottom: var(--space-xs);
+        }
+
+        .result-excerpt {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            line-height: 1.4;
+        }
+
+        .result-category {
+            font-size: 0.625rem;
+            color: var(--orange);
+            text-transform: uppercase;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+        }
+
+        /* Navigation */
+        .documentation-nav .nav-category {
+            margin-bottom: var(--space-xl);
+        }
+
+        .category-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: var(--space-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .nav-sections {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: var(--space-xs);
+        }
+
+        .section-title {
+            display: block;
+            padding: var(--space-sm) var(--space-md);
+            color: var(--gray-600);
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            transition: all var(--transition-normal);
+            cursor: pointer;
+        }
+
+        .section-title:hover {
+            background: var(--white);
+            color: var(--orange);
+        }
+
+        .section-title.active {
+            background: var(--orange);
+            color: var(--white);
+            font-weight: 500;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.625rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            margin-left: var(--space-sm);
+        }
+
+        .status-new {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-updated {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .docs-main {
+            grid-area: main;
+            padding: var(--space-2xl);
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            .docs-main {
+                padding: var(--space-lg);
+            }
+        }
+
+        .doc-content {
+            max-width: 800px;
+        }
+
+        .doc-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: var(--space-md);
+            line-height: 1.1;
+        }
+
+        .doc-subtitle {
+            font-size: 1.125rem;
+            color: var(--gray-600);
+            margin-bottom: var(--space-xl);
+            line-height: 1.6;
+        }
+
+        .doc-body {
+            line-height: 1.7;
+            color: var(--gray-700);
+        }
+
+        .doc-body h1,
+        .doc-body h2,
+        .doc-body h3 {
+            margin-top: var(--space-xl);
+            margin-bottom: var(--space-md);
+            color: var(--gray-900);
+        }
+
+        .doc-body h1 {
+            font-size: 2rem;
+        }
+
+        .doc-body h2 {
+            font-size: 1.5rem;
+        }
+
+        .doc-body h3 {
+            font-size: 1.25rem;
+        }
+
+        .doc-body p {
+            margin-bottom: var(--space-md);
+        }
+
+        .doc-body pre {
+            background: var(--gray-900);
+            color: var(--white);
+            padding: var(--space-lg);
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            margin: var(--space-lg) 0;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+        }
+
+        .doc-body code {
+            background: var(--gray-100);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+        }
+
+        .doc-body pre code {
+            background: none;
+            padding: 0;
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: var(--gray-600);
+        }
+
+        /* Mobile overlay */
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: calc(var(--z-overlay) - 1);
+        }
+
+        /* ===== PAGE COMPONENTS ===== */
+        .page-content {
+            max-width: 800px;
+            padding: var(--space-xl) 0;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: var(--space-md);
+            line-height: 1.1;
+        }
+
+        .page-subtitle {
+            font-size: 1.125rem;
+            color: var(--gray-600);
+            margin-bottom: var(--space-xl);
+            line-height: 1.6;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: var(--space-md);
+            margin-top: var(--space-xl);
+        }
+
+        .btn {
+            padding: var(--space-md) var(--space-lg);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all var(--transition-normal);
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--orange);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--orange-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--gray-900);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--orange);
+            color: var(--orange);
+        }
+
+        .examples-grid,
+        .demos-grid {
+            display: grid;
+            gap: var(--space-xl);
+            margin-top: var(--space-xl);
+        }
+
+        .example-card,
+        .demo-card {
+            padding: var(--space-xl);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            background: var(--white);
+        }
+
+        .example-card h3,
+        .demo-card h3 {
+            margin-bottom: var(--space-sm);
+            color: var(--gray-900);
+        }
+
+        .example-card p,
+        .demo-card p {
+            color: var(--gray-600);
+            margin-bottom: var(--space-md);
+        }
+
+        .blog-posts {
+            margin-top: var(--space-xl);
+        }
+
+        .blog-post {
+            padding: var(--space-xl);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-lg);
+            background: var(--white);
+        }
+
+        .blog-post h3 {
+            margin-bottom: var(--space-sm);
+            color: var(--gray-900);
+        }
+
+        .post-meta {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            margin-bottom: var(--space-md);
+        }
+
+        .read-more {
+            color: var(--orange);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .read-more:hover {
+            color: var(--orange-dark);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="docs-layout">
+            <header class="docs-header">
+                <a href="#/" class="logo">Juris</a>
+                <button class="mobile-menu-btn">☰</button>
+            </header>
+
+            <aside class="docs-sidebar">
+                <div class="sidebar-content">
+                    <div class="search-container">
+                        <input type="text" class="search-input" placeholder="Search documentation...">
+                        <div class="search-results"></div>
+                    </div>
+                    <nav class="documentation-nav"></nav>
+                </div>
+            </aside>
+
+            <main class="docs-main">
+                <div class="doc-content">
+                    <div class="loading">Loading documentation...</div>
+                </div>
+            </main>
+        </div>
+
+        <div class="mobile-overlay"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="juris.js"></script>
+    <script src="headless/url-state-sync.js"></script>
+    <script src="headless/json_component_factory.js"></script>
+    <script src="headless/docs_api.js"></script>
+
+    <script>
+        // Sample documentation data for testing
+        const sampleDocs = {
+            'introduction': {
+                title: 'Introduction to Juris',
+                subtitle: 'A revolutionary JavaScript framework',
+                category: 'Getting Started',
+                content: `
+                    <h2>What is Juris?</h2>
+                    <p>Juris is a revolutionary JavaScript framework that brings unprecedented flexibility to web development through its Object DOM architecture and reactive state management system.</p>
+                    
+                    <h3>Key Features</h3>
+                    <p>Juris offers several unique advantages:</p>
+                    
+                    <pre><code>// Example: Creating a reactive component
+const Counter = (props, context) => {
+  return {
+    'div': {
+      className: 'counter',
+      children: [
+        { 'p': { text: () => \`Count: \${context.getState('count', 0)}\` } },
+        { 'button': { 
+          text: 'Increment',
+          onclick: () => context.setState('count', context.getState('count', 0) + 1)
+        }}
+      ]
+    }
+  };
+};</code></pre>
+                `,
+                tags: ['introduction', 'framework', 'overview']
+            },
+            'headless-components': {
+                title: 'Headless Components',
+                subtitle: 'Building logic without UI',
+                category: 'Components',
+                content: `
+                    <h2>Understanding Headless Components</h2>
+                    <p>Headless components provide business logic and state management without rendering UI.</p>
+                    
+                    <pre><code>// Example: User management headless component
+const UserManager = (props, context) => {
+  return {
+    api: {
+      login: async (credentials) => {
+        const user = await api.login(credentials);
+        context.setState('user.data', user);
+      },
+      logout: () => context.setState('user.data', null)
+    }
+  };
+};</code></pre>
+                `,
+                tags: ['headless', 'components', 'logic']
+            },
+            'routing': {
+                title: 'URL State Sync',
+                subtitle: 'Advanced routing and state synchronization',
+                category: 'Routing',
+                content: `
+                    <h2>URL State Synchronization</h2>
+                    <p>Juris provides powerful routing capabilities through the UrlStateSync component.</p>
+                    
+                    <pre><code>// Configure routing
+juris.registerHeadlessComponent('router', UrlStateSync, {
+  mode: 'hash',
+  routes: {
+    '/': { name: 'home' },
+    '/docs/:id': { name: 'document' }
+  }
+});</code></pre>
+                `,
+                tags: ['routing', 'state', 'url']
+            }
+        };
+
+        const sampleNavigation = {
+            'Getting Started': {
+                title: 'Getting Started',
+                subtitle: 'Learn the basics',
+                sections: [
+                    { id: 'introduction', title: 'Introduction', subtitle: 'Framework overview', status: 'new' },
+                    { id: 'installation', title: 'Installation', subtitle: 'Getting set up' }
+                ]
+            },
+            'Components': {
+                title: 'Components',
+                subtitle: 'Building with Juris',
+                sections: [
+                    { id: 'headless-components', title: 'Headless Components', subtitle: 'Logic without UI', status: 'updated' },
+                    { id: 'ui-components', title: 'UI Components', subtitle: 'Visual elements' }
+                ]
+            },
+            'Routing': {
+                title: 'Routing',
+                subtitle: 'Navigation and state',
+                sections: [
+                    { id: 'routing', title: 'URL State Sync', subtitle: 'Advanced routing' }
+                ]
+            }
+        };
+
+        // Initialize Juris application
+        const juris = new Juris({
+            renderMode: 'fine-grained',
+            components: {
+                AppLayout: (props, context) => {
+                    const { getState, setState } = context;
+                    return {
+                        render: () => ({
+                            'div': {
+                                className: 'docs-layout',
+                                children: [
+                                    { 'Header': {} },
+                                    { 'Sidebar': {} },
+                                    { 'MainContent': {} },
+                                    {
+                                        'div': {
+                                            className: () => getState('ui.sidebarOpen') ? 'mobile-overlay visible' : 'mobile-overlay',
+                                            onclick: () => setState('ui.sidebarOpen', false)
+                                        }
+                                    }
+                                ]
+                            }
+                        })
+                    };
+                },
+
+                Header: (props, context) => {
+                    const { getState, setState, router } = context;
+                    return {
+                        render: () => ({
+                            'header': {
+                                className: 'docs-header',
+                                children: [
+                                    { 'a': { href: '#/', className: 'logo', text: 'Juris' } },
+                                    {
+                                        'nav': {
+                                            className: 'header-nav',
+                                            children: [
+                                                { 'a': { href: '#/', className: 'nav-link', text: 'Home' } },
+                                                { 'a': { href: '#/docs', className: 'nav-link', text: 'Documentation' } },
+                                                { 'a': { href: '#/examples', className: 'nav-link', text: 'Examples' } },
+                                                { 'a': { href: '#/demos', className: 'nav-link', text: 'Demos' } },
+                                                { 'a': { href: '#/blog', className: 'nav-link', text: 'Blog' } }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        'button': {
+                                            className: 'mobile-menu-btn',
+                                            text: '☰',
+                                            onclick: () => {
+                                                const isOpen = getState('ui.sidebarOpen', false);
+                                                setState('ui.sidebarOpen', !isOpen);
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        })
+                    };
+                },
+
+                Sidebar: (props, context) => {
+                    const { getState, setState, docsAPI, factory } = context;
+                    return {
+                        render: () => ({
+                            'aside': {
+                                className: () => getState('ui.sidebarOpen') ? 'docs-sidebar open' : 'docs-sidebar',
+                                children: [
+                                    {
+                                        'div': {
+                                            className: 'sidebar-content',
+                                            children: [
+                                                { 'SearchContainer': {} },
+                                                { 'NavigationNav': {} }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        })
+                    };
+                },
+
+                SearchContainer: (props, context) => {
+                    const { setState, getState, docsAPI, factory } = context;
+                    return {
+                        render: () => ({
+                            'div': {
+                                className: 'search-container',
+                                children: [
+                                    {
+                                        'input': {
+                                            type: 'text',
+                                            className: 'search-input',
+                                            placeholder: 'Search documentation...',
+                                            oninput: (e) => {
+                                                const query = e.target.value;
+                                                setState('docs.search.query', query);
+                                                if (query.trim()) {
+                                                    setTimeout(() => docsAPI.search(query), 300);
+                                                } else {
+                                                    setState('docs.search.results', []);
+                                                }
+                                            }
+                                        }
+                                    },
+                                    {
+                                        'div': {
+                                            className: () => {
+                                                const results = getState('docs.search.results', []);
+                                                return results.length > 0 ? 'search-results visible' : 'search-results';
+                                            },
+                                            children: () => {
+                                                const results = getState('docs.search.results', []);
+                                                return factory.createSearchResults(results);
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        })
+                    };
+                },
+
+                NavigationNav: (props, context) => {
+                    const { setState, getState, factory, docsAPI } = context;
+                    return {
+                        render: () => ({
+                            'nav': {
+                                className: 'documentation-nav',
+                                children: () => {
+                                    const nav = getState('docs.navigation', {});
+                                    return factory.createNavigation(nav);
+                                }
+                            }
+                        }),
+                        hooks: {
+                            onMount: () => {
+                                docsAPI.getNavigation().then(nav => {
+                                    setState('docs.navigation', nav);
+                                });
+                            }
+                        }
+                    };
+                },
+
+                MainContent: (props, context) => {
+                    const { getState, setState, subscribe, factory, docsAPI, router } = context;
+                    return {
+                        render: () => ({
+                            'main': {
+                                className: 'docs-main',
+                                children: () => {
+                                    const currentPath = getState('router.path', '/');
+
+                                    if (currentPath.startsWith('/docs')) {
+                                        return [{ 'DocsPage': {} }];
+                                    } else if (currentPath.startsWith('/examples')) {
+                                        return [{ 'ExamplePage': {} }];
+                                    } else if (currentPath.startsWith('/demos')) {
+                                        return [{ 'DemosPage': {} }];
+                                    } else if (currentPath.startsWith('/blog')) {
+                                        return [{ 'BlogPage': {} }];
+                                    } else {
+                                        return [{ 'HomePage': {} }];
+                                    }
+                                }
+                            }
+                        }),
+                        hooks: {
+                            onMount: () => {
+                                subscribe('router.path', (newPath) => {
+                                    // Route change handling moved to individual page components
+                                });
+                            }
+                        }
+                    };
+                },
+
+                HomePage: (props, context) => {
+                    return {
+                        render: () => ({
+                            'div': {
+                                className: 'page-content',
+                                children: [
+                                    { 'h1': { className: 'page-title', text: 'Welcome to Juris Framework' } },
+                                    { 'p': { className: 'page-subtitle', text: 'A revolutionary JavaScript framework for modern web development' } },
+                                    {
+                                        'div': {
+                                            className: 'hero-content', innerHTML: `
+                                        <p>Juris brings unprecedented flexibility through Object DOM architecture and reactive state management.</p>
+                                        <div class="cta-buttons">
+                                            <a href="#/docs" class="btn btn-primary">Get Started</a>
+                                            <a href="#/examples" class="btn btn-secondary">View Examples</a>
+                                        </div>
+                                    `}
+                                    }
+                                ]
+                            }
+                        })
+                    };
+                },
+
+                DocsPage: (props, context) => {
+                    const { getState, setState, subscribe, factory, docsAPI } = context;
+                    return {
+                        render: () => ({
+                            'div': {
+                                className: 'docs-page',
+                                children: [
+                                    {
+                                        'div': {
+                                            className: 'doc-content',
+                                            children: () => {
+                                                const doc = getState('docs.current');
+                                                return doc ? factory.createDocument(doc) :
+                                                    { 'div': { className: 'loading', text: 'Loading documentation...' } };
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }),
+                        hooks: {
+                            onMount: () => {
+                                subscribe('router.path', (newPath) => {
+                                    if (newPath && newPath.startsWith('/docs/')) {
+                                        const docId = newPath.replace('/docs/', '');
+                                        docsAPI.loadDocument(docId);
+                                    } else if (newPath === '/docs') {
+                                        setState('docs.current', {
+                                            title: 'Documentation',
+                                            subtitle: 'Complete guide to Juris Framework',
+                                            content: '<p>Select a topic from the sidebar to explore the documentation.</p>'
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    };
+                },
+
+                ExamplePage: (props, context) => {
+                    return {
+                        render: () => ({
+                            'div': {
+                                className: 'page-content',
+                                children: [
+                                    { 'h1': { className: 'page-title', text: 'Examples' } },
+                                    { 'p': { className: 'page-subtitle', text: 'Practical examples and code samples' } },
+                                    {
+                                        'div': {
+                                            className: 'examples-grid', innerHTML: `
+                                        <div class="example-card">
+                                            <h3>Counter Component</h3>
+                                            <p>Basic reactive state management</p>
+                                            <pre><code>const Counter = (props, context) => ({
+  'div': {
+    children: [
+      { 'span': { text: () => \`Count: \${context.getState('count', 0)}\` } },
+      { 'button': { text: '+', onclick: () => context.setState('count', context.getState('count', 0) + 1) } }
+    ]
+  }
+});</code></pre>
+                                        </div>
+                                        <div class="example-card">
+                                            <h3>Todo List</h3>
+                                            <p>Working with arrays and forms</p>
+                                            <pre><code>const TodoList = (props, context) => ({
+  'div': {
+    children: [
+      { 'input': { placeholder: 'Add todo...', onkeypress: (e) => {
+          if (e.key === 'Enter') {
+            const todos = context.getState('todos', []);
+            todos.push({ id: Date.now(), text: e.target.value });
+            context.setState('todos', todos);
+            e.target.value = '';
+          }
+        }}},
+      { 'ul': { children: () => context.getState('todos', []).map(todo => 
+          ({ 'li': { text: todo.text } })
+        )}}
+    ]
+  }
+});</code></pre>
+                                        </div>
+                                    `}
+                                    }
+                                ]
+                            }
+                        })
+                    };
+                },
+
+                DemosPage: (props, context) => {
+                    return {
+                        render: () => ({
+                            'div': {
+                                className: 'page-content',
+                                children: [
+                                    { 'h1': { className: 'page-title', text: 'Live Demos' } },
+                                    { 'p': { className: 'page-subtitle', text: 'Interactive demonstrations of Juris capabilities' } },
+                                    {
+                                        'div': {
+                                            className: 'demos-grid', innerHTML: `
+                                        <div class="demo-card">
+                                            <h3>Real-time Dashboard</h3>
+                                            <p>Complex state management with multiple components</p>
+                                            <a href="#/demos/dashboard" class="btn btn-primary">View Demo</a>
+                                        </div>
+                                        <div class="demo-card">
+                                            <h3>Form Validation</h3>
+                                            <p>Dynamic forms with reactive validation</p>
+                                            <a href="#/demos/forms" class="btn btn-primary">View Demo</a>
+                                        </div>
+                                        <div class="demo-card">
+                                            <h3>Data Visualization</h3>
+                                            <p>Charts and graphs with live data updates</p>
+                                            <a href="#/demos/charts" class="btn btn-primary">View Demo</a>
+                                        </div>
+                                    `}
+                                    }
+                                ]
+                            }
+                        })
+                    };
+                },
+
+                BlogPage: (props, context) => {
+                    return {
+                        render: () => ({
+                            'div': {
+                                className: 'page-content',
+                                children: [
+                                    { 'h1': { className: 'page-title', text: 'Blog' } },
+                                    { 'p': { className: 'page-subtitle', text: 'Latest updates and insights about Juris' } },
+                                    {
+                                        'div': {
+                                            className: 'blog-posts', innerHTML: `
+                                        <article class="blog-post">
+                                            <h3>Introducing Juris 1.0</h3>
+                                            <p class="post-meta">March 15, 2024</p>
+                                            <p>We're excited to announce the release of Juris 1.0, bringing revolutionary Object DOM architecture to web development...</p>
+                                            <a href="#/blog/introducing-juris" class="read-more">Read More</a>
+                                        </article>
+                                        <article class="blog-post">
+                                            <h3>Headless Components Deep Dive</h3>
+                                            <p class="post-meta">March 10, 2024</p>
+                                            <p>Learn how to separate business logic from UI rendering with Juris headless components...</p>
+                                            <a href="#/blog/headless-components" class="read-more">Read More</a>
+                                        </article>
+                                        <article class="blog-post">
+                                            <h3>State Management Best Practices</h3>
+                                            <p class="post-meta">March 5, 2024</p>
+                                            <p>Discover patterns and techniques for effective state management in Juris applications...</p>
+                                            <a href="#/blog/state-management" class="read-more">Read More</a>
+                                        </article>
+                                    `}
+                                    }
+                                ]
+                            }
+                        })
+                    };
+                }
+            },
+            layout: { 'AppLayout': {} },
+            states: {
+                docs: {
+                    loading: false,
+                    current: null,
+                    search: { query: '', results: [] }
+                },
+                ui: {
+                    sidebarOpen: false
+                }
+            },
+            headlessComponents: {
+                router: {
+                    fn: UrlStateSync,
+                    options: {
+                        autoInit: true,
+                        config: {
+                            mode: 'hash',
+                            statePath: 'router',
+                            routes: {
+                                '/': { name: 'home' },
+                                '/docs': { name: 'docs' },
+                                '/docs/:id': { name: 'document' },
+                                '/examples': { name: 'examples' },
+                                '/demos': { name: 'demos' },
+                                '/blog': { name: 'blog' }
+                            }
+                        }
+                    }
+                },
+                factory: {
+                    fn: (props, context) => {
+                        // Custom templates with proper data attributes
+                        const templates = {
+                            document: (data) => ({
+                                'article': {
+                                    className: 'doc-content',
+                                    children: [
+                                        { 'h1': { className: 'doc-title', text: data.title } },
+                                        { 'p': { className: 'doc-subtitle', text: data.subtitle } },
+                                        { 'div': { className: 'doc-body', innerHTML: data.content } }
+                                    ]
+                                }
+                            }),
+
+                            searchResult: (data) => ({
+                                'div': {
+                                    className: 'search-result',
+                                    'data-doc-id': data.id,
+                                    children: [
+                                        { 'h3': { className: 'result-title', text: data.title } },
+                                        { 'p': { className: 'result-excerpt', innerHTML: data.excerpt } },
+                                        { 'span': { className: 'result-category', text: data.category } }
+                                    ]
+                                }
+                            }),
+
+                            navigationSection: (data) => ({
+                                'div': {
+                                    className: 'nav-category',
+                                    children: [
+                                        { 'h2': { className: 'category-title', text: data.title } },
+                                        data.subtitle ? { 'p': { className: 'category-subtitle', text: data.subtitle } } : null
+                                    ].filter(Boolean)
+                                }
+                            }),
+
+                            navigationItem: (data) => ({
+                                'li': {
+                                    className: 'nav-item',
+                                    children: [
+                                        {
+                                            'span': {
+                                                className: 'section-title',
+                                                text: data.title,
+                                                'data-doc-id': data.id
+                                            }
+                                        },
+                                        data.subtitle ? { 'span': { className: 'section-subtitle', text: data.subtitle } } : null,
+                                        data.status ? { 'span': { className: `status status-${data.status}`, text: data.status } } : null
+                                    ].filter(Boolean)
+                                }
+                            })
+                        };
+
+                        return {
+                            api: {
+                                createFromJson: (data, templateName) => {
+                                    const template = templates[templateName];
+                                    return template ? template(data) : null;
+                                },
+                                createDocument: (data) => templates.document(data),
+                                createSearchResults: (results) => results.map(r => templates.searchResult(r)),
+                                createNavigation: (navData) => {
+                                    const sections = Object.entries(navData).map(([key, category]) => {
+                                        const categoryComponent = templates.navigationSection(category);
+
+                                        if (category.sections?.length) {
+                                            const sectionsComponent = {
+                                                'ul': {
+                                                    className: 'nav-sections',
+                                                    children: category.sections.map(section =>
+                                                        templates.navigationItem(section)
+                                                    )
+                                                }
+                                            };
+
+                                            const tagName = Object.keys(categoryComponent)[0];
+                                            categoryComponent[tagName].children = [
+                                                ...(categoryComponent[tagName].children || []),
+                                                sectionsComponent
+                                            ];
+                                        }
+
+                                        return categoryComponent;
+                                    });
+
+                                    return sections;
+                                }
+                            }
+                        };
+                    },
+                    options: { autoInit: true }
+                },
+                docsAPI: {
+                    fn: (props, context) => {
+                        return {
+                            api: {
+                                getNavigation: () => Promise.resolve(sampleNavigation),
+                                getDocument: (id) => Promise.resolve(sampleDocs[id] || null),
+                                search: (query) => {
+                                    const results = Object.entries(sampleDocs)
+                                        .filter(([id, doc]) =>
+                                            doc.title.toLowerCase().includes(query.toLowerCase()) ||
+                                            doc.content.toLowerCase().includes(query.toLowerCase())
+                                        )
+                                        .map(([id, doc]) => ({
+                                            id,
+                                            title: doc.title,
+                                            category: doc.category,
+                                            excerpt: doc.subtitle
+                                        }));
+                                    context.setState('docs.search.results', results);
+                                    return Promise.resolve(results);
+                                },
+                                getCurrentDocument: () => context.getState('docs.current'),
+                                loadDocument: (id) => {
+                                    const doc = sampleDocs[id];
+                                    if (doc) context.setState('docs.current', doc);
+                                    return Promise.resolve(doc);
+                                }
+                            }
+                        };
+                    },
+                    options: { autoInit: true }
+                }
+            }
+        });
+
+        // Navigation and search result click handlers
+        juris.enhance('.section-title', (context) => {
+            const { router, setState } = context;
+            return {
+                onclick: () => {
+                    const docId = context.element.dataset.docId;
+                    if (docId) {
+                        router.navigate(`/docs/${docId}`);
+                        setState('ui.sidebarOpen', false);
+                    }
+                }
+            };
+        });
+
+        juris.enhance('.search-result', (context) => {
+            const { router, setState } = context;
+            return {
+                onclick: () => {
+                    const docId = context.element.dataset.docId;
+                    if (docId) {
+                        router.navigate(`/docs/${docId}`);
+                        setState('ui.sidebarOpen', false);
+                        setState('docs.search.results', []);
+                        const searchInput = document.querySelector('.search-input');
+                        if (searchInput) searchInput.value = '';
+                    }
+                }
+            };
+        });
+
+        // Initialize the application
+        juris.render('#app');
+
+        // Load initial content
+        setTimeout(() => {
+            const docsAPI = juris.getHeadlessComponent('docsAPI').api;
+            docsAPI.loadDocument('introduction');
+        }, 500);
+    </script>
+</body>
+
+</html>

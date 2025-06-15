@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris - Architectural Chaos Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .chaos-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .chaos-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid #ff4757;
+            border-radius: 10px;
+            animation: pulse-red 2s infinite;
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% { border-color: #ff4757; box-shadow: 0 0 10px rgba(255, 71, 87, 0.3); }
+            50% { border-color: #ff6b7a; box-shadow: 0 0 20px rgba(255, 71, 87, 0.6); }
+        }
+        
+        .chaos-header h1 {
+            color: #ff4757;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+        }
+        
+        .stress-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .control-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-panel h3 {
+            color: #ffa502;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .chaos-button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+        
+        .btn-chaos { background: #ff4757; color: white; }
+        .btn-warning { background: #ffa502; color: white; }
+        .btn-danger { background: #ff3742; color: white; }
+        .btn-nuclear { background: #2f1b14; color: #ff4757; border: 2px solid #ff4757; }
+        
+        .chaos-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            font-size: 0.9em;
+            color: #bbb;
+            text-transform: uppercase;
+        }
+        
+        .chaos-zone {
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px dashed #666;
+            border-radius: 15px;
+            min-height: 400px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .chaos-item {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #666;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 5px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        
+        .chaos-item.exploding {
+            animation: explode 0.5s ease-out;
+        }
+        
+        @keyframes explode {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            50% { transform: scale(1.5) rotate(180deg); opacity: 0.7; }
+            100% { transform: scale(0) rotate(360deg); opacity: 0; }
+        }
+        
+        .circular-dep {
+            border: 2px solid #ff4757;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .memory-hog {
+            background: linear-gradient(45deg, #ff4757, #ffa502);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        .async-component {
+            border-left: 4px solid #2ed573;
+            background: rgba(46, 213, 115, 0.1);
+        }
+        
+        .error-boundary {
+            border: 2px solid #ff4757;
+            background: rgba(255, 71, 87, 0.2);
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Monaco', monospace;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .log-error { background: rgba(255, 71, 87, 0.2); color: #ff4757; }
+        .log-warning { background: rgba(255, 165, 2, 0.2); color: #ffa502; }
+        .log-info { background: rgba(46, 213, 115, 0.2); color: #2ed573; }
+        .log-chaos { background: rgba(116, 75, 162, 0.2); color: #764ba2; }
+        
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        
+        .status-stable { background: #2ed573; color: white; }
+        .status-unstable { background: #ffa502; color: white; }
+        .status-critical { background: #ff4757; color: white; animation: pulse 0.5s infinite; }
+        .status-meltdown { background: #000; color: #ff4757; border: 2px solid #ff4757; animation: shake 0.2s infinite; }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .performance-graph {
+            width: 100%;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .memory-warning {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 71, 87, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 2000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div id="portal-zone"></div>
+    
+    <!-- Include Juris -->
+    <script src="juris.js"></script>
+    
+    <script>
+        // =====================================================================
+        // ARCHITECTURAL CHAOS UNDER TIME PRESSURE TEST
+        // =====================================================================
+        
+        // Global chaos metrics and state
+        let chaosMetrics = {
+            componentsCreated: 0,
+            componentsDestroyed: 0,
+            stateChanges: 0,
+            circularDependencies: 0,
+            memoryLeaks: 0,
+            asyncOperations: 0,
+            errors: 0,
+            renderTime: 0,
+            maxDepth: 0,
+            currentStress: 'STABLE'
+        };
+        
+        let chaosLevel = 0;
+        let isTestRunning = false;
+        let chaosIntervals = [];
+        let memoryPressure = [];
+        let logEntries = [];
+        
+        // Performance monitoring
+        let performanceData = [];
+        const maxDataPoints = 50;
+        
+        // =====================================================================
+        // CHAOS COMPONENTS - These components are designed to stress test
+        // =====================================================================
+        
+        // Recursive Chaos Component - Creates infinite nesting with circular dependencies
+        function ChaosRecursive(props, context) {
+            const { getState, setState } = context;
+            const depth = props.depth || 0;
+            const id = props.id || Math.random().toString(36).substr(2, 9);
+            
+            chaosMetrics.maxDepth = Math.max(chaosMetrics.maxDepth, depth);
+            chaosMetrics.componentsCreated++;
+            
+            return {
+                hooks: {
+                    onMount: () => {
+                        // Create circular dependency intentionally
+                        if (depth > 0) {
+                            const parentId = props.parentId;
+                            if (parentId) {
+                                setState(`chaos.circular.${id}`, parentId);
+                                setState(`chaos.circular.${parentId}`, id);
+                                chaosMetrics.circularDependencies++;
+                                logChaos(`🔄 Circular dependency created: ${id} ↔ ${parentId}`);
+                            }
+                        }
+                        
+                        // Random state mutations to create cascading updates
+                        if (Math.random() > 0.7) {
+                            setTimeout(() => {
+                                setState(`chaos.random.${id}`, Math.random());
+                                chaosMetrics.stateChanges++;
+                            }, Math.random() * 1000);
+                        }
+                    },
+                    
+                    onUnmount: () => {
+                        chaosMetrics.componentsDestroyed++;
+                        setState(`chaos.circular.${id}`, null);
+                    }
+                },
+                
+                render: () => ({
+                    div: {
+                        className: () => {
+                            const hasCircular = getState(`chaos.circular.${id}`);
+                            return `chaos-item ${hasCircular ? 'circular-dep' : ''}`;
+                        },
+                        style: () => ({
+                            left: `${(depth * 50 + Math.random() * 100) % 600}px`,
+                            top: `${(depth * 30 + Math.random() * 50) % 300}px`,
+                            zIndex: depth,
+                            transform: `scale(${Math.max(0.3, 1 - depth * 0.1)})`
+                        }),
+                        children: [
+                            {
+                                div: {
+                                    text: () => `Chaos-${id.slice(0,4)} D:${depth} R:${getState(`chaos.random.${id}`, 0).toFixed(2)}`
+                                }
+                            },
+                            // Recursive children with increasing chaos
+                            ...(depth < 8 && getState('chaos.recursiveEnabled', false) ? 
+                                Array.from({length: Math.min(2, Math.floor(Math.random() * 3))}, (_, i) => ({
+                                    ChaosRecursive: {
+                                        depth: depth + 1,
+                                        parentId: id,
+                                        key: `${id}-child-${i}`
+                                    }
+                                })) : [])
+                        ]
+                    }
+                })
+            };
+        }
+        
+        // Memory Chaos Component - Intentionally creates memory pressure
+        function MemoryHog(props, context) {
+            const { getState, setState } = context;
+            const id = props.id || Math.random().toString(36).substr(2, 9);
+            
+            return {
+                hooks: {
+                    onMount: () => {
+                        // Create large objects to consume memory
+                        const largeArray = new Array(100000).fill(0).map(() => ({
+                            id: Math.random(),
+                            data: new Array(100).fill(Math.random()),
+                            timestamp: Date.now()
+                        }));
+                        
+                        setState(`memory.hog.${id}`, largeArray);
+                        memoryPressure.push(largeArray);
+                        chaosMetrics.memoryLeaks++;
+                        
+                        // Create intentional memory leak
+                        const leakyInterval = setInterval(() => {
+                            const moreData = new Array(10000).fill(Math.random());
+                            setState(`memory.leak.${id}.${Date.now()}`, moreData);
+                        }, 500);
+                        
+                        // Store interval reference in a way that might not get cleaned up
+                        setState(`memory.intervals.${id}`, leakyInterval);
+                    },
+                    
+                    onUnmount: () => {
+                        // Simulate cleanup failure
+                        if (Math.random() > 0.7) {
+                            logChaos(`💥 Memory cleanup failed for ${id}`);
+                            return; // Don't clean up - simulate memory leak
+                        }
+                        
+                        const interval = getState(`memory.intervals.${id}`);
+                        if (interval) clearInterval(interval);
+                        setState(`memory.hog.${id}`, null);
+                    }
+                },
+                
+                render: () => ({
+                    div: {
+                        className: 'chaos-item memory-hog',
+                        style: () => ({
+                            left: `${Math.random() * 500}px`,
+                            top: `${Math.random() * 200}px`
+                        }),
+                        children: [
+                            {
+                                div: { text: `🐷 MemHog-${id.slice(0,4)}` }
+                            },
+                            {
+                                div: { 
+                                    text: () => `Size: ${(getState(`memory.hog.${id}`, []).length / 1000).toFixed(0)}K`,
+                                    style: { fontSize: '10px', color: '#ffa502' }
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        }
+        
+        // Async Chaos Component - Creates race conditions and timing issues
+        function AsyncChaos(props, context) {
+            const { getState, setState } = context;
+            const id = props.id || Math.random().toString(36).substr(2, 9);
+            
+            return {
+                hooks: {
+                    onMount: () => {
+                        // Create multiple competing async operations
+                        const delays = [100, 200, 300, 500, 800];
+                        
+                        delays.forEach((delay, index) => {
+                            setTimeout(() => {
+                                setState(`async.${id}.step${index}`, {
+                                    completed: true,
+                                    timestamp: Date.now(),
+                                    data: Math.random()
+                                });
+                                chaosMetrics.asyncOperations++;
+                                
+                                // Create dependency on previous step that might not exist yet
+                                const prevStep = getState(`async.${id}.step${index - 1}`);
+                                if (prevStep) {
+                                    setState(`async.${id}.calculated${index}`, prevStep.data * Math.random());
+                                } else {
+                                    // This should create a race condition
+                                    logChaos(`⚡ Race condition detected in ${id}, step ${index}`);
+                                }
+                            }, delay * Math.random()); // Randomize timing for chaos
+                        });
+                        
+                        // Create a Promise that might reject randomly
+                        const chaosPromise = new Promise((resolve, reject) => {
+                            setTimeout(() => {
+                                if (Math.random() > 0.6) {
+                                    resolve(`Success for ${id}`);
+                                } else {
+                                    reject(new Error(`Chaos failure in ${id}`));
+                                }
+                            }, Math.random() * 2000);
+                        });
+                        
+                        chaosPromise.catch(error => {
+                            setState(`async.${id}.error`, error.message);
+                            chaosMetrics.errors++;
+                            logChaos(`💥 Async error: ${error.message}`);
+                        });
+                    }
+                },
+                
+                render: () => ({
+                    div: {
+                        className: 'chaos-item async-component',
+                        style: () => ({
+                            left: `${Math.random() * 400}px`,
+                            top: `${Math.random() * 150}px`
+                        }),
+                        children: [
+                            {
+                                div: { text: `⚡ Async-${id.slice(0,4)}` }
+                            },
+                            {
+                                div: {
+                                    text: () => {
+                                        const steps = [0,1,2,3,4].map(i => 
+                                            getState(`async.${id}.step${i}`) ? '✓' : '⏳'
+                                        ).join('');
+                                        return `Steps: ${steps}`;
+                                    },
+                                    style: { fontSize: '10px' }
+                                }
+                            },
+                            ...(getState(`async.${id}.error`) ? [{
+                                div: { 
+                                    text: '💥 ERROR',
+                                    style: { color: '#ff4757', fontSize: '10px' }
+                                }
+                            }] : [])
+                        ]
+                    }
+                })
+            };
+        }
+        
+        // Exploding Component - Randomly self-destructs and creates chaos
+        function ExplodingComponent(props, context) {
+            const { getState, setState } = context;
+            const id = props.id || Math.random().toString(36).substr(2, 9);
+            
+            return {
+                hooks: {
+                    onMount: () => {
+                        // Random self-destruction timer
+                        const explodeTime = Math.random() * 5000 + 1000;
+                        setTimeout(() => {
+                            setState(`exploding.${id}.armed`, true);
+                            
+                            setTimeout(() => {
+                                setState(`exploding.${id}.exploded`, true);
+                                logChaos(`💥 Component ${id} exploded!`);
+                                
+                                // Try to destroy parent component too (chaos cascade)
+                                if (props.parentId) {
+                                    setState(`exploding.${props.parentId}.collateral`, true);
+                                }
+                                
+                                chaosMetrics.errors++;
+                            }, 500);
+                        }, explodeTime);
+                    }
+                },
+                
+                render: () => {
+                    const armed = getState(`exploding.${id}.armed`, false);
+                    const exploded = getState(`exploding.${id}.exploded`, false);
+                    
+                    if (exploded) return null; // Component destroyed
+                    
+                    return {
+                        div: {
+                            className: `chaos-item ${armed ? 'exploding' : ''}`,
+                            style: () => ({
+                                left: `${Math.random() * 450}px`,
+                                top: `${Math.random() * 180}px`,
+                                backgroundColor: armed ? '#ff4757' : 'rgba(255, 255, 255, 0.1)'
+                            }),
+                            children: [
+                                {
+                                    div: { text: `💣 Bomb-${id.slice(0,4)} ${armed ? '⚠️' : ''}` }
+                                },
+                                {
+                                    div: {
+                                        text: () => armed ? 'ARMED!' : `Timer: ${((Date.now() / 1000) % 10).toFixed(1)}`,
+                                        style: { fontSize: '10px', color: armed ? '#fff' : '#ffa502' }
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+        }
+        
+        // =====================================================================
+        // CHAOS CONTROL SYSTEM
+        // =====================================================================
+        
+        function ChaosController(props, context) {
+            const { getState, setState } = context;
+            
+            return {
+                hooks: {
+                    onMount: () => {
+                        // Initialize performance monitoring
+                        setInterval(() => {
+                            const start = performance.now();
+                            // Trigger a small render to measure performance
+                            setState('performance.ping', Date.now());
+                            const end = performance.now();
+                            
+                            chaosMetrics.renderTime = end - start;
+                            performanceData.push(chaosMetrics.renderTime);
+                            if (performanceData.length > maxDataPoints) {
+                                performanceData.shift();
+                            }
+                            
+                            // Update stress level based on metrics
+                            updateStressLevel();
+                        }, 100);
+                    }
+                },
+                
+                api: {
+                    startChaos: () => startChaosTest(),
+                    stopChaos: () => stopChaosTest(),
+                    increaseChaos: () => increaseChaosLevel(),
+                    nuclearOption: () => triggerNuclearChaos()
+                },
+                
+                render: () => ({
+                    div: {
+                        className: 'chaos-container',
+                        children: [
+                            // Header
+                            {
+                                div: {
+                                    className: 'chaos-header',
+                                    children: [
+                                        { h1: { text: '⚠️ ARCHITECTURAL CHAOS TEST ⚠️' } },
+                                        { p: { text: 'Testing Juris framework under extreme architectural stress' } },
+                                        {
+                                            div: {
+                                                className: () => `status-indicator status-${getState('chaos.status', 'stable')}`,
+                                                text: () => `STATUS: ${getState('chaos.status', 'STABLE').toUpperCase()}`
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            
+                            // Control Panels
+                            {
+                                div: {
+                                    className: 'stress-controls',
+                                    children: [
+                                        // Basic Chaos Controls
+                                        {
+                                            div: {
+                                                className: 'control-panel',
+                                                children: [
+                                                    { h3: { text: '🎛️ Chaos Controls' } },
+                                                    {
+                                                        button: {
+                                                            className: 'chaos-button btn-chaos',
+                                                            text: () => isTestRunning ? 'STOP CHAOS' : 'START CHAOS',
+                                                            onclick: () => isTestRunning ? stopChaosTest() : startChaosTest()
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            className: 'chaos-button btn-warning',
+                                                            text: 'INCREASE CHAOS',
+                                                            onclick: () => increaseChaosLevel()
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            className: 'chaos-button btn-nuclear',
+                                                            text: '☢️ NUCLEAR OPTION',
+                                                            onclick: () => triggerNuclearChaos()
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        
+                                        // Component Chaos
+                                        {
+                                            div: {
+                                                className: 'control-panel',
+                                                children: [
+                                                    { h3: { text: '🧬 Component Chaos' } },
+                                                    {
+                                                        button: {
+                                                            className: 'chaos-button btn-chaos',
+                                                            text: 'Spawn Recursive',
+                                                            onclick: () => spawnRecursiveComponents()
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            className: 'chaos-button btn-warning',
+                                                            text: 'Memory Bombs',
+                                                            onclick: () => spawnMemoryHogs()
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            className: 'chaos-button btn-danger',
+                                                            text: 'Async Race',
+                                                            onclick: () => spawnAsyncChaos()
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        
+                                        // State Chaos
+                                        {
+                                            div: {
+                                                className: 'control-panel',
+                                                children: [
+                                                    { h3: { text: '🌀 State Chaos' } },
+                                                    {
+                                                        button: {
+                                                            className: 'chaos-button btn-chaos',
+                                                            text: 'Circular Deps',
+                                                            onclick: () => createCircularDependencies()
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            className: 'chaos-button btn-warning',
+                                                            text: 'State Storm',
+                                                            onclick: () => triggerStateStorm()
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            className: 'chaos-button btn-danger',
+                                                            text: 'Clear All State',
+                                                            onclick: () => clearAllState()
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            
+                            // Metrics Dashboard
+                            {
+                                div: {
+                                    className: 'metrics-grid',
+                                    children: [
+                                        {
+                                            div: {
+                                                className: 'metric-card',
+                                                children: [
+                                                    { div: { className: 'metric-value', text: () => chaosMetrics.componentsCreated.toString() } },
+                                                    { div: { className: 'metric-label', text: 'Components Created' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'metric-card',
+                                                children: [
+                                                    { div: { className: 'metric-value', text: () => chaosMetrics.circularDependencies.toString() } },
+                                                    { div: { className: 'metric-label', text: 'Circular Deps' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'metric-card',
+                                                children: [
+                                                    { div: { className: 'metric-value', text: () => chaosMetrics.stateChanges.toString() } },
+                                                    { div: { className: 'metric-label', text: 'State Changes' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'metric-card',
+                                                children: [
+                                                    { div: { className: 'metric-value', text: () => chaosMetrics.errors.toString() } },
+                                                    { div: { className: 'metric-label', text: 'Errors' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'metric-card',
+                                                children: [
+                                                    { div: { className: 'metric-value', text: () => `${chaosMetrics.renderTime.toFixed(2)}ms` } },
+                                                    { div: { className: 'metric-label', text: 'Render Time' } }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                className: 'metric-card',
+                                                children: [
+                                                    { div: { className: 'metric-value', text: () => chaosLevel.toString() } },
+                                                    { div: { className: 'metric-label', text: 'Chaos Level' } }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            
+                            // Chaos Zone - Where components battle for survival
+                            {
+                                div: {
+                                    className: 'chaos-zone',
+                                    children: () => {
+                                        const components = [];
+                                        
+                                        // Render active chaos components
+                                        const recursiveCount = getState('chaos.components.recursive', 0);
+                                        for (let i = 0; i < recursiveCount; i++) {
+                                            components.push({
+                                                ChaosRecursive: { id: `recursive-${i}`, depth: 0 }
+                                            });
+                                        }
+                                        
+                                        const memoryCount = getState('chaos.components.memory', 0);
+                                        for (let i = 0; i < memoryCount; i++) {
+                                            components.push({
+                                                MemoryHog: { id: `memory-${i}` }
+                                            });
+                                        }
+                                        
+                                        const asyncCount = getState('chaos.components.async', 0);
+                                        for (let i = 0; i < asyncCount; i++) {
+                                            components.push({
+                                                AsyncChaos: { id: `async-${i}` }
+                                            });
+                                        }
+                                        
+                                        const explodingCount = getState('chaos.components.exploding', 0);
+                                        for (let i = 0; i < explodingCount; i++) {
+                                            components.push({
+                                                ExplodingComponent: { id: `bomb-${i}` }
+                                            });
+                                        }
+                                        
+                                        return components.length > 0 ? components : [{
+                                            div: {
+                                                text: '🌪️ Chaos Zone - Click controls above to unleash architectural chaos!',
+                                                style: {
+                                                    position: 'absolute',
+                                                    top: '50%',
+                                                    left: '50%',
+                                                    transform: 'translate(-50%, -50%)',
+                                                    textAlign: 'center',
+                                                    color: '#666',
+                                                    fontSize: '18px'
+                                                }
+                                            }
+                                        }];
+                                    }
+                                }
+                            },
+                            
+                            // Chaos Log
+                            {
+                                div: {
+                                    className: 'log-container',
+                                    children: [
+                                        { h3: { text: '📝 Chaos Log', style: { marginBottom: '15px', color: '#ffa502' } } },
+                                        {
+                                            div: {
+                                                children: () => logEntries.slice(-20).map((entry, index) => ({
+                                                    div: {
+                                                        className: `log-entry log-${entry.type}`,
+                                                        text: `[${entry.timestamp}] ${entry.message}`,
+                                                        key: `log-${index}`
+                                                    }
+                                                }))
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        }
+        
+        // =====================================================================
+        // CHAOS FUNCTIONS - The actual stress testing logic
+        // =====================================================================
+        
+        function logChaos(message, type = 'chaos') {
+            const timestamp = new Date().toLocaleTimeString();
+            logEntries.push({ message, type, timestamp });
+            console.log(`[CHAOS] ${message}`);
+        }
+        
+        function startChaosTest() {
+            if (isTestRunning) return;
+            
+            isTestRunning = true;
+            chaosLevel = 1;
+            logChaos('🚀 Chaos test initiated!', 'info');
+            
+            // Start with mild chaos and escalate
+            const escalationInterval = setInterval(() => {
+                if (chaosLevel < 10) {
+                    increaseChaosLevel();
+                } else {
+                    clearInterval(escalationInterval);
+                }
+            }, 5000);
+            
+            chaosIntervals.push(escalationInterval);
+        }
+        
+        function stopChaosTest() {
+            isTestRunning = false;
+            chaosLevel = 0;
+            
+            // Clear all intervals
+            chaosIntervals.forEach(interval => clearInterval(interval));
+            chaosIntervals = [];
+            
+            // Clear all chaos components
+            app.setState('chaos.components.recursive', 0);
+            app.setState('chaos.components.memory', 0);
+            app.setState('chaos.components.async', 0);
+            app.setState('chaos.components.exploding', 0);
+            app.setState('chaos.status', 'stable');
+            
+            logChaos('🛑 Chaos test stopped', 'info');
+        }
+        
+        function increaseChaosLevel() {
+            chaosLevel++;
+            logChaos(`📈 Chaos level increased to ${chaosLevel}`, 'warning');
+            
+            // Spawn components based on chaos level
+            if (chaosLevel % 2 === 0) spawnRecursiveComponents();
+            if (chaosLevel % 3 === 0) spawnMemoryHogs();
+            if (chaosLevel % 4 === 0) spawnAsyncChaos();
+            if (chaosLevel >= 5) spawnExplodingComponents();
+            
+            // Trigger state chaos
+            if (chaosLevel >= 3) triggerStateStorm();
+            if (chaosLevel >= 6) createCircularDependencies();
+        }
+        
+        function spawnRecursiveComponents() {
+            const current = app.getState('chaos.components.recursive', 0);
+            app.setState('chaos.components.recursive', current + Math.floor(Math.random() * 3) + 1);
+            app.setState('chaos.recursiveEnabled', true);
+            logChaos(`🌀 Spawned recursive components`, 'chaos');
+        }
+        
+        function spawnMemoryHogs() {
+            const current = app.getState('chaos.components.memory', 0);
+            app.setState('chaos.components.memory', current + Math.floor(Math.random() * 2) + 1);
+            logChaos(`🐷 Spawned memory hogs`, 'chaos');
+        }
+        
+        function spawnAsyncChaos() {
+            const current = app.getState('chaos.components.async', 0);
+            app.setState('chaos.components.async', current + Math.floor(Math.random() * 3) + 1);
+            logChaos(`⚡ Spawned async chaos components`, 'chaos');
+        }
+        
+        function spawnExplodingComponents() {
+            const current = app.getState('chaos.components.exploding', 0);
+            app.setState('chaos.components.exploding', current + Math.floor(Math.random() * 2) + 1);
+            logChaos(`💣 Spawned exploding components`, 'chaos');
+        }
+        
+        function createCircularDependencies() {
+            // Create intentional circular state dependencies
+            const id1 = Math.random().toString(36).substr(2, 9);
+            const id2 = Math.random().toString(36).substr(2, 9);
+            
+            app.setState(`circular.${id1}`, id2);
+            app.setState(`circular.${id2}`, id1);
+            
+            // Create a chain that references itself
+            app.setState(`circular.chain.${id1}`, {
+                next: id2,
+                data: Math.random()
+            });
+            app.setState(`circular.chain.${id2}`, {
+                next: id1,
+                data: Math.random()
+            });
+            
+            chaosMetrics.circularDependencies += 2;
+            logChaos(`🔄 Created circular dependencies: ${id1} ↔ ${id2}`, 'warning');
+        }
+        
+        function triggerStateStorm() {
+            // Rapid fire state changes that cascade
+            const stormId = Math.random().toString(36).substr(2, 9);
+            let stormCount = 0;
+            
+            const stormInterval = setInterval(() => {
+                stormCount++;
+                app.setState(`storm.${stormId}.count`, stormCount);
+                app.setState(`storm.${stormId}.data.${stormCount}`, {
+                    value: Math.random(),
+                    timestamp: Date.now(),
+                    cascade: stormCount % 3 === 0 ? stormCount - 1 : null
+                });
+                
+                chaosMetrics.stateChanges += 2;
+                
+                if (stormCount >= 50) {
+                    clearInterval(stormInterval);
+                    logChaos(`🌪️ State storm completed: ${stormCount} changes`, 'warning');
+                }
+            }, 10); // Very rapid state changes
+            
+            chaosIntervals.push(stormInterval);
+            logChaos(`🌪️ State storm initiated: ${stormId}`, 'warning');
+        }
+        
+        function clearAllState() {
+            // Nuclear option - clear most state suddenly
+            const keysToKeep = ['chaos.components', 'performance'];
+            
+            // This should create chaos by removing state that components depend on
+            app.setState('storm', null);
+            app.setState('circular', null);
+            app.setState('memory', null);
+            app.setState('async', null);
+            app.setState('exploding', null);
+            
+            logChaos('☢️ State nuclear option triggered!', 'error');
+        }
+        
+        function triggerNuclearChaos() {
+            logChaos('☢️ NUCLEAR CHAOS INITIATED!', 'error');
+            
+            // Everything at once
+            chaosLevel = 10;
+            spawnRecursiveComponents();
+            spawnMemoryHogs();
+            spawnAsyncChaos();
+            spawnExplodingComponents();
+            createCircularDependencies();
+            triggerStateStorm();
+            
+            // Extra chaos
+            setTimeout(() => clearAllState(), 2000);
+            setTimeout(() => spawnRecursiveComponents(), 3000);
+            setTimeout(() => triggerStateStorm(), 4000);
+        }
+        
+        function updateStressLevel() {
+            let status = 'stable';
+            
+            if (chaosMetrics.renderTime > 16) status = 'unstable';
+            if (chaosMetrics.errors > 5) status = 'critical';
+            if (chaosMetrics.renderTime > 50 || chaosMetrics.errors > 10) status = 'meltdown';
+            
+            app.setState('chaos.status', status);
+            chaosMetrics.currentStress = status.toUpperCase();
+        }
+        
+        // =====================================================================
+        // INITIALIZE CHAOS TEST APPLICATION
+        // =====================================================================
+        
+        const app = new Juris({
+            layout: {
+                div: {
+                    children: [{ ChaosController: {} }]
+                }
+            },
+            
+            components: {
+                ChaosController,
+                ChaosRecursive,
+                MemoryHog,
+                AsyncChaos,
+                ExplodingComponent
+            },
+            
+            states: {
+                chaos: {
+                    status: 'stable',
+                    components: {
+                        recursive: 0,
+                        memory: 0,
+                        async: 0,
+                        exploding: 0
+                    },
+                    recursiveEnabled: false
+                },
+                performance: {
+                    ping: 0
+                }
+            },
+            
+            middleware: [
+                // Track all state changes for chaos metrics
+                ({ path, oldValue, newValue }) => {
+                    chaosMetrics.stateChanges++;
+                    
+                    // Detect potential problems
+                    if (typeof newValue === 'object' && newValue !== null) {
+                        try {
+                            JSON.stringify(newValue); // Check for circular references
+                        } catch (e) {
+                            logChaos(`🔄 Circular reference detected in state: ${path}`, 'error');
+                            chaosMetrics.errors++;
+                        }
+                    }
+                    
+                    return newValue;
+                }
+            ]
+        });
+        
+        // Start monitoring performance
+        let lastTime = performance.now();
+        function monitorFrameRate() {
+            const currentTime = performance.now();
+            const frameTime = currentTime - lastTime;
+            lastTime = currentTime;
+            
+            if (frameTime > 16.67) { // 60fps threshold
+                logChaos(`⚠️ Frame drop detected: ${frameTime.toFixed(2)}ms`, 'warning');
+            }
+            
+            requestAnimationFrame(monitorFrameRate);
+        }
+        
+        // Memory monitoring
+        function monitorMemory() {
+            if (performance.memory) {
+                const used = performance.memory.usedJSHeapSize;
+                const total = performance.memory.totalJSHeapSize;
+                const limit = performance.memory.jsHeapSizeLimit;
+                
+                if (used / limit > 0.8) {
+                    logChaos(`🚨 Memory usage critical: ${(used/1024/1024).toFixed(2)}MB`, 'error');
+                }
+            }
+        }
+        
+        // Initialize monitoring
+        monitorFrameRate();
+        setInterval(monitorMemory, 1000);
+        
+        // Render the chaos test
+        app.render('#app');
+        
+        // Welcome message
+        logChaos('🎭 Architectural Chaos Test initialized', 'info');
+        logChaos('⚡ Ready to stress test Juris framework', 'info');
+        logChaos('🚀 Click "START CHAOS" to begin the torture test!', 'info');
+        
+        // Expose app globally for debugging
+        window.chaosApp = app;
+        window.chaosMetrics = chaosMetrics;
+    </script>
+</body>
+</html>

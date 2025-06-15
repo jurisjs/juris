@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Framework Performance Benchmark</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .benchmark-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        input,
+        select,
+        button {
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0 10px 0 30px;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .test-area {
+            border: 2px dashed #e1e5e9;
+            border-radius: 8px;
+            min-height: 300px;
+            padding: 20px;
+            background: #f8f9fa;
+            overflow-y: auto;
+            max-height: 500px;
+        }
+
+        .item {
+            background: white;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 5px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .item-content {
+            flex: 1;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .item-actions button {
+            padding: 5px 10px;
+            font-size: 12px;
+            min-width: 60px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .log {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            .results {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Juris Framework Script -->
+    <script src="juris.js"></script>
+
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Juris Framework Performance Benchmark</h1>
+            <p>Testing DOM update performance, reactivity, and memory usage</p>
+        </div>
+
+        <div class="benchmark-section">
+            <h2>📊 Benchmark Controls</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="itemCount">Item Count</label>
+                    <input type="number" id="itemCount" value="1000" min="100" max="10000" step="100">
+                </div>
+                <div class="control-group">
+                    <label for="updateInterval">Update Interval (ms)</label>
+                    <input type="number" id="updateInterval" value="16" min="1" max="1000">
+                </div>
+                <div class="control-group">
+                    <label for="testType">Test Type</label>
+                    <select id="testType">
+                        <option value="create">Create Items</option>
+                        <option value="update">Update Items</option>
+                        <option value="mixed">Mixed Operations</option>
+                        <option value="stress">Stress Test</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>&nbsp;</label>
+                    <button id="startBtn">Start Benchmark</button>
+                </div>
+                <div class="control-group">
+                    <label>&nbsp;</label>
+                    <button id="stopBtn" disabled>Stop Test</button>
+                </div>
+                <div class="control-group">
+                    <label>&nbsp;</label>
+                    <button id="clearBtn">Clear Results</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="benchmark-section">
+            <h2>📈 Performance Metrics</h2>
+            <div class="results">
+                <div class="metric">
+                    <div class="metric-value" id="fpsMetric">0</div>
+                    <div class="metric-label">FPS</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="renderTime">0ms</div>
+                    <div class="metric-label">Render Time</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="memoryUsage">0MB</div>
+                    <div class="metric-label">Memory Usage</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="updateCount">0</div>
+                    <div class="metric-label">Updates/sec</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="benchmark-section">
+            <h2>🎯 Test Area</h2>
+            <div class="test-area" id="testArea">
+                <p>Click "Start Benchmark" to begin testing...</p>
+            </div>
+        </div>
+
+        <div class="benchmark-section">
+            <h2>📝 Performance Log</h2>
+            <div class="log" id="performanceLog"></div>
+        </div>
+    </div>
+
+    <script>
+        class PerformanceBenchmark {
+            constructor() {
+                this.juris = null;
+                this.isRunning = false;
+                this.startTime = 0;
+                this.frameCount = 0;
+                this.lastFrameTime = 0;
+                this.renderTimes = [];
+                this.updateCounts = [];
+                this.testInterval = null;
+                this.metricsInterval = null;
+
+                // PEAK VALUES TRACKING
+                this.peakValues = {
+                    fps: 0,
+                    renderTime: 0,
+                    memoryUsage: 0,
+                    updatesPerSec: 0
+                };
+
+                this.initializeJuris();
+                this.setupEventListeners();
+                this.startMetricsCollection();
+            }
+
+            initializeJuris() {
+                this.juris = new Juris({
+                    states: {
+                        benchmark: {
+                            items: [],
+                            currentTest: 'create',
+                            progress: 0,
+                            stats: {
+                                totalOperations: 0,
+                                averageRenderTime: 0,
+                                peakMemory: 0
+                            }
+                        }
+                    },
+                    components: {
+                        BenchmarkItem: (props, ctx) => ({
+                            div: {
+                                key: `item-${props.id}`, // VDOM: Add key for reconciliation
+                                className: 'item',
+                                style: {
+                                    backgroundColor: () => props.highlighted ? '#e3f2fd' : 'white',
+                                    borderLeft: () => `4px solid ${props.color || '#667eea'}`
+                                },
+                                children: [
+                                    {
+                                        div: {
+                                            className: 'item-content',
+                                            children: [
+                                                {
+                                                    h4: {
+                                                        key: `title-${props.id}`, // VDOM: Add key
+                                                        text: () => `Item #${props.id}`,
+                                                        style: { margin: '0 0 5px 0' }
+                                                    }
+                                                },
+                                                {
+                                                    p: {
+                                                        key: `desc-${props.id}`, // VDOM: Add key
+                                                        text: () => `Value: ${props.value} | Updates: ${props.updateCount}`,
+                                                        style: { fontSize: '14px', color: '#666' }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        div: {
+                                            className: 'item-actions',
+                                            children: [
+                                                {
+                                                    button: {
+                                                        key: `update-btn-${props.id}`, // VDOM: Add key
+                                                        text: 'Update',
+                                                        onclick: () => this.updateItem(props.id)
+                                                    }
+                                                },
+                                                {
+                                                    button: {
+                                                        key: `delete-btn-${props.id}`, // VDOM: Add key
+                                                        text: 'Delete',
+                                                        onclick: () => this.deleteItem(props.id),
+                                                        style: {
+                                                            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }),
+
+                        BenchmarkList: (props, ctx) => ({
+                            div: {
+                                children: () => {
+                                    const items = ctx.getState('benchmark.items', []);
+                                    // VDOM: Ensure each item has a unique key for optimal reconciliation
+                                    return items.map(item => ({
+                                        BenchmarkItem: {
+                                            ...item,
+                                            key: `benchmark-item-${item.id}` // Unique key for VDOM
+                                        }
+                                    }));
+                                }
+                            }
+                        })
+                    },
+                    layout: {
+                        BenchmarkList: {}
+                    }
+                });
+            }
+
+            setupEventListeners() {
+                document.getElementById('startBtn').addEventListener('click', () => this.startBenchmark());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stopBenchmark());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearResults());
+            }
+
+            startBenchmark() {
+                if (this.isRunning) return;
+
+                this.isRunning = true;
+                this.startTime = performance.now();
+                this.frameCount = 0;
+                this.renderTimes = [];
+
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+
+                const testType = document.getElementById('testType').value;
+                const itemCount = parseInt(document.getElementById('itemCount').value);
+                const updateInterval = parseInt(document.getElementById('updateInterval').value);
+
+                this.log(`🚀 Starting ${testType} benchmark with ${itemCount} items`);
+                this.log(`⚡ Update interval: ${updateInterval}ms`);
+
+                this.juris.setState('benchmark.currentTest', testType);
+                this.juris.render('#testArea');
+
+                switch (testType) {
+                    case 'create':
+                        this.runCreateTest(itemCount);
+                        break;
+                    case 'update':
+                        this.runUpdateTest(itemCount, updateInterval);
+                        break;
+                    case 'mixed':
+                        this.runMixedTest(itemCount, updateInterval);
+                        break;
+                    case 'stress':
+                        this.runStressTest(itemCount, updateInterval);
+                        break;
+                }
+            }
+
+            stopBenchmark() {
+                this.isRunning = false;
+                if (this.testInterval) {
+                    clearInterval(this.testInterval);
+                    this.testInterval = null;
+                }
+
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+
+                const duration = performance.now() - this.startTime;
+                const avgFPS = (this.frameCount / (duration / 1000)).toFixed(2);
+                const avgRenderTime = this.renderTimes.length > 0
+                    ? (this.renderTimes.reduce((a, b) => a + b, 0) / this.renderTimes.length).toFixed(2)
+                    : 0;
+
+                this.log(`✅ Benchmark completed!`);
+                this.log(`📊 Duration: ${(duration / 1000).toFixed(2)}s`);
+                this.log(`🎯 Average FPS: ${avgFPS}`);
+                this.log(`⚡ Average render time: ${avgRenderTime}ms`);
+                this.log(`🏆 PEAK PERFORMANCE:`);
+                this.log(`   • Peak FPS: ${this.peakValues.fps.toFixed(1)}`);
+                this.log(`   • Peak Render Time: ${this.peakValues.renderTime.toFixed(2)}ms`);
+                this.log(`   • Peak Memory: ${this.peakValues.memoryUsage.toFixed(2)}MB`);
+                this.log(`   • Peak Updates/sec: ${this.peakValues.updatesPerSec}`);
+            }
+
+            runCreateTest(itemCount) {
+                let created = 0;
+                const batchSize = Math.min(50, itemCount / 20);
+
+                this.testInterval = setInterval(() => {
+                    const startTime = performance.now();
+
+                    // Create batch of items
+                    const newItems = [];
+                    for (let i = 0; i < batchSize && created < itemCount; i++) {
+                        newItems.push({
+                            id: created++,
+                            value: Math.random().toFixed(3),
+                            updateCount: 0,
+                            color: this.getRandomColor(),
+                            highlighted: Math.random() > 0.8
+                        });
+                    }
+
+                    const currentItems = this.juris.getState('benchmark.items', []);
+                    this.juris.setState('benchmark.items', [...currentItems, ...newItems]);
+
+                    const renderTime = performance.now() - startTime;
+                    this.renderTimes.push(renderTime);
+                    this.frameCount++;
+
+                    this.updateProgress(created / itemCount);
+
+                    if (created >= itemCount) {
+                        this.stopBenchmark();
+                    }
+                }, 16);
+            }
+
+            runUpdateTest(itemCount, updateInterval) {
+                // First create all items
+                const items = [];
+                for (let i = 0; i < itemCount; i++) {
+                    items.push({
+                        id: i,
+                        value: Math.random().toFixed(3),
+                        updateCount: 0,
+                        color: this.getRandomColor(),
+                        highlighted: false
+                    });
+                }
+                this.juris.setState('benchmark.items', items);
+
+                let updateCount = 0;
+                const maxUpdates = itemCount * 2;
+
+                this.testInterval = setInterval(() => {
+                    const startTime = performance.now();
+
+                    // Update random items
+                    const itemsToUpdate = Math.min(10, itemCount / 10);
+                    const currentItems = this.juris.getState('benchmark.items', []);
+
+                    for (let i = 0; i < itemsToUpdate; i++) {
+                        const randomIndex = Math.floor(Math.random() * currentItems.length);
+                        const item = currentItems[randomIndex];
+
+                        this.juris.setState(`benchmark.items.${randomIndex}`, {
+                            ...item,
+                            value: Math.random().toFixed(3),
+                            updateCount: item.updateCount + 1,
+                            highlighted: Math.random() > 0.7,
+                            color: this.getRandomColor()
+                        });
+                    }
+
+                    const renderTime = performance.now() - startTime;
+                    this.renderTimes.push(renderTime);
+                    this.frameCount++;
+                    updateCount += itemsToUpdate;
+
+                    this.updateProgress(updateCount / maxUpdates);
+
+                    if (updateCount >= maxUpdates) {
+                        this.stopBenchmark();
+                    }
+                }, updateInterval);
+            }
+
+            runMixedTest(itemCount, updateInterval) {
+                let operations = 0;
+                const maxOperations = itemCount * 3;
+
+                this.testInterval = setInterval(() => {
+                    const startTime = performance.now();
+                    const currentItems = this.juris.getState('benchmark.items', []);
+
+                    // Randomly choose operation
+                    const operation = Math.random();
+
+                    if (operation < 0.4 && currentItems.length < itemCount) {
+                        // Create new item
+                        const newItem = {
+                            id: Date.now() + Math.random(),
+                            value: Math.random().toFixed(3),
+                            updateCount: 0,
+                            color: this.getRandomColor(),
+                            highlighted: Math.random() > 0.8
+                        };
+                        this.juris.setState('benchmark.items', [...currentItems, newItem]);
+
+                    } else if (operation < 0.7 && currentItems.length > 0) {
+                        // Update existing item
+                        const randomIndex = Math.floor(Math.random() * currentItems.length);
+                        const item = currentItems[randomIndex];
+
+                        this.juris.setState(`benchmark.items.${randomIndex}`, {
+                            ...item,
+                            value: Math.random().toFixed(3),
+                            updateCount: item.updateCount + 1,
+                            highlighted: !item.highlighted
+                        });
+
+                    } else if (currentItems.length > 0) {
+                        // Delete item
+                        const randomIndex = Math.floor(Math.random() * currentItems.length);
+                        const newItems = currentItems.filter((_, index) => index !== randomIndex);
+                        this.juris.setState('benchmark.items', newItems);
+                    }
+
+                    const renderTime = performance.now() - startTime;
+                    this.renderTimes.push(renderTime);
+                    this.frameCount++;
+                    operations++;
+
+                    this.updateProgress(operations / maxOperations);
+
+                    if (operations >= maxOperations) {
+                        this.stopBenchmark();
+                    }
+                }, updateInterval);
+            }
+
+            runStressTest(itemCount, updateInterval) {
+                // Create initial items
+                const items = [];
+                for (let i = 0; i < itemCount; i++) {
+                    items.push({
+                        id: i,
+                        value: Math.random().toFixed(3),
+                        updateCount: 0,
+                        color: this.getRandomColor(),
+                        highlighted: false
+                    });
+                }
+                this.juris.setState('benchmark.items', items);
+
+                let cycles = 0;
+                const maxCycles = 100;
+
+                this.testInterval = setInterval(() => {
+                    const startTime = performance.now();
+
+                    // Update ALL items simultaneously
+                    const currentItems = this.juris.getState('benchmark.items', []);
+                    const updatedItems = currentItems.map(item => ({
+                        ...item,
+                        value: Math.random().toFixed(3),
+                        updateCount: item.updateCount + 1,
+                        highlighted: Math.random() > 0.5,
+                        color: this.getRandomColor()
+                    }));
+
+                    this.juris.setState('benchmark.items', updatedItems);
+
+                    const renderTime = performance.now() - startTime;
+                    this.renderTimes.push(renderTime);
+                    this.frameCount++;
+                    cycles++;
+
+                    this.updateProgress(cycles / maxCycles);
+
+                    if (cycles >= maxCycles) {
+                        this.stopBenchmark();
+                    }
+                }, updateInterval);
+            }
+
+            updateItem(id) {
+                const items = this.juris.getState('benchmark.items', []);
+                const itemIndex = items.findIndex(item => item.id === id);
+
+                if (itemIndex !== -1) {
+                    const item = items[itemIndex];
+                    this.juris.setState(`benchmark.items.${itemIndex}`, {
+                        ...item,
+                        value: Math.random().toFixed(3),
+                        updateCount: item.updateCount + 1,
+                        highlighted: !item.highlighted
+                    });
+                }
+            }
+
+            deleteItem(id) {
+                const items = this.juris.getState('benchmark.items', []);
+                const newItems = items.filter(item => item.id !== id);
+                this.juris.setState('benchmark.items', newItems);
+            }
+
+            updateProgress(progress) {
+                const percentage = Math.min(100, progress * 100);
+                document.getElementById('progressFill').style.width = `${percentage}%`;
+            }
+
+            getRandomColor() {
+                const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            startMetricsCollection() {
+                this.metricsInterval = setInterval(() => {
+                    this.updateMetrics();
+                }, 1000);
+            }
+
+            updateMetrics() {
+                // Calculate FPS
+                const now = performance.now();
+                const timeDiff = now - this.lastFrameTime;
+                const fps = this.isRunning && timeDiff > 0 ? (1000 / timeDiff).toFixed(1) : 0;
+                this.lastFrameTime = now;
+
+                // Calculate average render time
+                const avgRenderTime = this.renderTimes.length > 0
+                    ? (this.renderTimes.slice(-10).reduce((a, b) => a + b, 0) / Math.min(10, this.renderTimes.length)).toFixed(2)
+                    : 0;
+
+                // Estimate memory usage
+                const memoryUsage = (performance.memory ?
+                    (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2) : 'N/A');
+
+                // Calculate updates per second
+                const updatesPerSec = this.isRunning ? Math.floor(this.frameCount / ((now - this.startTime) / 1000)) : 0;
+
+                // UPDATE PEAK VALUES
+                this.peakValues.fps = Math.max(this.peakValues.fps, parseFloat(fps));
+                this.peakValues.renderTime = Math.max(this.peakValues.renderTime, parseFloat(avgRenderTime));
+                if (memoryUsage !== 'N/A') {
+                    this.peakValues.memoryUsage = Math.max(this.peakValues.memoryUsage, parseFloat(memoryUsage));
+                }
+                this.peakValues.updatesPerSec = Math.max(this.peakValues.updatesPerSec, updatesPerSec);
+
+                // Update UI with current values AND peak values
+                document.getElementById('fpsMetric').innerHTML = `
+                    <div style="font-size: 2em; font-weight: bold;">${fps}</div>
+                    <div style="font-size: 0.8em; opacity: 0.8;">Peak: ${this.peakValues.fps.toFixed(1)}</div>
+                `;
+
+                document.getElementById('renderTime').innerHTML = `
+                    <div style="font-size: 2em; font-weight: bold;">${avgRenderTime}ms</div>
+                    <div style="font-size: 0.8em; opacity: 0.8;">Peak: ${this.peakValues.renderTime.toFixed(2)}ms</div>
+                `;
+
+                document.getElementById('memoryUsage').innerHTML = `
+                    <div style="font-size: 2em; font-weight: bold;">${memoryUsage}MB</div>
+                    <div style="font-size: 0.8em; opacity: 0.8;">Peak: ${this.peakValues.memoryUsage.toFixed(2)}MB</div>
+                `;
+
+                document.getElementById('updateCount').innerHTML = `
+                    <div style="font-size: 2em; font-weight: bold;">${updatesPerSec}</div>
+                    <div style="font-size: 0.8em; opacity: 0.8;">Peak: ${this.peakValues.updatesPerSec}</div>
+                `;
+            }
+
+            clearResults() {
+                this.juris.setState('benchmark.items', []);
+                this.renderTimes = [];
+                this.frameCount = 0;
+                this.updateProgress(0);
+
+                // RESET PEAK VALUES
+                this.peakValues = {
+                    fps: 0,
+                    renderTime: 0,
+                    memoryUsage: 0,
+                    updatesPerSec: 0
+                };
+
+                // Reset UI to show zeros
+                document.getElementById('fpsMetric').innerHTML = `
+                    <div style="font-size: 2em; font-weight: bold;">0</div>
+                    <div style="font-size: 0.8em; opacity: 0.8;">Peak: 0</div>
+                `;
+                document.getElementById('renderTime').innerHTML = `
+                    <div style="font-size: 2em; font-weight: bold;">0ms</div>
+                    <div style="font-size: 0.8em; opacity: 0.8;">Peak: 0ms</div>
+                `;
+                document.getElementById('memoryUsage').innerHTML = `
+                    <div style="font-size: 2em; font-weight: bold;">0MB</div>
+                    <div style="font-size: 0.8em; opacity: 0.8;">Peak: 0MB</div>
+                `;
+                document.getElementById('updateCount').innerHTML = `
+                    <div style="font-size: 2em; font-weight: bold;">0</div>
+                    <div style="font-size: 0.8em; opacity: 0.8;">Peak: 0</div>
+                `;
+
+                document.getElementById('performanceLog').innerHTML = '';
+                this.log('📋 Results cleared - Peak values reset');
+            }
+
+            log(message) {
+                const logElement = document.getElementById('performanceLog');
+                const timestamp = new Date().toLocaleTimeString();
+                logElement.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+                logElement.scrollTop = logElement.scrollHeight;
+            }
+        }
+
+        // Initialize benchmark when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.benchmark = new PerformanceBenchmark();
+        });
+    </script>
+</body>
+
+</html>
