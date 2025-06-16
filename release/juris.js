@@ -10,7 +10,7 @@
  * 
  * Author: Resti Guay
  * Maintained by: Juris Github Team
- * Version: 0.4.1 -optimized-rendermode, nested-selectors
+ * Version: 0.4.3 (stable)
  * License: MIT
  * GitHub: https://github.com/jurisjs/juris
  * Website: https://jurisjs.com
