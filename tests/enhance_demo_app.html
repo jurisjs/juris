@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Enhance API Demo</title>
+    <script src="../src/juris.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .demo-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .demo-section:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+        
+        .demo-section h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        /* Todo App Styles */
+        .todo-app {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .add-todo-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .add-todo-form input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .add-todo-form input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .add-todo-form button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .add-todo-form button:hover {
+            background: #5a6fd8;
+        }
+        
+        .todo-list {
+            min-height: 200px;
+        }
+        
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .todo-item:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .todo-item.completed {
+            opacity: 0.7;
+            text-decoration: line-through;
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .todo-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .todo-text {
+            flex: 1;
+            font-size: 16px;
+        }
+        
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .filter-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn.active {
+            background: #667eea;
+            transform: scale(1.05);
+        }
+        
+        .filter-btn:hover {
+            background: #5a6268;
+        }
+        
+        .filter-btn.active:hover {
+            background: #5a6fd8;
+        }
+        
+        .todo-count {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        /* Product Grid Styles */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .product-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .product-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .product-card.in-cart {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .product-card.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .product-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        
+        .product-price {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .add-to-cart-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .add-to-cart-btn:hover {
+            background: #218838;
+        }
+        
+        .add-to-cart-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .qty-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .qty-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .qty-display {
+            font-weight: bold;
+            font-size: 18px;
+            min-width: 30px;
+            text-align: center;
+        }
+        
+        /* Cart Styles */
+        .cart-summary {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .cart-total {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        /* Theme Styles */
+        .theme-switcher {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .theme-btn {
+            background: #495057;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 0 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-btn.active {
+            background: #667eea;
+            transform: scale(1.1);
+        }
+        
+        .themed-content {
+            padding: 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .themed-content.light {
+            background: #f8f9fa;
+            color: #495057;
+        }
+        
+        .themed-content.dark {
+            background: #343a40;
+            color: #f8f9fa;
+        }
+        
+        /* Form Styles */
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .form-field {
+            margin-bottom: 20px;
+        }
+        
+        .form-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .form-field input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-field input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-field.valid input {
+            border-color: #28a745;
+        }
+        
+        .form-field.invalid input {
+            border-color: #dc3545;
+        }
+        
+        .form-status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .form-status.valid {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .form-status.invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .product-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Juris Enhance API Demo</h1>
+            <p>Progressive Enhancement in Action</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- Todo App Demo -->
+            <div class="demo-section">
+                <h2>📝 Todo Application</h2>
+                <div class="todo-app">
+                    <form class="add-todo-form">
+                        <input type="text" placeholder="Enter a new todo..." required>
+                        <button type="submit">Add Todo</button>
+                    </form>
+                    
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="active">Active</button>
+                        <button class="filter-btn" data-filter="completed">Completed</button>
+                    </div>
+                    
+                    <div class="todo-list">
+                        <!-- Todos will be dynamically generated -->
+                    </div>
+                    
+                    <div class="todo-count">
+                        0 items left
+                    </div>
+                </div>
+            </div>
+            
+            <!-- E-commerce Demo -->
+            <div class="demo-section">
+                <h2>🛒 Product Catalog</h2>
+                <div class="product-grid">
+                    <div class="product-card" data-product-id="1" data-price="29.99">
+                        <div class="product-name">Wireless Headphones</div>
+                        <div class="product-price">$29.99</div>
+                        <button class="add-to-cart-btn">Add to Cart</button>
+                        <div class="quantity-controls" style="display: none;">
+                            <button class="qty-btn decrease">-</button>
+                            <span class="qty-display">0</span>
+                            <button class="qty-btn increase">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-card" data-product-id="2" data-price="49.99">
+                        <div class="product-name">Smart Watch</div>
+                        <div class="product-price">$49.99</div>
+                        <button class="add-to-cart-btn">Add to Cart</button>
+                        <div class="quantity-controls" style="display: none;">
+                            <button class="qty-btn decrease">-</button>
+                            <span class="qty-display">0</span>
+                            <button class="qty-btn increase">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-card" data-product-id="3" data-price="19.99">
+                        <div class="product-name">Phone Case</div>
+                        <div class="product-price">$19.99</div>
+                        <button class="add-to-cart-btn">Add to Cart</button>
+                        <div class="quantity-controls" style="display: none;">
+                            <button class="qty-btn decrease">-</button>
+                            <span class="qty-display">0</span>
+                            <button class="qty-btn increase">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-card" data-product-id="4" data-price="99.99">
+                        <div class="product-name">Bluetooth Speaker</div>
+                        <div class="product-price">$99.99</div>
+                        <button class="add-to-cart-btn">Add to Cart</button>
+                        <div class="quantity-controls" style="display: none;">
+                            <button class="qty-btn decrease">-</button>
+                            <span class="qty-display">0</span>
+                            <button class="qty-btn increase">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cart-summary">
+                    <div class="cart-total">Cart Total: $0.00</div>
+                </div>
+            </div>
+            
+            <!-- Theme Switcher Demo -->
+            <div class="demo-section">
+                <h2>🎨 Theme Switcher</h2>
+                <div class="theme-switcher">
+                    <button class="theme-btn active" data-theme="light">☀️ Light</button>
+                    <button class="theme-btn" data-theme="dark">🌙 Dark</button>
+                </div>
+                
+                <div class="themed-content light">
+                    <h3>Themed Content Area</h3>
+                    <p>This content changes appearance based on the selected theme. The enhancement system automatically updates styles when the theme state changes.</p>
+                    <p>Try switching between light and dark themes to see the reactive styling in action!</p>
+                </div>
+            </div>
+            
+            <!-- Form Validation Demo -->
+            <div class="demo-section">
+                <h2>✅ Form Validation</h2>
+                <div class="form-container">
+                    <div class="form-field">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" data-validation="email" placeholder="your@email.com">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" data-validation="password" placeholder="Min 8 characters">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="confirm-password">Confirm Password</label>
+                        <input type="password" id="confirm-password" data-validation="confirm" placeholder="Repeat password">
+                    </div>
+                    
+                    <div class="form-status">
+                        Fill out the form to see live validation
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Juris
+        const app = new Juris();
+        
+        // Initialize application state
+        app.setState('todos', [{id: 1, text: 'test', completed: false}]);
+        app.setState('filter', 'all');
+        app.setState('cart', {});
+        app.setState('cartTotal', 0);
+        app.setState('theme', 'light');
+        app.setState('form', {});
+        app.setState('validation', {});
+        
+        // Todo Application Enhancement
+        app.enhance('.todo-app', {
+            selectors: {
+                '.add-todo-form': {
+                    onsubmit: (e) => {
+                        console.log('add-todo-form onsubmit');
+                        e.preventDefault();
+                        const input = e.target.querySelector('input');
+                        const text = input.value.trim();
+                        
+                        if (text) {
+                            const todos = app.getState('todos', []);
+                            const newTodo = {
+                                id: Date.now(),
+                                text: text,
+                                completed: false
+                            };
+                            app.setState('todos', [...todos, newTodo]);
+                            input.value = '';
+                        }
+                    }
+                },
+                
+                '.todo-list': {
+                    children: () => {
+                        const todos = app.getState('todos', []);
+                        const filter = app.getState('filter', 'all');
+                        
+                        const filteredTodos = todos.filter(todo => {
+                            if (filter === 'active') return !todo.completed;
+                            if (filter === 'completed') return todo.completed;
+                            return true;
+                        });
+                        
+                        if (filteredTodos.length === 0) {
+                            return [{
+                                div: {
+                                    text: todos.length === 0 ? 'No todos yet. Add one above!' : 'No todos match the current filter.',
+                                    style: { 
+                                        textAlign: 'center', 
+                                        padding: '40px', 
+                                        color: '#6c757d',
+                                        fontStyle: 'italic'
+                                    }
+                                }
+                            }];
+                        }
+                        
+                        return filteredTodos.map(todo => ({
+                            div: {
+                                key: todo.id,
+                                className: `todo-item ${todo.completed ? 'completed' : ''}`,
+                                children: [
+                                    {
+                                        input: {
+                                            type: 'checkbox',
+                                            checked: todo.completed,
+                                            onchange: () => {
+                                                const todos = app.getState('todos', []);
+                                                const updated = todos.map(t => 
+                                                    t.id === todo.id ? { ...t, completed: !t.completed } : t
+                                                );
+                                                app.setState('todos', updated);
+                                            }
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            text: todo.text,
+                                            className: 'todo-text'
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            text: '🗑️',
+                                            className: 'delete-btn',
+                                            onclick: () => {
+                                                const todos = app.getState('todos', []);
+                                                const filtered = todos.filter(t => t.id !== todo.id);
+                                                app.setState('todos', filtered);
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }));
+                    }
+                },
+                
+                '.filter-btn': (context) => {
+                    const filter = context.element.dataset.filter;
+                    return {
+                        className: () => {
+                            const currentFilter = app.getState('filter', 'all');
+                            return `filter-btn ${currentFilter === filter ? 'active' : ''}`;
+                        },
+                        onclick: () => {
+                            app.setState('filter', filter);
+                        }
+                    };
+                },
+                
+                '.todo-count': {
+                    text: () => {
+                        const todos = app.getState('todos', []);
+                        const remaining = todos.filter(t => !t.completed).length;
+                        return `${remaining} item${remaining !== 1 ? 's' : ''} left`;
+                    }
+                }
+            }
+        });
+        
+        // Product Grid Enhancement
+        app.enhance('.product-grid', {
+            selectors: {
+                '.product-card': (context) => {
+                    const productId = context.element.dataset.productId;
+                    return {
+                        className: () => {
+                            const cart = app.getState('cart', {});
+                            const loading = app.getState(`products.${productId}.loading`, false);
+                            const inCart = cart[productId] && cart[productId].quantity > 0;
+                            return `product-card ${inCart ? 'in-cart' : ''} ${loading ? 'loading' : ''}`;
+                        }
+                    };
+                },
+                
+                '.add-to-cart-btn': (context) => {
+                    const productId = context.element.dataset.productId;
+                    const price = parseFloat(context.element.closest('.product-card').dataset.price);
+                    
+                    return {
+                        onclick: () => {
+                            app.setState(`products.${productId}.loading`, true);
+                            
+                            setTimeout(() => {
+                                const cart = app.getState('cart', {});
+                                const quantity = cart[productId]?.quantity || 0;
+                                
+                                app.setState(`cart.${productId}`, {
+                                    quantity: quantity + 1,
+                                    price: price
+                                });
+                                
+                                app.setState(`products.${productId}.loading`, false);
+                                updateCartTotal();
+                            }, 300);
+                        },
+                        
+                        text: () => {
+                            const loading = app.getState(`products.${productId}.loading`, false);
+                            const cart = app.getState('cart', {});
+                            const inCart = cart[productId] && cart[productId].quantity > 0;
+                            
+                            if (loading) return '⏳ Adding...';
+                            if (inCart) return '✅ In Cart';
+                            return '🛒 Add to Cart';
+                        },
+                        
+                        disabled: () => {
+                            return app.getState(`products.${productId}.loading`, false);
+                        }
+                    };
+                },
+                
+                '.quantity-controls': (context) => {
+                    const productId = context.element.dataset.productId || 
+                                   context.element.closest('.product-card').dataset.productId;
+                    
+                    return {
+                        style: () => {
+                            const cart = app.getState('cart', {});
+                            const quantity = cart[productId]?.quantity || 0;
+                            return {
+                                display: quantity > 0 ? 'flex' : 'none'
+                            };
+                        }
+                    };
+                },
+                
+                '.qty-display': (context) => {
+                    const productId = context.element.closest('.product-card').dataset.productId;
+                    return {
+                        text: () => {
+                            const cart = app.getState('cart', {});
+                            return (cart[productId]?.quantity || 0).toString();
+                        }
+                    };
+                },
+                
+                '.qty-btn.decrease': (context) => ({
+                    onclick: () => {
+                        const productId = context.element.closest('.product-card').dataset.productId;
+                        const cart = app.getState('cart', {});
+                        const current = cart[productId]?.quantity || 0;
+                        
+                        if (current > 1) {
+                            app.setState(`cart.${productId}.quantity`, current - 1);
+                        } else {
+                            app.setState(`cart.${productId}`, null);
+                        }
+                        updateCartTotal();
+                    }
+                }),
+                
+                '.qty-btn.increase': (context) => ({
+                    onclick: () => {
+                        const productId = context.element.closest('.product-card').dataset.productId;
+                        const cart = app.getState('cart', {});
+                        const current = cart[productId]?.quantity || 0;
+                        const price = parseFloat(context.element.closest('.product-card').dataset.price);
+                        
+                        app.setState(`cart.${productId}`, {
+                            quantity: current + 1,
+                            price: price
+                        });
+                        updateCartTotal();
+                    }
+                })
+            }
+        });
+        
+        // Cart Summary Enhancement
+        app.enhance('.cart-summary', {
+            selectors: {
+                '.cart-total': {
+                    text: () => {
+                        const total = app.getState('cartTotal', 0);
+                        return `Cart Total: $${total.toFixed(2)}`;
+                    }
+                }
+            }
+        });
+        
+        // Theme Switcher Enhancement
+        app.enhance('.theme-switcher', {
+            selectors: {
+                '.theme-btn': (context) => {
+                    const theme = context.element.dataset.theme;
+                    return {
+                        className: () => {
+                            const currentTheme = app.getState('theme', 'light');
+                            return `theme-btn ${currentTheme === theme ? 'active' : ''}`;
+                        },
+                        onclick: () => {
+                            app.setState('theme', theme);
+                        }
+                    };
+                }
+            }
+        });
+        
+        // Themed Content Enhancement
+        app.enhance('.themed-content', {
+            className: () => {
+                const theme = app.getState('theme', 'light');
+                return `themed-content ${theme}`;
+            }
+        });
+        
+        // Form Validation Enhancement
+        app.enhance('.form-container', {
+            selectors: {
+                'input[data-validation]': (context) => {
+                    const field = context.element.id;
+                    const validation = context.element.dataset.validation;
+                    
+                    return {
+                        oninput: (e) => {
+                            const value = e.target.value;
+                            let isValid = true;
+                            
+                            app.setState(`form.${field}`, value);
+                            
+                            if (validation === 'email') {
+                                isValid = /\S+@\S+\.\S+/.test(value) || value === '';
+                            } else if (validation === 'password') {
+                                isValid = value.length >= 8 || value === '';
+                            } else if (validation === 'confirm') {
+                                const password = app.getState('form.password', '');
+                                isValid = value === password || value === '';
+                            }
+                            
+                            app.setState(`validation.${field}`, isValid);
+                        }
+                    };
+                },
+                
+                '.form-field': (context) => {
+                    const input = context.element.querySelector('input');
+                    const field = input?.id;
+                    
+                    if (!field) return {};
+                    
+                    return {
+                        className: () => {
+                            const isValid = app.getState(`validation.${field}`, true);
+                            const hasValue = app.getState(`form.${field}`, '').length > 0;
+                            
+                            if (!hasValue) return 'form-field';
+                            return `form-field ${isValid ? 'valid' : 'invalid'}`;
+                        }
+                    };
+                },
+                
+                '.form-status': {
+                    text: () => {
+                        const validation = app.getState('validation', {});
+                        const form = app.getState('form', {});
+                        
+                        const fields = Object.keys(validation);
+                        if (fields.length === 0) {
+                            return 'Fill out the form to see live validation';
+                        }
+                        
+                        const allValid = Object.values(validation).every(v => v);
+                        const hasValues = Object.values(form).some(v => v && v.length > 0);
+                        
+                        if (!hasValues) {
+                            return 'Start typing to see validation...';
+                        }
+                        
+                        if (allValid) {
+                            return '✅ All fields are valid!';
+                        } else {
+                            return '❌ Please fix the errors above';
+                        }
+                    },
+                    
+                    className: () => {
+                        const validation = app.getState('validation', {});
+                        const form = app.getState('form', {});
+                        
+                        const hasValues = Object.values(form).some(v => v && v.length > 0);
+                        if (!hasValues) return 'form-status';
+                        
+                        const allValid = Object.values(validation).every(v => v);
+                        return `form-status ${allValid ? 'valid' : 'invalid'}`;
+                    }
+                }
+            }
+        });
+        
+        // Helper function to update cart total
+        function updateCartTotal() {
+            const cart = app.getState('cart', {});
+            const total = Object.values(cart).reduce((sum, item) => {
+                if (item && item.quantity && item.price) {
+                    return sum + (item.quantity * item.price);
+                }
+                return sum;
+            }, 0);
+            app.setState('cartTotal', total);
+        }
+        
+        // Add some demo todos on load
+        setTimeout(() => {
+            app.setState('todos', [
+                { id: 1, text: 'Learn Juris Enhance API', completed: false },
+                { id: 2, text: 'Build awesome apps', completed: false },
+                { id: 3, text: 'Share with the world', completed: true }
+            ]);
+        }, 500);
+        
+        console.log('🚀 Juris Enhance API Demo loaded successfully!');
+    </script>
+</body>
+</html>

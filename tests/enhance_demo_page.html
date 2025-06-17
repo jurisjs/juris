@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhance API Demo - Selectors Category</title>
+    <script src="../src/juris.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .demo-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1, h2 {
+            color: #333;
+        }
+        
+        .task-list {
+            border: 2px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        
+        .task-list.enhanced {
+            border-color: #4CAF50;
+            background: #f0f8f0;
+        }
+        
+        .task-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .task-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .task-item.pending {
+            border-left: 4px solid #ff9800;
+        }
+        
+        .task-item.completed {
+            border-left: 4px solid #4CAF50;
+            background: #e8f5e8;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        
+        .add-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .add-btn:hover {
+            background: #1976D2;
+        }
+        
+        .debug-info {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .test-results {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .success {
+            color: #4CAF50;
+        }
+        
+        .error {
+            color: #f44336;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Enhance API Demo - Selectors Category Test</h1>
+    
+    <div class="demo-section">
+        <h2>Interactive Task List</h2>
+        <p>This demo replicates the failing "Selectors Category Enhancement" test. Click tasks to toggle completion status.</p>
+        
+        <div class="task-list" id="task-container">
+            <div class="task-item" data-task-id="1">Task 1 - Click to toggle</div>
+            <div class="task-item" data-task-id="2">Task 2 - Click to toggle</div>
+            <button class="add-btn">Add Task</button>
+        </div>
+        
+        <div class="debug-info" id="debug-info">
+            <strong>Debug Info:</strong><br>
+            State: <span id="state-display">{}</span><br>
+            Enhancement Status: <span id="enhancement-status">Not applied</span><br>
+            Last Click: <span id="last-click">None</span>
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <h2>Test Controls</h2>
+        <button onclick="runTest()">🚀 Run Test</button>
+        <button onclick="resetDemo()">🔄 Reset Demo</button>
+        <button onclick="toggleDebug()">🐛 Toggle Debug Mode</button>
+        <button onclick="inspectElement()">🔍 Inspect First Task</button>
+        
+        <div class="test-results" id="test-results">
+            Click "Run Test" to execute the same logic as the failing test.
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <h2>Manual Testing</h2>
+        <p>Try these manual tests:</p>
+        <ul>
+            <li>Click on Task 1 or Task 2 to toggle completion</li>
+            <li>Watch the className change in the debug info</li>
+            <li>Check if the state updates correctly</li>
+            <li>Observe any timing issues</li>
+        </ul>
+    </div>
+
+    <script>
+        let juris;
+        let debugMode = false;
+        
+        function initializeDemo() {
+            console.log('🚀 Initializing Enhance API Demo');
+            
+            // Create new Juris instance
+            juris = new Juris();
+            
+            // Set initial state step by step to debug
+            juris.setState('tasks.1.completed', false);
+            juris.setState('tasks.2.completed', false);
+            
+            console.log('📊 Initial state set:');
+            console.log('  - tasks:', juris.getState('tasks'));
+            console.log('  - tasks.1:', juris.getState('tasks.1'));
+            console.log('  - tasks.1.completed:', juris.getState('tasks.1.completed'));
+            
+            // Apply enhancement (same as failing test)
+            try {
+                console.log('🎯 Starting enhancement...');
+                
+                juris.enhance('.task-list', {
+                    className: 'task-list enhanced',
+                    selectors: {
+                        '.task-item': (context) => {
+                            const taskId = context.element?.dataset?.taskId;
+                            console.log(`🎯 Enhancing task item with ID: ${taskId}, element:`, context.element);
+                            
+                            if (!taskId) {
+                                console.warn('⚠️ No task ID found for element:', context.element);
+                                return {};
+                            }
+                            
+                            return {
+                                className: () => {
+                                    const completed = context.getState(`tasks.${taskId}.completed`, false);
+                                    const newClassName = `task-item ${completed ? 'completed' : 'pending'}`;
+                                    if (debugMode) {
+                                        console.log(`📝 Task ${taskId} className: ${newClassName}, completed: ${completed}`);
+                                    }
+                                    return newClassName;
+                                },
+                                onclick: (event) => {
+                                    console.log(`👆 Task ${taskId} clicked (actual click event)`, event);
+                                    const current = context.getState(`tasks.${taskId}.completed`, false);
+                                    const newValue = !current;
+                                    console.log(`🔄 Toggling task ${taskId}: ${current} → ${newValue}`);
+                                    context.setState(`tasks.${taskId}.completed`, newValue);
+                                    
+                                    updateDebugInfo();
+                                    document.getElementById('last-click').textContent = `Task ${taskId} (${newValue ? 'completed' : 'pending'})`;
+                                }
+                            };
+                        },
+                        '.add-btn': (context) => ({
+                            onclick: (event) => {
+                                console.log('➕ Add button clicked (actual click event)', event);
+                                const tasks = context.getState('tasks', {});
+                                const taskIds = Object.keys(tasks);
+                                const newTaskId = (taskIds.length + 1).toString();
+                                context.setState(`tasks.${newTaskId}.completed`, false);
+                                
+                                // Add new task element
+                                const newTask = document.createElement('div');
+                                newTask.className = 'task-item';
+                                newTask.dataset.taskId = newTaskId;
+                                newTask.textContent = `Task ${newTaskId} - Click to toggle`;
+                                
+                                const addBtn = document.querySelector('.add-btn');
+                                addBtn.parentNode.insertBefore(newTask, addBtn);
+                                
+                                updateDebugInfo();
+                            }
+                        })
+                    }
+                });
+                
+                document.getElementById('enhancement-status').textContent = 'Applied successfully';
+                console.log('✅ Enhancement applied successfully');
+                
+            } catch (error) {
+                console.error('❌ Enhancement failed:', error);
+                document.getElementById('enhancement-status').textContent = `Failed: ${error.message}`;
+            }
+            
+            // Subscribe to state changes for debugging
+            juris.subscribe('tasks', (newValue, oldValue, path) => {
+                console.log('📡 State change detected:', { path, newValue, oldValue });
+                updateDebugInfo();
+            });
+            
+            updateDebugInfo();
+        }
+        
+        function updateDebugInfo() {
+            const state = juris.getState('tasks', {});
+            document.getElementById('state-display').textContent = JSON.stringify(state, null, 2);
+            
+            // Update visual state of tasks
+            Object.keys(state).forEach(taskId => {
+                const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (taskElement) {
+                    const completed = state[taskId].completed;
+                    const expectedClassName = `task-item ${completed ? 'completed' : 'pending'}`;
+                    const actualClassName = taskElement.className;
+                    
+                    if (debugMode) {
+                        console.log(`🔍 Task ${taskId} - Expected: "${expectedClassName}", Actual: "${actualClassName}"`);
+                    }
+                }
+            });
+        }
+        
+        async function runTest() {
+            console.log('🧪 Running test logic...');
+            const resultsDiv = document.getElementById('test-results');
+            
+            try {
+                // Reset for clean test
+                resetDemo();
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                const results = [];
+                
+                // Test 1: Check initial enhancement
+                const container = document.getElementById('task-container');
+                const expectedContainerClass = 'task-list enhanced';
+                const actualContainerClass = container.className;
+                
+                if (actualContainerClass === expectedContainerClass) {
+                    results.push(`✅ Container class: Expected "${expectedContainerClass}", Got "${actualContainerClass}"`);
+                } else {
+                    results.push(`❌ Container class: Expected "${expectedContainerClass}", Got "${actualContainerClass}"`);
+                }
+                
+                // Test 2: Check initial task state
+                const taskItem1 = container.querySelector('[data-task-id="1"]');
+                const initialState = juris.getState('tasks.1.completed');
+                results.push(`📊 Initial task 1 completed state: ${initialState}`);
+                results.push(`📊 Initial task 1 className: "${taskItem1.className}"`);
+                
+                // Test 3: Click and check state change
+                console.log('👆 Simulating click on task 1...');
+                taskItem1.click();
+                
+                // Wait for state update
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                const afterClickState = juris.getState('tasks.1.completed');
+                const afterClickClassName = taskItem1.className;
+                
+                results.push(`📊 After click - State: ${afterClickState}`);
+                results.push(`📊 After click - ClassName: "${afterClickClassName}"`);
+                
+                // Test 4: Verify expected changes
+                if (afterClickState === true) {
+                    results.push(`✅ State change: ${initialState} → ${afterClickState}`);
+                } else {
+                    results.push(`❌ State change failed: Expected true, got ${afterClickState}`);
+                }
+                
+                const expectedClassName = 'task-item completed';
+                if (afterClickClassName === expectedClassName) {
+                    results.push(`✅ ClassName change: "${afterClickClassName}"`);
+                } else {
+                    results.push(`❌ ClassName change failed: Expected "${expectedClassName}", got "${afterClickClassName}"`);
+                }
+                
+                resultsDiv.innerHTML = `
+                    <h3>🧪 Test Results</h3>
+                    <div style="font-family: monospace; white-space: pre-line;">${results.join('\n')}</div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <h3>❌ Test Error</h3>
+                    <div class="error">${error.message}</div>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+        }
+        
+        function resetDemo() {
+            console.log('🔄 Resetting demo...');
+            
+            // Reset HTML
+            document.getElementById('task-container').innerHTML = `
+                <div class="task-item" data-task-id="1">Task 1 - Click to toggle</div>
+                <div class="task-item" data-task-id="2">Task 2 - Click to toggle</div>
+                <button class="add-btn">Add Task</button>
+            `;
+            
+            // Reset state and re-initialize
+            initializeDemo();
+            
+            document.getElementById('last-click').textContent = 'None';
+            document.getElementById('test-results').innerHTML = 'Click "Run Test" to execute the same logic as the failing test.';
+        }
+        
+        function toggleDebug() {
+            debugMode = !debugMode;
+            console.log(`🐛 Debug mode: ${debugMode ? 'ON' : 'OFF'}`);
+            alert(`Debug mode: ${debugMode ? 'ON' : 'OFF'}\nCheck console for detailed logs.`);
+        }
+        
+        function inspectElement() {
+            const taskItem1 = document.querySelector('[data-task-id="1"]');
+            const state = juris.getState('tasks.1');
+            
+            console.log('🔍 Element Inspection:');
+            console.log('Element:', taskItem1);
+            console.log('Dataset:', taskItem1.dataset);
+            console.log('ClassName:', taskItem1.className);
+            console.log('State:', state);
+            console.log('Complete state tree:', juris.getState('tasks'));
+            
+            alert(`Element Inspection:
+className: "${taskItem1.className}"
+data-task-id: "${taskItem1.dataset.taskId}"
+State: ${JSON.stringify(state)}
+Check console for full details.`);
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 Page loaded, initializing demo...');
+            initializeDemo();
+        });
+        
+        // Global error handler
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('💥 Global error:', { message, source, lineno, colno, error });
+            document.getElementById('test-results').innerHTML = `
+                <h3>💥 JavaScript Error</h3>
+                <div class="error">${message}</div>
+                <div>Line: ${lineno}, Column: ${colno}</div>
+            `;
+        };
+    </script>
+</body>
+</html>
