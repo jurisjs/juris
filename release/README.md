@@ -18,42 +18,45 @@ Transforms web development through its comprehensive object-first architecture t
 ### Via CDN
 
 **ES Module (Recommended):**
+
 ```html
 <!-- Development version -->
 <script type="module">
-  import Juris from 'https://unpkg.com/juris@0.4.1/juris.js';
+	import Juris from "https://unpkg.com/juris@0.5.1/juris.js";
 </script>
 
 <!-- Production version (minified) -->
 <script type="module">
-  import Juris from 'https://unpkg.com/juris@0.4.1/juris.mini.js';
+	import Juris from "https://unpkg.com/juris@0.5.1/juris.mini.js";
 </script>
 ```
 
 **Traditional Script Tag:**
+
 ```html
 <!-- Development version -->
-<script src="https://unpkg.com/juris@0.4.1/juris.js"></script>
+<script src="https://unpkg.com/juris@0.5.1/juris.js"></script>
 
 <!-- Production version (minified) -->
-<script src="https://unpkg.com/juris@0.4.1/juris.mini.js"></script>
+<script src="https://unpkg.com/juris@0.5.1/juris.mini.js"></script>
 <script>
   // Juris is now available as a global variable
 ```
 
 ### Via npm
+
 ```bash
 npm install juris
 ```
 
 ```javascript
-import Juris from 'juris';
+import Juris from "juris";
 ```
 
 ## Usage
 
 ```javascript
-import Juris from 'https://unpkg.com/juris@0.4.1';
+import Juris from "https://unpkg.com/juris@0.5.1";
 
 // Your implementation examples here
 ```

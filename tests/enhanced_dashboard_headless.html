@@ -1,0 +1,2343 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Dashboard - Headless Components & Services</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+
+        /* Theme Variations */
+        body.theme-dark {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e2e8f0;
+        }
+
+        body.theme-light {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1a202c;
+        }
+
+            body.theme-default {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+            }
+
+            .dashboard {
+                padding: 1rem;
+                max-width: 100vw;
+                margin: 0;
+                height: 100vh;
+                overflow-y: auto;
+            }
+
+            .dashboard-header {
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                padding: 1rem;
+                border-radius: 12px;
+                margin-bottom: 1rem;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+                text-align: center;
+            }
+
+            body.theme-dark .dashboard-header {
+                background: rgba(30, 41, 59, 0.95);
+                color: #e2e8f0;
+            }
+
+            body.theme-light .dashboard-header {
+                background: rgba(255, 255, 255, 0.98);
+                color: #1a202c;
+            }
+
+            .dashboard-title {
+                font-size: 1.8rem;
+                font-weight: 700;
+                color: #667eea;
+                margin-bottom: 0.25rem;
+            }
+
+            body.theme-dark .dashboard-title {
+                color: #a78bfa;
+            }
+
+            body.theme-light .dashboard-title {
+                color: #5b21b6;
+            }
+
+            .dashboard-subtitle {
+                color: #666;
+                font-size: 0.9rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .status-bar {
+                display: flex;
+                justify-content: center;
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+
+            .status-item {
+                display: flex;
+                align-items: center;
+                gap: 0.25rem;
+                padding: 0.25rem 0.75rem;
+                background: rgba(102, 126, 234, 0.1);
+                border-radius: 20px;
+                font-size: 0.8rem;
+            }
+
+            .status-item.active {
+                background: rgba(102, 126, 234, 0.2);
+                transform: scale(1.05);
+            }
+
+            body.theme-dark .status-item {
+                background: rgba(99, 102, 241, 0.2);
+                color: #e2e8f0;
+            }
+
+            body.theme-light .status-item {
+                background: rgba(102, 126, 234, 0.12);
+                color: #1a202c;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-rows: auto auto auto;
+                gap: 1rem;
+                height: calc(100vh - 180px);
+            }
+
+            .widget {
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                border-radius: 12px;
+                padding: 1rem;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .widget:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            }
+
+            body.theme-dark .widget {
+                background: rgba(30, 41, 59, 0.95);
+                border: 1px solid rgba(75, 85, 99, 0.3);
+                color: #e2e8f0;
+            }
+
+            body.theme-light .widget {
+                background: rgba(255, 255, 255, 0.98);
+                border: 1px solid rgba(226, 232, 240, 0.5);
+                color: #1a202c;
+            }
+
+            .widget-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 0.75rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                flex-shrink: 0;
+            }
+
+            body.theme-dark .widget-header {
+                border-bottom-color: rgba(75, 85, 99, 0.3);
+            }
+
+            body.theme-light .widget-header {
+                border-bottom-color: rgba(226, 232, 240, 0.5);
+            }
+
+            .widget-title {
+                font-size: 1rem;
+                font-weight: 600;
+                color: #333;
+            }
+
+            body.theme-dark .widget-title {
+                color: #e2e8f0;
+            }
+
+            body.theme-light .widget-title {
+                color: #1a202c;
+            }
+
+            .widget-actions {
+                display: flex;
+                gap: 0.25rem;
+            }
+
+            .btn {
+                padding: 0.25rem 0.75rem;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                font-weight: 500;
+                background: #667eea;
+                color: white;
+            }
+
+            .btn:hover {
+                background: #5a6fd8;
+                transform: translateY(-1px);
+            }
+
+            body.theme-dark .btn {
+                background: #a78bfa;
+                color: #1e1b4b;
+            }
+
+            body.theme-light .btn {
+                background: #5b21b6;
+                color: white;
+            }
+
+            .btn.secondary {
+                background: #e2e8f0;
+                color: #334155;
+            }
+
+            .btn.secondary:hover {
+                background: #cbd5e1;
+            }
+
+            body.theme-dark .btn.secondary {
+                background: #374151;
+                color: #d1d5db;
+            }
+
+            body.theme-light .btn.secondary {
+                background: #f1f5f9;
+                color: #475569;
+            }
+
+            .btn.danger {
+                background: #ef4444;
+            }
+
+            .btn.danger:hover {
+                background: #dc2626;
+            }
+
+            .btn.success {
+                background: #10b981;
+            }
+
+            .btn.success:hover {
+                background: #059669;
+            }
+
+            /* Specific widget layouts */
+            .metrics-widget {
+                grid-column: 1;
+                grid-row: 1;
+            }
+
+            .chart-widget {
+                grid-column: 2;
+                grid-row: 1;
+            }
+
+            .table-widget {
+                grid-column: 3;
+                grid-row: 1 / span 2;
+            }
+
+            .activity-widget {
+                grid-column: 1;
+                grid-row: 2;
+            }
+
+            .settings-widget {
+                grid-column: 2;
+                grid-row: 2;
+            }
+
+            .headless-demo-widget {
+                grid-column: 1 / span 2;
+                grid-row: 3;
+            }
+
+            .metrics-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 0.5rem;
+                flex: 1;
+            }
+
+            .metric {
+                text-align: center;
+                padding: 0.5rem;
+                background: rgba(102, 126, 234, 0.05);
+                border-radius: 8px;
+            }
+
+            .metric:hover {
+                background: rgba(102, 126, 234, 0.1);
+            }
+
+            body.theme-dark .metric {
+                background: rgba(99, 102, 241, 0.15);
+            }
+
+            body.theme-light .metric {
+                background: rgba(102, 126, 234, 0.08);
+            }
+
+            .metric-value {
+                font-size: 1.2rem;
+                font-weight: 700;
+                color: #667eea;
+                margin-bottom: 0.1rem;
+            }
+
+            body.theme-dark .metric-value {
+                color: #a78bfa;
+            }
+
+            body.theme-light .metric-value {
+                color: #5b21b6;
+            }
+
+            .metric-label {
+                color: #666;
+                font-size: 0.7rem;
+            }
+
+            body.theme-dark .metric-label {
+                color: #9ca3af;
+            }
+
+            body.theme-light .metric-label {
+                color: #6b7280;
+            }
+
+            .metric-trend {
+                font-size: 0.65rem;
+                margin-top: 0.1rem;
+            }
+
+            .trend-up {
+                color: #10b981;
+            }
+
+            .trend-down {
+                color: #ef4444;
+            }
+
+            .chart-container {
+                height: 120px;
+                background: rgba(102, 126, 234, 0.05);
+                border-radius: 8px;
+                display: flex;
+                align-items: end;
+                justify-content: center;
+                position: relative;
+                overflow: hidden;
+                flex: 1;
+                padding: 0.5rem;
+                gap: 2px;
+            }
+
+            body.theme-dark .chart-container {
+                background: rgba(99, 102, 241, 0.15);
+            }
+
+            body.theme-light .chart-container {
+                background: rgba(102, 126, 234, 0.08);
+            }
+
+            .chart-bar {
+                background: linear-gradient(45deg, #667eea, #764ba2);
+                border-radius: 2px 2px 0 0;
+                cursor: pointer;
+                flex: 1;
+                min-width: 8px;
+            }
+
+            .chart-bar:hover {
+                opacity: 0.8;
+                transform: scaleY(1.1);
+            }
+
+            body.theme-dark .chart-bar {
+                background: linear-gradient(45deg, #a78bfa, #c084fc);
+            }
+
+            body.theme-light .chart-bar {
+                background: linear-gradient(45deg, #5b21b6, #7c3aed);
+            }
+
+            .activity-feed {
+                max-height: 200px;
+                overflow-y: auto;
+                flex: 1;
+            }
+
+            .activity-item {
+                padding: 0.5rem;
+                border-left: 2px solid #667eea;
+                margin-bottom: 0.25rem;
+                background: rgba(102, 126, 234, 0.05);
+                border-radius: 0 6px 6px 0;
+                font-size: 0.8rem;
+            }
+
+            .activity-item:hover {
+                background: rgba(102, 126, 234, 0.1);
+                transform: translateX(2px);
+            }
+
+            body.theme-dark .activity-item {
+                border-left-color: #a78bfa;
+                background: rgba(99, 102, 241, 0.15);
+            }
+
+            body.theme-light .activity-item {
+                border-left-color: #5b21b6;
+                background: rgba(102, 126, 234, 0.08);
+            }
+
+            .activity-time {
+                font-size: 0.7rem;
+                color: #666;
+                float: right;
+            }
+
+            body.theme-dark .activity-time {
+                color: #9ca3af;
+            }
+
+            body.theme-light .activity-time {
+                color: #6b7280;
+            }
+
+            .activity-text {
+                color: #333;
+                font-size: 0.8rem;
+            }
+
+            body.theme-dark .activity-text {
+                color: #e2e8f0;
+            }
+
+            body.theme-light .activity-text {
+                color: #1a202c;
+            }
+
+            .data-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.8rem;
+                flex: 1;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 0.5rem;
+                text-align: left;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            }
+
+            body.theme-dark .data-table th,
+            body.theme-dark .data-table td {
+                border-bottom-color: rgba(75, 85, 99, 0.3);
+            }
+
+            body.theme-light .data-table th,
+            body.theme-light .data-table td {
+                border-bottom-color: rgba(226, 232, 240, 0.5);
+            }
+
+            .data-table th {
+                background: rgba(102, 126, 234, 0.1);
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 0.75rem;
+            }
+
+            .data-table th:hover {
+                background: rgba(102, 126, 234, 0.2);
+            }
+
+            body.theme-dark .data-table th {
+                background: rgba(99, 102, 241, 0.2);
+                color: #e2e8f0;
+            }
+
+            body.theme-light .data-table th {
+                background: rgba(102, 126, 234, 0.12);
+                color: #1a202c;
+            }
+
+            .data-table tr:hover {
+                background: rgba(102, 126, 234, 0.05);
+            }
+
+            body.theme-dark .data-table tr:hover {
+                background: rgba(99, 102, 241, 0.15);
+            }
+
+            body.theme-light .data-table tr:hover {
+                background: rgba(102, 126, 234, 0.08);
+            }
+
+            .filter-bar {
+                display: flex;
+                gap: 0.5rem;
+                margin-bottom: 0.75rem;
+                flex-wrap: wrap;
+            }
+
+            .filter-input {
+                padding: 0.25rem;
+                border: 1px solid #e2e8f0;
+                border-radius: 4px;
+                font-size: 0.8rem;
+                flex: 1;
+                min-width: 80px;
+                background: white;
+                color: #1a202c;
+            }
+
+            body.theme-dark .filter-input {
+                background: #374151;
+                border-color: #4b5563;
+                color: #e2e8f0;
+            }
+
+            body.theme-light .filter-input {
+                background: #ffffff;
+                border-color: #cbd5e1;
+                color: #1a202c;
+            }
+
+            .filter-input:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+            }
+
+            body.theme-dark .filter-input:focus {
+                border-color: #a78bfa;
+                box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
+            }
+
+            body.theme-light .filter-input:focus {
+                border-color: #5b21b6;
+                box-shadow: 0 0 0 2px rgba(91, 33, 182, 0.1);
+            }
+
+            .table-container {
+                overflow-y: auto;
+                flex: 1;
+                max-height: 300px;
+            }
+
+            .settings-content {
+                flex: 1;
+            }
+
+            .settings-content>div {
+                margin-bottom: 0.75rem;
+            }
+
+            .settings-content label {
+                display: block;
+                margin-bottom: 0.25rem;
+                font-weight: 500;
+                font-size: 0.8rem;
+            }
+
+            .notification {
+                position: fixed;
+                top: 2rem;
+                right: 2rem;
+                padding: 1rem 1.5rem;
+                border-radius: 12px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                transform: translateX(100%);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            }
+
+            .notification.show {
+                transform: translateX(0);
+            }
+
+            .notification.success {
+                background: linear-gradient(45deg, #10b981, #059669);
+            }
+
+            .notification.error {
+                background: linear-gradient(45deg, #ef4444, #dc2626);
+            }
+
+            .notification.info {
+                background: linear-gradient(45deg, #3b82f6, #2563eb);
+            }
+
+            .loading {
+                opacity: 0.7;
+                pointer-events: none;
+            }
+
+            .fade-in {
+                animation: fadeIn 0.5s ease forwards;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .slide-in {
+                animation: slideIn 0.6s ease forwards;
+            }
+
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(-20px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+
+            .pulse {
+                animation: pulse 2s infinite;
+            }
+
+            @keyframes pulse {
+
+                0%,
+                100% {
+                    opacity: 1;
+                }
+
+                50% {
+                    opacity: 0.7;
+                }
+            }
+
+            /* Headless Demo Widget Styles */
+            .headless-demo-content {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+                flex: 1;
+            }
+
+            .demo-section {
+                padding: 1rem;
+                background: rgba(102, 126, 234, 0.05);
+                border-radius: 8px;
+                border: 1px solid rgba(102, 126, 234, 0.1);
+            }
+
+            body.theme-dark .demo-section {
+                background: rgba(99, 102, 241, 0.15);
+                border-color: rgba(99, 102, 241, 0.2);
+            }
+
+            body.theme-light .demo-section {
+                background: rgba(102, 126, 234, 0.08);
+                border-color: rgba(102, 126, 234, 0.15);
+            }
+
+            .demo-section h4 {
+                font-size: 0.9rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                color: #667eea;
+            }
+
+            body.theme-dark .demo-section h4 {
+                color: #a78bfa;
+            }
+
+            body.theme-light .demo-section h4 {
+                color: #5b21b6;
+            }
+
+            .demo-controls {
+                display: flex;
+                gap: 0.5rem;
+                margin-bottom: 0.75rem;
+                flex-wrap: wrap;
+            }
+
+            .demo-output {
+                font-size: 0.8rem;
+                line-height: 1.4;
+                background: rgba(0, 0, 0, 0.05);
+                padding: 0.5rem;
+                border-radius: 4px;
+                min-height: 60px;
+            }
+
+            body.theme-dark .demo-output {
+                background: rgba(0, 0, 0, 0.2);
+                color: #e2e8f0;
+            }
+
+            body.theme-light .demo-output {
+                background: rgba(0, 0, 0, 0.03);
+                color: #1a202c;
+            }
+
+            @media (max-width: 768px) {
+                .dashboard {
+                    padding: 1rem;
+                }
+
+                .grid {
+                    grid-template-columns: 1fr;
+                    grid-template-rows: repeat(6, auto);
+                }
+
+                .table-widget,
+                .headless-demo-widget {
+                    grid-column: 1;
+                    grid-row: auto;
+                }
+
+                .dashboard-title {
+                    font-size: 1.5rem;
+                }
+
+                .status-bar {
+                    gap: 0.5rem;
+                }
+
+                .notification {
+                    right: 1rem;
+                    left: 1rem;
+                    top: 1rem;
+                }
+
+                .headless-demo-content {
+                    grid-template-columns: 1fr;
+                }
+            }
+    </style>
+</head>
+
+<body>
+    <!-- Static HTML - This gets enhanced with Juris enhance() API + Headless Components -->
+    <div class="dashboard">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Enhanced Dashboard</h1>
+            <p class="dashboard-subtitle">Showcasing Juris enhance() API with Headless Components & Services</p>
+            <div class="status-bar">
+                <div class="status-item" data-status="connection">
+                    <span>🔗</span>
+                    <span>Connection: Connecting...</span>
+                </div>
+                <div class="status-item" data-status="performance">
+                    <span>⚡</span>
+                    <span>Performance: Excellent</span>
+                </div>
+                <div class="status-item" data-status="updates">
+                    <span>🔄</span>
+                    <span>Updates: 0</span>
+                </div>
+                <div class="status-item" data-status="enhancements">
+                    <span>🎯</span>
+                    <span>Enhanced: 0 elements</span>
+                </div>
+                <div class="status-item" data-status="headless">
+                    <span>🧠</span>
+                    <span>Headless: 0 active</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Grid -->
+        <div class="grid">
+            <!-- Real-time Metrics Widget -->
+            <div class="widget metrics-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Real-time Metrics</h3>
+                    <div class="widget-actions">
+                        <button class="btn refresh-metrics">Refresh</button>
+                        <button class="btn secondary toggle-auto-refresh">Auto: OFF</button>
+                    </div>
+                </div>
+                <div class="metrics-grid">
+                    <div class="metric" data-metric="users">
+                        <div class="metric-value">1,247</div>
+                        <div class="metric-label">Active Users</div>
+                        <div class="metric-trend trend-up">↗ +12%</div>
+                    </div>
+                    <div class="metric" data-metric="revenue">
+                        <div class="metric-value">$89,432</div>
+                        <div class="metric-label">Revenue Today</div>
+                        <div class="metric-trend trend-up">↗ +8.5%</div>
+                    </div>
+                    <div class="metric" data-metric="orders">
+                        <div class="metric-value">156</div>
+                        <div class="metric-label">Orders</div>
+                        <div class="metric-trend trend-down">↘ -3%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Chart Widget -->
+            <div class="widget chart-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Sales Chart</h3>
+                    <div class="widget-actions">
+                        <button class="btn chart-period" data-period="day">Day</button>
+                        <button class="btn secondary chart-period" data-period="week">Week</button>
+                        <button class="btn secondary chart-period" data-period="month">Month</button>
+                    </div>
+                </div>
+                <div class="chart-container" id="salesChart">
+                    <!-- Chart bars will be generated here -->
+                </div>
+            </div>
+
+            <!-- Data Table Widget -->
+            <div class="widget table-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Recent Orders</h3>
+                    <div class="widget-actions">
+                        <button class="btn export-data">Export</button>
+                        <button class="btn secondary add-order">Add Order</button>
+                    </div>
+                </div>
+                <div class="filter-bar">
+                    <input type="text" class="filter-input" placeholder="Search..." data-filter="search">
+                    <select class="filter-input" data-filter="status">
+                        <option value="">Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="id">ID</th>
+                                <th data-sort="customer">Customer</th>
+                                <th data-sort="amount">Amount</th>
+                                <th data-sort="status">Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <!-- Orders will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Activity Feed Widget -->
+            <div class="widget activity-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Live Activity Feed</h3>
+                    <div class="widget-actions">
+                        <button class="btn clear-activity">Clear</button>
+                        <button class="btn secondary pause-feed">Pause</button>
+                    </div>
+                </div>
+                <div class="activity-feed" id="activityFeed">
+                    <!-- Activity items will be added here -->
+                </div>
+            </div>
+
+            <!-- Settings Widget -->
+            <div class="widget settings-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Dashboard Settings</h3>
+                    <div class="widget-actions">
+                        <button class="btn save-settings">Save</button>
+                        <button class="btn secondary reset-settings">Reset</button>
+                    </div>
+                </div>
+                <div class="settings-content">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Theme</label>
+                        <select data-setting="theme"> <!-- Remove class="filter-input" -->
+                            <option value="default">Default</option>
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Update Frequency</label>
+                        <select data-setting="updateFreq">
+                            <option value="1000">1 second</option>
+                            <option value="5000" selected>5 seconds</option>
+                            <option value="10000">10 seconds</option>
+                            <option value="30000">30 seconds</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" data-setting="notifications" checked>
+                            <span>Enable Notifications</span>
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" data-setting="animations" checked>
+                            <span>Enable Animations</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NEW: Headless Components Demo Widget -->
+            <div class="widget headless-demo-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Headless Components & Services Demo</h3>
+                    <div class="widget-actions">
+                        <button class="btn test-services">Test Services</button>
+                        <button class="btn secondary test-headless">Test Headless</button>
+                    </div>
+                </div>
+                <div class="headless-demo-content">
+                    <div class="demo-section" id="servicesDemo">
+                        <h4>🛠️ Services Demo</h4>
+                        <div class="demo-controls">
+                            <button class="btn test-api-service">Test API</button>
+                            <button class="btn test-storage-service">Test Storage</button>
+                            <button class="btn test-logger-service">Test Logger</button>
+                        </div>
+                        <div class="demo-output" id="servicesOutput">
+                            Services are available directly in context...
+                        </div>
+                    </div>
+
+                    <div class="demo-section" id="headlessDemo">
+                        <h4>🧠 Headless Components Demo</h4>
+                        <div class="demo-controls">
+                            <button class="btn test-counter">Test Counter</button>
+                            <button class="btn test-timer">Test Timer</button>
+                            <button class="btn test-data-manager">Test Data Manager</button>
+                        </div>
+                        <div class="demo-output" id="headlessOutput">
+                            Headless components provide logic without UI...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notifications"></div>
+
+    <!-- Load Juris from CDN -->
+    <!--script src="https://unpkg.com/juris@0.5.0/juris.js"></script-->
+    <script src="../src/juris.js"></script>
+
+    <script>
+        // ===== SERVICES DEFINITION =====
+const services = {
+    // API Service - Handles all external API calls
+    api: {
+        async get(endpoint) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const mockData = {
+                '/users': { count: Math.floor(Math.random() * 1000) + 1000, status: 'active' },
+                '/orders': { total: Math.floor(Math.random() * 500) + 100, pending: 23 },
+                '/analytics': { revenue: Math.floor(Math.random() * 100000) + 50000, growth: '12.5%' }
+            };
+            return mockData[endpoint] || { message: 'Data retrieved successfully' };
+        },
+
+        async post(endpoint, data) {
+            await new Promise(resolve => setTimeout(resolve, 400));
+            return { success: true, id: Date.now(), data };
+        }
+    },
+
+    // Storage Service - Handles all data persistence
+    storage: {
+        set(key, value) {
+            try {
+                const data = JSON.stringify(value);
+                localStorage.setItem(`dashboard_${key}`, data);
+                return true;
+            } catch (error) {
+                console.warn('Storage not available, using memory fallback');
+                this._memoryStore = this._memoryStore || {};
+                this._memoryStore[key] = value;
+                return true;
+            }
+        },
+
+        get(key, defaultValue = null) {
+            try {
+                const data = localStorage.getItem(`dashboard_${key}`);
+                return data ? JSON.parse(data) : defaultValue;
+            } catch (error) {
+                console.warn('Storage not available, using memory fallback');
+                this._memoryStore = this._memoryStore || {};
+                return this._memoryStore[key] || defaultValue;
+            }
+        },
+
+        remove(key) {
+            try {
+                localStorage.removeItem(`dashboard_${key}`);
+            } catch (error) {
+                if (this._memoryStore) {
+                    delete this._memoryStore[key];
+                }
+            }
+            return true;
+        }
+    },
+
+    // Logger Service - Handles all logging functionality
+    logger: {
+        log(message, data = null) {
+            const timestamp = new Date().toISOString();
+            const logEntry = { timestamp, level: 'info', message, data };
+            console.log(`[${timestamp}] ${message}`, data || '');
+            this._storeLogs(logEntry);
+            return logEntry;
+        },
+
+        error(message, error = null) {
+            const timestamp = new Date().toISOString();
+            const logEntry = { timestamp, level: 'error', message, error: error?.message };
+            console.error(`[${timestamp}] ERROR: ${message}`, error || '');
+            this._storeLogs(logEntry);
+            return logEntry;
+        },
+
+        _storeLogs(logEntry) {
+            const logs = this.getLogs();
+            logs.push(logEntry);
+            if (logs.length > 100) {
+                logs.splice(0, logs.length - 100);
+            }
+            services.storage.set('logs', logs);
+        },
+
+        getLogs() {
+            return services.storage.get('logs', []);
+        },
+
+        clearLogs() {
+            services.storage.remove('logs');
+        }
+    },
+
+    // Notification Service - Handles all user notifications
+    notification: {
+        container: null,
+        queue: [],
+        isProcessing: false,
+
+        init() {
+            if (!this.container) {
+                this.container = document.createElement('div');
+                this.container.id = 'notifications-container';
+                this.container.style.cssText = 'position: fixed; top: 2rem; right: 2rem; z-index: 1000;';
+                document.body.appendChild(this.container);
+            }
+        },
+
+        show(message, type = 'info', duration = 3000) {
+            this.queue.push({ message, type, duration });
+            if (!this.isProcessing) {
+                this.processQueue();
+            }
+        },
+
+        async processQueue() {
+            this.isProcessing = true;
+            while (this.queue.length > 0) {
+                const { message, type, duration } = this.queue.shift();
+                await this.displayNotification(message, type, duration);
+            }
+            this.isProcessing = false;
+        },
+
+        displayNotification(message, type, duration) {
+            return new Promise(resolve => {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                notification.style.cssText = `
+                    padding: 1rem 1.5rem; border-radius: 12px; color: white; font-weight: 500;
+                    transform: translateX(100%); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                    margin-bottom: 0.5rem; transition: transform 0.3s ease;
+                    background: ${type === 'success' ? 'linear-gradient(45deg, #10b981, #059669)' :
+                        type === 'error' ? 'linear-gradient(45deg, #ef4444, #dc2626)' :
+                        'linear-gradient(45deg, #3b82f6, #2563eb)'};
+                `;
+
+                this.container.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                        resolve();
+                    }, 300);
+                }, duration);
+            });
+        }
+    },
+
+    // Theme Service - Handles theme management
+    theme: {
+        apply(theme) {
+            document.body.classList.remove('theme-default', 'theme-dark', 'theme-light');
+            document.body.classList.add(`theme-${theme}`);
+            services.logger.log(`Theme changed to ${theme}`);
+            
+            // Trigger chart re-render after theme change
+            setTimeout(() => {
+                const event = new CustomEvent('theme-changed', { detail: { theme } });
+                document.dispatchEvent(event);
+            }, 100);
+        },
+
+        getCurrentTheme() {
+            const classList = document.body.classList;
+            if (classList.contains('theme-dark')) return 'dark';
+            if (classList.contains('theme-light')) return 'light';
+            return 'default';
+        }
+    }
+};
+
+// ===== HEADLESS COMPONENTS DEFINITION =====
+const headlessComponents = {
+    // Metrics Manager - Handles all metrics logic
+    metricsManager: (props, context) => {
+        const { getState, setState } = context;
+        const basePath = props.statePath || 'metrics';
+
+        const api = {
+            async refreshMetrics() {
+                try {
+                    setState(`${basePath}.loading`, true);
+                    
+                    // Generate new random metrics
+                    const newMetrics = {
+                        users: Math.floor(Math.random() * 2000) + 1000,
+                        revenue: Math.floor(Math.random() * 100000) + 50000,
+                        orders: Math.floor(Math.random() * 200) + 100,
+                        lastUpdate: Date.now()
+                    };
+
+                    setState(`${basePath}.users`, newMetrics.users);
+                    setState(`${basePath}.revenue`, newMetrics.revenue);
+                    setState(`${basePath}.orders`, newMetrics.orders);
+                    setState(`${basePath}.lastUpdate`, newMetrics.lastUpdate);
+                    setState(`${basePath}.loading`, false);
+
+                    context.logger.log('Metrics refreshed successfully', newMetrics);
+                    return newMetrics;
+                } catch (error) {
+                    setState(`${basePath}.loading`, false);
+                    context.logger.error('Failed to refresh metrics', error);
+                    throw error;
+                }
+            },
+
+            getMetrics() {
+                return {
+                    users: getState(`${basePath}.users`, 1247),
+                    revenue: getState(`${basePath}.revenue`, 89432),
+                    orders: getState(`${basePath}.orders`, 156),
+                    lastUpdate: getState(`${basePath}.lastUpdate`, Date.now()),
+                    loading: getState(`${basePath}.loading`, false)
+                };
+            },
+
+            isLoading() {
+                return getState(`${basePath}.loading`, false);
+            }
+        };
+
+        return {
+            api,
+            hooks: {
+                onRegister() {
+                    context.logger.log('MetricsManager headless component registered');
+                    // Initialize default metrics if not present
+                    if (!getState(`${basePath}.users`)) {
+                        setState(`${basePath}.users`, 1247);
+                        setState(`${basePath}.revenue`, 89432);
+                        setState(`${basePath}.orders`, 156);
+                        setState(`${basePath}.lastUpdate`, Date.now());
+                    }
+                }
+            }
+        };
+    },
+
+    // Chart Manager - Handles chart data and rendering logic
+    chartManager: (props, context) => {
+        const { getState, setState } = context;
+        const basePath = props.statePath || 'chart';
+
+        const api = {
+            generateChartData(period) {
+                let dataPoints;
+                switch (period) {
+                    case 'day': dataPoints = 24; break;
+                    case 'week': dataPoints = 7; break;
+                    case 'month': dataPoints = 30; break;
+                    default: dataPoints = 12;
+                }
+
+                const data = Array.from({ length: dataPoints }, () => 
+                    Math.floor(Math.random() * 100) + 20
+                );
+
+                setState(`${basePath}.data`, data);
+                setState(`${basePath}.period`, period);
+                context.logger.log(`Chart data generated for ${period}`, { dataPoints: data.length });
+                
+                return data;
+            },
+
+            getCurrentData() {
+                return getState(`${basePath}.data`, []);
+            },
+
+            getCurrentPeriod() {
+                return getState(`${basePath}.period`, 'day');
+            },
+
+            renderChart(containerId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                const data = this.getCurrentData();
+                container.innerHTML = '';
+
+                if (data.length === 0) return;
+
+                const maxValue = Math.max(...data);
+                const containerHeight = 100;
+
+                data.forEach((value, index) => {
+                    const height = Math.max(10, (value / maxValue) * containerHeight);
+                    const bar = document.createElement('div');
+                    bar.className = 'chart-bar';
+                    bar.style.cssText = `
+                        height: ${height}%; 
+                        background: linear-gradient(45deg, #667eea, #764ba2);
+                        border-radius: 2px 2px 0 0; 
+                        cursor: pointer; 
+                        flex: 1; 
+                        min-width: 8px;
+                        transition: all 0.2s ease;
+                    `;
+                    bar.title = `Value: ${value}`;
+                    bar.dataset.value = value;
+                    bar.dataset.index = index;
+
+                    bar.addEventListener('click', () => {
+                        context.notification.show(`Data point ${index + 1}: ${value}`, 'info', 2000);
+                    });
+
+                    container.appendChild(bar);
+                });
+            }
+        };
+
+        return {
+            api,
+            hooks: {
+                onRegister() {
+                    context.logger.log('ChartManager headless component registered');
+                    // Initialize with default data
+                    if (!getState(`${basePath}.data`)) {
+                        api.generateChartData('day');
+                    }
+
+                    // Listen for theme changes to re-render chart
+                    document.addEventListener('theme-changed', () => {
+                        setTimeout(() => api.renderChart('salesChart'), 100);
+                    });
+                }
+            }
+        };
+    },
+
+    // Order Manager - Handles order data and operations
+    orderManager: (props, context) => {
+        const { getState, setState } = context;
+        const basePath = props.statePath || 'orders';
+
+        const api = {
+            generateOrder() {
+                const customers = ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Brown', 'Charlie Wilson'];
+                const statuses = ['pending', 'completed', 'cancelled'];
+
+                return {
+                    id: `ORD-${Date.now()}`,
+                    customer: customers[Math.floor(Math.random() * customers.length)],
+                    amount: Math.floor(Math.random() * 500) + 50,
+                    status: statuses[Math.floor(Math.random() * statuses.length)],
+                    date: new Date().toISOString().split('T')[0]
+                };
+            },
+
+            generateOrders(count = 20) {
+                const orders = Array.from({ length: count }, () => this.generateOrder());
+                setState(`${basePath}.all`, orders);
+                context.logger.log(`Generated ${count} orders`);
+                return orders;
+            },
+
+            addOrder() {
+                const orders = getState(`${basePath}.all`, []);
+                const newOrder = this.generateOrder();
+                setState(`${basePath}.all`, [newOrder, ...orders]);
+                context.logger.log('New order added', newOrder);
+                return newOrder;
+            },
+
+            getFilteredOrders() {
+                const allOrders = getState(`${basePath}.all`, []);
+                const searchTerm = getState('filters.search', '').toLowerCase();
+                const statusValue = getState('filters.status', '');
+
+                return allOrders.filter(order => {
+                    const matchesSearch = !searchTerm ||
+                        order.id.toLowerCase().includes(searchTerm) ||
+                        order.customer.toLowerCase().includes(searchTerm);
+                    const matchesStatus = !statusValue || order.status === statusValue;
+                    return matchesSearch && matchesStatus;
+                });
+            },
+
+            renderOrdersTable(tableBodyId) {
+                const tbody = document.getElementById(tableBodyId);
+                if (!tbody) return;
+
+                const orders = this.getFilteredOrders().slice(0, 12);
+                tbody.innerHTML = '';
+
+                orders.forEach(order => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.id.substring(4)}</td>
+                        <td>${order.customer.split(' ')[0]}</td>
+                        <td>$${order.amount}</td>
+                        <td><span class="status-${order.status}">${order.status}</span></td>
+                        <td><button class="btn view-order-btn" data-order-id="${order.id}" style="font-size: 0.7rem; padding: 0.2rem 0.4rem;">View</button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Add event listeners to view buttons
+                tbody.querySelectorAll('.view-order-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const orderId = e.target.dataset.orderId;
+                        context.notification.show(`Viewing order ${orderId}`, 'info');
+                    });
+                });
+            }
+        };
+
+        return {
+            api,
+            hooks: {
+                onRegister() {
+                    context.logger.log('OrderManager headless component registered');
+                    // Initialize with default orders if not present
+                    if (!getState(`${basePath}.all`)) {
+                        api.generateOrders();
+                    }
+                }
+            }
+        };
+    },
+
+    // Activity Manager - Handles activity feed logic
+    activityManager: (props, context) => {
+        const { getState, setState } = context;
+        const basePath = props.statePath || 'activity';
+
+        const api = {
+            addActivity(text) {
+                const isPaused = getState('dashboard.activityPaused', false);
+                if (isPaused) return;
+
+                const activities = getState(`${basePath}.items`, []);
+                const newActivity = {
+                    text,
+                    time: new Date().toLocaleTimeString(),
+                    id: Date.now()
+                };
+
+                setState(`${basePath}.items`, [newActivity, ...activities]);
+                context.logger.log('Activity added', newActivity);
+                return newActivity;
+            },
+
+            clearActivities() {
+                setState(`${basePath}.items`, []);
+                context.logger.log('Activities cleared');
+            },
+
+            getActivities() {
+                return getState(`${basePath}.items`, []);
+            },
+
+            renderActivityFeed(feedId) {
+                const feed = document.getElementById(feedId);
+                if (!feed) return;
+
+                const activities = this.getActivities().slice(0, 20);
+                feed.innerHTML = '';
+
+                activities.forEach(activity => {
+                    const item = document.createElement('div');
+                    item.className = 'activity-item slide-in';
+                    item.style.cssText = `
+                        padding: 0.5rem; border-left: 2px solid #667eea; margin-bottom: 0.25rem;
+                        background: rgba(102, 126, 234, 0.05); border-radius: 0 6px 6px 0;
+                        font-size: 0.8rem; transition: all 0.2s ease;
+                    `;
+                    item.innerHTML = `
+                        <span style="font-size: 0.7rem; color: #666; float: right;">${activity.time}</span>
+                        <div style="color: #333; font-size: 0.8rem;">${activity.text}</div>
+                    `;
+                    feed.appendChild(item);
+                });
+            },
+
+            startAutoActivity() {
+                const activities = [
+                    'Background sync completed',
+                    'Cache updated via DataManager',
+                    'New user session logged',
+                    'Counter incremented by system',
+                    'Performance metrics stored'
+                ];
+
+                const interval = setInterval(() => {
+                    if (!getState('dashboard.activityPaused', false)) {
+                        const activity = activities[Math.floor(Math.random() * activities.length)];
+                        this.addActivity(activity);
+                        this.renderActivityFeed('activityFeed');
+
+                        // Log some activities
+                        if (Math.random() < 0.3) {
+                            context.logger.log(`System activity: ${activity}`);
+                        }
+                    }
+                }, 8000);
+
+                setState(`${basePath}.autoInterval`, interval);
+                return interval;
+            },
+
+            stopAutoActivity() {
+                const interval = getState(`${basePath}.autoInterval`);
+                if (interval) {
+                    clearInterval(interval);
+                    setState(`${basePath}.autoInterval`, null);
+                }
+            }
+        };
+
+        return {
+            api,
+            hooks: {
+                onRegister() {
+                    context.logger.log('ActivityManager headless component registered');
+                    // Start auto activity after a delay
+                    setTimeout(() => {
+                        api.startAutoActivity();
+                    }, 3000);
+                },
+                onUnregister() {
+                    api.stopAutoActivity();
+                }
+            }
+        };
+    },
+
+    // Settings Manager - Handles dashboard settings
+    settingsManager: (props, context) => {
+        const { getState, setState, storage, theme } = context;
+        const basePath = props.statePath || 'dashboard';
+
+        const api = {
+            saveSettings() {
+                const settings = {
+                    theme: getState(`${basePath}.theme`, 'default'),
+                    updateFreq: getState(`${basePath}.updateFreq`, 5000),
+                    notifications: getState(`${basePath}.notifications`, true),
+                    animations: getState(`${basePath}.animations`, true)
+                };
+
+                storage.set('dashboardSettings', settings);
+                theme.apply(settings.theme);
+                context.logger.log('Settings saved', settings);
+                return settings;
+            },
+
+            loadSettings() {
+                const savedSettings = storage.get('dashboardSettings');
+                if (savedSettings) {
+                    Object.keys(savedSettings).forEach(key => {
+                        setState(`${basePath}.${key}`, savedSettings[key]);
+                    });
+                    theme.apply(savedSettings.theme || 'default');
+                    context.logger.log('Settings loaded from storage', savedSettings);
+                    return savedSettings;
+                }
+                return null;
+            },
+
+            resetSettings() {
+                setState(`${basePath}.theme`, 'default');
+                setState(`${basePath}.updateFreq`, 5000);
+                setState(`${basePath}.notifications`, true);
+                setState(`${basePath}.animations`, true);
+                theme.apply('default');
+                context.logger.log('Settings reset to defaults');
+            },
+
+            getSettings() {
+                return {
+                    theme: getState(`${basePath}.theme`, 'default'),
+                    updateFreq: getState(`${basePath}.updateFreq`, 5000),
+                    notifications: getState(`${basePath}.notifications`, true),
+                    animations: getState(`${basePath}.animations`, true)
+                };
+            }
+        };
+
+        return {
+            api,
+            hooks: {
+                onRegister() {
+                    context.logger.log('SettingsManager headless component registered');
+                    // Load settings on startup
+                    api.loadSettings();
+                }
+            }
+        };
+    },
+
+    // Auto Refresh Manager - Handles automatic data refreshing
+    autoRefreshManager: (props, context) => {
+        const { getState, setState } = context;
+        const basePath = props.statePath || 'dashboard';
+
+        let refreshInterval = null;
+
+        const api = {
+            start() {
+                if (getState('refreshInterval', 1000)>0) return;
+
+                const frequency = getState(`${basePath}.updateFreq`, 5000);
+                const isEnabled = getState(`${basePath}.autoRefresh`, false);
+
+                if (!isEnabled) return;
+
+                refreshInterval = setInterval(() => {
+                    // Refresh metrics
+                    context.metricsManager.refreshMetrics();
+                    
+                    // Add activity
+                    const activities = [
+                        'New order received',
+                        'Payment processed', 
+                        'User registered',
+                        'Product updated',
+                        'Inventory restocked',
+                        'Report generated'
+                    ];
+                    const activity = activities[Math.floor(Math.random() * activities.length)];
+                    context.activityManager.addActivity(activity);
+                    context.activityManager.renderActivityFeed('activityFeed');
+
+                    // Update counter
+                    const updateCount = getState(`${basePath}.updateCount`, 0);
+                    setState(`${basePath}.updateCount`, updateCount + 1);
+
+                }, frequency);
+
+                context.logger.log('Auto refresh started', { frequency });
+            },
+
+            stop() {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                    setState('refreshInterval',0);
+                    context.logger.log('Auto refresh stopped');
+                }
+            },
+
+            toggle() {
+                const current = getState(`${basePath}.autoRefresh`, false);
+                setState(`${basePath}.autoRefresh`, !current);
+                const currentInterval = getState('refreshInterval',1000);
+                if(currentInterval > 0){
+                    setState('refreshInterval',0)
+                }else{
+                    setState('refreshInterval',1000)
+                }
+                if (!current) {
+                    this.start();
+                } else {
+                    this.stop();
+                }
+
+                return !current;
+            },
+
+            isRunning() {
+                return getState('refreshInterval', 1000) > 0;
+            }
+        };
+
+        return {
+            api,
+            hooks: {
+                onRegister() {
+                    context.logger.log('AutoRefreshManager headless component registered');
+                },
+                onUnregister() {
+                    api.stop();
+                }
+            }
+        };
+    },
+
+    // Dashboard Status Manager - Handles dashboard status and connection state
+    dashboardStatus: (props, context) => {
+        const { getState, setState } = context;
+        const basePath = props.statePath || 'dashboard';
+
+        const api = {
+            connect() {
+                setState(`${basePath}.connected`, true);
+                setState(`${basePath}.enhancedElements`, 20);
+                const headlessStatus = context.utils.getHeadlessStatus();
+                setState(`${basePath}.headlessCount`, headlessStatus.initialized.length);
+                context.logger.log('Dashboard connected');
+            },
+
+            updateStats() {
+                const updateCount = getState(`${basePath}.updateCount`, 0);
+                setState(`${basePath}.updateCount`, updateCount + 1);
+            },
+
+            getStatus() {
+                return {
+                    connected: getState(`${basePath}.connected`, false),
+                    autoRefresh: getState(`${basePath}.autoRefresh`, false),
+                    updateCount: getState(`${basePath}.updateCount`, 0),
+                    enhancedElements: getState(`${basePath}.enhancedElements`, 0),
+                    headlessCount: getState(`${basePath}.headlessCount`, 0),
+                    activityPaused: getState(`${basePath}.activityPaused`, false)
+                };
+            }
+        };
+
+        return {
+            api,
+            hooks: {
+                onRegister() {
+                    context.logger.log('DashboardStatus headless component registered');
+                    // Auto-connect after a delay
+                    setTimeout(() => {
+                        api.connect();
+                        context.notification.show('Dashboard connected with services & headless components!', 'success');
+                    }, 1500);
+                }
+            }
+        };
+    }
+};
+
+// ===== JURIS INITIALIZATION =====
+const app = new Juris({
+    renderMode: 'fine-grained',
+    services: services,
+    headlessComponents: headlessComponents,
+    states: {
+        dashboard: {
+            connected: false,
+            autoRefresh: false,
+            updateCount: 0,
+            enhancedElements: 0,
+            headlessCount: 0,
+            theme: 'default',
+            notifications: true,
+            animations: true,
+            updateFreq: 5000,
+            activityPaused: false
+        },
+        filters: {
+            search: '',
+            status: ''
+        },
+        metrics: {
+            users: 1247,
+            revenue: 89432,
+            orders: 156,
+            lastUpdate: Date.now()
+        },
+        chart: {
+            period: 'day',
+            data: [45, 67, 89, 34, 78, 56, 90, 123, 67, 89, 34, 78]
+        },
+        orders: { all: [] },
+        activity: { items: [] }
+    }
+});
+
+app.initializeHeadlessComponent('metricsManager');
+app.initializeHeadlessComponent('chartManager');
+app.initializeHeadlessComponent('orderManager');
+app.initializeHeadlessComponent('activityManager');
+app.initializeHeadlessComponent('settingsManager');
+app.initializeHeadlessComponent('autoRefreshManager');
+app.initializeHeadlessComponent('dashboardStatus');
+// ===== ENHANCED STATUS BAR =====
+app.enhance('.status-item', (context) => {
+    const { getState, element, dashboardStatus } = context;
+    const statusType = element.dataset.status;
+
+    return {
+        className: () => {
+            const status = dashboardStatus.getStatus();
+            let active = false;
+            
+            if (statusType === 'connection' && status.connected) active = true;
+            if (statusType === 'performance') active = true;
+            if (statusType === 'updates' && status.autoRefresh) active = true;
+            if (statusType === 'enhancements') active = true;
+            if (statusType === 'headless') active = true;
+
+            return `status-item ${active ? 'active' : ''}`;
+        },
+
+        text: () => {
+            const status = dashboardStatus.getStatus();
+
+            switch (statusType) {
+                case 'connection':
+                    return `🔗 Connection: ${status.connected ? 'Connected' : 'Connecting...'}`;
+                case 'performance':
+                    return '⚡ Performance: Excellent';
+                case 'updates':
+                    return `🔄 Updates: ${status.updateCount}`;
+                case 'enhancements':
+                    return `🎯 Enhanced: ${status.enhancedElements} elements`;
+                case 'headless':
+                    return `🧠 Headless: ${status.headlessCount} active`;
+                default:
+                    return element.textContent;
+            }
+        }
+    };
+});
+
+// ===== ENHANCED METRICS WIDGET =====
+app.enhance('.metrics-widget', (context) => {
+    const { metricsManager, autoRefreshManager, notification, dashboardStatus } = context;
+
+    return {
+        selectors: {
+            '.refresh-metrics': {
+                onclick: async () => {
+                    try {
+                        await metricsManager.refreshMetrics();
+                        notification.show('Metrics refreshed successfully!', 'success');
+                        dashboardStatus.updateStats();
+                    } catch (error) {
+                        notification.show('Failed to refresh metrics', 'error');
+                    }
+                }
+            },
+
+            '.toggle-auto-refresh': {
+                text: () => {
+                    const isRunning = autoRefreshManager.isRunning();
+                    return `Auto: ${isRunning ? 'ON' : 'OFF'}`;
+                },
+
+                className: () => {
+                    const isRunning = autoRefreshManager.isRunning();
+                    return `btn ${isRunning ? 'success' : 'secondary'}`;
+                },
+
+                onclick: () => {
+                    const newState = autoRefreshManager.toggle();
+                    const message = newState ? 'Auto-refresh enabled' : 'Auto-refresh disabled';
+                    notification.show(message, 'info');
+                }
+            }
+        }
+    };
+});
+
+// ===== ENHANCED INDIVIDUAL METRICS =====
+app.enhance('.metric', (context) => {
+    const { getState, element, metricsManager, notification } = context;
+    const metricType = element.dataset.metric;
+
+    return {
+        className: () => {
+            const lastUpdate = getState('metrics.lastUpdate', 0);
+            const isRecent = Date.now() - lastUpdate < 2000;
+            return `metric ${isRecent ? 'pulse' : ''}`;
+        },
+
+        onclick: () => {
+            const metrics = metricsManager.getMetrics();
+            const value = metrics[metricType];
+            notification.show(`${metricType}: ${value}`, 'info', 2000);
+        },
+
+        children: () => {
+            const metrics = metricsManager.getMetrics();
+            let value, label, trend;
+
+            switch (metricType) {
+                case 'users':
+                    value = metrics.users.toLocaleString();
+                    label = 'Active Users';
+                    trend = '↗ +12%';
+                    break;
+                case 'revenue':
+                    value = `$${metrics.revenue.toLocaleString()}`;
+                    label = 'Revenue Today';
+                    trend = '↗ +8.5%';
+                    break;
+                case 'orders':
+                    value = metrics.orders.toLocaleString();
+                    label = 'Orders';
+                    trend = '↘ -3%';
+                    break;
+                default:
+                    return [];
+            }
+
+            return [
+                { div: { className: 'metric-value', text: value } },
+                { div: { className: 'metric-label', text: label } },
+                { div: { className: `metric-trend ${trend.includes('↗') ? 'trend-up' : 'trend-down'}`, text: trend } }
+            ];
+        }
+    };
+});
+
+// ===== ENHANCED CHART WIDGET =====
+app.enhance('.chart-widget', (context) => {
+    const { chartManager, notification } = context;
+
+    return {
+        selectors: {
+            '.chart-period': (buttonContext) => {
+                const { element, getState } = buttonContext;
+                const period = element.dataset.period;
+
+                return {
+                    className: () => {
+                        const activePeriod = getState('chart.period', 'day');
+                        return `btn ${period === activePeriod ? '' : 'secondary'}`;
+                    },
+
+                    onclick: () => {
+                        chartManager.generateChartData(period);
+                        chartManager.renderChart('salesChart');
+                        notification.show(`Chart updated to ${period} view`, 'info', 2000);
+                    }
+                };
+            }
+        }
+    };
+});
+
+// ===== ENHANCED TABLE WIDGET =====
+app.enhance('.table-widget', (context) => {
+    const { orderManager, notification, activityManager } = context;
+
+    return {
+        selectors: {
+            '.export-data': {
+                onclick: () => {
+                    notification.show('Data exported successfully!', 'success');
+                }
+            },
+
+            '.add-order': {
+                onclick: () => {
+                    const newOrder = orderManager.addOrder();
+                    orderManager.renderOrdersTable('ordersTableBody');
+                    notification.show('New order added!', 'success');
+                    activityManager.addActivity(`New order ${newOrder.id} created`);
+                    activityManager.renderActivityFeed('activityFeed');
+                }
+            }
+        }
+    };
+});
+
+// ===== ENHANCED FILTER INPUTS =====
+app.enhance('.filter-input', (context) => {
+    const { element, setState, orderManager } = context;
+
+    return {
+        oninput: (event) => {
+            const filterType = element.dataset.filter;
+            if (filterType) {
+                setState(`filters.${filterType}`, event.target.value);
+                orderManager.renderOrdersTable('ordersTableBody');
+            }
+        },
+
+        onchange: (event) => {
+            const filterType = element.dataset.filter;
+            if (filterType) {
+                setState(`filters.${filterType}`, event.target.value);
+                orderManager.renderOrdersTable('ordersTableBody');
+            }
+        }
+    };
+});
+
+// ===== ENHANCED TABLE HEADERS =====
+app.enhance('[data-sort]', (context) => {
+    const { element, notification } = context;
+
+    return {
+        onclick: () => {
+            const sortField = element.dataset.sort;
+            notification.show(`Sorted by ${sortField}`, 'info', 1500);
+        }
+    };
+});
+
+// ===== ENHANCED ACTIVITY WIDGET =====
+app.enhance('.activity-widget', (context) => {
+    const { getState, setState, activityManager, notification } = context;
+
+    return {
+        selectors: {
+            '.clear-activity': {
+                onclick: () => {
+                    activityManager.clearActivities();
+                    activityManager.renderActivityFeed('activityFeed');
+                    notification.show('Activity feed cleared', 'info');
+                }
+            },
+
+            '.pause-feed': {
+                text: () => {
+                    const paused = getState('dashboard.activityPaused', false);
+                    return paused ? 'Resume' : 'Pause';
+                },
+
+                className: () => {
+                    const paused = getState('dashboard.activityPaused', false);
+                    return `btn ${paused ? 'success' : 'secondary'}`;
+                },
+
+                onclick: () => {
+                    const current = getState('dashboard.activityPaused', false);
+                    setState('dashboard.activityPaused', !current);
+
+                    const message = !current ? 'Activity feed paused' : 'Activity feed resumed';
+                    notification.show(message, 'info');
+                }
+            }
+        }
+    };
+});
+
+// ===== ENHANCED SETTINGS WIDGET =====
+// Replace the existing settings widget enhancement with this:
+// ===== ENHANCED SETTINGS WIDGET =====
+app.enhance('.settings-widget', (context) => {
+    const { getState, setState, settingsManager, notification, autoRefreshManager } = context;
+
+    return {
+        selectors: {
+            '[data-setting]': (settingContext) => {
+                const { element } = settingContext;
+                const setting = element.dataset.setting;
+
+                return {
+                    value: () => {
+                        if (element.type === 'checkbox') return undefined;
+                        return getState(`dashboard.${setting}`, setting === 'theme' ? 'default' : (setting === 'updateFreq' ? '5000' : ''));
+                    },
+
+                    checked: () => {
+                        if (element.type !== 'checkbox') return undefined;
+                        return getState(`dashboard.${setting}`, false);
+                    },
+
+                    onchange: (event) => {
+                        console.log('Settings change event fired:', setting, event.target.value); // Debug log
+                        const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+                        setState(`dashboard.${setting}`, value);
+
+                        if (setting === 'theme') {
+                            context.theme.apply(value);
+                            notification.show(`Theme switched to ${value}`, 'info');
+                        } else if (setting === 'updateFreq') {
+                            if (autoRefreshManager.isRunning()) {
+                                autoRefreshManager.stop();
+                                autoRefreshManager.start();
+                            }
+                            notification.show(`Update frequency changed to ${value}ms`, 'info');
+                        } else if (setting === 'notifications') {
+                            notification.show(`Notifications ${value ? 'enabled' : 'disabled'}`, 'info');
+                        } else if (setting === 'animations') {
+                            notification.show(`Animations ${value ? 'enabled' : 'disabled'}`, 'info');
+                        }
+                    }
+                };
+            },
+
+            '.save-settings': {
+                onclick: () => {
+                    settingsManager.saveSettings();
+                    notification.show('Settings saved and applied successfully!', 'success');
+                }
+            },
+
+            '.reset-settings': {
+                onclick: () => {
+                    settingsManager.resetSettings();
+                    notification.show('Settings reset to defaults', 'info');
+                }
+            }
+        }
+    };
+});
+
+// ===== HEADLESS COMPONENTS & SERVICES DEMO WIDGET =====
+app.enhance('.headless-demo-widget', (context) => {
+    const { api, storage, logger, counter, timer, dataManager, notification } = context;
+
+    return {
+        selectors: {
+            '.test-services': {
+                onclick: async () => {
+                    const output = document.getElementById('servicesOutput');
+                    output.textContent = 'Testing all services...';
+
+                    try {
+                        const apiData = await api.get('/analytics');
+                        storage.set('testKey', { timestamp: Date.now(), data: 'test' });
+                        const storedData = storage.get('testKey');
+                        logger.log('Services test completed successfully');
+
+                        output.innerHTML = `
+                            <strong>✅ All Services Working!</strong><br>
+                            API Response: ${JSON.stringify(apiData)}<br>
+                            Storage Test: ${storedData ? '✅ Success' : '❌ Failed'}<br>
+                            Logger: Check console for logs
+                        `;
+
+                        notification.show('All services tested successfully!', 'success');
+                    } catch (error) {
+                        output.textContent = `❌ Error: ${error.message}`;
+                        notification.show('Service test failed', 'error');
+                    }
+                }
+            },
+
+            '.test-headless': {
+                onclick: () => {
+                    const output = document.getElementById('headlessOutput');
+
+                    try {
+                        const currentCount = counter.getValue();
+                        counter.increment(5);
+                        const newCount = counter.getValue();
+
+                        const timerRunning = timer.isRunning();
+                        const timerSeconds = timer.getTime();
+
+                        const cacheStatus = dataManager.getCacheStatus();
+
+                        output.innerHTML = `
+                            <strong>🧠 Headless Components Active!</strong><br>
+                            Counter: ${currentCount} → ${newCount}<br>
+                            Timer: ${timerRunning ? 'Running' : 'Stopped'} (${timerSeconds}s)<br>
+                            Cache: ${cacheStatus.cachedKeys.length} keys cached
+                        `;
+
+                        notification.show('Headless components tested!', 'success');
+                    } catch (error) {
+                        output.textContent = `❌ Error: ${error.message}`;
+                        notification.show('Headless test failed', 'error');
+                    }
+                }
+            },
+
+            '.test-api-service': {
+                onclick: async () => {
+                    const output = document.getElementById('servicesOutput');
+                    output.textContent = 'Calling API service...';
+
+                    try {
+                        const data = await api.get('/users');
+                        output.innerHTML = `
+                            <strong>🌐 API Service Response:</strong><br>
+                            ${JSON.stringify(data, null, 2)}
+                        `;
+                        logger.log('API service test completed', data);
+                    } catch (error) {
+                        output.textContent = `❌ API Error: ${error.message}`;
+                    }
+                }
+            },
+
+            '.test-storage-service': {
+                onclick: () => {
+                    const output = document.getElementById('servicesOutput');
+
+                    try {
+                        const testData = {
+                            id: Date.now(),
+                            message: 'Hello from storage service!',
+                            array: [1, 2, 3, 4, 5],
+                            nested: { deep: { value: 'works!' } }
+                        };
+
+                        storage.set('complexTest', testData);
+                        const retrieved = storage.get('complexTest');
+
+                        output.innerHTML = `
+                            <strong>💾 Storage Service Test:</strong><br>
+                            Stored: ${JSON.stringify(testData).substring(0, 50)}...<br>
+                            Retrieved: ${retrieved ? '✅ Success' : '❌ Failed'}<br>
+                            Match: ${JSON.stringify(testData) === JSON.stringify(retrieved) ? '✅' : '❌'}
+                        `;
+
+                        logger.log('Storage service test completed', { stored: testData, retrieved });
+                    } catch (error) {
+                        output.textContent = `❌ Storage Error: ${error.message}`;
+                    }
+                }
+            },
+
+            '.test-logger-service': {
+                onclick: () => {
+                    const output = document.getElementById('servicesOutput');
+
+                    try {
+                        logger.log('Info message from logger service', { level: 'info' });
+                        logger.error('Test error message', new Error('This is a test error'));
+                        logger.log('Complex object logging', {
+                            user: { id: 123, name: 'Test User' },
+                            action: 'button_click',
+                            timestamp: Date.now()
+                        });
+
+                        const logs = logger.getLogs();
+                        const recentLogs = logs.slice(-3);
+
+                        output.innerHTML = `
+                            <strong>📝 Logger Service Test:</strong><br>
+                            Total logs: ${logs.length}<br>
+                            Recent logs:<br>
+                            ${recentLogs.map(log =>
+                                `• [${log.level.toUpperCase()}] ${log.message}`
+                            ).join('<br>')}
+                        `;
+                    } catch (error) {
+                        output.textContent = `❌ Logger Error: ${error.message}`;
+                    }
+                }
+            },
+
+            '.test-counter': {
+                onclick: () => {
+                    const output = document.getElementById('headlessOutput');
+
+                    try {
+                        const before = counter.getValue();
+                        counter.increment(Math.floor(Math.random() * 10) + 1);
+                        const after = counter.getValue();
+
+                        output.innerHTML = `
+                            <strong>🔢 Counter Headless Component:</strong><br>
+                            Before: ${before}<br>
+                            After: ${after}<br>
+                            <button onclick="window.jurisApp.counter.reset()" class="btn" style="margin-top: 0.5rem; font-size: 0.7rem;">Reset Counter</button>
+                        `;
+
+                        window.jurisApp = { counter };
+                    } catch (error) {
+                        output.textContent = `❌ Counter Error: ${error.message}`;
+                    }
+                }
+            },
+
+            '.test-timer': {
+                onclick: () => {
+                    const output = document.getElementById('headlessOutput');
+
+                    try {
+                        const isRunning = timer.isRunning();
+                        if (isRunning) {
+                            timer.stop();
+                        } else {
+                            timer.start();
+                        }
+
+                        const newRunning = timer.isRunning();
+
+                        output.innerHTML = `
+                            <strong>⏱️ Timer Headless Component:</strong><br>
+                            Status: ${newRunning ? 'Running' : 'Stopped'}<br>
+                            Current Time: <span id="timer-display">${timer.getTime()}s</span><br>
+                            <button onclick="window.jurisApp.timer.reset()" class="btn" style="margin-top: 0.5rem; font-size: 0.7rem;">Reset Timer</button>
+                        `;
+
+                        window.jurisApp = window.jurisApp || {};
+                        window.jurisApp.timer = timer;
+
+                        if (newRunning) {
+                            const updateDisplay = () => {
+                                const display = document.getElementById('timer-display');
+                                if (display && timer.isRunning()) {
+                                    display.textContent = `${timer.getTime()}s`;
+                                    setTimeout(updateDisplay, 1000);
+                                }
+                            };
+                            setTimeout(updateDisplay, 1000);
+                        }
+                    } catch (error) {
+                        output.textContent = `❌ Timer Error: ${error.message}`;
+                    }
+                }
+            },
+
+            '.test-data-manager': {
+                onclick: async () => {
+                    const output = document.getElementById('headlessOutput');
+                    output.textContent = 'Testing Data Manager...';
+
+                    try {
+                        const data1 = await dataManager.fetchData('test-endpoint-1', async () => {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            return {
+                                data: `Fresh data ${Date.now()}`,
+                                random: Math.floor(Math.random() * 1000)
+                            };
+                        });
+
+                        const data2 = await dataManager.fetchData('test-endpoint-1', async () => {
+                            return { data: 'This should not be called due to cache' };
+                        });
+
+                        const cacheStatus = dataManager.getCacheStatus();
+
+                        output.innerHTML = `
+                            <strong>📊 Data Manager Headless Component:</strong><br>
+                            First fetch: ${JSON.stringify(data1).substring(0, 30)}...<br>
+                            Cache hit: ${data1.random === data2.random ? '✅' : '❌'}<br>
+                            Cached keys: ${cacheStatus.cachedKeys.length}<br>
+                            <button onclick="window.jurisApp.dataManager.clearCache()" class="btn" style="margin-top: 0.5rem; font-size: 0.7rem;">Clear Cache</button>
+                        `;
+
+                        window.jurisApp = window.jurisApp || {};
+                        window.jurisApp.dataManager = dataManager;
+
+                    } catch (error) {
+                        output.textContent = `❌ Data Manager Error: ${error.message}`;
+                    }
+                }
+            }
+        }
+    };
+});
+
+// ===== INITIALIZATION =====
+function initializeDashboard() {
+    // Initialize notification service
+    services.notification.init();
+
+    // Initialize initial data through headless components
+    app.headlessAPIs.orderManager.generateOrders();
+    app.headlessAPIs.chartManager.generateChartData('day');
+    
+    // Initial renders
+    app.headlessAPIs.orderManager.renderOrdersTable('ordersTableBody');
+    app.headlessAPIs.activityManager.renderActivityFeed('activityFeed');
+    app.headlessAPIs.chartManager.renderChart('salesChart');
+    
+    // Add initial activities
+    app.headlessAPIs.activityManager.addActivity('Dashboard initialized');
+    app.headlessAPIs.activityManager.addActivity('Services loaded: API, Storage, Logger, Notification, Theme');
+    app.headlessAPIs.activityManager.addActivity('Headless components: MetricsManager, ChartManager, OrderManager, ActivityManager, SettingsManager, AutoRefreshManager, DashboardStatus');
+    app.headlessAPIs.activityManager.addActivity('Progressive enhancement complete');
+    app.headlessAPIs.activityManager.renderActivityFeed('activityFeed');
+
+    console.log('🚀 Enhanced Dashboard loaded with Services & Headless Components');
+    console.log('📊 All functionality moved to services and headless components');
+    console.log('⚡ Clean separation of concerns achieved!');
+}
+
+// Start the dashboard
+initializeDashboard();
+    </script>
+</body>
+</html>

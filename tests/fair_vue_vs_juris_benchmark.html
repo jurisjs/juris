@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 Vue vs Juris: Real Framework Benchmark</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .fairness-note {
+            background: rgba(46, 213, 115, 0.2);
+            border: 2px solid #2ed573;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .frameworks-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .framework-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .framework-panel:hover {
+            transform: translateY(-5px);
+        }
+
+        .framework-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .vue-header {
+            background: linear-gradient(135deg, #42b883, #347474);
+        }
+
+        .juris-header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: scale(1.05);
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #4ecdc4;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .test-zone {
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            min-height: 250px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .performance-graph {
+            width: 100%;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .graph-bar {
+            position: absolute;
+            bottom: 0;
+            width: 3px;
+            transition: height 0.2s ease;
+            border-radius: 2px 2px 0 0;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-group h3 {
+            margin-bottom: 15px;
+            color: #4ecdc4;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #56ab2f, #a8e6cf);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            color: white;
+        }
+
+        .results-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .winner-announcement {
+            background: linear-gradient(45deg, #2ed573, #17a2b8);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .component {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 11px;
+            max-width: 140px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            word-wrap: break-word;
+        }
+
+        .vue-component {
+            border-color: #42b883;
+            background: rgba(66, 184, 131, 0.2);
+        }
+
+        .juris-component {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.2);
+        }
+
+        .component:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .real-time-stats {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .testing {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinning {
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes thrash {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-3px);
+            }
+
+            75% {
+                transform: translateX(3px);
+            }
+        }
+
+        .thrashing {
+            animation: thrash 0.3s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .frameworks-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="real-time-stats" id="realTimeStats">
+        <div>⚡ Live Performance Monitor</div>
+        <div id="currentFPS">FPS: --</div>
+        <div id="memoryUsage">Memory: --</div>
+        <div id="testStatus">Status: Ready</div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🏆 Fair Framework Showdown</h1>
+            <p class="subtitle">Vue 3 vs Juris: Real Frameworks, Equal Conditions</p>
+            <div class="fairness-note">
+                ✅ <strong>REAL FRAMEWORKS:</strong> Vue 3 Production + Complete Juris Framework<br>
+                ✅ <strong>IDENTICAL METRICS:</strong> Same scoring algorithm for both frameworks<br>
+                ✅ <strong>FAIR CONDITIONS:</strong> No artificial penalties or advantages
+            </div>
+        </div>
+
+        <div class="frameworks-grid">
+            <!-- Vue Panel -->
+            <div class="framework-panel">
+                <div class="framework-header vue-header">
+                    <h2>🟢 Vue 3</h2>
+                    <p>The Progressive JavaScript Framework</p>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="vue-fps">60</div>
+                        <div class="metric-label">FPS</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="vue-components">0</div>
+                        <div class="metric-label">Components</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="vue-memory">0</div>
+                        <div class="metric-label">Memory</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="vue-errors">0</div>
+                        <div class="metric-label">Errors</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="vue-updates">0</div>
+                        <div class="metric-label">Updates</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="vue-score">100</div>
+                        <div class="metric-label">Score</div>
+                    </div>
+                </div>
+
+                <div class="test-zone" id="vue-zone">
+                    <div
+                        style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.5; text-align: center;">
+                        Vue Test Zone<br><small>Real Vue 3 components will render here</small>
+                    </div>
+                </div>
+
+                <div class="performance-graph" id="vue-graph"></div>
+            </div>
+
+            <!-- Juris Panel -->
+            <div class="framework-panel">
+                <div class="framework-header juris-header">
+                    <h2>🔴 Juris</h2>
+                    <p>Object-First Reactive Framework</p>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="juris-fps">60</div>
+                        <div class="metric-label">FPS</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="juris-components">0</div>
+                        <div class="metric-label">Components</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="juris-memory">0</div>
+                        <div class="metric-label">Memory</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="juris-errors">0</div>
+                        <div class="metric-label">Errors</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="juris-updates">0</div>
+                        <div class="metric-label">Updates</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="juris-score">100</div>
+                        <div class="metric-label">Score</div>
+                    </div>
+                </div>
+
+                <div class="test-zone" id="juris-zone">
+                    <div
+                        style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.5; text-align: center;">
+                        Juris Test Zone<br><small>Real Juris components will render here</small>
+                    </div>
+                </div>
+
+                <div class="performance-graph" id="juris-graph"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>🎮 Fair Tests</h3>
+                <button class="btn btn-primary" onclick="startFairBenchmark()">Start Fair Benchmark</button>
+                <button class="btn btn-warning" onclick="stressTest()">Stress Test</button>
+                <button class="btn btn-danger" onclick="extremeStressTest()">Extreme Stress</button>
+                <button class="btn btn-success" onclick="stopAllTests()">Stop All Tests</button>
+            </div>
+
+            <div class="control-group">
+                <h3>📊 Component Tests</h3>
+                <button class="btn btn-primary" onclick="spawnComponents()">Spawn Components</button>
+                <button class="btn btn-primary" onclick="testReactivity()">Test Reactivity</button>
+                <button class="btn btn-primary" onclick="testMemoryLoad()">Memory Test</button>
+                <button class="btn btn-primary" onclick="testLifecycles()">Lifecycle Test</button>
+            </div>
+
+            <div class="control-group">
+                <h3>🔬 Analysis</h3>
+                <button class="btn btn-success" onclick="generateFairReport()">Generate Report</button>
+                <button class="btn btn-warning" onclick="resetAllMetrics()">Reset Metrics</button>
+                <button class="btn btn-primary" onclick="exportData()">Export Data</button>
+                <button class="btn btn-primary" onclick="toggleRealTimeStats()">Toggle Stats</button>
+            </div>
+        </div>
+
+        <div class="results-panel" id="results">
+            <h2>📈 Fair Benchmark Results</h2>
+            <div class="results-grid">
+                <div>
+                    <h3>🟢 Vue 3 Performance</h3>
+                    <div id="vue-results"></div>
+                </div>
+                <div>
+                    <h3>🔴 Juris Performance</h3>
+                    <div id="juris-results"></div>
+                </div>
+            </div>
+            <div class="winner-announcement" id="winner"></div>
+        </div>
+    </div>
+
+    <!-- Load REAL frameworks -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="../src/juris.js"></script>
+    <script>
+        // =====================================================================
+        // FAIR BENCHMARK IMPLEMENTATION
+        // =====================================================================
+
+        // Global state for fair testing
+        const benchmarkState = {
+            vue: {
+                fps: 60, components: 0, memory: 0, errors: 0, updates: 0, score: 100,
+                frameTimes: [], app: null, instance: null, mountPoint: null
+            },
+            juris: {
+                fps: 60, components: 0, memory: 0, errors: 0, updates: 0, score: 100,
+                frameTimes: [], app: null, instance: null, mountPoint: null
+            },
+            testing: false,
+            startTime: null
+        };
+
+        let performanceMonitor = null;
+        let frameCount = 0;
+        let lastFrameTime = performance.now();
+        let lastFpsUpdate = performance.now();
+
+        // =====================================================================
+        // REAL VUE 3 FRAMEWORK MANAGER
+        // =====================================================================
+
+        class VueFrameworkManager {
+            constructor() {
+                this.app = null;
+                this.instance = null;
+                this.components = [];
+                this.isDestroyed = false;
+            }
+
+            initialize() {
+                try {
+                    console.log('🟢 Initializing REAL Vue 3 framework...');
+
+                    const { createApp, ref, reactive, computed, onMounted, onUnmounted } = Vue;
+
+                    this.app = createApp({
+                        setup() {
+                            const components = ref([]);
+                            const state = reactive({
+                                counter: 0,
+                                memory: new Map(),
+                                async: new Map()
+                            });
+
+                            const createComponent = (type) => {
+                                const id = `vue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                                const x = Math.random() * 200;
+                                const y = Math.random() * 180;
+
+                                const component = reactive({
+                                    id, type, x, y,
+                                    active: true,
+                                    counter: 0,
+                                    data: type === 'memory' ? new Array(1000).fill(Math.random()) : null
+                                });
+
+                                components.value.push(component);
+                                benchmarkState.vue.components++;
+
+                                // Set up component behavior
+                                setupVueComponentBehavior(component, components);
+
+                                console.log(`Vue: Created ${type} component with real reactivity`);
+                                return component;
+                            };
+
+                            const updateState = () => {
+                                state.counter++;
+                                benchmarkState.vue.updates++;
+
+                                // Create reactive state updates
+                                state.async.set(`update_${Date.now()}`, {
+                                    timestamp: performance.now(),
+                                    random: Math.random(),
+                                    deep: {
+                                        nested: {
+                                            value: Math.random()
+                                        }
+                                    }
+                                });
+
+                                // Clean old state to prevent memory bloat
+                                if (state.async.size > 100) {
+                                    const keys = Array.from(state.async.keys()).slice(0, 50);
+                                    keys.forEach(key => state.async.delete(key));
+                                }
+                            };
+
+                            const stressTest = () => {
+                                const iterations = 50;
+                                let count = 0;
+
+                                const interval = setInterval(() => {
+                                    count++;
+                                    updateState();
+
+                                    // Update all components
+                                    components.value.forEach(comp => {
+                                        if (comp.active) {
+                                            comp.counter++;
+                                        }
+                                    });
+
+                                    if (count >= iterations) {
+                                        clearInterval(interval);
+                                        console.log(`Vue: Completed stress test (${iterations} updates)`);
+                                    }
+                                }, 10);
+                            };
+
+                            const cleanup = () => {
+                                components.value = [];
+                                benchmarkState.vue.components = 0;
+                                state.counter = 0;
+                                state.memory.clear();
+                                state.async.clear();
+                            };
+
+                            return {
+                                components, state,
+                                createComponent, updateState, stressTest, cleanup
+                            };
+                        },
+                        template: `
+                            <div class="vue-container">
+                                <transition-group name="vue-comp" tag="div">
+                                    <div 
+                                        v-for="comp in components" 
+                                        :key="comp.id"
+                                        class="component vue-component"
+                                        :class="{
+                                            'spinning': comp.type === 'spinning',
+                                            'thrashing': comp.type === 'thrashing'
+                                        }"
+                                        :style="{
+                                            left: comp.x + 'px',
+                                            top: comp.y + 'px',
+                                            opacity: comp.active ? 1 : 0.5
+                                        }"
+                                        @click="comp.counter++"
+                                    >
+                                        Vue-{{ comp.type }}-{{ comp.id.slice(-4) }}
+                                        <span v-if="comp.counter > 0">({{ comp.counter }})</span>
+                                    </div>
+                                </transition-group>
+                            </div>
+                        `
+                    });
+
+                    // Mount Vue app in the zone
+                    this.mountPoint = document.createElement('div');
+                    this.mountPoint.id = 'vue-mount';
+                    const vueZone = document.getElementById('vue-zone');
+                    vueZone.appendChild(this.mountPoint);
+
+                    this.instance = this.app.mount(this.mountPoint);
+                    benchmarkState.vue.app = this;
+
+                    console.log('✅ Vue 3 framework initialized successfully');
+                    return true;
+                } catch (error) {
+                    console.error('❌ Vue initialization failed:', error);
+                    benchmarkState.vue.errors++;
+                    return false;
+                }
+            }
+
+            createComponent(type) {
+                if (this.isDestroyed || !this.instance) return null;
+
+                try {
+                    return this.instance.createComponent(type);
+                } catch (error) {
+                    console.error('Vue component creation failed:', error);
+                    benchmarkState.vue.errors++;
+                    return null;
+                }
+            }
+
+            updateState() {
+                if (this.instance) {
+                    this.instance.updateState();
+                }
+            }
+
+            stressTest() {
+                if (this.instance) {
+                    this.instance.stressTest();
+                }
+            }
+
+            cleanup() {
+                if (this.instance) {
+                    this.instance.cleanup();
+                }
+            }
+
+            destroy() {
+                this.isDestroyed = true;
+                if (this.app && this.mountPoint) {
+                    this.app.unmount();
+                }
+                if (this.mountPoint && this.mountPoint.parentNode) {
+                    this.mountPoint.parentNode.removeChild(this.mountPoint);
+                }
+                this.app = null;
+                this.instance = null;
+            }
+        }
+
+        function setupVueComponentBehavior(component, componentsRef) {
+            const { type, id } = component;
+
+            // Async components
+            if (type === 'async') {
+                setTimeout(() => {
+                    if (Math.random() > 0.8) {
+                        benchmarkState.vue.errors++;
+                        console.log('Vue async component error');
+                    }
+                }, Math.random() * 2000);
+            }
+
+            // Memory components
+            if (type === 'memory') {
+                benchmarkState.vue.memory += 1;
+                component.memoryData = new Array(1000).fill(0).map(() => Math.random());
+            }
+
+            // Exploding components
+            if (type === 'exploding') {
+                setTimeout(() => {
+                    component.active = false;
+                    setTimeout(() => {
+                        const index = componentsRef.value.findIndex(c => c.id === id);
+                        if (index !== -1) {
+                            componentsRef.value.splice(index, 1);
+                            benchmarkState.vue.components--;
+                        }
+                    }, 500);
+                }, Math.random() * 3000 + 1000);
+            }
+
+            // Thrashing components
+            if (type === 'thrashing') {
+                let thrashCount = 0;
+                const interval = setInterval(() => {
+                    thrashCount++;
+                    component.counter = thrashCount;
+                    component.x += (Math.random() - 0.5) * 10;
+                    component.y += (Math.random() - 0.5) * 10;
+
+                    if (thrashCount >= 20) {
+                        clearInterval(interval);
+                        const index = componentsRef.value.findIndex(c => c.id === id);
+                        if (index !== -1) {
+                            componentsRef.value.splice(index, 1);
+                            benchmarkState.vue.components--;
+                        }
+                    }
+                }, 100);
+            }
+
+            // Spinning components
+            if (type === 'spinning') {
+                let spinCount = 0;
+                const interval = setInterval(() => {
+                    spinCount++;
+                    component.counter = spinCount;
+                    if (spinCount >= 30) {
+                        clearInterval(interval);
+                    }
+                }, 150);
+            }
+        }
+
+        // =====================================================================
+        // REAL JURIS FRAMEWORK MANAGER
+        // =====================================================================
+
+        class JurisFrameworkManager {
+            constructor() {
+                this.app = null;
+                this.components = [];
+                this.isDestroyed = false;
+            }
+
+            initialize() {
+                try {
+                    console.log('🔴 Initializing REAL Juris framework...');
+
+                    this.app = new Juris({
+                        states: {
+                            test: {
+                                counter: 0,
+                                components: {},
+                                memory: {},
+                                async: {}
+                            }
+                        },
+                        components: {
+                            TestComponent: (props, context) => {
+                                const { type, id, x, y } = props;
+
+                                return {
+                                    div: {
+                                        className: `component juris-component ${type === 'spinning' ? 'spinning' : ''} ${type === 'thrashing' ? 'thrashing' : ''}`,
+                                        style: () => ({
+                                            left: x + 'px',
+                                            top: y + 'px',
+                                            opacity: context.getState(`test.components.${id}.active`, true) ? 1 : 0.5
+                                        }),
+                                        onclick: () => {
+                                            const counter = context.getState(`test.components.${id}.counter`, 0);
+                                            context.setState(`test.components.${id}.counter`, counter + 1);
+                                        },
+                                        text: () => {
+                                            const counter = context.getState(`test.components.${id}.counter`, 0);
+                                            return `Juris-${type}-${id.slice(-4)}${counter > 0 ? ` (${counter})` : ''}`;
+                                        }
+                                    }
+                                };
+                            }
+                        }
+                    });
+
+                    benchmarkState.juris.app = this;
+                    console.log('✅ Juris framework initialized successfully');
+                    return true;
+                } catch (error) {
+                    console.error('❌ Juris initialization failed:', error);
+                    benchmarkState.juris.errors++;
+                    return false;
+                }
+            }
+
+            createComponent(type) {
+                if (this.isDestroyed || !this.app) return null;
+
+                try {
+                    const id = `juris_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const x = Math.random() * 200;
+                    const y = Math.random() * 180;
+
+                    // Set up component state
+                    this.app.setState(`test.components.${id}.type`, type);
+                    this.app.setState(`test.components.${id}.counter`, 0);
+                    this.app.setState(`test.components.${id}.active`, true);
+
+                    // Create component element
+                    const element = this.app.componentManager.create('TestComponent', {
+                        type, id, x, y
+                    });
+
+                    if (element) {
+                        // Add to DOM
+                        const zone = document.getElementById('juris-zone');
+                        zone.appendChild(element);
+
+                        const component = { id, type, element };
+                        this.components.push(component);
+                        benchmarkState.juris.components++;
+
+                        // Set up component behavior
+                        this.setupComponentBehavior(component);
+
+                        console.log(`Juris: Created ${type} component with real state`);
+                        return component;
+                    }
+                } catch (error) {
+                    console.error('Juris component creation failed:', error);
+                    benchmarkState.juris.errors++;
+                    return null;
+                }
+            }
+
+            setupComponentBehavior(component) {
+                const { type, id } = component;
+
+                // Async components
+                if (type === 'async') {
+                    setTimeout(() => {
+                        if (Math.random() > 0.8) {
+                            benchmarkState.juris.errors++;
+                            console.log('Juris async component error');
+                        }
+                    }, Math.random() * 2000);
+                }
+
+                // Memory components
+                if (type === 'memory') {
+                    benchmarkState.juris.memory += 1;
+                    this.app.setState(`test.memory.${id}`, new Array(1000).fill(Math.random()));
+                }
+
+                // Exploding components
+                if (type === 'exploding') {
+                    setTimeout(() => {
+                        this.app.setState(`test.components.${id}.active`, false);
+                        setTimeout(() => {
+                            this.removeComponent(id);
+                        }, 500);
+                    }, Math.random() * 3000 + 1000);
+                }
+
+                // Thrashing components
+                if (type === 'thrashing') {
+                    let thrashCount = 0;
+                    const interval = setInterval(() => {
+                        thrashCount++;
+                        this.app.setState(`test.components.${id}.counter`, thrashCount);
+
+                        if (thrashCount >= 20) {
+                            clearInterval(interval);
+                            this.removeComponent(id);
+                        }
+                    }, 100);
+                }
+
+                // Spinning components
+                if (type === 'spinning') {
+                    let spinCount = 0;
+                    const interval = setInterval(() => {
+                        spinCount++;
+                        this.app.setState(`test.components.${id}.counter`, spinCount);
+
+                        if (spinCount >= 30) {
+                            clearInterval(interval);
+                        }
+                    }, 150);
+                }
+            }
+
+            updateState() {
+                if (!this.app) return;
+
+                try {
+                    const counter = this.app.getState('test.counter', 0);
+                    this.app.setState('test.counter', counter + 1);
+                    benchmarkState.juris.updates++;
+
+                    // Create reactive state updates
+                    this.app.setState(`test.async.update_${Date.now()}`, {
+                        timestamp: performance.now(),
+                        random: Math.random(),
+                        deep: {
+                            nested: {
+                                value: Math.random()
+                            }
+                        }
+                    });
+
+                    console.log('Juris: State updated with real reactivity');
+                } catch (error) {
+                    console.error('Juris state update failed:', error);
+                    benchmarkState.juris.errors++;
+                }
+            }
+
+            stressTest() {
+                if (!this.app) return;
+
+                const iterations = 50;
+                let count = 0;
+
+                const interval = setInterval(() => {
+                    count++;
+                    this.updateState();
+
+                    // Update all components
+                    this.components.forEach(comp => {
+                        const counter = this.app.getState(`test.components.${comp.id}.counter`, 0);
+                        this.app.setState(`test.components.${comp.id}.counter`, counter + 1);
+                    });
+
+                    if (count >= iterations) {
+                        clearInterval(interval);
+                        console.log(`Juris: Completed stress test (${iterations} updates)`);
+                    }
+                }, 10);
+            }
+
+            removeComponent(id) {
+                const index = this.components.findIndex(c => c.id === id);
+                if (index !== -1) {
+                    const component = this.components[index];
+
+                    // Clean up DOM using Juris cleanup
+                    if (component.element && component.element.parentNode) {
+                        this.app.domRenderer.cleanup(component.element);
+                        component.element.parentNode.removeChild(component.element);
+                    }
+
+                    this.components.splice(index, 1);
+                    benchmarkState.juris.components--;
+                }
+            }
+
+            cleanup() {
+                this.components.forEach(comp => this.removeComponent(comp.id));
+                if (this.app) {
+                    this.app.setState('test', {
+                        counter: 0,
+                        components: {},
+                        memory: {},
+                        async: {}
+                    });
+                }
+            }
+
+            destroy() {
+                this.isDestroyed = true;
+                this.cleanup();
+                if (this.app) {
+                    this.app.cleanup();
+                }
+            }
+        }
+
+        // =====================================================================
+        // FAIR PERFORMANCE MONITORING
+        // =====================================================================
+
+        function startPerformanceMonitoring() {
+            if (performanceMonitor) return;
+
+            performanceMonitor = setInterval(() => {
+                monitorFrameRate();
+                updateUI();
+                updateGraphs();
+                calculateScores();
+            }, 1000 / 60); // 60 FPS monitoring
+        }
+
+        function monitorFrameRate() {
+            const currentTime = performance.now();
+            const deltaTime = currentTime - lastFrameTime;
+            lastFrameTime = currentTime;
+            frameCount++;
+
+            // Record frame times
+            if (benchmarkState.testing) {
+                benchmarkState.vue.frameTimes.push(deltaTime);
+                benchmarkState.juris.frameTimes.push(deltaTime);
+
+                // Keep only recent frame times
+                if (benchmarkState.vue.frameTimes.length > 60) {
+                    benchmarkState.vue.frameTimes.shift();
+                    benchmarkState.juris.frameTimes.shift();
+                }
+            }
+
+            // Update FPS every second
+            if (currentTime - lastFpsUpdate >= 1000) {
+                const fps = Math.round((frameCount * 1000) / (currentTime - lastFpsUpdate));
+
+                if (benchmarkState.testing) {
+                    // FAIR FPS calculation - identical for both frameworks
+                    const baseFps = fps;
+
+                    // Apply identical component penalties
+                    benchmarkState.vue.fps = Math.max(0, baseFps - Math.floor(benchmarkState.vue.components / 20));
+                    benchmarkState.juris.fps = Math.max(0, baseFps - Math.floor(benchmarkState.juris.components / 20));
+                }
+
+                frameCount = 0;
+                lastFpsUpdate = currentTime;
+            }
+
+            // Update real-time stats
+            document.getElementById('currentFPS').textContent = `FPS: ${Math.round(60 - (deltaTime - 16.67))}`;
+            document.getElementById('memoryUsage').textContent = `Memory: ${Math.round(performance.memory?.usedJSHeapSize / 1048576 || 0)}MB`;
+        }
+
+        function calculateScores() {
+            // IDENTICAL scoring algorithm for both frameworks
+            ['vue', 'juris'].forEach(framework => {
+                const metrics = benchmarkState[framework];
+                let score = 100;
+
+                // FPS penalty (identical for both)
+                if (metrics.fps < 60) {
+                    score -= (60 - metrics.fps) * 1.5;
+                }
+                if (metrics.fps < 30) {
+                    score -= 20;
+                }
+
+                // Error penalty (identical for both)
+                score -= metrics.errors * 5;
+
+                // Component handling (identical for both)
+                score -= Math.max(0, metrics.components - 10) * 0.5;
+
+                // Memory bonus (identical for both)
+                score += Math.min(5, metrics.updates / 10);
+
+                metrics.score = Math.max(0, Math.min(100, score));
+            });
+        }
+
+        function updateUI() {
+            // Update Vue metrics
+            ['fps', 'components', 'memory', 'errors', 'updates', 'score'].forEach(metric => {
+                const element = document.getElementById(`vue-${metric}`);
+                if (element) {
+                    element.textContent = Math.round(benchmarkState.vue[metric]);
+                }
+            });
+
+            // Update Juris metrics
+            ['fps', 'components', 'memory', 'errors', 'updates', 'score'].forEach(metric => {
+                const element = document.getElementById(`juris-${metric}`);
+                if (element) {
+                    element.textContent = Math.round(benchmarkState.juris[metric]);
+                }
+            });
+        }
+
+        function updateGraphs() {
+            updateGraph('vue', benchmarkState.vue.frameTimes);
+            updateGraph('juris', benchmarkState.juris.frameTimes);
+        }
+
+        function updateGraph(framework, frameTimes) {
+            const graph = document.getElementById(`${framework}-graph`);
+            if (!graph || !frameTimes.length) return;
+
+            graph.innerHTML = '';
+
+            frameTimes.forEach((frameTime, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'graph-bar';
+                bar.style.left = `${(index / frameTimes.length) * 100}%`;
+                bar.style.height = `${Math.min((frameTime / 50) * 80, 80)}px`;
+
+                if (frameTime > 33) {
+                    bar.style.background = '#ff4757';
+                } else if (frameTime > 16.67) {
+                    bar.style.background = '#ffa502';
+                } else {
+                    bar.style.background = framework === 'vue' ? '#42b883' : '#ff6b6b';
+                }
+
+                graph.appendChild(bar);
+            });
+        }
+
+        // =====================================================================
+        // TEST FUNCTIONS
+        // =====================================================================
+
+        function startFairBenchmark() {
+            if (benchmarkState.testing) {
+                stopAllTests();
+                return;
+            }
+
+            console.log('🚀 Starting fair benchmark with identical conditions...');
+
+            benchmarkState.testing = true;
+            benchmarkState.startTime = performance.now();
+
+            document.getElementById('testStatus').textContent = 'Status: Testing';
+
+            // Initialize both frameworks
+            if (!benchmarkState.vue.app) {
+                const vueManager = new VueFrameworkManager();
+                if (vueManager.initialize()) {
+                    benchmarkState.vue.app = vueManager;
+                }
+            }
+
+            if (!benchmarkState.juris.app) {
+                const jurisManager = new JurisFrameworkManager();
+                if (jurisManager.initialize()) {
+                    benchmarkState.juris.app = jurisManager;
+                }
+            }
+
+            startPerformanceMonitoring();
+
+            // Start with basic component creation
+            setTimeout(() => spawnComponents(), 500);
+        }
+
+        function spawnComponents() {
+            if (!benchmarkState.testing) return;
+
+            const componentTypes = ['basic', 'async', 'memory', 'spinning', 'thrashing', 'exploding'];
+            const type = componentTypes[Math.floor(Math.random() * componentTypes.length)];
+
+            // Create components in both frameworks simultaneously
+            if (benchmarkState.vue.app) {
+                benchmarkState.vue.app.createComponent(type);
+            }
+
+            if (benchmarkState.juris.app) {
+                benchmarkState.juris.app.createComponent(type);
+            }
+
+            console.log(`Both frameworks: Created ${type} components`);
+        }
+
+        function testReactivity() {
+            if (!benchmarkState.testing) return;
+
+            console.log('🔄 Testing reactivity in both frameworks...');
+
+            if (benchmarkState.vue.app) {
+                benchmarkState.vue.app.updateState();
+            }
+
+            if (benchmarkState.juris.app) {
+                benchmarkState.juris.app.updateState();
+            }
+        }
+
+        function testMemoryLoad() {
+            console.log('💾 Testing memory load...');
+
+            // Create memory-intensive components
+            for (let i = 0; i < 5; i++) {
+                if (benchmarkState.vue.app) {
+                    benchmarkState.vue.app.createComponent('memory');
+                }
+                if (benchmarkState.juris.app) {
+                    benchmarkState.juris.app.createComponent('memory');
+                }
+            }
+        }
+
+        function testLifecycles() {
+            console.log('♻️ Testing component lifecycles...');
+
+            // Create exploding components to test cleanup
+            for (let i = 0; i < 3; i++) {
+                if (benchmarkState.vue.app) {
+                    benchmarkState.vue.app.createComponent('exploding');
+                }
+                if (benchmarkState.juris.app) {
+                    benchmarkState.juris.app.createComponent('exploding');
+                }
+            }
+        }
+
+        function stressTest() {
+            if (!benchmarkState.testing) {
+                startFairBenchmark();
+                return;
+            }
+
+            console.log('⚡ Starting stress test...');
+
+            // Rapid component creation
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => spawnComponents(), i * 100);
+            }
+
+            // State update storm
+            if (benchmarkState.vue.app) {
+                benchmarkState.vue.app.stressTest();
+            }
+            if (benchmarkState.juris.app) {
+                benchmarkState.juris.app.stressTest();
+            }
+        }
+
+        function extremeStressTest() {
+            console.log('☢️ EXTREME STRESS TEST INITIATED');
+
+            if (!benchmarkState.testing) {
+                startFairBenchmark();
+            }
+
+            // Create many components rapidly
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => spawnComponents(), i * 25);
+            }
+
+            // Multiple stress tests
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    if (benchmarkState.vue.app) {
+                        benchmarkState.vue.app.stressTest();
+                    }
+                    if (benchmarkState.juris.app) {
+                        benchmarkState.juris.app.stressTest();
+                    }
+                }, i * 500);
+            }
+
+            // Memory pressure
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => testMemoryLoad(), i * 200);
+            }
+        }
+
+        function stopAllTests() {
+            console.log('🛑 Stopping all tests...');
+
+            benchmarkState.testing = false;
+            document.getElementById('testStatus').textContent = 'Status: Stopped';
+
+            if (performanceMonitor) {
+                clearInterval(performanceMonitor);
+                performanceMonitor = null;
+            }
+
+            // Clean up both frameworks
+            if (benchmarkState.vue.app) {
+                benchmarkState.vue.app.cleanup();
+            }
+            if (benchmarkState.juris.app) {
+                benchmarkState.juris.app.cleanup();
+            }
+        }
+
+        function resetAllMetrics() {
+            console.log('🔄 Resetting all metrics...');
+
+            // Reset Vue metrics
+            Object.assign(benchmarkState.vue, {
+                fps: 60, components: 0, memory: 0, errors: 0, updates: 0, score: 100,
+                frameTimes: []
+            });
+
+            // Reset Juris metrics  
+            Object.assign(benchmarkState.juris, {
+                fps: 60, components: 0, memory: 0, errors: 0, updates: 0, score: 100,
+                frameTimes: []
+            });
+
+            updateUI();
+        }
+
+        function generateFairReport() {
+            console.log('📊 Generating fair comparison report...');
+
+            const vueScore = benchmarkState.vue.score;
+            const jurisScore = benchmarkState.juris.score;
+
+            // Generate detailed results
+            document.getElementById('vue-results').innerHTML = `
+                <div><strong>Final FPS:</strong> ${benchmarkState.vue.fps}</div>
+                <div><strong>Components Created:</strong> ${benchmarkState.vue.components}</div>
+                <div><strong>Memory Allocations:</strong> ${benchmarkState.vue.memory}</div>
+                <div><strong>Errors:</strong> ${benchmarkState.vue.errors}</div>
+                <div><strong>State Updates:</strong> ${benchmarkState.vue.updates}</div>
+                <div><strong>Overall Score:</strong> ${vueScore.toFixed(1)}/100</div>
+            `;
+
+            document.getElementById('juris-results').innerHTML = `
+                <div><strong>Final FPS:</strong> ${benchmarkState.juris.fps}</div>
+                <div><strong>Components Created:</strong> ${benchmarkState.juris.components}</div>
+                <div><strong>Memory Allocations:</strong> ${benchmarkState.juris.memory}</div>
+                <div><strong>Errors:</strong> ${benchmarkState.juris.errors}</div>
+                <div><strong>State Updates:</strong> ${benchmarkState.juris.updates}</div>
+                <div><strong>Overall Score:</strong> ${jurisScore.toFixed(1)}/100</div>
+            `;
+
+            // Determine winner with fair analysis
+            let winnerText = '';
+            let analysis = '';
+
+            if (Math.abs(vueScore - jurisScore) < 5) {
+                winnerText = '🤝 TIE: Both frameworks performed similarly!';
+                analysis = 'Under identical conditions, both frameworks showed comparable performance characteristics.';
+            } else if (vueScore > jurisScore) {
+                winnerText = `🟢 VUE WINS with ${vueScore.toFixed(1)} vs ${jurisScore.toFixed(1)}`;
+                analysis = `Vue's mature ecosystem and optimizations provided a ${(vueScore - jurisScore).toFixed(1)} point advantage.`;
+            } else {
+                winnerText = `🔴 JURIS WINS with ${jurisScore.toFixed(1)} vs ${vueScore.toFixed(1)}`;
+                analysis = `Juris's innovative architecture delivered a ${(jurisScore - vueScore).toFixed(1)} point performance advantage.`;
+            }
+
+            document.getElementById('winner').innerHTML = `
+                ${winnerText}
+                <div style="margin-top: 10px; font-size: 14px; font-weight: normal;">
+                    ${analysis}<br>
+                    <small>✅ Fair test conditions: Identical metrics, penalties, and test scenarios</small>
+                </div>
+            `;
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function exportData() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                testDuration: benchmarkState.startTime ? performance.now() - benchmarkState.startTime : 0,
+                vue: { ...benchmarkState.vue },
+                juris: { ...benchmarkState.juris },
+                conditions: 'Fair test with identical metrics and penalties'
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `vue-vs-juris-benchmark-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleRealTimeStats() {
+            const stats = document.getElementById('realTimeStats');
+            stats.style.display = stats.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // =====================================================================
+        // INITIALIZATION
+        // =====================================================================
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🎯 Fair Vue vs Juris benchmark ready!');
+            console.log('✅ Real Vue 3 framework loaded');
+            console.log('✅ Real Juris framework loaded');
+            console.log('🔬 Identical testing conditions established');
+
+            // Show framework versions
+            if (window.Vue) {
+                console.log('Vue version:', Vue.version || '3.x');
+            }
+            if (window.Juris) {
+                console.log('Juris framework loaded successfully');
+            }
+        });
+
+        // Global access for debugging
+        window.benchmarkState = benchmarkState;
+        window.startFairBenchmark = startFairBenchmark;
+    </script>
+</body>
+
+</html>

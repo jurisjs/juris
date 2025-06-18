@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris objectToHtml Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="../src/juris.js"></script>
+    <script>
+        // Initialize Juris
+        const juris = new Juris();
+
+        // Define the entire page structure as JavaScript objects
+        const pageStructure = {
+            div: {
+                className: 'page-container',
+                style: {
+                    maxWidth: '1200px',
+                    margin: '0 auto',
+                    padding: '20px',
+                    background: 'white',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+                    marginTop: '20px',
+                    marginBottom: '20px'
+                },
+                children: [
+                    // Header Section
+                    {
+                        header: {
+                            className: 'hero-header',
+                            style: {
+                                background: 'linear-gradient(45deg, #2196F3, #21CBF3)',
+                                color: 'white',
+                                padding: '40px 20px',
+                                textAlign: 'center',
+                                borderRadius: '8px',
+                                marginBottom: '30px'
+                            },
+                            children: [
+                                {
+                                    h1: {
+                                        text: '🚀 Juris objectToHtml Demo',
+                                        style: {
+                                            fontSize: '2.5rem',
+                                            marginBottom: '10px',
+                                            fontWeight: 'bold'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Building entire pages with pure JavaScript objects - No JSX, No Build Tools, No Magic!',
+                                        style: {
+                                            fontSize: '1.2rem',
+                                            opacity: '0.9'
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Features Grid
+                    {
+                        section: {
+                            className: 'features-section',
+                            style: {
+                                marginBottom: '40px'
+                            },
+                            children: [
+                                {
+                                    h2: {
+                                        text: '✨ Why This Is Revolutionary',
+                                        style: {
+                                            fontSize: '2rem',
+                                            marginBottom: '20px',
+                                            color: '#333',
+                                            textAlign: 'center'
+                                        }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'features-grid',
+                                        style: {
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                                            gap: '20px',
+                                            marginBottom: '30px'
+                                        },
+                                        children: [
+                                            // Feature Card 1
+                                            {
+                                                div: {
+                                                    className: 'feature-card',
+                                                    style: {
+                                                        background: '#f8f9fa',
+                                                        padding: '25px',
+                                                        borderRadius: '12px',
+                                                        border: '2px solid #e9ecef',
+                                                        transition: 'transform 0.3s ease'
+                                                    },
+                                                    children: [
+                                                        {
+                                                            h3: {
+                                                                text: '📦 Zero Build Tools',
+                                                                style: {
+                                                                    color: '#2196F3',
+                                                                    marginBottom: '15px',
+                                                                    fontSize: '1.3rem'
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            p: {
+                                                                text: 'No Webpack, no Babel, no transpilation. Just pure JavaScript objects that render to real DOM elements instantly.',
+                                                                style: {
+                                                                    color: '#666',
+                                                                    lineHeight: '1.6'
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+
+                                            // Feature Card 2
+                                            {
+                                                div: {
+                                                    className: 'feature-card',
+                                                    style: {
+                                                        background: '#f8f9fa',
+                                                        padding: '25px',
+                                                        borderRadius: '12px',
+                                                        border: '2px solid #e9ecef'
+                                                    },
+                                                    children: [
+                                                        {
+                                                            h3: {
+                                                                text: '🤖 AI-Friendly',
+                                                                style: {
+                                                                    color: '#4CAF50',
+                                                                    marginBottom: '15px',
+                                                                    fontSize: '1.3rem'
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            p: {
+                                                                text: 'LLMs can generate valid JavaScript objects way more reliably than JSX. Perfect for AI-assisted development.',
+                                                                style: {
+                                                                    color: '#666',
+                                                                    lineHeight: '1.6'
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+
+                                            // Feature Card 3
+                                            {
+                                                div: {
+                                                    className: 'feature-card',
+                                                    style: {
+                                                        background: '#f8f9fa',
+                                                        padding: '25px',
+                                                        borderRadius: '12px',
+                                                        border: '2px solid #e9ecef'
+                                                    },
+                                                    children: [
+                                                        {
+                                                            h3: {
+                                                                text: '⚡ Pure Performance',
+                                                                style: {
+                                                                    color: '#FF9800',
+                                                                    marginBottom: '15px',
+                                                                    fontSize: '1.3rem'
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            p: {
+                                                                text: 'Direct DOM manipulation with zero overhead. No virtual DOM, no reconciliation - just efficient object-to-element conversion.',
+                                                                style: {
+                                                                    color: '#666',
+                                                                    lineHeight: '1.6'
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Code Example Section
+                    {
+                        section: {
+                            className: 'code-example-section',
+                            style: {
+                                background: '#2c3e50',
+                                color: 'white',
+                                padding: '30px',
+                                borderRadius: '12px',
+                                marginBottom: '40px'
+                            },
+                            children: [
+                                {
+                                    h2: {
+                                        text: '💻 See It In Action',
+                                        style: {
+                                            marginBottom: '20px',
+                                            color: '#ecf0f1'
+                                        }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'code-comparison',
+                                        style: {
+                                            display: 'grid',
+                                            gridTemplateColumns: '1fr 1fr',
+                                            gap: '20px'
+                                        },
+                                        children: [
+                                            {
+                                                div: {
+                                                    children: [
+                                                        {
+                                                            h3: {
+                                                                text: 'Traditional JSX:',
+                                                                style: {
+                                                                    color: '#e74c3c',
+                                                                    marginBottom: '10px'
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            pre: {
+                                                                style: {
+                                                                    background: '#34495e',
+                                                                    padding: '15px',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '14px',
+                                                                    overflow: 'auto'
+                                                                },
+                                                                text: `<div className="card">
+  <h3>Hello World</h3>
+  <p>This is JSX</p>
+  <button onClick={handleClick}>
+    Click me
+  </button>
+</div>`
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    children: [
+                                                        {
+                                                            h3: {
+                                                                text: 'Juris Objects:',
+                                                                style: {
+                                                                    color: '#2ecc71',
+                                                                    marginBottom: '10px'
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            pre: {
+                                                                style: {
+                                                                    background: '#34495e',
+                                                                    padding: '15px',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '14px',
+                                                                    overflow: 'auto'
+                                                                },
+                                                                text: `{
+  div: {
+    className: 'card',
+    children: [
+      { h3: { text: 'Hello World' } },
+      { p: { text: 'This is Juris' } },
+      {
+        button: {
+          onclick: handleClick,
+          text: 'Click me'
+        }
+      }
+    ]
+  }
+}`
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Interactive Demo Section
+                    {
+                        section: {
+                            className: 'interactive-demo',
+                            style: {
+                                background: '#f8f9fa',
+                                padding: '30px',
+                                borderRadius: '12px',
+                                marginBottom: '40px'
+                            },
+                            children: [
+                                {
+                                    h2: {
+                                        text: '🎮 Interactive Demo',
+                                        style: {
+                                            marginBottom: '20px',
+                                            color: '#333'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Click the button below to see objectToHtml dynamically create new content:',
+                                        style: {
+                                            marginBottom: '20px',
+                                            color: '#666'
+                                        }
+                                    }
+                                },
+                                {
+                                    button: {
+                                        className: 'demo-button',
+                                        style: {
+                                            background: '#3498db',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px 24px',
+                                            borderRadius: '6px',
+                                            fontSize: '16px',
+                                            cursor: 'pointer',
+                                            marginBottom: '20px',
+                                            transition: 'background 0.3s'
+                                        },
+                                        text: '🎯 Generate Dynamic Content',
+                                        onclick: generateDynamicContent
+                                    }
+                                },
+                                {
+                                    div: {
+                                        id: 'dynamic-content-area',
+                                        style: {
+                                            minHeight: '100px',
+                                            border: '2px dashed #ddd',
+                                            borderRadius: '8px',
+                                            padding: '20px',
+                                            textAlign: 'center',
+                                            color: '#999'
+                                        },
+                                        text: 'Dynamic content will appear here...'
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Statistics Section
+                    {
+                        section: {
+                            className: 'stats-section',
+                            children: [
+                                {
+                                    h2: {
+                                        text: '📊 Why Developers Love This Approach',
+                                        style: {
+                                            textAlign: 'center',
+                                            marginBottom: '30px',
+                                            color: '#333'
+                                        }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'stats-grid',
+                                        style: {
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                            gap: '20px'
+                                        },
+                                        children: [
+                                            {
+                                                div: {
+                                                    className: 'stat-card',
+                                                    style: {
+                                                        textAlign: 'center',
+                                                        padding: '25px',
+                                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                        color: 'white',
+                                                        borderRadius: '12px'
+                                                    },
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                text: '0ms',
+                                                                style: {
+                                                                    fontSize: '2.5rem',
+                                                                    fontWeight: 'bold',
+                                                                    marginBottom: '10px'
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            div: {
+                                                                text: 'Build Time',
+                                                                style: {
+                                                                    fontSize: '1rem',
+                                                                    opacity: '0.9'
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'stat-card',
+                                                    style: {
+                                                        textAlign: 'center',
+                                                        padding: '25px',
+                                                        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                                        color: 'white',
+                                                        borderRadius: '12px'
+                                                    },
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                text: '100%',
+                                                                style: {
+                                                                    fontSize: '2.5rem',
+                                                                    fontWeight: 'bold',
+                                                                    marginBottom: '10px'
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            div: {
+                                                                text: 'Vanilla JS',
+                                                                style: {
+                                                                    fontSize: '1rem',
+                                                                    opacity: '0.9'
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'stat-card',
+                                                    style: {
+                                                        textAlign: 'center',
+                                                        padding: '25px',
+                                                        background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                                                        color: 'white',
+                                                        borderRadius: '12px'
+                                                    },
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                text: '<20KB',
+                                                                style: {
+                                                                    fontSize: '2.5rem',
+                                                                    fontWeight: 'bold',
+                                                                    marginBottom: '10px'
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            div: {
+                                                                text: 'Bundle Size',
+                                                                style: {
+                                                                    fontSize: '1rem',
+                                                                    opacity: '0.9'
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'stat-card',
+                                                    style: {
+                                                        textAlign: 'center',
+                                                        padding: '25px',
+                                                        background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                                                        color: 'white',
+                                                        borderRadius: '12px'
+                                                    },
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                text: 'Any',
+                                                                style: {
+                                                                    fontSize: '2.5rem',
+                                                                    fontWeight: 'bold',
+                                                                    marginBottom: '10px'
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            div: {
+                                                                text: 'Backend',
+                                                                style: {
+                                                                    fontSize: '1rem',
+                                                                    opacity: '0.9'
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Footer
+                    {
+                        footer: {
+                            style: {
+                                textAlign: 'center',
+                                padding: '30px',
+                                marginTop: '40px',
+                                borderTop: '2px solid #eee',
+                                color: '#666'
+                            },
+                            children: [
+                                {
+                                    p: {
+                                        text: '🚀 This entire page was built using objectToHtml - no JSX, no build tools, just pure JavaScript objects!',
+                                        style: {
+                                            fontSize: '1.1rem',
+                                            marginBottom: '10px'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Welcome to the future of web development.',
+                                        style: {
+                                            fontStyle: 'italic',
+                                            opacity: '0.8'
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        };
+
+        // Function to generate dynamic content
+        function generateDynamicContent() {
+            const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+            const messages = [
+                'Dynamically created with objectToHtml!',
+                'No framework magic, just pure objects!',
+                'This was generated at runtime!',
+                'Objects to DOM elements instantly!',
+                'Zero build tools needed!'
+            ];
+
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            const timestamp = new Date().toLocaleTimeString();
+
+            const dynamicContent = {
+                div: {
+                    style: {
+                        background: randomColor,
+                        color: 'white',
+                        padding: '20px',
+                        borderRadius: '8px',
+                        marginBottom: '10px',
+                        animation: 'fadeIn 0.5s ease-in'
+                    },
+                    children: [
+                        {
+                            h3: {
+                                text: '✨ Dynamically Generated!',
+                                style: {
+                                    marginBottom: '10px'
+                                }
+                            }
+                        },
+                        {
+                            p: {
+                                text: randomMessage,
+                                style: {
+                                    marginBottom: '10px'
+                                }
+                            }
+                        },
+                        {
+                            small: {
+                                text: `Generated at: ${timestamp}`,
+                                style: {
+                                    opacity: '0.8'
+                                }
+                            }
+                        }
+                    ]
+                }
+            };
+
+            // Use objectToHtml to create the element
+            const element = juris.objectToHtml(dynamicContent);
+            
+            // Add it to the dynamic content area
+            const contentArea = document.getElementById('dynamic-content-area');
+            contentArea.appendChild(element);
+
+            console.log('🎯 Dynamic content created with objectToHtml:', dynamicContent);
+        }
+
+        // Render the entire page
+        const pageElement = juris.objectToHtml(pageStructure);
+        document.getElementById('app').appendChild(pageElement);
+
+        // Add some CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            .feature-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            }
+            
+            .demo-button:hover {
+                background: #2980b9 !important;
+                transform: translateY(-2px);
+            }
+            
+            .stat-card {
+                transition: transform 0.3s ease;
+            }
+            
+            .stat-card:hover {
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        console.log('🚀 Entire page built with objectToHtml!');
+        console.log('📊 Page structure:', pageStructure);
+    </script>
+</body>
+</html>
