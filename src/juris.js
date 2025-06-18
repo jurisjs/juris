@@ -101,23 +101,23 @@
                 console.warn('Invalid state path:', path);
                 return;
             }
-    
+
             if (this._hasCircularUpdate(path)) {
                 return;
             }
-    
+
             // Route to batching if enabled
             if (this.batchingEnabled && this.batchDelayMs > 0) {
                 this._queueUpdate(path, value, context);
                 return;
             }
-    
+
             this._setStateImmediate(path, value, context);
         }
 
         _setStateImmediate(path, value, context = {}) {
             const oldValue = this.getState(path);
-    
+
             let finalValue = value;
             for (const middleware of this.middleware) {
                 try {
@@ -135,14 +135,14 @@
                     console.error('Middleware error:', error);
                 }
             }
-    
+
             if (deepEquals(oldValue, finalValue)) {
                 return;
             }
-    
+
             const parts = getPathParts(path);
             let current = this.state;
-    
+
             for (let i = 0; i < parts.length - 1; i++) {
                 const part = parts[i];
                 if (current[part] == null || typeof current[part] !== 'object') {
@@ -150,20 +150,20 @@
                 }
                 current = current[part];
             }
-    
+
             current[parts[parts.length - 1]] = finalValue;
-    
+
             if (!this.isUpdating) {
                 this.isUpdating = true;
-    
+
                 if (!this.currentlyUpdating) {
                     this.currentlyUpdating = new Set();
                 }
                 this.currentlyUpdating.add(path);
-    
+
                 this._notifySubscribers(path, finalValue, oldValue);
                 this._notifyExternalSubscribers(path, finalValue, oldValue); // ✅ Now hierarchical
-    
+
                 this.currentlyUpdating.delete(path);
                 this.isUpdating = false;
             }
@@ -174,40 +174,40 @@
             if (this.batchUpdateInProgress || this.updateQueue.length === 0) {
                 return;
             }
-    
+
             this.batchUpdateInProgress = true;
-    
+
             if (this.batchTimeout) {
                 clearTimeout(this.batchTimeout);
                 this.batchTimeout = null;
             }
-    
+
             const batchSize = Math.min(this.maxBatchSize, this.updateQueue.length);
             const currentBatch = this.updateQueue.splice(0, batchSize);
-    
+
             try {
                 // ✅ FIXED: Group updates by path and take latest value
                 const pathGroups = new Map();
-    
+
                 currentBatch.forEach(update => {
                     pathGroups.set(update.path, update); // Latest update wins
                 });
-    
+
                 // ✅ FIXED: Process unique paths only
                 const affectedPaths = new Set();
-                
+
                 pathGroups.forEach((update) => {
                     this._setStateImmediate(update.path, update.value, update.context);
                     affectedPaths.add(update.path);
                 });
-    
+
                 console.log(`Batched ${currentBatch.length} updates into ${pathGroups.size} unique state changes`);
-    
+
             } catch (error) {
                 console.error('Error processing batched updates:', error);
             } finally {
                 this.batchUpdateInProgress = false;
-    
+
                 if (this.updateQueue.length > 0) {
                     setTimeout(() => this._processBatchedUpdates(), 0);
                 }
@@ -217,11 +217,11 @@
         configureBatching(options = {}) {
             this.maxBatchSize = options.maxBatchSize || this.maxBatchSize;
             this.batchDelayMs = options.batchDelayMs !== undefined ? options.batchDelayMs : this.batchDelayMs;
-            
+
             if (options.enabled !== undefined) {
                 this.batchingEnabled = options.enabled;
             }
-            
+
             console.log(`Batching configured: enabled=${this.batchingEnabled}, delay=${this.batchDelayMs}ms, maxSize=${this.maxBatchSize}`);
         }
 
@@ -256,11 +256,11 @@
             if (!this.externalSubscribers.has(path)) {
                 this.externalSubscribers.set(path, new Set());
             }
-            
+
             // Store callback with hierarchical flag
             const subscription = { callback, hierarchical };
             this.externalSubscribers.get(path).add(subscription);
-    
+
             return () => {
                 const subs = this.externalSubscribers.get(path);
                 if (subs) {
@@ -320,12 +320,12 @@
             this.externalSubscribers.forEach((subscriptions, subscribedPath) => {
                 subscriptions.forEach(subscription => {
                     const { callback, hierarchical } = subscription;
-                    
+
                     let shouldNotify = false;
-                    
+
                     if (hierarchical) {
                         // Hierarchical: notify if changedPath is under subscribedPath
-                        if (changedPath === subscribedPath || 
+                        if (changedPath === subscribedPath ||
                             changedPath.startsWith(subscribedPath + '.')) {
                             shouldNotify = true;
                         }
@@ -335,7 +335,7 @@
                             shouldNotify = true;
                         }
                     }
-                    
+
                     if (shouldNotify) {
                         try {
                             callback(newValue, oldValue, changedPath);
@@ -703,6 +703,13 @@
             if (!instance) return;
 
             const oldProps = instance.props;
+
+            // ✅ NEW: Check if props have actually changed using deep comparison
+            if (deepEquals(oldProps, newProps)) {
+                console.log(`Skipping re-render for ${instance.name} - props unchanged`);
+                return; // Skip re-render if props are identical
+            }
+
             instance.props = newProps;
 
             if (instance.hooks.onUpdate) {
@@ -803,6 +810,35 @@
             this.renderMode = 'fine-grained'; // 'batch' or 'fine-grained'
             this.failureCount = 0;
             this.maxFailures = 3;
+
+            this.renderStats = {
+                totalUpdates: 0,
+                skippedUpdates: 0,
+                lastReset: Date.now()
+            };
+        }
+
+        getRenderStats() {
+            const now = Date.now();
+            const duration = (now - this.renderStats.lastReset) / 1000;
+            const skipRate = this.renderStats.totalUpdates > 0
+                ? (this.renderStats.skippedUpdates / this.renderStats.totalUpdates * 100).toFixed(1)
+                : 0;
+
+            return {
+                totalUpdates: this.renderStats.totalUpdates,
+                skippedUpdates: this.renderStats.skippedUpdates,
+                skipRate: `${skipRate}%`,
+                duration: `${duration.toFixed(1)}s`
+            };
+        }
+
+        resetRenderStats() {
+            this.renderStats = {
+                totalUpdates: 0,
+                skippedUpdates: 0,
+                lastReset: Date.now()
+            };
         }
 
         // PUBLIC: Set render mode
@@ -962,11 +998,22 @@
 
         _handleChildrenFineGrained(element, children, subscriptions) {
             if (typeof children === 'function') {
+                let lastChildrenResult = null;
+                let isInitialized = false;
+
                 const updateChildren = () => {
                     try {
                         const result = children();
+
+                        // ✅ NEW: Only update if children result has actually changed
+                        if (isInitialized && deepEquals(result, lastChildrenResult)) {
+                            return; // Skip update if children haven't changed
+                        }
+
                         if (result !== "ignore") {
                             this._updateChildrenFineGrained(element, result);
+                            lastChildrenResult = result;
+                            isInitialized = true;
                         }
                     } catch (error) {
                         console.error('Error in children function:', error);
@@ -974,6 +1021,12 @@
                 };
 
                 this._createReactiveUpdate(element, updateChildren, subscriptions);
+
+                // Initial render
+                const initialResult = children();
+                this._updateChildrenFineGrained(element, initialResult);
+                lastChildrenResult = initialResult;
+                isInitialized = true;
             } else {
                 this._updateChildrenFineGrained(element, children);
             }
@@ -1419,18 +1472,25 @@
         _handleText(element, text, subscriptions) {
             if (typeof text === 'function') {
                 let lastTextValue = null;
+                let isInitialized = false;
 
                 this._createReactiveUpdate(element, () => {
                     const newTextValue = text();
-                    if (newTextValue !== lastTextValue) {
-                        element.textContent = newTextValue;
-                        lastTextValue = newTextValue;
+
+                    // ✅ NEW: Only update if text has actually changed
+                    if (isInitialized && newTextValue === lastTextValue) {
+                        return; // Skip update if text hasn't changed
                     }
+
+                    element.textContent = newTextValue;
+                    lastTextValue = newTextValue;
+                    isInitialized = true;
                 }, subscriptions);
 
                 const initialValue = text();
                 element.textContent = initialValue;
                 lastTextValue = initialValue;
+                isInitialized = true;
             } else {
                 element.textContent = text;
             }
@@ -1439,20 +1499,27 @@
         _handleStyle(element, style, subscriptions) {
             if (typeof style === 'function') {
                 let lastStyleState = null;
+                let isInitialized = false;
 
                 this._createReactiveUpdate(element, () => {
                     const styleObj = style();
-                    if (!this._styleObjectsEqual(styleObj, lastStyleState)) {
-                        const cssText = this._styleObjectToCssText(styleObj);
-                        element.style.cssText = cssText;
-                        lastStyleState = { ...styleObj };
+
+                    // ✅ NEW: Only update if style has actually changed
+                    if (isInitialized && deepEquals(styleObj, lastStyleState)) {
+                        return; // Skip update if style hasn't changed
                     }
+
+                    const cssText = this._styleObjectToCssText(styleObj);
+                    element.style.cssText = cssText;
+                    lastStyleState = { ...styleObj };
+                    isInitialized = true;
                 }, subscriptions);
 
                 const initialStyle = style();
                 const cssText = this._styleObjectToCssText(initialStyle);
                 element.style.cssText = cssText;
                 lastStyleState = { ...initialStyle };
+                isInitialized = true;
 
             } else if (typeof style === 'object') {
                 const reactiveProps = {};
@@ -1470,6 +1537,7 @@
 
                 if (Object.keys(reactiveProps).length > 0) {
                     const lastValues = {};
+                    const initialized = {};
 
                     this._createReactiveUpdate(element, () => {
                         const changes = {};
@@ -1477,9 +1545,12 @@
 
                         Object.keys(reactiveProps).forEach(prop => {
                             const newValue = reactiveProps[prop]();
-                            if (newValue !== lastValues[prop]) {
+
+                            // ✅ NEW: Only update if individual style property has changed
+                            if (!initialized[prop] || newValue !== lastValues[prop]) {
                                 changes[prop] = newValue;
                                 lastValues[prop] = newValue;
+                                initialized[prop] = true;
                                 hasChanges = true;
                             }
                         });
@@ -1493,6 +1564,7 @@
                         const value = reactiveProps[prop]();
                         element.style[prop] = value;
                         lastValues[prop] = value;
+                        initialized[prop] = true;
                     });
                 }
             }
@@ -1585,18 +1657,25 @@
 
         _handleReactiveAttribute(element, attr, valueFn, subscriptions) {
             let lastValue = null;
+            let isInitialized = false;
 
             this._createReactiveUpdate(element, () => {
                 const newValue = valueFn();
-                if (newValue !== lastValue) {
-                    this._setStaticAttribute(element, attr, newValue);
-                    lastValue = newValue;
+
+                // ✅ NEW: Only update if value has actually changed
+                if (isInitialized && deepEquals(newValue, lastValue)) {
+                    return; // Skip update if value hasn't changed
                 }
+
+                this._setStaticAttribute(element, attr, newValue);
+                lastValue = newValue;
+                isInitialized = true;
             }, subscriptions);
 
             const initialValue = valueFn();
             this._setStaticAttribute(element, attr, initialValue);
             lastValue = initialValue;
+            isInitialized = true;
         }
 
         _setStaticAttribute(element, attr, value) {
@@ -1912,28 +1991,28 @@
                 // Mark as enhanced
                 this.enhancedElements.add(element);
                 element.setAttribute('data-juris-enhanced-selector', Date.now());
-        
+
                 // Get the actual definition
                 let actualDefinition = definition;
-        
+
                 // If definition is a function, call it with context
                 if (typeof definition === 'function') {
                     const context = this.juris.createContext(element);
                     actualDefinition = definition(context);
-        
+
                     if (!actualDefinition || typeof actualDefinition !== 'object') {
                         console.warn(`Selector '${selector}' function must return a definition object`);
                         this.enhancedElements.delete(element);
                         return;
                     }
                 }
-        
+
                 // Process element-aware functions (FIXED - no auto-execution)
                 const processedDefinition = this._processElementAwareFunctions(element, actualDefinition);
-        
+
                 // Apply enhancements
                 this._applyEnhancements(element, processedDefinition);
-        
+
             } catch (error) {
                 console.error('Error enhancing selector element:', error);
                 this.enhancedElements.delete(element);
@@ -1942,16 +2021,21 @@
 
         _processElementAwareFunctions(element, definition) {
             const processed = {};
-        
+
             Object.entries(definition).forEach(([key, value]) => {
                 if (typeof value === 'function') {
-                    // Check if function expects parameters (element-aware)
-                    if (value.length > 0) {
+                    // Check if this is an event handler (starts with 'on')
+                    if (key.startsWith('on')) {
+                        // Event handlers should never be auto-executed, always preserve them
+                        processed[key] = value;
+                    }
+                    // Check if function expects parameters (element-aware) and is NOT an event handler
+                    else if (value.length > 0) {
                         try {
                             // Create safe context for element-aware functions
                             const context = this.juris.createContext(element);
                             const result = value(context);
-                            
+
                             // Element-aware function should return an object
                             if (result && typeof result === 'object') {
                                 processed[key] = result;
@@ -1964,14 +2048,14 @@
                             processed[key] = value;
                         }
                     } else {
-                        // No parameters = direct function (like event handlers)
+                        // No parameters = direct function (like computed properties)
                         processed[key] = value;
                     }
                 } else {
                     processed[key] = value;
                 }
             });
-        
+
             return processed;
         }
 
@@ -2359,6 +2443,14 @@
             Object.assign(this.options, options);
         }
 
+        configureRenderOptimization(options = {}) {
+            if (options.enableLogging !== undefined) {
+                this.renderOptimization = this.renderOptimization || {};
+                this.renderOptimization.enableLogging = options.enableLogging;
+            }
+
+            console.log('Render optimization configured:', this.renderOptimization);
+        }
         getStats() {
             const enhancedElements = document.querySelectorAll('[data-juris-enhanced]').length;
             const enhancedContainers = document.querySelectorAll('[data-juris-enhanced-container]').length;

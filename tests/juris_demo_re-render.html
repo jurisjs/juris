@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Rendering Optimization Demo</title>
+    <script src="../src/juris.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .demo-section {
+            padding: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .demo-section:last-child {
+            border-bottom: none;
+        }
+        
+        .demo-section h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .demo-section h2::before {
+            content: "🚀";
+            font-size: 1.2em;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .metric-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .demo-output {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .component-demo {
+            border: 2px solid #e74c3c;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #fff5f5;
+        }
+        
+        .optimization-enabled {
+            border-color: #27ae60;
+            background: #f0fff4;
+        }
+        
+        .counter-display {
+            font-size: 3em;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ff7b7b 0%, #e74c3c 100%);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-enabled {
+            background: #27ae60;
+        }
+        
+        .status-disabled {
+            background: #e74c3c;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .log-skip {
+            background: rgba(39, 174, 96, 0.2);
+            border-left: 3px solid #27ae60;
+        }
+        
+        .log-render {
+            background: rgba(231, 76, 60, 0.2);
+            border-left: 3px solid #e74c3c;
+        }
+        
+        .performance-tip {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .performance-tip::before {
+            content: "💡 ";
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Juris Rendering Optimization</h1>
+            <p>Demonstrating intelligent re-render prevention for better performance</p>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Component Props Optimization</h2>
+            <p>This demo shows how Juris prevents unnecessary component re-renders when props haven't changed.</p>
+            
+            <div class="controls">
+                <button class="btn btn-primary" id="updateSameProps">Update Same Props</button>
+                <button class="btn btn-secondary" id="updateDifferentProps">Update Different Props</button>
+                <button class="btn btn-success" id="toggleOptimization">
+                    <span class="status-indicator status-enabled"></span>
+                    Optimization: ON
+                </button>
+            </div>
+            
+            <div id="componentDemo" class="component-demo optimization-enabled"></div>
+            
+            <div class="metrics">
+                <div class="metric-card">
+                    <div class="metric-value" id="totalRenders">0</div>
+                    <div class="metric-label">Total Renders</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="skippedRenders">0</div>
+                    <div class="metric-label">Skipped Renders</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="skipRate">0%</div>
+                    <div class="metric-label">Skip Rate</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Reactive Attributes Optimization</h2>
+            <p>Watch how reactive attributes only update when their values actually change.</p>
+            
+            <div class="controls">
+                <button class="btn btn-primary" id="triggerSameValue">Trigger Same Value</button>
+                <button class="btn btn-secondary" id="triggerNewValue">Trigger New Value</button>
+                <button class="btn btn-success" id="startStressTest">Start Stress Test</button>
+                <button class="btn btn-secondary" id="stopStressTest">Stop Test</button>
+            </div>
+            
+            <div id="reactiveDemo"></div>
+            
+            <div class="performance-tip">
+                <strong>Performance Tip:</strong> The optimization prevents DOM manipulation when reactive values don't change, 
+                significantly improving performance in high-frequency update scenarios.
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Real-time Activity Log</h2>
+            <div id="activityLog" class="demo-output"></div>
+            <button class="btn btn-secondary" id="clearLog">Clear Log</button>
+        </div>
+    </div>
+
+    <script>
+        // Demo State and Configuration
+        let renderOptimizationEnabled = true;
+        let totalRenders = 0;
+        let skippedRenders = 0;
+        let stressTestInterval = null;
+        let logEntries = [];
+        
+        // Initialize Juris with demo components
+        const juris = new Juris({
+            renderMode: 'fine-grained',
+            states: {
+                counter: 0,
+                message: 'Hello World',
+                timestamp: Date.now(),
+                stressValue: 100
+            },
+            components: {
+                // Demo counter component that tracks renders
+                DemoCounter: (props, context) => {
+                    const renderCount = (window.componentRenderCount || 0) + 1;
+                    window.componentRenderCount = renderCount;
+                    
+                    logActivity(`🔄 DemoCounter rendered (render #${renderCount}) with props: ${JSON.stringify(props)}`);
+                    totalRenders++;
+                    updateMetrics();
+                    
+                    return {
+                        div: {
+                            className: 'counter-display',
+                            style: {
+                                background: props.color || 'linear-gradient(135deg, #ff7b7b 0%, #e74c3c 100%)'
+                            },
+                            text: () => `${props.label || 'Count'}: ${props.value() || 0}`
+                        }
+                    };
+                },
+                
+                // Demo reactive component
+                ReactiveDemo: (props, context) => {
+                    return {
+                        div: {
+                            style: {
+                                padding: '20px',
+                                margin: '10px 0',
+                                borderRadius: '8px',
+                                background: () => {
+                                    const value = context.getState('stressValue', 100);
+                                    return `hsl(${value * 3.6}, 70%, 85%)`;
+                                },
+                                transform: () => {
+                                    const value = context.getState('stressValue', 100);
+                                    return `scale(${0.8 + (value / 500)})`;
+                                },
+                                transition: 'all 0.3s ease'
+                            },
+                            children: [
+                                {
+                                    h3: {
+                                        text: 'Reactive Styling Demo',
+                                        style: { margin: '0 0 10px 0' }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: () => `Current value: ${context.getState('stressValue', 100)}`,
+                                        style: {
+                                            fontSize: () => {
+                                                const value = context.getState('stressValue', 100);
+                                                return `${12 + (value / 25)}px`;
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            },
+            layout: {
+                div: {
+                    id: 'app-content',
+                    children: [
+                        {
+                            DemoCounter: {
+                                value: () => juris.getState('counter', 0),
+                                label: 'Demo Counter',
+                                color: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
+                            }
+                        },
+                        {
+                            ReactiveDemo: {}
+                        }
+                    ]
+                }
+            }
+        });
+        
+        // Override updateInstance1 with optimization logic
+        const originalUpdateInstance = juris.componentManager.updateInstance1;
+        juris.componentManager.updateInstance1 = function(element, newProps) {
+            if (!renderOptimizationEnabled) {
+                return originalUpdateInstance.call(this, element, newProps);
+            }
+            
+            const instance = this.instances.get(element);
+            if (!instance) return;
+
+            const oldProps = instance.props;
+            
+            // Check if props have actually changed using deep comparison
+            if (deepEquals(oldProps, newProps)) {
+                logActivity(`⚡ Skipped re-render for ${instance.name} - props unchanged`, 'skip');
+                skippedRenders++;
+                updateMetrics();
+                return;
+            }
+            
+            logActivity(`🔄 Re-rendering ${instance.name} - props changed`, 'render');
+            return originalUpdateInstance.call(this, element, newProps);
+        };
+        
+        // Utility Functions
+        function logActivity(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            logEntries.unshift(logEntry);
+            
+            if (logEntries.length > 50) {
+                logEntries = logEntries.slice(0, 50);
+            }
+            
+            updateActivityLog(type);
+        }
+        
+        function updateActivityLog(lastType = 'info') {
+            const logElement = document.getElementById('activityLog');
+            logElement.innerHTML = logEntries.map((entry, index) => {
+                const cssClass = index === 0 ? (lastType === 'skip' ? 'log-skip' : 'log-render') : '';
+                return `<div class="log-entry ${cssClass}">${entry}</div>`;
+            }).join('');
+            logElement.scrollTop = 0;
+        }
+        
+        function updateMetrics() {
+            document.getElementById('totalRenders').textContent = totalRenders;
+            document.getElementById('skippedRenders').textContent = skippedRenders;
+            const rate = totalRenders > 0 ? ((skippedRenders / (totalRenders + skippedRenders)) * 100).toFixed(1) : 0;
+            document.getElementById('skipRate').textContent = `${rate}%`;
+        }
+        
+        // Event Handlers
+        document.getElementById('updateSameProps').addEventListener('click', () => {
+            // Update with same props - should be skipped
+            const currentValue = juris.getState('counter', 0);
+            juris.setState('counter', currentValue); // Same value
+        });
+        
+        document.getElementById('updateDifferentProps').addEventListener('click', () => {
+            // Update with different props - should re-render
+            const currentValue = juris.getState('counter', 0);
+            juris.setState('counter', currentValue + 1);
+        });
+        
+        document.getElementById('toggleOptimization').addEventListener('click', (e) => {
+            renderOptimizationEnabled = !renderOptimizationEnabled;
+            const indicator = e.target.querySelector('.status-indicator');
+            const component = document.getElementById('componentDemo');
+            
+            if (renderOptimizationEnabled) {
+                e.target.innerHTML = '<span class="status-indicator status-enabled"></span>Optimization: ON';
+                component.classList.add('optimization-enabled');
+                logActivity('✅ Render optimization ENABLED');
+            } else {
+                e.target.innerHTML = '<span class="status-indicator status-disabled"></span>Optimization: OFF';
+                component.classList.remove('optimization-enabled');
+                logActivity('❌ Render optimization DISABLED');
+            }
+        });
+        
+        document.getElementById('triggerSameValue').addEventListener('click', () => {
+            const currentValue = juris.getState('stressValue', 100);
+            juris.setState('stressValue', currentValue); // Same value
+            logActivity(`🔄 Triggered same value update: ${currentValue}`);
+        });
+        
+        document.getElementById('triggerNewValue').addEventListener('click', () => {
+            const newValue = Math.floor(Math.random() * 200) + 50;
+            juris.setState('stressValue', newValue);
+            logActivity(`🔄 Triggered new value update: ${newValue}`);
+        });
+        
+        document.getElementById('startStressTest').addEventListener('click', () => {
+            if (stressTestInterval) return;
+            
+            logActivity('🚀 Starting stress test...');
+            stressTestInterval = setInterval(() => {
+                // 70% chance of same value, 30% chance of new value
+                if (Math.random() < 0.7) {
+                    const currentValue = juris.getState('stressValue', 100);
+                    juris.setState('stressValue', currentValue); // Same value
+                } else {
+                    const newValue = Math.floor(Math.random() * 200) + 50;
+                    juris.setState('stressValue', newValue);
+                }
+            }, 100);
+        });
+        
+        document.getElementById('stopStressTest').addEventListener('click', () => {
+            if (stressTestInterval) {
+                clearInterval(stressTestInterval);
+                stressTestInterval = null;
+                logActivity('⏹️ Stress test stopped');
+            }
+        });
+        
+        document.getElementById('clearLog').addEventListener('click', () => {
+            logEntries = [];
+            updateActivityLog();
+        });
+        
+        // Initialize the demo
+        juris.render('#componentDemo');
+        juris.render('#reactiveDemo');
+        
+        // Initial log
+        logActivity('🚀 Juris Rendering Optimization Demo initialized');
+        logActivity('💡 Try updating with same vs different props to see optimization in action');
+        
+        // Update metrics display
+        updateMetrics();
+    </script>
+</body>
+</html>

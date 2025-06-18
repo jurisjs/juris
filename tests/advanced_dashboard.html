@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Dashboard - Juris enhance() API Showcase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Theme Variations */
+        body.theme-dark {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e2e8f0;
+        }
+
+        body.theme-light {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1a202c;
+        }
+
+        body.theme-default {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        body.theme-dark .dashboard-header {
+            background: rgba(30, 41, 59, 0.95);
+            color: #e2e8f0;
+        }
+
+        body.theme-light .dashboard-header {
+            background: rgba(255, 255, 255, 0.98);
+            color: #1a202c;
+        }
+
+        .widget {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .widget:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        body.theme-dark .widget {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            color: #e2e8f0;
+        }
+
+        body.theme-light .widget {
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            color: #1a202c;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 0.75rem;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+        }
+
+        .metric:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        body.theme-dark .metric {
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        body.theme-light .metric {
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 0.15rem;
+        }
+
+        body.theme-dark .metric-value {
+            color: #a78bfa;
+        }
+
+        body.theme-light .metric-value {
+            color: #5b21b6;
+        }
+
+        .chart-container {
+            height: 120px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        body.theme-dark .chart-container {
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        body.theme-light .chart-container {
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .chart-bar {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            margin: 0 1px;
+            border-radius: 2px 2px 0 0;
+            cursor: pointer;
+        }
+
+        .chart-bar:hover {
+            opacity: 0.8;
+            transform: scaleY(1.1);
+        }
+
+        body.theme-dark .chart-bar {
+            background: linear-gradient(45deg, #a78bfa, #c084fc);
+        }
+
+        body.theme-light .chart-bar {
+            background: linear-gradient(45deg, #5b21b6, #7c3aed);
+        }
+
+        .activity-item {
+            padding: 0.5rem;
+            border-left: 2px solid #667eea;
+            margin-bottom: 0.25rem;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 0 6px 6px 0;
+            font-size: 0.8rem;
+        }
+
+        .activity-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(2px);
+        }
+
+        body.theme-dark .activity-item {
+            border-left-color: #a78bfa;
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        body.theme-light .activity-item {
+            border-left-color: #5b21b6;
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .data-table th {
+            background: rgba(102, 126, 234, 0.1);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .data-table th:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        body.theme-dark .data-table th {
+            background: rgba(99, 102, 241, 0.2);
+            color: #e2e8f0;
+        }
+
+        body.theme-light .data-table th {
+            background: rgba(102, 126, 234, 0.12);
+            color: #1a202c;
+        }
+
+        .data-table tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        body.theme-dark .data-table tr:hover {
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        body.theme-light .data-table tr:hover {
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .btn {
+            padding: 0.25rem 0.75rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: #667eea;
+            color: white;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+
+        body.theme-dark .btn {
+            background: #a78bfa;
+            color: #1e1b4b;
+        }
+
+        body.theme-light .btn {
+            background: #5b21b6;
+            color: white;
+        }
+
+        .btn.secondary {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .btn.secondary:hover {
+            background: #cbd5e1;
+        }
+
+        body.theme-dark .btn.secondary {
+            background: #374151;
+            color: #d1d5db;
+        }
+
+        body.theme-light .btn.secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .status-item.active {
+            background: rgba(102, 126, 234, 0.2);
+            transform: scale(1.05);
+        }
+
+        body.theme-dark .status-item {
+            background: rgba(99, 102, 241, 0.2);
+            color: #e2e8f0;
+        }
+
+        body.theme-light .status-item {
+            background: rgba(102, 126, 234, 0.12);
+            color: #1a202c;
+        }
+
+        .filter-input {
+            padding: 0.25rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            flex: 1;
+            min-width: 80px;
+            background: white;
+            color: #1a202c;
+        }
+
+        body.theme-dark .filter-input {
+            background: #374151;
+            border-color: #4b5563;
+            color: #e2e8f0;
+        }
+
+        body.theme-light .filter-input {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            color: #1a202c;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        body.theme-dark .filter-input:focus {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
+        }
+
+        body.theme-light .filter-input:focus {
+            border-color: #5b21b6;
+            box-shadow: 0 0 0 2px rgba(91, 33, 182, 0.1);
+        }
+
+        .dashboard {
+            padding: 1rem;
+            max-width: 100vw;
+            margin: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .dashboard-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 0.25rem;
+        }
+
+        .dashboard-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .status-item.active {
+            background: rgba(102, 126, 234, 0.2);
+            transform: scale(1.05);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 1rem;
+            height: calc(100vh - 180px);
+        }
+
+        .widget {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .widget:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .widget-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .widget-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .btn {
+            padding: 0.25rem 0.75rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background: #667eea;
+            color: white;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+
+        .btn.secondary {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .btn.secondary:hover {
+            background: #cbd5e1;
+        }
+
+        .btn.danger {
+            background: #ef4444;
+        }
+
+        .btn.danger:hover {
+            background: #dc2626;
+        }
+
+        .btn.success {
+            background: #10b981;
+        }
+
+        .btn.success:hover {
+            background: #059669;
+        }
+
+        /* Specific widget layouts */
+        .metrics-widget {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .chart-widget {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .table-widget {
+            grid-column: 3;
+            grid-row: 1 / span 2;
+        }
+
+        .activity-widget {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .settings-widget {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .performance-widget {
+            display: none; /* Hide to save space */
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 0.75rem;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .metric:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 0.15rem;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .metric-trend {
+            font-size: 0.7rem;
+            margin-top: 0.15rem;
+        }
+
+        .trend-up {
+            color: #10b981;
+        }
+
+        .trend-down {
+            color: #ef4444;
+        }
+
+        .chart-container {
+            height: 120px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .chart-bar {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            margin: 0 1px;
+            border-radius: 2px 2px 0 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .chart-bar:hover {
+            opacity: 0.8;
+            transform: scaleY(1.1);
+        }
+
+        .activity-feed {
+            max-height: 200px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .activity-item {
+            padding: 0.5rem;
+            border-left: 2px solid #667eea;
+            margin-bottom: 0.25rem;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 0 6px 6px 0;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .activity-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(2px);
+        }
+
+        .activity-time {
+            font-size: 0.7rem;
+            color: #666;
+            float: right;
+        }
+
+        .activity-text {
+            color: #333;
+            font-size: 0.8rem;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            flex: 1;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th {
+            background: rgba(102, 126, 234, 0.1);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.75rem;
+        }
+
+        .data-table th:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .data-table tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            padding: 0.25rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .table-container {
+            overflow-y: auto;
+            flex: 1;
+            max-height: 300px;
+        }
+
+        .settings-content {
+            flex: 1;
+        }
+
+        .settings-content > div {
+            margin-bottom: 0.75rem;
+        }
+
+        .settings-content label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        .performance-stats {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: linear-gradient(45deg, #10b981, #059669);
+        }
+
+        .notification.error {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+        }
+
+        .notification.info {
+            background: linear-gradient(45deg, #3b82f6, #2563eb);
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #667eea;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.6s ease forwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                padding: 1rem;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-title {
+                font-size: 2rem;
+            }
+            
+            .status-bar {
+                gap: 1rem;
+            }
+            
+            .notification {
+                right: 1rem;
+                left: 1rem;
+                top: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Dashboard Header -->
+    <div class="dashboard">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Advanced Dashboard</h1>
+            <p class="dashboard-subtitle">Showcasing Juris enhance() API with Real-time Data & Progressive Enhancement</p>
+            <div class="status-bar">
+                <div class="status-item" data-status="connection">
+                    <span>🔗</span>
+                    <span>Connection: Connecting...</span>
+                </div>
+                <div class="status-item" data-status="performance">
+                    <span>⚡</span>
+                    <span>Performance: Excellent</span>
+                </div>
+                <div class="status-item" data-status="updates">
+                    <span>🔄</span>
+                    <span>Updates: 0</span>
+                </div>
+                <div class="status-item" data-status="enhancements">
+                    <span>🎯</span>
+                    <span>Enhanced: 0 elements</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Grid -->
+        <div class="grid">
+            <!-- Real-time Metrics Widget -->
+            <div class="widget metrics-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Real-time Metrics</h3>
+                    <div class="widget-actions">
+                        <button class="btn refresh-metrics">Refresh</button>
+                        <button class="btn secondary toggle-auto-refresh">Auto: OFF</button>
+                    </div>
+                </div>
+                <div class="metrics-grid">
+                    <div class="metric" data-metric="users">
+                        <div class="metric-value">1,247</div>
+                        <div class="metric-label">Active Users</div>
+                        <div class="metric-trend trend-up">↗ +12%</div>
+                    </div>
+                    <div class="metric" data-metric="revenue">
+                        <div class="metric-value">$89,432</div>
+                        <div class="metric-label">Revenue Today</div>
+                        <div class="metric-trend trend-up">↗ +8.5%</div>
+                    </div>
+                    <div class="metric" data-metric="orders">
+                        <div class="metric-value">156</div>
+                        <div class="metric-label">Orders</div>
+                        <div class="metric-trend trend-down">↘ -3%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Chart Widget -->
+            <div class="widget chart-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Sales Chart</h3>
+                    <div class="widget-actions">
+                        <button class="btn chart-period" data-period="day">Day</button>
+                        <button class="btn secondary chart-period" data-period="week">Week</button>
+                        <button class="btn secondary chart-period" data-period="month">Month</button>
+                    </div>
+                </div>
+                <div class="chart-container" id="salesChart">
+                    <!-- Chart bars will be generated here -->
+                </div>
+            </div>
+
+            <!-- Data Table Widget -->
+            <div class="widget table-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Recent Orders</h3>
+                    <div class="widget-actions">
+                        <button class="btn export-data">Export</button>
+                        <button class="btn secondary add-order">Add Order</button>
+                    </div>
+                </div>
+                <div class="filter-bar">
+                    <input type="text" class="filter-input" placeholder="Search..." data-filter="search">
+                    <select class="filter-input" data-filter="status">
+                        <option value="">Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="id">ID</th>
+                                <th data-sort="customer">Customer</th>
+                                <th data-sort="amount">Amount</th>
+                                <th data-sort="status">Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <!-- Orders will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Activity Feed Widget -->
+            <div class="widget activity-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Live Activity Feed</h3>
+                    <div class="widget-actions">
+                        <button class="btn clear-activity">Clear</button>
+                        <button class="btn secondary pause-feed">Pause</button>
+                    </div>
+                </div>
+                <div class="activity-feed" id="activityFeed">
+                    <!-- Activity items will be added here -->
+                </div>
+            </div>
+
+            <!-- Settings Widget -->
+            <div class="widget settings-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Dashboard Settings</h3>
+                    <div class="widget-actions">
+                        <button class="btn save-settings">Save</button>
+                        <button class="btn secondary reset-settings">Reset</button>
+                    </div>
+                </div>
+                <div class="settings-content">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Theme</label>
+                        <select class="filter-input" data-setting="theme">
+                            <option value="default">Default</option>
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Update Frequency</label>
+                        <select class="filter-input" data-setting="updateFreq">
+                            <option value="1000">1 second</option>
+                            <option value="5000" selected>5 seconds</option>
+                            <option value="10000">10 seconds</option>
+                            <option value="30000">30 seconds</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" data-setting="notifications" checked>
+                            <span>Enable Notifications</span>
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" data-setting="animations" checked>
+                            <span>Enable Animations</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Monitor Widget -->
+            <div class="widget performance-widget">
+                <div class="widget-header">
+                    <h3 class="widget-title">Performance Monitor</h3>
+                    <div class="widget-actions">
+                        <button class="btn run-benchmark">Run Benchmark</button>
+                        <button class="btn secondary clear-stats">Clear</button>
+                    </div>
+                </div>
+                <div class="performance-stats">
+                    <div class="metric" data-perf="renderTime">
+                        <div class="metric-value">2.3ms</div>
+                        <div class="metric-label">Avg Render Time</div>
+                    </div>
+                    <div class="metric" data-perf="updates">
+                        <div class="metric-value">1,247</div>
+                        <div class="metric-label">Total Updates</div>
+                    </div>
+                    <div class="metric" data-perf="efficiency">
+                        <div class="metric-value">98.5%</div>
+                        <div class="metric-label">Efficiency</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notifications"></div>
+
+    <!-- Load Juris from CDN -->
+    <script src="../src/juris.js"></script>
+    
+    <script>
+        // Initialize Juris Application
+        const app = new Juris({
+            renderMode: 'fine-grained',
+            states: {
+                dashboard: {
+                    connected: false,
+                    autoRefresh: false,
+                    updateCount: 0,
+                    enhancedElements: 0,
+                    theme: 'default',
+                    notifications: true,
+                    animations: true,
+                    updateFreq: 5000
+                },
+                filters: {
+                    search: '',
+                    status: '',
+                    date: ''
+                },
+                metrics: {
+                    users: 1247,
+                    revenue: 89432,
+                    orders: 156,
+                    lastUpdate: Date.now()
+                },
+                chart: {
+                    period: 'day',
+                    data: [45, 67, 89, 34, 78, 56, 90, 123, 67, 89, 34, 78]
+                },
+                orders: [],
+                activity: [],
+                performance: {
+                    renderTime: 2.3,
+                    updates: 0,
+                    efficiency: 98.5
+                }
+            }
+        });
+
+        // Enhanced Notification System
+        class NotificationManager {
+            constructor() {
+                this.container = document.getElementById('notifications');
+                this.queue = [];
+                this.isProcessing = false;
+            }
+
+            show(message, type = 'info', duration = 3000) {
+                if (!app.getState('dashboard.notifications', true)) return;
+                
+                this.queue.push({ message, type, duration });
+                if (!this.isProcessing) {
+                    this.processQueue();
+                }
+            }
+
+            async processQueue() {
+                this.isProcessing = true;
+                
+                while (this.queue.length > 0) {
+                    const { message, type, duration } = this.queue.shift();
+                    await this.displayNotification(message, type, duration);
+                }
+                
+                this.isProcessing = false;
+            }
+
+            displayNotification(message, type, duration) {
+                return new Promise(resolve => {
+                    const notification = document.createElement('div');
+                    notification.className = `notification ${type}`;
+                    notification.textContent = message;
+                    
+                    this.container.appendChild(notification);
+                    
+                    setTimeout(() => {
+                        notification.classList.add('show');
+                    }, 100);
+                    
+                    setTimeout(() => {
+                        notification.classList.remove('show');
+                        setTimeout(() => {
+                            if (notification.parentNode) {
+                                notification.parentNode.removeChild(notification);
+                            }
+                            resolve();
+                        }, 300);
+                    }, duration);
+                });
+            }
+        }
+
+        const notifications = new NotificationManager();
+
+        // Mock Data Generators
+        const generateOrderData = () => {
+            const customers = ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Brown', 'Charlie Wilson'];
+            const statuses = ['pending', 'completed', 'cancelled'];
+            
+            return Array.from({ length: 20 }, (_, i) => ({
+                id: `ORD-${1000 + i}`,
+                customer: customers[Math.floor(Math.random() * customers.length)],
+                amount: Math.floor(Math.random() * 500) + 50,
+                status: statuses[Math.floor(Math.random() * statuses.length)],
+                date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            }));
+        };
+
+        const generateActivityItem = () => {
+            const activities = [
+                'New order received',
+                'Payment processed',
+                'User registered',
+                'Product updated',
+                'Inventory restocked',
+                'Report generated',
+                'Backup completed',
+                'System optimized'
+            ];
+            
+            return {
+                text: activities[Math.floor(Math.random() * activities.length)],
+                time: new Date().toLocaleTimeString()
+            };
+        };
+
+        // Initialize Dashboard Data
+        app.setState('orders', generateOrderData());
+
+        // Enhanced Dashboard Status Bar
+        app.enhance('.status-item', (context) => {
+            const { getState, element } = context;
+            const statusType = element.dataset.status;
+            
+            return {
+                className: () => {
+                    const connected = getState('dashboard.connected', false);
+                    const autoRefresh = getState('dashboard.autoRefresh', false);
+                    
+                    let active = false;
+                    if (statusType === 'connection' && connected) active = true;
+                    if (statusType === 'performance') active = true;
+                    if (statusType === 'updates' && autoRefresh) active = true;
+                    if (statusType === 'enhancements') active = true;
+                    
+                    return `status-item ${active ? 'active' : ''}`;
+                },
+                
+                text: () => {
+                    const connected = getState('dashboard.connected', false);
+                    const updateCount = getState('dashboard.updateCount', 0);
+                    const enhancedElements = getState('dashboard.enhancedElements', 0);
+                    
+                    switch (statusType) {
+                        case 'connection':
+                            return `🔗 Connection: ${connected ? 'Connected' : 'Connecting...'}`;
+                        case 'performance':
+                            return '⚡ Performance: Excellent';
+                        case 'updates':
+                            return `🔄 Updates: ${updateCount}`;
+                        case 'enhancements':
+                            return `🎯 Enhanced: ${enhancedElements} elements`;
+                        default:
+                            return element.textContent;
+                    }
+                }
+            };
+        });
+
+        // Enhanced Metrics Widget
+        app.enhance('.metrics-widget', (context) => {
+            const { getState, setState } = context;
+            
+            return {
+                selectors: {
+                    '.refresh-metrics': {
+                        onclick: async () => {
+                            const widget = document.querySelector('.metrics-widget');
+                            widget.classList.add('loading');
+                            
+                            // Simulate API call
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            
+                            // Update metrics with new random values
+                            setState('metrics.users', Math.floor(Math.random() * 2000) + 1000);
+                            setState('metrics.revenue', Math.floor(Math.random() * 100000) + 50000);
+                            setState('metrics.orders', Math.floor(Math.random() * 200) + 100);
+                            setState('metrics.lastUpdate', Date.now());
+                            
+                            widget.classList.remove('loading');
+                            notifications.show('Metrics refreshed successfully!', 'success');
+                            
+                            setState('dashboard.updateCount', getState('dashboard.updateCount', 0) + 1);
+                        }
+                    },
+                    
+                    '.toggle-auto-refresh': {
+                        text: () => {
+                            const autoRefresh = getState('dashboard.autoRefresh', false);
+                            return `Auto: ${autoRefresh ? 'ON' : 'OFF'}`;
+                        },
+                        
+                        className: () => {
+                            const autoRefresh = getState('dashboard.autoRefresh', false);
+                            return `btn ${autoRefresh ? 'success' : 'secondary'}`;
+                        },
+                        
+                        onclick: () => {
+                            const current = getState('dashboard.autoRefresh', false);
+                            setState('dashboard.autoRefresh', !current);
+                            
+                            if (!current) {
+                                startAutoRefresh();
+                                notifications.show('Auto-refresh enabled', 'info');
+                            } else {
+                                stopAutoRefresh();
+                                notifications.show('Auto-refresh disabled', 'info');
+                            }
+                        }
+                    }
+                }
+            };
+        });
+
+        // Enhanced Individual Metrics
+        app.enhance('.metric', (context) => {
+            const { getState, element } = context;
+            const metricType = element.dataset.metric;
+            
+            return {
+                className: () => {
+                    const lastUpdate = getState('metrics.lastUpdate', 0);
+                    const isRecent = Date.now() - lastUpdate < 2000;
+                    return `metric ${isRecent ? 'pulse' : ''}`;
+                },
+                
+                onclick: () => {
+                    const value = getState(`metrics.${metricType}`, 0);
+                    notifications.show(`${metricType}: ${value}`, 'info', 2000);
+                },
+                
+                children: () => {
+                    const users = getState('metrics.users', 1247);
+                    const revenue = getState('metrics.revenue', 89432);
+                    const orders = getState('metrics.orders', 156);
+                    
+                    let value, label, trend;
+                    
+                    switch (metricType) {
+                        case 'users':
+                            value = users.toLocaleString();
+                            label = 'Active Users';
+                            trend = '↗ +12%';
+                            break;
+                        case 'revenue':
+                            value = `$${revenue.toLocaleString()}`;
+                            label = 'Revenue Today';
+                            trend = '↗ +8.5%';
+                            break;
+                        case 'orders':
+                            value = orders.toLocaleString();
+                            label = 'Orders';
+                            trend = '↘ -3%';
+                            break;
+                        default:
+                            return [];
+                    }
+                    
+                    return [
+                        { div: { className: 'metric-value', text: value } },
+                        { div: { className: 'metric-label', text: label } },
+                        { div: { className: `metric-trend ${trend.includes('↗') ? 'trend-up' : 'trend-down'}`, text: trend } }
+                    ];
+                }
+            };
+        });
+
+        // Enhanced Chart Widget
+        app.enhance('.chart-widget', (context) => {
+            const { getState, setState } = context;
+            
+            return {
+                selectors: {
+                    '.chart-period': (buttonContext) => {
+                        const { element, getState: buttonGetState, setState: buttonSetState } = buttonContext;
+                        const period = element.dataset.period;
+                        
+                        return {
+                            className: () => {
+                                const activePeriod = buttonGetState('chart.period', 'day');
+                                return `btn ${period === activePeriod ? '' : 'secondary'}`;
+                            },
+                            
+                            onclick: () => {
+                                buttonSetState('chart.period', period);
+                                generateChartData(period);
+                                notifications.show(`Chart updated to ${period} view`, 'info', 2000);
+                            }
+                        };
+                    }
+                }
+            };
+        });
+
+        // Chart Data Generation and Rendering
+        function generateChartData(period) {
+            let dataPoints;
+            switch (period) {
+                case 'day':
+                    dataPoints = 24; // Hours
+                    break;
+                case 'week':
+                    dataPoints = 7; // Days
+                    break;
+                case 'month':
+                    dataPoints = 30; // Days
+                    break;
+                default:
+                    dataPoints = 12;
+            }
+            
+            const data = Array.from({ length: dataPoints }, () => Math.floor(Math.random() * 100) + 20);
+            app.setState('chart.data', data);
+            renderChart();
+        }
+
+        function renderChart() {
+            const chartContainer = document.getElementById('salesChart');
+            const data = app.getState('chart.data', []);
+            
+            chartContainer.innerHTML = '';
+            
+            const maxValue = Math.max(...data);
+            const containerHeight = 160;
+            
+            data.forEach((value, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = `${(value / maxValue) * containerHeight}px`;
+                bar.style.width = `${Math.floor((chartContainer.clientWidth - data.length * 4) / data.length)}px`;
+                bar.title = `Value: ${value}`;
+                
+                bar.addEventListener('click', () => {
+                    notifications.show(`Data point ${index + 1}: ${value}`, 'info', 2000);
+                });
+                
+                chartContainer.appendChild(bar);
+            });
+        }
+
+        // Enhanced Data Table
+        app.enhance('.table-widget', (context) => {
+            const { getState, setState } = context;
+            
+            return {
+                selectors: {
+                    '.export-data': {
+                        onclick: () => {
+                            const orders = getState('orders', []);
+                            const csv = convertToCSV(orders);
+                            downloadCSV(csv, 'orders.csv');
+                            notifications.show('Data exported successfully!', 'success');
+                        }
+                    },
+                    
+                    '.add-order': {
+                        onclick: () => {
+                            const orders = getState('orders', []);
+                            const newOrder = {
+                                id: `ORD-${Date.now()}`,
+                                customer: 'New Customer',
+                                amount: Math.floor(Math.random() * 500) + 50,
+                                status: 'pending',
+                                date: new Date().toISOString().split('T')[0]
+                            };
+                            
+                            setState('orders', [newOrder, ...orders]);
+                            renderOrdersTable();
+                            notifications.show('New order added!', 'success');
+                            
+                            // Add to activity feed
+                            addActivityItem(`New order ${newOrder.id} created`);
+                        }
+                    }
+                }
+            };
+        });
+
+        // Enhanced Filter Inputs
+        app.enhance('.filter-input', (context) => {
+            const { element, getState, setState } = context;
+            
+            return {
+                oninput: (event) => {
+                    const filterType = element.dataset.filter;
+                    if (filterType) {
+                        setState(`filters.${filterType}`, event.target.value);
+                        applyTableFilters();
+                    }
+                },
+                
+                onchange: (event) => {
+                    const filterType = element.dataset.filter;
+                    if (filterType) {
+                        setState(`filters.${filterType}`, event.target.value);
+                        applyTableFilters();
+                    }
+                }
+            };
+        });
+
+        // Enhanced Table Headers (Sorting)
+        app.enhance('[data-sort]', (context) => {
+            const { element } = context;
+            
+            return {
+                onclick: () => {
+                    const sortField = element.dataset.sort;
+                    sortTable(sortField);
+                    notifications.show(`Sorted by ${sortField}`, 'info', 1500);
+                }
+            };
+        });
+
+        // Enhanced Activity Widget
+        app.enhance('.activity-widget', (context) => {
+            const { getState, setState } = context;
+            
+            return {
+                selectors: {
+                    '.clear-activity': {
+                        onclick: () => {
+                            setState('activity', []);
+                            renderActivityFeed();
+                            notifications.show('Activity feed cleared', 'info');
+                        }
+                    },
+                    
+                    '.pause-feed': {
+                        text: () => {
+                            const paused = getState('dashboard.activityPaused', false);
+                            return paused ? 'Resume' : 'Pause';
+                        },
+                        
+                        className: () => {
+                            const paused = getState('dashboard.activityPaused', false);
+                            return `btn ${paused ? 'success' : 'secondary'}`;
+                        },
+                        
+                        onclick: () => {
+                            const current = getState('dashboard.activityPaused', false);
+                            setState('dashboard.activityPaused', !current);
+                            
+                            if (!current) {
+                                notifications.show('Activity feed paused', 'info');
+                            } else {
+                                notifications.show('Activity feed resumed', 'info');
+                            }
+                        }
+                    }
+                }
+            };
+        });
+
+        // Enhanced Settings Widget
+        app.enhance('.settings-widget', (context) => {
+            const { getState, setState } = context;
+            
+            return {
+                selectors: {
+                    '[data-setting]': (settingContext) => {
+                        const { element, getState: settingGetState } = settingContext;
+                        const setting = element.dataset.setting;
+                        
+                        return {
+                            value: () => {
+                                if (element.type === 'checkbox') return undefined;
+                                return settingGetState(`dashboard.${setting}`, '');
+                            },
+                            
+                            checked: () => {
+                                if (element.type !== 'checkbox') return undefined;
+                                return settingGetState(`dashboard.${setting}`, false);
+                            },
+                            
+                            onchange: (event) => {
+                                const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+                                setState(`dashboard.${setting}`, value);
+                                
+                                // Apply setting immediately
+                                if (setting === 'theme') {
+                                    applyTheme(value);
+                                } else if (setting === 'updateFreq') {
+                                    if (getState('dashboard.autoRefresh', false)) {
+                                        stopAutoRefresh();
+                                        startAutoRefresh();
+                                    }
+                                }
+                            }
+                        };
+                    },
+                    
+                    '.save-settings': {
+                        onclick: () => {
+                            const settings = {
+                                theme: getState('dashboard.theme', 'default'),
+                                updateFreq: getState('dashboard.updateFreq', 5000),
+                                notifications: getState('dashboard.notifications', true),
+                                animations: getState('dashboard.animations', true)
+                            };
+                            
+                            // Apply theme immediately when saving
+                            applyTheme(settings.theme);
+                            
+                            // Also restart auto-refresh if needed with new frequency
+                            if (getState('dashboard.autoRefresh', false)) {
+                                stopAutoRefresh();
+                                startAutoRefresh();
+                            }
+                            
+                            localStorage.setItem('dashboardSettings', JSON.stringify(settings));
+                            notifications.show('Settings saved and applied successfully!', 'success');
+                        }
+                    },
+                    
+                    '.reset-settings': {
+                        onclick: () => {
+                            // Just update state - let reactive system handle DOM updates!
+                            setState('dashboard.theme', 'default');
+                            setState('dashboard.updateFreq', 5000);
+                            setState('dashboard.notifications', true);
+                            setState('dashboard.animations', true);
+                            
+                            applyTheme('default');
+                            notifications.show('Settings reset to defaults', 'info');
+                        }
+                    }
+                }
+            };
+        });
+
+        // Enhanced Performance Widget
+        app.enhance('.performance-widget', (context) => {
+            const { getState, setState } = context;
+            
+            return {
+                selectors: {
+                    '.run-benchmark': {
+                        onclick: async () => {
+                            const button = document.querySelector('.run-benchmark');
+                            button.textContent = 'Running...';
+                            button.disabled = true;
+                            
+                            // Run performance benchmark
+                            const results = await runPerformanceBenchmark();
+                            
+                            setState('performance.renderTime', results.renderTime);
+                            setState('performance.efficiency', results.efficiency);
+                            
+                            renderPerformanceStats();
+                            
+                            button.textContent = 'Run Benchmark';
+                            button.disabled = false;
+                            
+                            notifications.show('Benchmark completed!', 'success');
+                        }
+                    },
+                    
+                    '.clear-stats': {
+                        onclick: () => {
+                            setState('performance.updates', 0);
+                            setState('performance.renderTime', 0);
+                            setState('performance.efficiency', 100);
+                            
+                            renderPerformanceStats();
+                            notifications.show('Performance stats cleared', 'info');
+                        }
+                    }
+                }
+            };
+        });
+
+        // Performance Statistics Enhancement
+        app.enhance('[data-perf]', (context) => {
+            const { getState, element } = context;
+            const perfType = element.dataset.perf;
+            
+            return {
+                children: () => {
+                    const renderTime = getState('performance.renderTime', 2.3);
+                    const updates = getState('performance.updates', 0);
+                    const efficiency = getState('performance.efficiency', 98.5);
+                    
+                    let value, label;
+                    
+                    switch (perfType) {
+                        case 'renderTime':
+                            value = `${renderTime.toFixed(1)}ms`;
+                            label = 'Avg Render Time';
+                            break;
+                        case 'updates':
+                            value = updates.toLocaleString();
+                            label = 'Total Updates';
+                            break;
+                        case 'efficiency':
+                            value = `${efficiency.toFixed(1)}%`;
+                            label = 'Efficiency';
+                            break;
+                        default:
+                            return [];
+                    }
+                    
+                    return [
+                        { div: { className: 'metric-value', text: value } },
+                        { div: { className: 'metric-label', text: label } }
+                    ];
+                }
+            };
+        });
+
+        // Utility Functions
+        function convertToCSV(data) {
+            if (!data || data.length === 0) return '';
+            
+            const headers = Object.keys(data[0]);
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => headers.map(header => JSON.stringify(row[header] || '')).join(','))
+            ].join('\n');
+            
+            return csvContent;
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function renderOrdersTable() {
+            const tbody = document.getElementById('ordersTableBody');
+            const orders = app.getState('orders', []).slice(0, 12); // Limit to 12 rows
+            
+            tbody.innerHTML = orders.map(order => `
+                <tr>
+                    <td>${order.id.substring(4)}</td>
+                    <td>${order.customer.split(' ')[0]}</td>
+                    <td>${order.amount}</td>
+                    <td><span class="status-${order.status}">${order.status}</span></td>
+                    <td>
+                        <button class="btn" data-action="view" data-order-id="${order.id}" style="font-size: 0.7rem; padding: 0.2rem 0.4rem;">View</button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Enhance action buttons
+            app.enhance('[data-action]', (context) => {
+                const { element } = context;
+                
+                return {
+                    onclick: () => {
+                        const action = element.dataset.action;
+                        const orderId = element.dataset.orderId;
+                        
+                        if (action === 'view') {
+                            notifications.show(`Viewing order ${orderId}`, 'info');
+                        }
+                    }
+                };
+            });
+        }
+
+        function applyTableFilters() {
+            // Trust state instead of querying DOM
+            const searchTerm = app.getState('filters.search', '').toLowerCase();
+            const statusValue = app.getState('filters.status', '');
+            const dateValue = app.getState('filters.date', '');
+            
+            const allOrders = app.getState('orders', []);
+            
+            const filteredOrders = allOrders.filter(order => {
+                const matchesSearch = !searchTerm || 
+                    order.id.toLowerCase().includes(searchTerm) ||
+                    order.customer.toLowerCase().includes(searchTerm);
+                
+                const matchesStatus = !statusValue || order.status === statusValue;
+                const matchesDate = !dateValue || order.date === dateValue;
+                
+                return matchesSearch && matchesStatus && matchesDate;
+            });
+            
+            renderFilteredTable(filteredOrders);
+        }
+
+        function renderFilteredTable(orders) {
+            const tbody = document.getElementById('ordersTableBody');
+            const limitedOrders = orders.slice(0, 12); // Limit to 12 rows
+            
+            tbody.innerHTML = limitedOrders.map(order => `
+                <tr>
+                    <td>${order.id.substring(4)}</td>
+                    <td>${order.customer.split(' ')[0]}</td>
+                    <td>${order.amount}</td>
+                    <td><span class="status-${order.status}">${order.status}</span></td>
+                    <td>
+                        <button class="btn" data-action="view" data-order-id="${order.id}" style="font-size: 0.7rem; padding: 0.2rem 0.4rem;">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function sortTable(field) {
+            const orders = app.getState('orders', []);
+            const sorted = [...orders].sort((a, b) => {
+                const aVal = a[field];
+                const bVal = b[field];
+                
+                if (typeof aVal === 'number') {
+                    return bVal - aVal;
+                } else {
+                    return aVal.localeCompare(bVal);
+                }
+            });
+            
+            app.setState('orders', sorted);
+            renderOrdersTable();
+        }
+
+        function renderActivityFeed() {
+            const feed = document.getElementById('activityFeed');
+            const activities = app.getState('activity', []);
+            
+            feed.innerHTML = activities.slice(0, 20).map(activity => `
+                <div class="activity-item slide-in">
+                    <span class="activity-time">${activity.time}</span>
+                    <div class="activity-text">${activity.text}</div>
+                </div>
+            `).join('');
+        }
+
+        function addActivityItem(text) {
+            if (app.getState('dashboard.activityPaused', false)) return;
+            
+            const activities = app.getState('activity', []);
+            const newActivity = {
+                text,
+                time: new Date().toLocaleTimeString()
+            };
+            
+            app.setState('activity', [newActivity, ...activities]);
+            renderActivityFeed();
+        }
+
+        function renderPerformanceStats() {
+            // Performance stats are handled by the enhanced elements
+            app.setState('performance.updates', app.getState('performance.updates', 0) + 1);
+        }
+
+        async function runPerformanceBenchmark() {
+            const iterations = 1000;
+            const startTime = performance.now();
+            
+            // Simulate heavy rendering operations
+            for (let i = 0; i < iterations; i++) {
+                const element = app.domRenderer.render({
+                    div: {
+                        className: 'test-element',
+                        children: [
+                            { span: { text: `Test ${i}` } },
+                            { button: { text: 'Click me', onclick: () => {} } }
+                        ]
+                    }
+                });
+            }
+            
+            const endTime = performance.now();
+            const totalTime = endTime - startTime;
+            const avgRenderTime = totalTime / iterations;
+            
+            // Calculate efficiency based on render time
+            const efficiency = Math.max(95, 100 - (avgRenderTime * 10));
+            
+            return {
+                renderTime: avgRenderTime,
+                efficiency: efficiency
+            };
+        }
+
+        function applyTheme(theme) {
+            const body = document.body;
+            
+            // Remove all theme classes
+            body.classList.remove('theme-default', 'theme-dark', 'theme-light');
+            
+            // Add the selected theme class
+            body.classList.add(`theme-${theme}`);
+            
+            console.log(`Theme switched to: ${theme}`);
+            
+            // Update chart colors based on theme
+            setTimeout(() => {
+                renderChart(); // Re-render chart with new theme colors
+            }, 100);
+        }
+
+        // Auto-refresh functionality
+        let autoRefreshInterval;
+
+        function startAutoRefresh() {
+            const frequency = app.getState('dashboard.updateFreq', 5000);
+            
+            autoRefreshInterval = setInterval(() => {
+                // Update metrics
+                app.setState('metrics.users', Math.floor(Math.random() * 2000) + 1000);
+                app.setState('metrics.revenue', Math.floor(Math.random() * 100000) + 50000);
+                app.setState('metrics.orders', Math.floor(Math.random() * 200) + 100);
+                app.setState('metrics.lastUpdate', Date.now());
+                
+                // Add random activity
+                addActivityItem(generateActivityItem().text);
+                
+                // Update counters
+                app.setState('dashboard.updateCount', app.getState('dashboard.updateCount', 0) + 1);
+                app.setState('performance.updates', app.getState('performance.updates', 0) + 1);
+                
+            }, frequency);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
+        // Initialize Dashboard
+        function initializeDashboard() {
+            // Simulate connection process
+            setTimeout(() => {
+                app.setState('dashboard.connected', true);
+                notifications.show('Dashboard connected successfully!', 'success');
+                
+                // Count enhanced elements
+                const enhancedElements = document.querySelectorAll('[data-juris-enhanced]').length;
+                app.setState('dashboard.enhancedElements', enhancedElements);
+                
+                // Initial data render
+                generateChartData('day');
+                renderOrdersTable();
+                renderActivityFeed();
+                renderPerformanceStats();
+                
+                // Add initial activity
+                addActivityItem('Dashboard initialized');
+                addActivityItem('All widgets loaded');
+                addActivityItem('Enhancement system activated');
+                
+                // Load saved settings and apply them
+                const savedSettings = localStorage.getItem('dashboardSettings');
+                if (savedSettings) {
+                    const settings = JSON.parse(savedSettings);
+                    Object.keys(settings).forEach(key => {
+                        app.setState(`dashboard.${key}`, settings[key]);
+                    });
+                    applyTheme(settings.theme || 'default');
+                } else {
+                    // Apply default theme on first load
+                    applyTheme('default');
+                }
+                
+            }, 1500);
+        }
+
+        // Start the dashboard
+        initializeDashboard();
+        
+        // Add some demo activity over time
+        setTimeout(() => {
+            setInterval(() => {
+                if (!app.getState('dashboard.activityPaused', false)) {
+                    addActivityItem(generateActivityItem().text);
+                }
+            }, 8000);
+        }, 3000);
+
+        console.log('🚀 Advanced Dashboard loaded with Juris enhance() API');
+        console.log('📊 Dashboard features:');
+        console.log('  - Real-time metrics with auto-refresh');
+        console.log('  - Interactive charts with period switching');
+        console.log('  - Sortable and filterable data tables');
+        console.log('  - Live activity feed with pause/resume');
+        console.log('  - Configurable settings with persistence');
+        console.log('  - Performance monitoring and benchmarking');
+        console.log('  - Progressive enhancement throughout');
+        console.log('  - Advanced notification system');
+        console.log('⚡ All powered by Juris enhance() API!');
+    </script>
+</body>
+</html>

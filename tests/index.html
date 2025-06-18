@@ -5,7 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{Juris} The Pinnacle of Web Development</title>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-QVHC7F5KRM"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
 
+      gtag('config', 'G-QVHC7F5KRM');
+    </script>
     <!-- Prism.js for code highlighting -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/prism-lucario.min.css" rel="stylesheet" />
 
@@ -26,13 +34,15 @@
 
     <link rel="stylesheet" href="styles.css">
     <!-- Juris Framework Scripts -->
-    <script src="../src/juris.js"></script>
+    <script src="https://unpkg.com/juris@0.5.0/juris.js"></script>
     <!--script src="plugin-system.js"></script-->
     <!--<script src="juris_security_headless.js"></script>-->
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
 
     <script>
+        //createMobileConsole();
+        const startTime = performance.now();
         // Add this code to your test file (before the DOMContentLoaded event)
 
         function createMobileConsole() {
@@ -151,8 +161,6 @@
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             //createMobileConsole();
         }
-        //createMobileConsole();
-        const startTime = performance.now();
 
         // Enhanced StatePersistenceManager with Timing Controls for Layout Shift Prevention
         const StatePersistenceManager = (props, context) => {
@@ -2670,7 +2678,7 @@
                                                                 a: {
                                                                     href: '#/',
                                                                     className: 'logo',
-                                                                    text: '{Juris}',
+                                                                    text: '{Juris} v0.5.0',
                                                                     onclick: (e) => {
                                                                         e.preventDefault();
                                                                         window.location.hash = '/';
@@ -2682,7 +2690,7 @@
                                                             {
                                                                 p: {
                                                                     className: 'tagline',
-                                                                    innerHTML: 'Total Devastating Lines of Code: <b>2254</b>'
+                                                                    innerHTML: 'Framework Lines of Codes: <b>2819</b>'
                                                                 }
                                                             },
                                                             // Desktop Navigation
@@ -4662,9 +4670,9 @@ const UserDashboard = (props, context) => {
 
         // DocsJSONStreaming Component
         const DocsJSONStreaming = (props, context) => {
-            const { getState, setState } = context;
+    const { getState, setState } = context;
 
-            const basicStreamingExample = `// JSON Streaming with Juris
+    const basicStreamingExample = `// JSON Streaming with Juris
 // 1. Stream pure JSON data from your API
 const streamArticles = async () => {
     const response = await fetch('/api/articles/stream');
@@ -4672,7 +4680,7 @@ const streamArticles = async () => {
     
     // 2. Render directly using Juris Object DOM
     articles.forEach(article => {
-        const articleElement = juris.domRenderer.render({
+        const articleElement = app.domRenderer.render({
             article: {
                 className: 'article fade-in',
                 'data-article-id': article.id,
@@ -4707,7 +4715,7 @@ const streamArticles = async () => {
     enhanceWithReactivity();
 };`;
 
-            const componentFactoryExample = `// JSON Component Factory Pattern
+    const componentFactoryExample = `// JSON Component Factory Pattern
 function createNewsArticleFactory() {
     return function NewsArticleFactory(props, context) {
         const { articleData } = props;
@@ -4803,67 +4811,79 @@ function createNewsArticleFactory() {
 }
 
 // Register the factory
-const juris = new Juris({
+const app = new Juris({
     renderMode: 'batch',
     components: {
         NewsArticle: createNewsArticleFactory()
     }
 });`;
 
-            const progressiveEnhancementExample = `// Progressive Enhancement After Streaming
+    const progressiveEnhancementExample = `// Progressive Enhancement After Streaming
 function enhanceArticles() {
     // 1. Enhance like buttons with reactive state
-    juris.enhance('.like-btn', (context) => ({
-        onclick: (event) => {
-            const articleId = event.target.dataset.articleId;
-            const liked = context.getState(\`articles.\${articleId}.liked\`, false);
-            const likes = context.getState(\`articles.\${articleId}.likes\`,
-                parseInt(event.target.textContent.replace(/[^\\d]/g, '')) || 0);
+    app.enhance('.like-btn', (context) => {
+        const { getState, setState } = context;
+        
+        return {
+            onclick: (event) => {
+                const articleId = event.target.dataset.articleId;
+                const liked = getState(\`articles.\${articleId}.liked\`, false);
+                const likes = getState(\`articles.\${articleId}.likes\`,
+                    parseInt(event.target.textContent.replace(/[^\\d]/g, '')) || 0);
 
-            const newLiked = !liked;
-            const newLikes = newLiked ? likes + 1 : likes - 1;
+                const newLiked = !liked;
+                const newLikes = newLiked ? likes + 1 : likes - 1;
 
-            // Update reactive state
-            context.setState(\`articles.\${articleId}.liked\`, newLiked);
-            context.setState(\`articles.\${articleId}.likes\`, newLikes);
+                // Update reactive state
+                setState(\`articles.\${articleId}.liked\`, newLiked);
+                setState(\`articles.\${articleId}.likes\`, newLikes);
 
-            // Update UI
-            event.target.textContent = \`❤️ \${newLikes}\`;
-            event.target.classList.toggle('liked', newLiked);
-        }
-    }));
+                // Update UI
+                event.target.textContent = \`❤️ \${newLikes}\`;
+                event.target.classList.toggle('liked', newLiked);
+            }
+        };
+    });
 
     // 2. Enhance bookmark functionality
-    juris.enhance('.bookmark-btn', (context) => ({
-        onclick: (event) => {
-            const articleId = event.target.dataset.articleId;
-            const bookmarked = context.getState(\`articles.\${articleId}.bookmarked\`, false);
+    app.enhance('.bookmark-btn', (context) => {
+        const { getState, setState } = context;
+        
+        return {
+            onclick: (event) => {
+                const articleId = event.target.dataset.articleId;
+                const bookmarked = getState(\`articles.\${articleId}.bookmarked\`, false);
 
-            context.setState(\`articles.\${articleId}.bookmarked\`, !bookmarked);
+                setState(\`articles.\${articleId}.bookmarked\`, !bookmarked);
 
-            event.target.textContent = !bookmarked ? '🔖 Bookmarked' : '🔖 Bookmark';
-            event.target.classList.toggle('bookmarked', !bookmarked);
-        }
-    }));
+                event.target.textContent = !bookmarked ? '🔖 Bookmarked' : '🔖 Bookmark';
+                event.target.classList.toggle('bookmarked', !bookmarked);
+            }
+        };
+    });
 
     // 3. Enhance category filtering
-    juris.enhance('.category-tag', (context) => ({
-        onclick: (event) => {
-            const category = event.target.textContent.toLowerCase();
-            
-            // Update global filter state
-            context.setState('app.activeCategory', category);
-            
-            // Filter articles based on state
-            filterArticlesByCategory(category);
-        }
-    }));
+    app.enhance('.category-tag', (context) => {
+        const { getState, setState } = context;
+        
+        return {
+            onclick: (event) => {
+                const category = event.target.textContent.toLowerCase();
+                
+                // Update global filter state
+                setState('app.activeCategory', category);
+                
+                // Filter articles based on state
+                filterArticlesByCategory(category);
+            }
+        };
+    });
 }`;
 
-            const realTimeStreamingExample = `// Real-Time JSON Streaming with WebSockets
+    const realTimeStreamingExample = `// Real-Time JSON Streaming with WebSockets
 class JSONStreamManager {
-    constructor(juris) {
-        this.juris = juris;
+    constructor(app) {
+        this.app = app;
         this.ws = null;
         this.container = null;
     }
@@ -4883,12 +4903,12 @@ class JSONStreamManager {
 
         this.ws.onopen = () => {
             console.log('✅ JSON streaming connected');
-            this.juris.setState('stream.status', 'connected');
+            this.app.setState('stream.status', 'connected');
         };
 
         this.ws.onclose = () => {
             console.log('🔌 JSON streaming disconnected');
-            this.juris.setState('stream.status', 'disconnected');
+            this.app.setState('stream.status', 'disconnected');
             
             // Auto-reconnect after 3 seconds
             setTimeout(() => this.connect(wsUrl, containerId), 3000);
@@ -4914,11 +4934,11 @@ class JSONStreamManager {
         const jsonSize = new Blob([JSON.stringify(articleData)]).size;
         
         // Update performance metrics
-        this.juris.setState('stream.totalSize', 
-            this.juris.getState('stream.totalSize', 0) + jsonSize);
+        this.app.setState('stream.totalSize', 
+            this.app.getState('stream.totalSize', 0) + jsonSize);
 
         // Render using Object DOM
-        const articleElement = this.juris.domRenderer.render({
+        const articleElement = this.app.domRenderer.render({
             article: {
                 className: 'article stream-entry',
                 'data-article-id': articleData.id,
@@ -4941,11 +4961,11 @@ class JSONStreamManager {
 
     enhanceNewArticle(element) {
         // Progressive enhancement on individual element
-        this.juris.enhance(element.querySelector('.like-btn'), (context) => ({
+        this.app.enhance(element.querySelector('.like-btn'), (context) => ({
             onclick: (event) => this.handleLikeClick(event, context)
         }));
         
-        this.juris.enhance(element.querySelector('.share-btn'), (context) => ({
+        this.app.enhance(element.querySelector('.share-btn'), (context) => ({
             onclick: (event) => this.handleShareClick(event, context)
         }));
     }
@@ -4954,7 +4974,7 @@ class JSONStreamManager {
         const { articleId, field, value } = updateData;
         
         // Update state
-        this.juris.setState(\`articles.\${articleId}.\${field}\`, value);
+        this.app.setState(\`articles.\${articleId}.\${field}\`, value);
         
         // Find and update specific element
         const element = document.querySelector(\`[data-article-id="\${articleId}"]\`);
@@ -4962,18 +4982,83 @@ class JSONStreamManager {
             this.updateElementField(element, field, value);
         }
     }
+
+    createArticleContent(articleData) {
+        return {
+            div: {
+                className: 'article-content',
+                children: [
+                    {
+                        h2: {
+                            className: 'article-title',
+                            text: articleData.title
+                        }
+                    },
+                    {
+                        p: {
+                            className: 'article-excerpt',
+                            text: articleData.excerpt
+                        }
+                    },
+                    {
+                        div: {
+                            className: 'article-actions',
+                            children: [
+                                {
+                                    button: {
+                                        className: 'like-btn',
+                                        'data-article-id': articleData.id,
+                                        text: \`❤️ \${articleData.likes}\`
+                                    }
+                                },
+                                {
+                                    button: {
+                                        className: 'share-btn',
+                                        'data-article-id': articleData.id,
+                                        text: '🔗 Share'
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        };
+    }
+
+    handleLikeClick(event, context) {
+        const { getState, setState } = context;
+        const articleId = event.target.dataset.articleId;
+        const liked = getState(\`articles.\${articleId}.liked\`, false);
+        
+        setState(\`articles.\${articleId}.liked\`, !liked);
+        event.target.classList.toggle('liked', !liked);
+    }
+
+    handleShareClick(event, context) {
+        const articleId = event.target.dataset.articleId;
+        const articleData = context.getState(\`articles.\${articleId}\`);
+        
+        if (navigator.share && articleData) {
+            navigator.share({
+                title: articleData.title,
+                text: articleData.excerpt,
+                url: window.location.href
+            });
+        }
+    }
 }
 
 // Usage
-const streamManager = new JSONStreamManager(juris);
+const streamManager = new JSONStreamManager(app);
 streamManager.connect('wss://api.example.com/stream', 'articlesContainer');`;
 
-            const performanceOptimizationExample = `// Performance Optimization for JSON Streaming
+    const performanceOptimizationExample = `// Performance Optimization for JSON Streaming
 
 // 1. Batch Rendering for Multiple Items
 class BatchRenderer {
-    constructor(juris, batchSize = 10) {
-        this.juris = juris;
+    constructor(app, batchSize = 10) {
+        this.app = app;
         this.batchSize = batchSize;
         this.pendingItems = [];
         this.renderTimer = null;
@@ -5004,7 +5089,7 @@ class BatchRenderer {
         const fragment = document.createDocumentFragment();
         
         this.pendingItems.forEach(item => {
-            const element = this.juris.domRenderer.render({
+            const element = this.app.domRenderer.render({
                 // Render structure based on item type
                 [item.type]: this.createElementStructure(item)
             });
@@ -5029,15 +5114,37 @@ class BatchRenderer {
         
         elements.forEach(element => {
             element.classList.remove('newly-rendered');
-            this.juris.enhance(element, this.getEnhancementConfig());
+            this.app.enhance(element, this.getEnhancementConfig());
+        });
+    }
+
+    createElementStructure(item) {
+        return {
+            className: 'item newly-rendered',
+            'data-item-id': item.id,
+            children: [
+                {
+                    h3: { text: item.title },
+                    p: { text: item.description }
+                }
+            ]
+        };
+    }
+
+    getEnhancementConfig() {
+        return (context) => ({
+            onclick: (event) => {
+                const itemId = event.target.dataset.itemId;
+                context.setState(\`items.\${itemId}.clicked\`, true);
+            }
         });
     }
 }
 
 // 2. Virtual Scrolling for Large Lists
 class VirtualScrollRenderer {
-    constructor(juris, container, itemHeight = 200) {
-        this.juris = juris;
+    constructor(app, container, itemHeight = 200) {
+        this.app = app;
         this.container = container;
         this.itemHeight = itemHeight;
         this.items = [];
@@ -5085,7 +5192,7 @@ class VirtualScrollRenderer {
 
     renderItem(index) {
         const item = this.items[index];
-        const element = this.juris.domRenderer.render({
+        const element = this.app.domRenderer.render({
             div: {
                 className: 'virtual-item',
                 style: {
@@ -5102,13 +5209,34 @@ class VirtualScrollRenderer {
         this.renderedItems.set(index, element);
         
         // Progressive enhancement
-        this.juris.enhance(element, this.getItemEnhancement(item));
+        this.app.enhance(element, this.getItemEnhancement(item));
+    }
+
+    createItemContent(item) {
+        return {
+            div: {
+                className: 'item-content',
+                children: [
+                    { h4: { text: item.title } },
+                    { p: { text: item.description } }
+                ]
+            }
+        };
+    }
+
+    getItemEnhancement(item) {
+        return (context) => ({
+            onclick: () => {
+                context.setState(\`virtualItems.\${item.id}.selected\`, true);
+            }
+        });
     }
 }
 
 // 3. Memory Management for Long-Running Streams
 class StreamMemoryManager {
-    constructor(maxItems = 1000) {
+    constructor(app, maxItems = 1000) {
+        this.app = app;
         this.maxItems = maxItems;
         this.itemCount = 0;
     }
@@ -5146,12 +5274,12 @@ class StreamMemoryManager {
         const elementId = element.dataset.articleId;
         if (elementId) {
             // Clear related state
-            this.juris.setState(\`articles.\${elementId}\`, null);
+            this.app.setState(\`articles.\${elementId}\`, null);
         }
     }
 }`;
 
-            const compressionExample = `// JSON Compression and Optimization
+    const compressionExample = `// JSON Compression and Optimization
 
 // 1. Compact JSON Structure
 const optimizedArticleStructure = {
@@ -5213,7 +5341,8 @@ async function streamCompressedArticles() {
 
 // 4. Delta Updates for Real-Time
 class DeltaUpdateManager {
-    constructor() {
+    constructor(app) {
+        this.app = app;
         this.articleCache = new Map();
     }
 
@@ -5268,19 +5397,19 @@ const deltaUpdate = {
     }
 };`;
 
-            const realWorldExample = `// Real-World JSON Streaming Implementation
+    const realWorldExample = `// Real-World JSON Streaming Implementation
 
 class NewsStreamApp {
     constructor() {
-        this.juris = new Juris({
+        this.app = new Juris({
             renderMode: 'batch',
             components: {
                 NewsArticle: this.createArticleComponent()
             }
         });
         
-        this.batchRenderer = new BatchRenderer(this.juris);
-        this.memoryManager = new StreamMemoryManager(500);
+        this.batchRenderer = new BatchRenderer(this.app);
+        this.memoryManager = new StreamMemoryManager(this.app, 500);
         this.performanceTracker = new PerformanceTracker();
         
         this.init();
@@ -5334,7 +5463,7 @@ class NewsStreamApp {
             const article = this.expandArticle(compact);
             
             // Create element using Juris
-            const element = this.juris.domRenderer.render({
+            const element = this.app.domRenderer.render({
                 article: {
                     className: 'article stream-item fade-in',
                     'data-article-id': article.id,
@@ -5385,7 +5514,7 @@ class NewsStreamApp {
 
     handleNewArticle(articleData) {
         // Render new article at top
-        const element = this.juris.domRenderer.render({
+        const element = this.app.domRenderer.render({
             article: {
                 className: 'article new-arrival',
                 'data-article-id': articleData.id,
@@ -5410,7 +5539,7 @@ class NewsStreamApp {
         // Like button enhancement
         const likeBtn = element.querySelector('.like-btn');
         if (likeBtn) {
-            this.juris.enhance(likeBtn, (context) => ({
+            this.app.enhance(likeBtn, (context) => ({
                 onclick: (event) => this.handleLike(event, context)
             }));
         }
@@ -5418,7 +5547,7 @@ class NewsStreamApp {
         // Category filter enhancement
         const categoryTag = element.querySelector('.category-tag');
         if (categoryTag) {
-            this.juris.enhance(categoryTag, (context) => ({
+            this.app.enhance(categoryTag, (context) => ({
                 onclick: (event) => this.handleCategoryFilter(event, context)
             }));
         }
@@ -5426,23 +5555,24 @@ class NewsStreamApp {
         // Share button enhancement
         const shareBtn = element.querySelector('.share-btn');
         if (shareBtn) {
-            this.juris.enhance(shareBtn, (context) => ({
+            this.app.enhance(shareBtn, (context) => ({
                 onclick: (event) => this.handleShare(event, context)
             }));
         }
     }
 
     handleLike(event, context) {
+        const { getState, setState } = context;
         const articleId = event.target.dataset.articleId;
         const currentLikes = parseInt(event.target.textContent.replace(/[^\\d]/g, '')) || 0;
-        const liked = context.getState(\`articles.\${articleId}.liked\`, false);
+        const liked = getState(\`articles.\${articleId}.liked\`, false);
         
         const newLiked = !liked;
         const newLikes = newLiked ? currentLikes + 1 : currentLikes - 1;
         
         // Update state
-        context.setState(\`articles.\${articleId}.liked\`, newLiked);
-        context.setState(\`articles.\${articleId}.likes\`, newLikes);
+        setState(\`articles.\${articleId}.liked\`, newLiked);
+        setState(\`articles.\${articleId}.likes\`, newLikes);
         
         // Update UI with animation
         event.target.style.transform = 'scale(1.2)';
@@ -5468,596 +5598,475 @@ class NewsStreamApp {
             console.error('Failed to update engagement:', error);
         }
     }
+
+    createArticleComponent() {
+        return (props, context) => {
+            const { articleData } = props;
+            return {
+                article: {
+                    className: 'news-article',
+                    'data-article-id': articleData.id,
+                    children: this.createArticleStructure(articleData)
+                }
+            };
+        };
+    }
+
+    createArticleStructure(article) {
+        return [
+            {
+                h2: {
+                    className: 'article-title',
+                    text: article.title
+                }
+            },
+            {
+                p: {
+                    className: 'article-excerpt',
+                    text: article.excerpt
+                }
+            },
+            {
+                div: {
+                    className: 'article-actions',
+                    children: [
+                        {
+                            button: {
+                                className: 'like-btn',
+                                'data-article-id': article.id,
+                                text: \`❤️ \${article.likes}\`
+                            }
+                        },
+                        {
+                            button: {
+                                className: 'share-btn',
+                                'data-article-id': article.id,
+                                text: '🔗 Share'
+                            }
+                        }
+                    ]
+                }
+            }
+        ];
+    }
+
+    expandArticle(compact) {
+        return {
+            id: compact.i,
+            title: compact.t,
+            excerpt: compact.e,
+            category: compact.c,
+            likes: compact.l,
+            comments: compact.m
+        };
+    }
+
+    handleCategoryFilter(event, context) {
+        const category = event.target.textContent.toLowerCase();
+        context.setState('app.activeCategory', category);
+    }
+
+    handleShare(event, context) {
+        const articleId = event.target.dataset.articleId;
+        const articleData = context.getState(\`articles.\${articleId}\`);
+        
+        if (navigator.share && articleData) {
+            navigator.share({
+                title: articleData.title,
+                text: articleData.excerpt,
+                url: window.location.href
+            });
+        }
+    }
+}
+
+// Performance Tracker utility
+class PerformanceTracker {
+    constructor() {
+        this.timers = new Map();
+    }
+
+    startTimer(name) {
+        this.timers.set(name, performance.now());
+    }
+
+    endTimer(name) {
+        const start = this.timers.get(name);
+        if (start) {
+            const duration = performance.now() - start;
+            console.log(\`\${name}: \${duration.toFixed(2)}ms\`);
+            this.timers.delete(name);
+            return duration;
+        }
+        return 0;
+    }
 }
 
 // Initialize the application
 const app = new NewsStreamApp();`;
 
-            return {
-                render: () => ({
-                    div: {
-                        children: [
-                            {
-                                h1: {
-                                    className: 'page-title',
-                                    text: 'JSON Streaming'
-                                }
-                            },
-                            {
-                                p: {
-                                    className: 'page-subtitle',
-                                    text: 'Stream pure JSON content and progressively enhance with Juris for optimal performance and flexibility. Achieve 68% smaller payloads and blazing-fast rendering.'
-                                }
-                            },
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        h1: {
+                            className: 'page-title',
+                            text: 'JSON Streaming'
+                        }
+                    },
+                    {
+                        p: {
+                            className: 'page-subtitle',
+                            text: 'Stream pure JSON content and progressively enhance with Juris for optimal performance and flexibility. Achieve 68% smaller payloads and blazing-fast rendering.'
+                        }
+                    },
 
-                            // Live Demo Link Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            div: {
-                                                className: 'card',
-                                                style: {
-                                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                                    color: 'white',
-                                                    padding: '2rem',
-                                                    textAlign: 'center'
-                                                },
-                                                children: [
-                                                    {
-                                                        h3: {
-                                                            text: '🚀 Live JSON Streaming Demo',
-                                                            style: { marginBottom: '1rem', fontSize: '1.5rem' }
-                                                        }
-                                                    },
-                                                    {
-                                                        p: {
-                                                            text: 'Experience JSON streaming in action with real-time article loading, progressive enhancement, and performance metrics.',
-                                                            style: { marginBottom: '1.5rem', opacity: '0.9' }
-                                                        }
-                                                    },
-                                                    {
-                                                        a: {
-                                                            href: 'juris_json-streaming.html',
-                                                            target: '_blank',
-                                                            className: 'btn',
-                                                            style: {
-                                                                background: 'white',
-                                                                color: '#667eea',
-                                                                textDecoration: 'none',
-                                                                fontWeight: '600',
-                                                                padding: '1rem 2rem',
-                                                                borderRadius: '0.5rem',
-                                                                display: 'inline-block'
-                                                            },
-                                                            text: '📡 View Live Demo'
-                                                        }
+                    // Overview Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'What is JSON Streaming?',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'JSON Streaming is a revolutionary pattern where you deliver pure JSON data from your API and use Juris\'s Object DOM to render it directly in the browser. This eliminates the need for server-side HTML generation while enabling progressive enhancement.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'content-grid',
+                                        style: {
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                                            gap: '1rem',
+                                            marginBottom: '2rem'
+                                        },
+                                        children: [
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: '📦 68% Smaller Payloads' } },
+                                                        { p: { text: 'Pure JSON is dramatically smaller than HTML with embedded JavaScript.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: '⚡ Instant Rendering' } },
+                                                        { p: { text: 'Object DOM renders JSON directly without parsing or compilation steps.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: '🔄 Progressive Enhancement' } },
+                                                        { p: { text: 'Add interactivity after initial render for optimal performance.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: '🌐 Real-Time Ready' } },
+                                                        { p: { text: 'Perfect for WebSocket updates and live data streaming.' } }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Basic Implementation Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Basic JSON Streaming Implementation',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Start streaming JSON content in three simple steps: fetch JSON data, render with Object DOM, and enhance with reactivity.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Basic JSON Streaming Pattern',
+                                        language: 'javascript',
+                                        code: basicStreamingExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Component Factory Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'JSON Component Factory Pattern',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Create component factories that transform JSON data into Object DOM structures. This pattern provides type safety and reusable rendering logic.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Component Factory for JSON Data',
+                                        language: 'javascript',
+                                        code: componentFactoryExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Progressive Enhancement Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Progressive Enhancement After Streaming',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'After streaming and rendering JSON content, use Juris\'s enhance() API to add reactive behaviors and state management.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Progressive Enhancement Implementation',
+                                        language: 'javascript',
+                                        code: progressiveEnhancementExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Real-Time Streaming Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Real-Time JSON Streaming',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Combine JSON streaming with WebSockets for real-time content updates. Stream live data and update existing content seamlessly.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Real-Time WebSocket JSON Streaming',
+                                        language: 'javascript',
+                                        code: realTimeStreamingExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Performance Optimization Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Performance Optimization',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Optimize JSON streaming for large datasets with batch rendering, virtual scrolling, and memory management techniques.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Advanced Performance Optimization',
+                                        language: 'javascript',
+                                        code: performanceOptimizationExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Compression Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'JSON Compression and Optimization',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Reduce payload sizes further with compact JSON structures, delta updates, and intelligent compression strategies.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'JSON Compression Techniques',
+                                        language: 'javascript',
+                                        code: compressionExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Real-World Implementation Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Complete Real-World Implementation',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'A complete production-ready JSON streaming application with all optimizations, error handling, and real-time features.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Production JSON Streaming App',
+                                        language: 'javascript',
+                                        code: realWorldExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Summary Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'JSON Streaming Summary',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'card',
+                                        style: {
+                                            background: 'linear-gradient(135deg, #fff8f5 0%, #ffffff 100%)',
+                                            border: '1px solid var(--orange-pale)',
+                                            padding: '2rem'
+                                        },
+                                        children: [
+                                            {
+                                                p: {
+                                                    text: 'JSON Streaming with Juris represents the next evolution in web application architecture. By delivering pure data and rendering it directly with Object DOM, you achieve unprecedented performance while maintaining the flexibility to progressively enhance with full reactivity.',
+                                                    style: {
+                                                        fontSize: '1.1rem',
+                                                        fontWeight: '500',
+                                                        textAlign: 'center',
+                                                        color: 'var(--gray-700)',
+                                                        margin: '0'
                                                     }
-                                                ]
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // What is JSON Streaming Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'What is JSON Streaming?',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
                                                 }
                                             }
-                                        },
-                                        {
-                                            p: {
-                                                text: 'JSON Streaming is a revolutionary pattern where you deliver pure JSON data from your API and use Juris\'s Object DOM to render it directly in the browser. This eliminates the need for server-side HTML generation while enabling progressive enhancement.',
-                                                style: { marginBottom: '1rem' }
-                                            }
-                                        },
-                                        {
-                                            div: {
-                                                className: 'content-grid',
-                                                style: {
-                                                    display: 'grid',
-                                                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                                                    gap: '1rem',
-                                                    marginBottom: '2rem'
-                                                },
-                                                children: [
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '📦 68% Smaller Payloads' } },
-                                                                { p: { text: 'Pure JSON is dramatically smaller than HTML with embedded JavaScript.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '⚡ Instant Rendering' } },
-                                                                { p: { text: 'Object DOM renders JSON directly without parsing or compilation steps.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '🔄 Progressive Enhancement' } },
-                                                                { p: { text: 'Add interactivity after initial render for optimal performance.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '🌐 Real-Time Ready' } },
-                                                                { p: { text: 'Perfect for WebSocket updates and live data streaming.' } }
-                                                            ]
-                                                        }
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                    ]
+                                        ]
+                                    }
                                 }
-                            },
-
-                            // Basic Implementation Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'Basic JSON Streaming Implementation',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            p: {
-                                                text: 'Start streaming JSON content in three simple steps: fetch JSON data, render with Object DOM, and enhance with reactivity.',
-                                                style: { marginBottom: '1rem' }
-                                            }
-                                        },
-                                        {
-                                            CodeBlock: {
-                                                title: 'Basic JSON Streaming Pattern',
-                                                language: 'javascript',
-                                                code: basicStreamingExample
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // Component Factory Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'JSON Component Factory Pattern',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            p: {
-                                                text: 'Create component factories that transform JSON data into Object DOM structures. This pattern provides type safety and reusable rendering logic.',
-                                                style: { marginBottom: '1rem' }
-                                            }
-                                        },
-                                        {
-                                            CodeBlock: {
-                                                title: 'Component Factory for JSON Data',
-                                                language: 'javascript',
-                                                code: componentFactoryExample
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // Progressive Enhancement Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'Progressive Enhancement After Streaming',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            p: {
-                                                text: 'After streaming and rendering JSON content, use Juris\'s enhance() API to add reactive behaviors and state management.',
-                                                style: { marginBottom: '1rem' }
-                                            }
-                                        },
-                                        {
-                                            CodeBlock: {
-                                                title: 'Progressive Enhancement Implementation',
-                                                language: 'javascript',
-                                                code: progressiveEnhancementExample
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // Real-Time Streaming Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'Real-Time JSON Streaming',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            p: {
-                                                text: 'Combine JSON streaming with WebSockets for real-time content updates. Stream live data and update existing content seamlessly.',
-                                                style: { marginBottom: '1rem' }
-                                            }
-                                        },
-                                        {
-                                            CodeBlock: {
-                                                title: 'Real-Time WebSocket JSON Streaming',
-                                                language: 'javascript',
-                                                code: realTimeStreamingExample
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // Performance Optimization Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'Performance Optimization',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            p: {
-                                                text: 'Optimize JSON streaming for large datasets with batch rendering, virtual scrolling, and memory management techniques.',
-                                                style: { marginBottom: '1rem' }
-                                            }
-                                        },
-                                        {
-                                            CodeBlock: {
-                                                title: 'Advanced Performance Optimization',
-                                                language: 'javascript',
-                                                code: performanceOptimizationExample
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // Compression Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'JSON Compression and Optimization',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            p: {
-                                                text: 'Reduce payload sizes further with compact JSON structures, delta updates, and intelligent compression strategies.',
-                                                style: { marginBottom: '1rem' }
-                                            }
-                                        },
-                                        {
-                                            CodeBlock: {
-                                                title: 'JSON Compression Techniques',
-                                                language: 'javascript',
-                                                code: compressionExample
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // Real-World Implementation Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'Complete Real-World Implementation',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            p: {
-                                                text: 'A complete production-ready JSON streaming application with all optimizations, error handling, and real-time features.',
-                                                style: { marginBottom: '1rem' }
-                                            }
-                                        },
-                                        {
-                                            CodeBlock: {
-                                                title: 'Production JSON Streaming App',
-                                                language: 'javascript',
-                                                code: realWorldExample
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // Benefits Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'Why JSON Streaming?',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            div: {
-                                                className: 'content-grid',
-                                                style: {
-                                                    display: 'grid',
-                                                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                                                    gap: '1rem',
-                                                    marginTop: '1rem'
-                                                },
-                                                children: [
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '📦 Minimal Bandwidth' } },
-                                                                { p: { text: 'JSON payloads are 68% smaller than equivalent HTML, reducing bandwidth costs and improving load times.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '⚡ Zero Parsing Overhead' } },
-                                                                { p: { text: 'Object DOM renders JSON directly without HTML parsing, CSS resolution, or JavaScript compilation.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '🎯 Separation of Concerns' } },
-                                                                { p: { text: 'Clean separation between data (JSON) and behavior (JavaScript) enables better caching and optimization.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '🔄 Real-Time Ready' } },
-                                                                { p: { text: 'Perfect for WebSocket updates, live data, and streaming applications without protocol overhead.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '🌐 API-First Design' } },
-                                                                { p: { text: 'Same JSON APIs serve web, mobile, and desktop clients without duplicate server-side rendering.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '🛡️ Progressive Enhancement' } },
-                                                                { p: { text: 'Content loads immediately, interactivity added progressively without blocking rendering.' } }
-                                                            ]
-                                                        }
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // Use Cases Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'Perfect Use Cases',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            div: {
-                                                className: 'content-grid',
-                                                style: {
-                                                    display: 'grid',
-                                                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                                                    gap: '1rem',
-                                                    marginTop: '1rem'
-                                                },
-                                                children: [
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '📰 News and Content Sites' } },
-                                                                { p: { text: 'Stream articles, blog posts, and news content for instant loading and real-time updates.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '🛒 E-commerce Catalogs' } },
-                                                                { p: { text: 'Product listings, search results, and inventory updates with minimal bandwidth usage.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '💬 Social Media Feeds' } },
-                                                                { p: { text: 'Real-time posts, comments, and interactions with seamless progressive enhancement.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '📊 Dashboard Applications' } },
-                                                                { p: { text: 'Live metrics, charts, and data updates without full page refreshes.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '🎮 Gaming Leaderboards' } },
-                                                                { p: { text: 'Real-time score updates, player rankings, and live tournament data.' } }
-                                                            ]
-                                                        }
-                                                    },
-                                                    {
-                                                        div: {
-                                                            className: 'card',
-                                                            children: [
-                                                                { h4: { text: '📈 Financial Data' } },
-                                                                { p: { text: 'Stock prices, trading data, and market information with millisecond updates.' } }
-                                                            ]
-                                                        }
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                    ]
-                                }
-                            },
-
-                            // Summary Section
-                            {
-                                section: {
-                                    style: { marginBottom: '3rem' },
-                                    children: [
-                                        {
-                                            h2: {
-                                                text: 'JSON Streaming Summary',
-                                                style: {
-                                                    fontSize: '1.5rem',
-                                                    marginBottom: '1rem',
-                                                    color: 'var(--orange)'
-                                                }
-                                            }
-                                        },
-                                        {
-                                            div: {
-                                                className: 'card',
-                                                style: {
-                                                    background: 'linear-gradient(135deg, #fff8f5 0%, #ffffff 100%)',
-                                                    border: '1px solid var(--orange-pale)',
-                                                    padding: '2rem'
-                                                },
-                                                children: [
-                                                    {
-                                                        p: {
-                                                            text: 'JSON Streaming with Juris represents the next evolution in web application architecture. By delivering pure data and rendering it directly with Object DOM, you achieve unprecedented performance while maintaining the flexibility to progressively enhance with full reactivity. This approach eliminates the traditional trade-offs between performance and functionality.',
-                                                            style: {
-                                                                fontSize: '1.1rem',
-                                                                fontWeight: '500',
-                                                                textAlign: 'center',
-                                                                color: 'var(--gray-700)',
-                                                                margin: '0'
-                                                            }
-                                                        }
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                    ]
-                                }
-                            }
-                        ]
+                            ]
+                        }
                     }
-                })
-            };
-        };
+                ]
+            }
+        })
+    };
+};
         const SolutionsPage = (props, context) => {
             return {
                 render: () => ({
@@ -6626,12 +6635,1179 @@ const app = new NewsStreamApp();`;
             };
         };
 
+        const DocsEnhanceAPI = (props, context) => {
+    const { getState, setState } = context;
+
+    const basicEnhanceExample = `// Basic Enhancement - Add Reactivity to Existing DOM
+const app = new Juris({
+    components: { /* your components */ }
+});
+
+// Enhance existing HTML elements with reactivity
+app.enhance('#counter-btn', {
+    text: () => \`Clicked \${app.getState('counter', 0)} times\`,
+    onclick: () => {
+        const current = app.getState('counter', 0);
+        app.setState('counter', current + 1);
+    }
+});
+
+// The HTML:
+// <button id="counter-btn">Static Button</button>
+// Becomes reactive without changing the HTML!`;
+
+    const selectorBasedExample = `// Selector-Based Enhancement - Multiple Elements at Once
+app.enhance('.themed-content', {
+    className: () => {
+        const theme = app.getState('ui.theme', 'light');
+        return \`themed-content \${theme}\`;
+    },
+    style: () => ({
+        opacity: app.getState('ui.visible', true) ? 1 : 0,
+        transition: 'all 0.3s ease'
+    })
+});
+
+// Enhances ALL elements with class 'themed-content'
+// <div class="themed-content">Content 1</div>
+// <div class="themed-content">Content 2</div>
+// <div class="themed-content">Content 3</div>
+// All become reactive simultaneously`;
+
+    const nestedSelectorsExample = `// Nested Selectors - Complex Enhancement Patterns
+app.enhance('.card-container', {
+    // Enhance the container itself
+    className: () => {
+        const layout = app.getState('ui.layout', 'grid');
+        return \`card-container \${layout}-layout\`;
+    },
+    
+    // Enhance child elements with different behaviors
+    selectors: {
+        '.card': (context) => ({
+            className: () => {
+                const cardId = context.element.dataset.cardId;
+                const isSelected = app.getState('selection.cards', []).includes(cardId);
+                return \`card \${isSelected ? 'selected' : ''}\`;
+            },
+            onclick: () => {
+                const cardId = context.element.dataset.cardId;
+                const selected = app.getState('selection.cards', []);
+                const newSelection = selected.includes(cardId)
+                    ? selected.filter(id => id !== cardId)
+                    : [...selected, cardId];
+                app.setState('selection.cards', newSelection);
+            }
+        }),
+        
+        '.card-title': (context) => ({
+            text: () => {
+                const cardId = context.element.closest('.card').dataset.cardId;
+                const cardData = app.getState(\`data.cards.\${cardId}\`);
+                return cardData?.title || 'Loading...';
+            }
+        }),
+        
+        '.card-actions .btn': (context) => ({
+            disabled: () => {
+                const action = context.element.dataset.action;
+                const permissions = app.getState('auth.permissions', []);
+                return !permissions.includes(action);
+            },
+            onclick: (event) => {
+                const action = event.target.dataset.action;
+                const cardId = event.target.closest('.card').dataset.cardId;
+                app.setState(\`actions.\${action}\`, { cardId, timestamp: Date.now() });
+            }
+        })
+    }
+});
+
+// Complex HTML structure becomes fully reactive:
+// <div class="card-container">
+//   <div class="card" data-card-id="1">
+//     <h3 class="card-title">Title</h3>
+//     <div class="card-actions">
+//       <button class="btn" data-action="edit">Edit</button>
+//       <button class="btn" data-action="delete">Delete</button>
+//     </div>
+//   </div>
+// </div>`;
+
+    const contextAccessExample = `// Context Access - Full Framework Integration
+app.enhance('.user-profile', (context) => {
+    // Access to all headless components, services, and state management
+    const { getState, setState, headless, services } = context;
+    
+    // Destructure headless components for easier access
+    const { DataManager, ApiManager, NotificationManager } = headless;
+    
+    // Helper functions using context (defined in enhancement scope)
+    const loadUserData = async (userId) => {
+        if (!ApiManager) return;
+        
+        try {
+            const userData = await ApiManager.get(\`/users/\${userId}\`);
+            setState(\`users.\${userId}\`, userData);
+            if (NotificationManager) {
+                NotificationManager.show('User data loaded');
+            }
+        } catch (error) {
+            if (NotificationManager) {
+                NotificationManager.error('Failed to load user data');
+            }
+        }
+    };
+    
+    const refreshData = () => {
+        if (DataManager?.refreshUserData) {
+            DataManager.refreshUserData();
+        }
+    };
+    
+    return {
+        className: () => {
+            const user = getState('auth.user');
+            const theme = getState('ui.theme', 'light');
+            return \`user-profile \${theme} \${user?.role || 'guest'}\`;
+        },
+        
+        // Click handler with access to helper functions
+        onclick: () => {
+            const user = getState('auth.user');
+            if (user?.id) {
+                loadUserData(user.id);
+            }
+        },
+        
+        // Double-click for refresh
+        ondblclick: () => {
+            refreshData();
+        }
+    };
+});
+
+// Enhanced refresh button with context access
+app.enhance('.refresh-btn', (context) => {
+    const { getState, headless } = context;
+    const { DataManager } = headless;
+    
+    return {
+        text: 'Refresh Data',
+        onclick: () => {
+            // Access headless component methods directly
+            if (DataManager?.refreshUserData) {
+                DataManager.refreshUserData();
+            }
+        },
+        className: () => {
+            const loading = getState('ui.loading', false);
+            return loading ? 'refresh-btn loading' : 'refresh-btn';
+        }
+    };
+});`;
+
+    const formEnhancementExample = `// Form Enhancement - Complex Form Handling
+app.enhance('form.contact-form', (context) => {
+    const { getState, setState } = context;
+    
+    // Form validation helper
+    const validateContactForm = (data) => {
+        const errors = {};
+        
+        if (!data.name || data.name.trim().length < 2) {
+            errors.name = 'Name must be at least 2 characters';
+        }
+        
+        if (!data.email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(data.email)) {
+            errors.email = 'Please enter a valid email address';
+        }
+        
+        if (!data.message || data.message.trim().length < 10) {
+            errors.message = 'Message must be at least 10 characters';
+        }
+        
+        return errors;
+    };
+    
+    return {
+        // Form-level enhancements
+        className: () => {
+            const isSubmitting = getState('form.contact.submitting', false);
+            const hasErrors = Object.keys(getState('form.contact.errors', {})).length > 0;
+            return \`contact-form \${isSubmitting ? 'submitting' : ''} \${hasErrors ? 'has-errors' : ''}\`;
+        },
+        
+        onsubmit: async (event) => {
+            event.preventDefault();
+            
+            // Set submitting state
+            setState('form.contact.submitting', true);
+            setState('form.contact.errors', {});
+            
+            try {
+                const formData = new FormData(event.target);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Validate
+                const errors = validateContactForm(data);
+                if (Object.keys(errors).length > 0) {
+                    setState('form.contact.errors', errors);
+                    return;
+                }
+                
+                // Submit
+                await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                setState('form.contact.success', true);
+                event.target.reset();
+                
+            } catch (error) {
+                setState('form.contact.errors', { _form: error.message });
+            } finally {
+                setState('form.contact.submitting', false);
+            }
+        },
+        
+        // Field-specific enhancements
+        selectors: {
+            'input[name="email"]': (context) => ({
+                className: () => {
+                    const errors = getState('form.contact.errors', {});
+                    return errors.email ? 'form-input error' : 'form-input';
+                },
+                oninput: (event) => {
+                    setState('form.contact.email', event.target.value);
+                    // Clear error on input
+                    const errors = getState('form.contact.errors', {});
+                    if (errors.email) {
+                        delete errors.email;
+                        setState('form.contact.errors', { ...errors });
+                    }
+                }
+            }),
+            
+            '.error-message': (context) => ({
+                text: () => {
+                    const fieldName = context.element.dataset.field;
+                    const errors = getState('form.contact.errors', {});
+                    return errors[fieldName] || '';
+                },
+                style: () => ({
+                    display: (() => {
+                        const fieldName = context.element.dataset.field;
+                        const errors = getState('form.contact.errors', {});
+                        return errors[fieldName] ? 'block' : 'none';
+                    })()
+                })
+            }),
+            
+            'button[type="submit"]': (context) => ({
+                disabled: () => getState('form.contact.submitting', false),
+                text: () => {
+                    const submitting = getState('form.contact.submitting', false);
+                    return submitting ? 'Sending...' : 'Send Message';
+                }
+            })
+        }
+    };
+});`;
+
+    const dataTableExample = `// Data Table Enhancement - Complex List Management
+app.enhance('.data-table', (context) => {
+    const { getState, setState, headless } = context;
+    const { ApiManager } = headless;
+    
+    // Helper functions for table operations
+    const deleteRow = async (rowId) => {
+        setState('table.loading', true);
+        try {
+            await ApiManager.delete(\`/api/rows/\${rowId}\`);
+            const data = getState('table.data', {});
+            delete data[rowId];
+            setState('table.data', { ...data });
+        } finally {
+            setState('table.loading', false);
+        }
+    };
+    
+    const loadTableData = async (page) => {
+        setState('table.loading', true);
+        try {
+            const data = await ApiManager.get(\`/api/table?page=\${page}\`);
+            setState('table.data', data.rows);
+            setState('table.totalPages', data.totalPages);
+        } finally {
+            setState('table.loading', false);
+        }
+    };
+    
+    return {
+        className: () => {
+            const loading = getState('table.loading', false);
+            const view = getState('table.view', 'grid');
+            return \`data-table \${view}-view \${loading ? 'loading' : ''}\`;
+        },
+        
+        selectors: {
+            // Header controls
+            '.sort-header': (context) => ({
+                className: () => {
+                    const column = context.element.dataset.column;
+                    const sortBy = getState('table.sortBy');
+                    const sortDir = getState('table.sortDirection', 'asc');
+                    return \`sort-header \${sortBy === column ? 'active ' + sortDir : ''}\`;
+                },
+                onclick: () => {
+                    const column = context.element.dataset.column;
+                    const currentSort = getState('table.sortBy');
+                    const currentDir = getState('table.sortDirection', 'asc');
+                    
+                    if (currentSort === column) {
+                        setState('table.sortDirection', currentDir === 'asc' ? 'desc' : 'asc');
+                    } else {
+                        setState('table.sortBy', column);
+                        setState('table.sortDirection', 'asc');
+                    }
+                }
+            }),
+            
+            // Row selection
+            '.row-checkbox': (context) => ({
+                checked: () => {
+                    const rowId = context.element.dataset.rowId;
+                    return getState('table.selected', []).includes(rowId);
+                },
+                onchange: (event) => {
+                    const rowId = context.element.dataset.rowId;
+                    const selected = getState('table.selected', []);
+                    
+                    if (event.target.checked) {
+                        setState('table.selected', [...selected, rowId]);
+                    } else {
+                        setState('table.selected', selected.filter(id => id !== rowId));
+                    }
+                }
+            }),
+            
+            // Row actions
+            '.row-action': (context) => ({
+                disabled: () => {
+                    const action = context.element.dataset.action;
+                    const rowId = context.element.dataset.rowId;
+                    const permissions = getState('auth.permissions', []);
+                    const rowData = getState(\`table.data.\${rowId}\`);
+                    
+                    if (action === 'delete' && !permissions.includes('delete')) return true;
+                    if (action === 'edit' && rowData?.locked) return true;
+                    return false;
+                },
+                onclick: async (event) => {
+                    const action = event.target.dataset.action;
+                    const rowId = event.target.dataset.rowId;
+                    
+                    switch (action) {
+                        case 'edit':
+                            setState('ui.editingRow', rowId);
+                            break;
+                        case 'delete':
+                            if (confirm('Are you sure?')) {
+                                await deleteRow(rowId);
+                            }
+                            break;
+                    }
+                }
+            }),
+            
+            // Pagination
+            '.page-btn': (context) => ({
+                className: () => {
+                    const page = parseInt(context.element.dataset.page);
+                    const currentPage = getState('table.currentPage', 1);
+                    return \`page-btn \${page === currentPage ? 'active' : ''}\`;
+                },
+                onclick: () => {
+                    const page = parseInt(context.element.dataset.page);
+                    setState('table.currentPage', page);
+                    loadTableData(page);
+                }
+            })
+        }
+    };
+});`;
+
+    const migrationExample = `// Progressive Migration - Legacy to Reactive
+// Step 1: Start with existing HTML and basic enhancement
+app.enhance('.legacy-widget', {
+    className: () => {
+        const theme = app.getState('ui.theme', 'light');
+        return \`legacy-widget \${theme}\`;
+    }
+});
+
+// Step 2: Add more sophisticated behavior
+app.enhance('.legacy-widget', (context) => {
+    const { getState, setState } = context;
+    
+    return {
+        selectors: {
+            '.legacy-button': (context) => ({
+                onclick: () => {
+                    // Bridge legacy JavaScript with reactive state
+                    const widgetId = context.element.closest('.legacy-widget').id;
+                    setState(\`widgets.\${widgetId}.clicked\`, Date.now());
+                    
+                    // Still call legacy function if needed
+                    if (window.legacyButtonClick) {
+                        window.legacyButtonClick(widgetId);
+                    }
+                }
+            }),
+            
+            '.legacy-display': (context) => ({
+                text: () => {
+                    const widgetId = context.element.closest('.legacy-widget').id;
+                    const lastClicked = getState(\`widgets.\${widgetId}.clicked\`);
+                    return lastClicked 
+                        ? \`Last clicked: \${new Date(lastClicked).toLocaleTimeString()}\`
+                        : 'Not clicked yet';
+                }
+            })
+        }
+    };
+});
+
+// Step 3: Gradually replace with full components
+// (Legacy code continues working while you migrate piece by piece)`;
+
+    const enhancementOptionsExample = `// Enhancement Options - Configuration and Control
+app.enhance('.advanced-component', (context) => {
+    const { getState, setState, headless } = context;
+    const { DataManager, NotificationManager } = headless;
+    
+    // Helper functions with context access
+    const trackAnalytics = (eventName, data) => {
+        setState('analytics.events', [
+            ...getState('analytics.events', []),
+            { eventName, data, timestamp: Date.now() }
+        ]);
+    };
+    
+    return {
+        className: () => \`component \${getState('ui.theme')}\`,
+        
+        onclick: (event) => {
+            const componentId = event.target.dataset.componentId;
+            if (DataManager) {
+                DataManager.trackInteraction(componentId);
+            }
+            if (NotificationManager) {
+                NotificationManager.show('Component clicked');
+            }
+            trackAnalytics('component_clicked', { componentId });
+        }
+    };
+}, {
+    // Enhancement configuration options
+    batchUpdates: true,           // Batch multiple DOM updates
+    debounceMs: 16,              // Debounce rapid state changes
+    observeNewElements: true,     // Auto-enhance dynamically added elements
+    preserveExistingHandlers: false // Override existing event handlers
+});
+
+// Multiple Enhancement Calls - Process Different Elements
+// Note: Each enhancement is applied separately
+app.enhance('.card', cardEnhancement, { observeNewElements: true });
+app.enhance('.button', buttonEnhancement, { debounceMs: 10 });
+app.enhance('.input', inputEnhancement, { batchUpdates: true });
+
+// Enhancement with progress tracking using state
+app.setState('enhancement.progress', 0);
+
+const enhanceWithProgress = async (selectors) => {
+    const total = selectors.length;
+    
+    for (let i = 0; i < selectors.length; i++) {
+        const { selector, config, options } = selectors[i];
+        app.enhance(selector, config, options);
+        
+        // Update progress
+        const progress = ((i + 1) / total) * 100;
+        app.setState('enhancement.progress', progress);
+        
+        // Allow UI to update
+        await new Promise(resolve => setTimeout(resolve, 0));
+    }
+};
+
+// Usage
+enhanceWithProgress([
+    { selector: '.card', config: cardEnhancement },
+    { selector: '.button', config: buttonEnhancement },
+    { selector: '.input', config: inputEnhancement }
+]);`;
+
+    const realWorldExample = `// Real-World Example - E-commerce Product Grid
+app.enhance('.product-grid', (context) => {
+    const { getState, setState, headless } = context;
+    const { ApiManager, NotificationManager } = headless;
+    
+    // Helper functions
+    const formatPrice = (price, currency) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency
+        }).format(price);
+    };
+    
+    return {
+        className: () => {
+            const view = getState('products.view', 'grid');
+            const loading = getState('products.loading', false);
+            return \`product-grid \${view}-view \${loading ? 'loading' : ''}\`;
+        },
+        
+        selectors: {
+            // Product cards
+            '.product-card': (context) => ({
+                className: () => {
+                    const productId = context.element.dataset.productId;
+                    const favorited = getState('user.favorites', []).includes(productId);
+                    const inCart = getState('cart.items', []).some(item => item.productId === productId);
+                    return \`product-card \${favorited ? 'favorited' : ''} \${inCart ? 'in-cart' : ''}\`;
+                }
+            }),
+            
+            // Favorite buttons
+            '.favorite-btn': (context) => ({
+                className: () => {
+                    const productId = context.element.closest('.product-card').dataset.productId;
+                    const favorited = getState('user.favorites', []).includes(productId);
+                    return \`favorite-btn \${favorited ? 'active' : ''}\`;
+                },
+                onclick: async (event) => {
+                    const productId = event.target.closest('.product-card').dataset.productId;
+                    const favorites = getState('user.favorites', []);
+                    
+                    const newFavorites = favorites.includes(productId)
+                        ? favorites.filter(id => id !== productId)
+                        : [...favorites, productId];
+                    
+                    setState('user.favorites', newFavorites);
+                    
+                    // Sync with backend
+                    if (ApiManager) {
+                        try {
+                            await ApiManager.post('/api/favorites', {
+                                productId,
+                                favorited: newFavorites.includes(productId)
+                            });
+                        } catch (error) {
+                            // Revert on error
+                            setState('user.favorites', favorites);
+                            if (NotificationManager) {
+                                NotificationManager.error('Failed to update favorites');
+                            }
+                        }
+                    }
+                }
+            }),
+            
+            // Add to cart buttons
+            '.add-to-cart': (context) => ({
+                disabled: () => {
+                    const productId = context.element.closest('.product-card').dataset.productId;
+                    const product = getState(\`products.data.\${productId}\`);
+                    const inCart = getState('cart.items', []).some(item => item.productId === productId);
+                    return !product?.inStock || inCart;
+                },
+                text: () => {
+                    const productId = context.element.closest('.product-card').dataset.productId;
+                    const inCart = getState('cart.items', []).some(item => item.productId === productId);
+                    const product = getState(\`products.data.\${productId}\`);
+                    
+                    if (inCart) return 'In Cart';
+                    if (!product?.inStock) return 'Out of Stock';
+                    return 'Add to Cart';
+                },
+                onclick: async (event) => {
+                    const productId = event.target.closest('.product-card').dataset.productId;
+                    const product = getState(\`products.data.\${productId}\`);
+                    
+                    const cartItems = getState('cart.items', []);
+                    const newItem = {
+                        productId,
+                        name: product.name,
+                        price: product.price,
+                        quantity: 1,
+                        addedAt: Date.now()
+                    };
+                    
+                    setState('cart.items', [...cartItems, newItem]);
+                    setState('cart.count', cartItems.length + 1);
+                    
+                    // Show confirmation
+                    if (NotificationManager) {
+                        NotificationManager.success(\`\${product.name} added to cart!\`);
+                    }
+                    
+                    // Analytics
+                    setState('analytics.events', [
+                        ...getState('analytics.events', []),
+                        { event: 'add_to_cart', productId, timestamp: Date.now() }
+                    ]);
+                }
+            }),
+            
+            // Price display
+            '.price': (context) => ({
+                text: () => {
+                    const productId = context.element.closest('.product-card').dataset.productId;
+                    const product = getState(\`products.data.\${productId}\`);
+                    const currency = getState('user.currency', 'USD');
+                    
+                    if (!product) return 'Loading...';
+                    
+                    const price = product.price;
+                    const discount = product.discount || 0;
+                    const finalPrice = price * (1 - discount);
+                    
+                    return formatPrice(finalPrice, currency);
+                },
+                className: () => {
+                    const productId = context.element.closest('.product-card').dataset.productId;
+                    const product = getState(\`products.data.\${productId}\`);
+                    return \`price \${product?.discount ? 'discounted' : ''}\`;
+                }
+            })
+        }
+    };
+});`;
+
+    return {
+        render: () => ({
+            div: {
+                children: [
+                    {
+                        h1: {
+                            className: 'page-title',
+                            text: 'enhance() API'
+                        }
+                    },
+                    {
+                        p: {
+                            className: 'page-subtitle',
+                            text: 'Transform existing DOM elements into reactive components without rewrites. The ultimate progressive enhancement API.'
+                        }
+                    },
+
+                    // Overview Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'What is enhance()?',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'The enhance() API is Juris\'s revolutionary progressive enhancement system. It adds reactivity to existing DOM elements without changing the HTML, making legacy code reactive and enabling gradual migration to modern patterns.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'content-grid',
+                                        style: {
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                                            gap: '1rem',
+                                            marginBottom: '2rem'
+                                        },
+                                        children: [
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: '🎯 Zero Rewrites' } },
+                                                        { p: { text: 'Transform existing HTML into reactive components without changing a single line of markup.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: '🔄 Full Reactivity' } },
+                                                        { p: { text: 'Enhanced elements get complete access to reactive state, event handlers, and framework features.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: '🏗️ Nested Selectors' } },
+                                                        { p: { text: 'Enhance complex DOM structures with different behaviors for different child elements.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: '🌐 Context Access' } },
+                                                        { p: { text: 'Enhanced elements have full access to headless components, services, and framework context.' } }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Basic Enhancement Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Basic Enhancement',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Start with existing HTML and add reactivity without changing the markup.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Basic Progressive Enhancement',
+                                        language: 'javascript',
+                                        code: basicEnhanceExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Selector-Based Enhancement Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Selector-Based Enhancement',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Enhance multiple elements at once using CSS selectors. Perfect for lists, grids, and repeated elements.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Multiple Element Enhancement',
+                                        language: 'javascript',
+                                        code: selectorBasedExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Nested Selectors Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Nested Selectors',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Enhance complex DOM structures with different behaviors for parent and child elements. Each selector gets its own enhancement configuration.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Complex Nested Enhancement',
+                                        language: 'javascript',
+                                        code: nestedSelectorsExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Context Access Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Context Access',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Enhanced elements have full access to the Juris context, including headless components, services, and custom methods through function-based enhancement definitions.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Full Framework Integration',
+                                        language: 'javascript',
+                                        code: contextAccessExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Form Enhancement Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Form Enhancement',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Transform static forms into reactive, validated forms with real-time feedback and error handling.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Complete Form Enhancement',
+                                        language: 'javascript',
+                                        code: formEnhancementExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Data Table Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Data Table Enhancement',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Turn static HTML tables into fully interactive data grids with sorting, filtering, pagination, and row actions.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Advanced Table Enhancement',
+                                        language: 'javascript',
+                                        code: dataTableExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Progressive Migration Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Progressive Migration',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Migrate legacy applications gradually without breaking existing functionality. Start with basic enhancements and progressively add more sophisticated behavior.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Gradual Legacy Migration',
+                                        language: 'javascript',
+                                        code: migrationExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Enhancement Options Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Enhancement Options',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Fine-tune enhancement behavior with configuration options and batch processing for optimal performance.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'Advanced Configuration',
+                                        language: 'javascript',
+                                        code: enhancementOptionsExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Real-World Example Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'Real-World Example',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    p: {
+                                        text: 'Complete e-commerce product grid enhancement showing how to transform a static HTML product listing into a fully interactive shopping interface.',
+                                        style: { marginBottom: '1rem' }
+                                    }
+                                },
+                                {
+                                    CodeBlock: {
+                                        title: 'E-commerce Enhancement',
+                                        language: 'javascript',
+                                        code: realWorldExample
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // API Reference Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'API Reference',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'content-grid',
+                                        style: {
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                                            gap: '1rem',
+                                            marginTop: '1rem'
+                                        },
+                                        children: [
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: 'app.enhance(selector, config, options)' } },
+                                                        { p: { text: 'Main enhancement method. Config can be object or function that returns config. Options configure behavior.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: 'Function-based Config' } },
+                                                        { p: { text: 'Use (context) => config to access framework context including headless components and services.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: 'config.selectors' } },
+                                                        { p: { text: 'Object defining child element behaviors. Keys are CSS selectors, values are enhancement configs or functions.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: 'options.batchUpdates' } },
+                                                        { p: { text: 'Boolean. Batch multiple DOM updates for better performance. Default: false.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: 'options.debounceMs' } },
+                                                        { p: { text: 'Number. Debounce rapid state changes to prevent excessive DOM updates. Default: 0.' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    className: 'card',
+                                                    children: [
+                                                        { h4: { text: 'options.observeNewElements' } },
+                                                        { p: { text: 'Boolean. Automatically enhance dynamically added elements that match the selector. Default: false.' } }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+
+                    // Summary Section
+                    {
+                        section: {
+                            style: { marginBottom: '3rem' },
+                            children: [
+                                {
+                                    h2: {
+                                        text: 'enhance() API Summary',
+                                        style: {
+                                            fontSize: '1.5rem',
+                                            marginBottom: '1rem',
+                                            color: 'var(--orange)'
+                                        }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        className: 'card',
+                                        style: {
+                                            background: 'linear-gradient(135deg, #fff8f5 0%, #ffffff 100%)',
+                                            border: '1px solid var(--orange-pale)',
+                                            padding: '2rem'
+                                        },
+                                        children: [
+                                            {
+                                                p: {
+                                                    text: 'The enhance() API represents the ultimate progressive enhancement solution - transforming existing HTML into reactive components without rewrites, enabling gradual migration to modern patterns while maintaining full access to Juris\'s powerful features. Use function-based configurations to access the complete framework context.',
+                                                    style: {
+                                                        fontSize: '1.1rem',
+                                                        fontWeight: '500',
+                                                        textAlign: 'center',
+                                                        color: 'var(--gray-700)',
+                                                        margin: '0'
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
         const DocsPage = (props, context) => {
             const { getState } = context;
 
             const subRoutes = [
                 { path: '', label: 'Getting Started', section: 'intro' },
                 { path: 'components', label: 'Components', section: 'components' },
+                { path: 'enhance', label: 'enhance() API', section: 'enhance' },
                 { path: 'state', label: 'State Management', section: 'state' },
                 { path: 'routing', label: 'Routing', section: 'routing' },
                 { path: 'advanced', label: 'Advanced Patterns', section: 'advanced' },
@@ -6689,6 +7865,8 @@ const app = new NewsStreamApp();`;
                                                         return [{ DocsRouting: {} }];
                                                     case 'headless':
                                                         return [{ DocsHeadless: {} }];
+                                                    case 'enhance':
+                                                        return [{ DocsEnhanceAPI: {} }];
                                                     case 'advanced':
                                                         return [{ DocsAdvancedPatterns: {} }];
                                                     case 'control-flow':
@@ -16205,7 +17383,8 @@ const ConditionalContent = (props, context) => ({
                 RandomTagline,
                 DocsAdvancedPatterns,
                 DocsJSONStreaming,
-                DocsControlFlow
+                DocsControlFlow,
+                DocsEnhanceAPI 
             },
 
             headlessComponents: {
@@ -16342,5 +17521,4 @@ const ConditionalContent = (props, context) => ({
         });
     </script>
 </body>
-
 </html>
