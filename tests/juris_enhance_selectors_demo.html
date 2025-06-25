@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris enhance() Selectors Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .demo-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .demo-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        /* Task List Styles */
+        .task-list {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: white;
+        }
+        
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .task-checkbox {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+        
+        .task-text {
+            flex: 1;
+            font-size: 16px;
+        }
+        
+        .task-priority {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .delete-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background 0.2s;
+        }
+        
+        .delete-btn:hover {
+            background: #ff3838;
+        }
+        
+        /* Form Styles */
+        .smart-form {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+        
+        .submit-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .submit-button:hover:not(:disabled) {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+        
+        .submit-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .error-message {
+            color: #f44336;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        /* Card Styles */
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .card-content {
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .card-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .card-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .like-btn {
+            background: #e91e63;
+            color: white;
+        }
+        
+        .share-btn {
+            background: #2196F3;
+            color: white;
+        }
+        
+        /* Controls */
+        .controls {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .control-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .control-btn:hover {
+            background: #2980b9;
+        }
+        
+        .status {
+            background: #34495e;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .add-task-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .task-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .add-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Juris enhance() Selectors Demo</h1>
+            <p>Showcasing hierarchical DOM enhancement with reactive state</p>
+        </div>
+        
+        <div class="content">
+            <!-- Controls -->
+            <div class="controls">
+                <h3>🎛️ Demo Controls</h3>
+                <div class="control-group">
+                    <button class="control-btn" onclick="toggleTasksVisibility()">Toggle Tasks Visibility</button>
+                    <button class="control-btn" onclick="toggleStrikethrough()">Toggle Strikethrough</button>
+                    <button class="control-btn" onclick="randomizeCardPriorities()">Randomize Card Priorities</button>
+                    <button class="control-btn" onclick="simulateFormErrors()">Simulate Form Errors</button>
+                </div>
+                <div class="status" id="status">
+                    Tasks Visible: <span id="tasks-visible">true</span> | 
+                    Strikethrough: <span id="strikethrough">false</span> | 
+                    Form Errors: <span id="form-errors">false</span>
+                </div>
+            </div>
+            
+            <!-- Task List Demo -->
+            <div class="demo-section">
+                <div class="demo-title">📝 Task List with Selectors Enhancement</div>
+                <div class="add-task-form">
+                    <input type="text" class="task-input" placeholder="Enter new task..." id="new-task-input">
+                    <select id="task-priority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                    <button class="add-btn" onclick="addTask()">Add Task</button>
+                </div>
+                <div class="task-list" id="task-list">
+                    <div class="task-item" data-task-id="1" data-priority="high">
+                        <input type="checkbox" class="task-checkbox">
+                        <span class="task-text">Learn Juris selectors API</span>
+                        <span class="task-priority">HIGH</span>
+                        <button class="delete-btn">Delete</button>
+                    </div>
+                    <div class="task-item" data-task-id="2" data-priority="medium">
+                        <input type="checkbox" class="task-checkbox">
+                        <span class="task-text">Build awesome demo</span>
+                        <span class="task-priority">MEDIUM</span>
+                        <button class="delete-btn">Delete</button>
+                    </div>
+                    <div class="task-item" data-task-id="3" data-priority="low">
+                        <input type="checkbox" class="task-checkbox">
+                        <span class="task-text">Write documentation</span>
+                        <span class="task-priority">LOW</span>
+                        <button class="delete-btn">Delete</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Smart Form Demo -->
+            <div class="demo-section">
+                <div class="demo-title">📋 Smart Form with Validation</div>
+                <form class="smart-form">
+                    <div class="form-group">
+                        <label class="form-label">Name (required)</label>
+                        <input type="text" class="form-input" name="name" required>
+                        <div class="error-message">Name is required</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email (required)</label>
+                        <input type="email" class="form-input" name="email" required>
+                        <div class="error-message">Valid email is required</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-input" name="message" rows="4"></textarea>
+                    </div>
+                    <button type="submit" class="submit-button">Submit Form</button>
+                </form>
+            </div>
+            
+            <!-- Card Container Demo -->
+            <div class="demo-section">
+                <div class="demo-title">🃏 Dynamic Card System</div>
+                <div class="card-container">
+                    <div class="card" data-priority="high" data-title="Important Task">
+                        <div class="card-title">Important Task</div>
+                        <div class="card-content">This is a high priority task that needs immediate attention.</div>
+                        <div class="card-actions">
+                            <button class="card-btn like-btn">❤️ Like</button>
+                            <button class="card-btn share-btn">📤 Share</button>
+                        </div>
+                    </div>
+                    <div class="card" data-priority="medium" data-title="Regular Work">
+                        <div class="card-title">Regular Work</div>
+                        <div class="card-content">Standard priority work item in the pipeline.</div>
+                        <div class="card-actions">
+                            <button class="card-btn like-btn">❤️ Like</button>
+                            <button class="card-btn share-btn">📤 Share</button>
+                        </div>
+                    </div>
+                    <div class="card" data-priority="low" data-title="Future Ideas">
+                        <div class="card-title">Future Ideas</div>
+                        <div class="card-content">Low priority ideas for future consideration.</div>
+                        <div class="card-actions">
+                            <button class="card-btn like-btn">❤️ Like</button>
+                            <button class="card-btn share-btn">📤 Share</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../src/juris.js"></script>
+    <script>
+        // Initialize Juris
+        const juris = new Juris({
+            states: {
+                tasks: {
+                    1: { completed: false, title: "Learn Juris selectors API" },
+                    2: { completed: false, title: "Build awesome demo" },
+                    3: { completed: false, title: "Write documentation" }
+                },
+                ui: {
+                    tasksVisible: true,
+                    strikethrough: false,
+                    fadeCompleted: true
+                },
+                validation: {
+                    hasErrors: false,
+                    errorMessage: '',
+                    fields: {}
+                },
+                cards: {
+                    priorityColors: {
+                        high: '#ffebee',
+                        medium: '#fff3e0', 
+                        low: '#e8f5e8'
+                    }
+                }
+            }
+        });
+
+        let taskCounter = 4;
+
+        // Task List Enhancement with Selectors
+        juris.enhance('.task-list', {
+            // Container-level styling
+            style: () => ({
+                display: juris.getState('ui.tasksVisible') ? 'block' : 'none',
+                opacity: juris.getState('ui.tasksVisible') ? 1 : 0.5
+            }),
+            
+            selectors: {
+                '.task-item': (context) => {
+                    // Element is available in context.element
+                    const taskId = context.element.dataset.taskId;
+                    return {
+                        style: () => {
+                            const completed = juris.getState(`tasks.${taskId}.completed`, false);
+                            const strikethrough = juris.getState('ui.strikethrough');
+                            return {
+                                backgroundColor: completed ? '#e8f5e8' : 'white',
+                                opacity: completed && juris.getState('ui.fadeCompleted') ? 0.7 : 1,
+                                transform: completed ? 'scale(0.98)' : 'scale(1)'
+                            };
+                        }
+                    };
+                },
+                
+                '.task-checkbox': (context) => {
+                    const taskId = context.element.closest('.task-item').dataset.taskId;
+                    return {
+                        checked: () => juris.getState(`tasks.${taskId}.completed`, false),
+                        onchange: (e) => {
+                            juris.setState(`tasks.${taskId}.completed`, e.target.checked);
+                            console.log(`Task ${taskId} ${e.target.checked ? 'completed' : 'uncompleted'}`);
+                        }
+                    };
+                },
+                
+                '.task-text': (context) => {
+                    const taskId = context.element.closest('.task-item').dataset.taskId;
+                    return {
+                        text: () => juris.getState(`tasks.${taskId}.title`, 'Untitled Task'),
+                        style: () => {
+                            const completed = juris.getState(`tasks.${taskId}.completed`, false);
+                            const strikethrough = juris.getState('ui.strikethrough');
+                            return {
+                                textDecoration: (completed && strikethrough) ? 'line-through' : 'none',
+                                color: completed ? '#666' : '#333'
+                            };
+                        }
+                    };
+                },
+                
+                '.task-priority': (context) => {
+                    const priority = context.element.closest('.task-item').dataset.priority;
+                    return {
+                        style: () => ({
+                            backgroundColor: priority === 'high' ? '#ff4757' : 
+                                          priority === 'medium' ? '#ffa502' : '#2ed573',
+                            color: 'white'
+                        })
+                    };
+                },
+                
+                '.delete-btn': (context) => {
+                    const taskId = context.element.closest('.task-item').dataset.taskId;
+                    return {
+                        onclick: () => {
+                            // Remove from state
+                            juris.setState(`tasks.${taskId}`, undefined);
+                            // Remove from DOM
+                            context.element.closest('.task-item').remove();
+                            console.log(`Task ${taskId} deleted`);
+                        }
+                    };
+                }
+            }
+        });
+
+        // Smart Form Enhancement
+        juris.enhance('.smart-form', {
+            selectors: {
+                'input[required]': (context) => ({
+                    style: () => {
+                        const fieldName = context.element.name;
+                        const hasError = juris.getState(`validation.fields.${fieldName}.error`, false);
+                        return {
+                            borderColor: hasError ? '#f44336' : '#ddd',
+                            backgroundColor: hasError ? '#ffebee' : 'white'
+                        };
+                    },
+                    oninput: (e) => validateField(e.target.name, e.target.value),
+                    onblur: (e) => validateField(e.target.name, e.target.value)
+                }),
+                
+                '.submit-button': {
+                    disabled: () => juris.getState('validation.hasErrors', false),
+                    style: () => ({
+                        opacity: juris.getState('validation.hasErrors', false) ? 0.5 : 1,
+                        cursor: juris.getState('validation.hasErrors', false) ? 'not-allowed' : 'pointer'
+                    }),
+                    onclick: (e) => {
+                        e.preventDefault();
+                        if (!juris.getState('validation.hasErrors', false)) {
+                            alert('Form submitted successfully! 🎉');
+                        }
+                    }
+                },
+                
+                '.error-message': (context) => {
+                    const fieldName = context.element.closest('.form-group').querySelector('input').name;
+                    return {
+                        text: () => juris.getState(`validation.fields.${fieldName}.message`, ''),
+                        style: () => ({
+                            display: juris.getState(`validation.fields.${fieldName}.error`, false) ? 'block' : 'none'
+                        })
+                    };
+                }
+            }
+        });
+
+        // Card Container Enhancement
+        juris.enhance('.card-container', {
+            selectors: {
+                '.card': (context) => {
+                    const priority = context.element.dataset.priority;
+                    return {
+                        onclick: () => {
+                            const title = context.element.dataset.title;
+                            alert(`Clicked card: ${title} (Priority: ${priority})`);
+                        },
+                        style: () => ({
+                            backgroundColor: juris.getState(`cards.priorityColors.${priority}`, 'white'),
+                            borderColor: priority === 'high' ? '#f44336' : 
+                                        priority === 'medium' ? '#ff9800' : '#4caf50'
+                        })
+                    };
+                },
+                
+                '.like-btn': (context) => ({
+                    onclick: (e) => {
+                        e.stopPropagation();
+                        const card = context.element.closest('.card');
+                        const title = card.dataset.title;
+                        context.element.textContent = context.element.textContent.includes('❤️') ? '💙 Liked!' : '❤️ Like';
+                        console.log(`Liked: ${title}`);
+                    }
+                }),
+                
+                '.share-btn': (context) => ({
+                    onclick: (e) => {
+                        e.stopPropagation();
+                        const card = context.element.closest('.card');
+                        const title = card.dataset.title;
+                        alert(`Sharing: ${title}`);
+                    }
+                })
+            }
+        });
+
+        // Validation logic
+        function validateField(fieldName, value) {
+            let hasError = false;
+            let message = '';
+            
+            if (fieldName === 'name' && !value.trim()) {
+                hasError = true;
+                message = 'Name is required';
+            } else if (fieldName === 'email') {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!value.trim()) {
+                    hasError = true;
+                    message = 'Email is required';
+                } else if (!emailRegex.test(value)) {
+                    hasError = true;
+                    message = 'Please enter a valid email';
+                }
+            }
+            
+            juris.setState(`validation.fields.${fieldName}.error`, hasError);
+            juris.setState(`validation.fields.${fieldName}.message`, message);
+            
+            // Update overall form error state
+            const allFields = juris.getState('validation.fields', {});
+            const hasAnyErrors = Object.values(allFields).some(field => field.error);
+            juris.setState('validation.hasErrors', hasAnyErrors);
+        }
+
+        // Demo control functions
+        function toggleTasksVisibility() {
+            const current = juris.getState('ui.tasksVisible');
+            juris.setState('ui.tasksVisible', !current);
+            updateStatus();
+        }
+
+        function toggleStrikethrough() {
+            const current = juris.getState('ui.strikethrough');
+            juris.setState('ui.strikethrough', !current);
+            updateStatus();
+        }
+
+        function randomizeCardPriorities() {
+            const priorities = ['high', 'medium', 'low'];
+            const colors = {
+                high: '#ffebee',
+                medium: '#fff3e0',
+                low: '#e8f5e8'
+            };
+            
+            // Randomize colors
+            priorities.forEach(priority => {
+                const randomColor = `hsl(${Math.random() * 360}, 50%, 95%)`;
+                juris.setState(`cards.priorityColors.${priority}`, randomColor);
+            });
+        }
+
+        function simulateFormErrors() {
+            const hasErrors = juris.getState('validation.hasErrors');
+            if (!hasErrors) {
+                juris.setState('validation.fields.name.error', true);
+                juris.setState('validation.fields.name.message', 'Simulated error: Name too short');
+                juris.setState('validation.hasErrors', true);
+            } else {
+                juris.setState('validation.fields.name.error', false);
+                juris.setState('validation.fields.name.message', '');
+                juris.setState('validation.fields.email.error', false);
+                juris.setState('validation.fields.email.message', '');
+                juris.setState('validation.hasErrors', false);
+            }
+            updateStatus();
+        }
+
+        function addTask() {
+            const input = document.getElementById('new-task-input');
+            const priority = document.getElementById('task-priority').value;
+            const title = input.value.trim();
+            
+            if (!title) return;
+            
+            const taskId = taskCounter++;
+            
+            // Add to state
+            juris.setState(`tasks.${taskId}`, {
+                completed: false,
+                title: title
+            });
+            
+            // Create DOM element
+            const taskItem = document.createElement('div');
+            taskItem.className = 'task-item';
+            taskItem.dataset.taskId = taskId;
+            taskItem.dataset.priority = priority;
+            taskItem.innerHTML = `
+                <input type="checkbox" class="task-checkbox">
+                <span class="task-text">${title}</span>
+                <span class="task-priority">${priority.toUpperCase()}</span>
+                <button class="delete-btn">Delete</button>
+            `;
+            
+            document.getElementById('task-list').appendChild(taskItem);
+            input.value = '';
+            
+            console.log(`Added task: ${title} (${priority})`);
+        }
+
+        function updateStatus() {
+            document.getElementById('tasks-visible').textContent = juris.getState('ui.tasksVisible');
+            document.getElementById('strikethrough').textContent = juris.getState('ui.strikethrough');
+            document.getElementById('form-errors').textContent = juris.getState('validation.hasErrors');
+        }
+
+        // Initialize status display
+        updateStatus();
+
+        // Log enhancement stats
+        console.log('Enhancement Stats:', juris.getEnhancementStats());
+        console.log('Juris instance:', juris);
+    </script>
+</body>
+</html>

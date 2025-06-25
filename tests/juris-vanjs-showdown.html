@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris vs VanJS - Performance Showdown</title>
+    <script src="https://unpkg.com/juris@0.5.2/juris.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/vanjs-org/van/public/van-1.5.2.nomodule.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 3rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .vs {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            text-align: center;
+        }
+
+        .metric-title {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .frameworks {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .framework {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .framework h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .framework-info {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .test-area {
+            min-height: 180px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+
+        .item {
+            padding: 4px 8px;
+            margin: 2px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .info {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .winner {
+            background: rgba(0,255,0,0.2);
+            border-color: rgba(0,255,0,0.5);
+        }
+
+        .comparison-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .frameworks {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                gap: 10px;
+            }
+            
+            button {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Juris <span class="vs">VS</span> VanJS</h1>
+        <div class="subtitle">Performance & Memory Showdown</div>
+        
+        <div class="controls">
+            <button onclick="startBenchmark(100)">Light Test (100 items)</button>
+            <button onclick="startBenchmark(500)">Medium Test (500 items)</button>
+            <button onclick="startBenchmark(1000)">Heavy Test (1K items)</button>
+            <button onclick="startBenchmark(2500)">Stress Test (2.5K items)</button>
+            <button onclick="clearTests()">Clear All</button>
+        </div>
+
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-title">Current FPS</div>
+                <div class="metric-value" id="fps">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Memory Usage (MB)</div>
+                <div class="metric-value" id="memory">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Juris Render (ms)</div>
+                <div class="metric-value" id="juris-time">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">VanJS Render (ms)</div>
+                <div class="metric-value" id="vanjs-time">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Winner</div>
+                <div class="metric-value" id="winner">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Speed Diff</div>
+                <div class="metric-value" id="speed-diff">0%</div>
+            </div>
+        </div>
+
+        <div class="frameworks">
+            <div class="framework" id="juris-framework">
+                <h3>🏛️ Juris v0.5.2</h3>
+                <div class="framework-info">Object-first reactive framework<br>Fine-grained & batch modes</div>
+                <div class="test-area" id="juris-area"></div>
+            </div>
+            <div class="framework" id="vanjs-framework">
+                <h3>🍦 VanJS v1.5.2</h3>
+                <div class="framework-info">1.0kB reactive framework<br>Direct DOM manipulation</div>
+                <div class="test-area" id="vanjs-area"></div>
+            </div>
+        </div>
+
+        <div class="comparison-stats">
+            <div class="stat">
+                <strong>Framework Size</strong><br>
+                Juris: ~15kB<br>
+                VanJS: 1.0kB
+            </div>
+            <div class="stat">
+                <strong>Architecture</strong><br>
+                Juris: Object-first<br>
+                VanJS: Function-based
+            </div>
+            <div class="stat">
+                <strong>State Management</strong><br>
+                Juris: Advanced<br>
+                VanJS: Simple
+            </div>
+            <div class="stat">
+                <strong>Learning Curve</strong><br>
+                Juris: Moderate<br>
+                VanJS: Minimal
+            </div>
+        </div>
+
+        <div class="info">
+            <p><strong>Test Details:</strong> DOM creation & manipulation performance with reactive state updates</p>
+            <p>Juris uses fine-grained mode for optimal compatibility. VanJS uses direct DOM operations.</p>
+            <p>Both frameworks create reactive components with state-driven rendering.</p>
+        </div>
+    </div>
+
+    <script>
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let animationId;
+        let jurisInstance;
+        let currentItemCount = 0;
+
+        // Wait for libraries to load, then initialize
+        window.addEventListener('load', function() {
+            // Check if libraries are loaded
+            if (typeof Juris === 'undefined') {
+                console.error('Juris library failed to load');
+                document.getElementById('juris-area').innerHTML = '<div style="color: red;">Juris failed to load</div>';
+            }
+            
+            if (typeof van === 'undefined') {
+                console.error('VanJS library failed to load');
+                document.getElementById('vanjs-area').innerHTML = '<div style="color: red;">VanJS failed to load</div>';
+            }
+            
+            // Initialize Juris
+            try {
+                if (typeof Juris !== 'undefined') {
+                    jurisInstance = new Juris({
+                        renderMode: 'fine-grained', // Use fine-grained for fairest comparison
+                        states: {
+                            items: []
+                        }
+                    });
+                    console.log('Juris initialized in', jurisInstance.getRenderMode(), 'mode');
+                }
+            } catch (error) {
+                console.error('Juris initialization failed:', error);
+            }
+            
+            // Test VanJS
+            if (typeof van !== 'undefined') {
+                console.log('VanJS loaded successfully:', van);
+            }
+        });
+
+        // FPS Counter
+        function updateFPS() {
+            frameCount++;
+            const currentTime = performance.now();
+            if (currentTime - lastTime >= 1000) {
+                const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                document.getElementById('fps').textContent = fps;
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+            animationId = requestAnimationFrame(updateFPS);
+        }
+
+        // Memory monitoring
+        function updateMemory() {
+            if (performance.memory) {
+                const memory = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+                document.getElementById('memory').textContent = memory;
+            } else {
+                document.getElementById('memory').textContent = 'N/A';
+            }
+        }
+
+        // Start monitoring
+        updateFPS();
+        setInterval(updateMemory, 500);
+
+        // Juris test with reactive state
+        function testJuris(itemCount) {
+            const startTime = performance.now();
+            const container = document.getElementById('juris-area');
+            
+            try {
+                // Clear previous content
+                container.innerHTML = '';
+                
+                // Create items data
+                const items = [];
+                for (let i = 0; i < itemCount; i++) {
+                    items.push({
+                        id: i,
+                        text: `Juris Item ${i + 1}`,
+                        value: Math.random().toFixed(4)
+                    });
+                }
+
+                // Update state
+                jurisInstance.setState('items', items);
+
+                // Create reactive component using object syntax
+                const itemList = items.map(item => ({
+                    div: {
+                        className: 'item',
+                        text: `${item.text} - ${item.value}`,
+                        style: { 
+                            opacity: 0.8 + (parseFloat(item.value) * 0.2)
+                        }
+                    }
+                }));
+
+                // Render using Juris object-to-html conversion
+                itemList.forEach(itemVNode => {
+                    const element = jurisInstance.objectToHtml(itemVNode);
+                    if (element) {
+                        container.appendChild(element);
+                    }
+                });
+
+                const endTime = performance.now();
+                const renderTime = (endTime - startTime).toFixed(2);
+                document.getElementById('juris-time').textContent = renderTime;
+                
+                return parseFloat(renderTime);
+
+            } catch (error) {
+                console.error('Juris test failed:', error);
+                const endTime = performance.now();
+                const renderTime = (endTime - startTime).toFixed(2);
+                document.getElementById('juris-time').textContent = renderTime + ' (E)';
+                return parseFloat(renderTime);
+            }
+        }
+
+        // VanJS test with reactive state
+        function testVanJS(itemCount) {
+            const startTime = performance.now();
+            const container = document.getElementById('vanjs-area');
+            
+            // Check if VanJS is available
+            if (typeof van === 'undefined') {
+                console.error('VanJS is not loaded');
+                container.innerHTML = '<div style="color: red;">VanJS library not loaded</div>';
+                return 999; // Return high time to indicate failure
+            }
+            
+            try {
+                // Clear previous content
+                container.innerHTML = '';
+                
+                // Create VanJS elements directly
+                for (let i = 0; i < itemCount; i++) {
+                    const value = Math.random().toFixed(4);
+                    const opacity = 0.8 + (parseFloat(value) * 0.2);
+                    
+                    const item = van.tags.div({
+                        class: 'item',
+                        style: `opacity: ${opacity}`
+                    }, `VanJS Item ${i + 1} - ${value}`);
+                    
+                    van.add(container, item);
+                }
+                
+                const endTime = performance.now();
+                const renderTime = (endTime - startTime).toFixed(2);
+                document.getElementById('vanjs-time').textContent = renderTime;
+                
+                return parseFloat(renderTime);
+
+            } catch (error) {
+                console.error('VanJS test failed:', error);
+                const endTime = performance.now();
+                const renderTime = (endTime - startTime).toFixed(2);
+                document.getElementById('vanjs-time').textContent = renderTime + ' (E)';
+                return parseFloat(renderTime);
+            }
+        }
+
+        // Update winner display
+        function updateWinner(jurisTime, vanjsTime) {
+            const jurisCard = document.getElementById('juris-framework');
+            const vanjsCard = document.getElementById('vanjs-framework');
+            const winnerEl = document.getElementById('winner');
+            const speedDiffEl = document.getElementById('speed-diff');
+            
+            // Remove previous winner classes
+            jurisCard.classList.remove('winner');
+            vanjsCard.classList.remove('winner');
+            
+            if (jurisTime < vanjsTime) {
+                winnerEl.textContent = 'Juris';
+                jurisCard.classList.add('winner');
+                const diff = ((vanjsTime - jurisTime) / vanjsTime * 100).toFixed(1);
+                speedDiffEl.textContent = `+${diff}%`;
+            } else {
+                winnerEl.textContent = 'VanJS';
+                vanjsCard.classList.add('winner');
+                const diff = ((jurisTime - vanjsTime) / jurisTime * 100).toFixed(1);
+                speedDiffEl.textContent = `+${diff}%`;
+            }
+        }
+
+        // Run benchmark
+        function startBenchmark(itemCount) {
+            console.log(`Starting benchmark with ${itemCount} items...`);
+            currentItemCount = itemCount;
+            
+            // Clear previous winner styles
+            document.getElementById('juris-framework').classList.remove('winner');
+            document.getElementById('vanjs-framework').classList.remove('winner');
+            
+            // Add small delay to ensure clean start
+            setTimeout(() => {
+                const jurisTime = testJuris(itemCount);
+                
+                setTimeout(() => {
+                    const vanjsTime = testVanJS(itemCount);
+                    
+                    // Update winner
+                    updateWinner(jurisTime, vanjsTime);
+                    
+                    // Log results
+                    console.log(`Results for ${itemCount} items:`);
+                    console.log(`Juris: ${jurisTime}ms`);
+                    console.log(`VanJS: ${vanjsTime}ms`);
+                    
+                    const winner = jurisTime < vanjsTime ? 'Juris' : 'VanJS';
+                    const margin = Math.abs(jurisTime - vanjsTime).toFixed(2);
+                    console.log(`Winner: ${winner} by ${margin}ms`);
+                    
+                }, 100);
+            }, 100);
+        }
+
+        // Clear test areas
+        function clearTests() {
+            document.getElementById('juris-area').innerHTML = '';
+            document.getElementById('vanjs-area').innerHTML = '';
+            document.getElementById('juris-time').textContent = '0';
+            document.getElementById('vanjs-time').textContent = '0';
+            document.getElementById('winner').textContent = '-';
+            document.getElementById('speed-diff').textContent = '0%';
+            
+            // Remove winner classes
+            document.getElementById('juris-framework').classList.remove('winner');
+            document.getElementById('vanjs-framework').classList.remove('winner');
+            
+            currentItemCount = 0;
+        }
+
+        // Add some background animation for FPS counter
+        function animate() {
+            const time = Date.now() * 0.001;
+            const frameworks = document.querySelectorAll('.framework');
+            frameworks.forEach((framework, index) => {
+                const offset = Math.sin(time + index) * 1;
+                framework.style.transform = `translateY(${offset}px)`;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        console.log('Juris vs VanJS Performance Showdown loaded!');
+        console.log('Waiting for libraries to initialize...');
+    </script>
+</body>
+</html>

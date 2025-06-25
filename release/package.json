@@ -1,6 +1,6 @@
 {
   "name": "juris",
-  "version": "0.5.1",
+  "version": "0.7.0",
   "description": "JavaScript Unified Reactive Interface Solution - Transforms web development through comprehensive object-first architecture that makes reactivity an intentional choice rather than automatic behavior",
   "main": "juris.js",
   "type": "module",
