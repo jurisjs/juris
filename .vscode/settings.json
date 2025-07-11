@@ -1,0 +1,383 @@
+{
+	"json.schemas": [
+		{
+			"fileMatch": ["*.js,*.component.js", "*.component.ts"],
+			"schema": {
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"title": "Juris VDOM Component",
+				"description": "Juris Object VDOM structure with formatting conventions",
+				"type": "object",
+				"properties": {
+					"div": { "$ref": "#/definitions/DivElement" },
+					"button": { "$ref": "#/definitions/ButtonElement" },
+					"p": { "$ref": "#/definitions/TextElement" },
+					"span": { "$ref": "#/definitions/TextElement" },
+					"input": { "$ref": "#/definitions/InputElement" },
+					"form": { "$ref": "#/definitions/FormElement" },
+					"ul": { "$ref": "#/definitions/ListElement" },
+					"ol": { "$ref": "#/definitions/ListElement" },
+					"li": { "$ref": "#/definitions/ListItemElement" },
+					"img": { "$ref": "#/definitions/ImageElement" },
+					"a": { "$ref": "#/definitions/LinkElement" },
+					"h1": { "$ref": "#/definitions/TextElement" },
+					"h2": { "$ref": "#/definitions/TextElement" },
+					"h3": { "$ref": "#/definitions/TextElement" },
+					"h4": { "$ref": "#/definitions/TextElement" },
+					"h5": { "$ref": "#/definitions/TextElement" },
+					"h6": { "$ref": "#/definitions/TextElement" }
+				},
+				"definitions": {
+					"BaseElementProps": {
+						"type": "object",
+						"description": "Base properties for all Juris elements. Static & short props should be inline.",
+						"properties": {
+							"id": {
+								"type": "string",
+								"description": "Element ID (inline if short)"
+							},
+							"className": {
+								"type": "string",
+								"description": "CSS classes (inline if short)"
+							},
+							"role": {
+								"type": "string",
+								"enum": [
+									"button",
+									"tab",
+									"tabpanel",
+									"tablist",
+									"navigation",
+									"main",
+									"banner",
+									"contentinfo"
+								],
+								"description": "ARIA role (inline)"
+							},
+							"aria-label": {
+								"type": ["string", "object"],
+								"description": "ARIA label - use function for reactive: () => getState('path')"
+							},
+							"aria-controls": { "type": "string" },
+							"aria-selected": {
+								"type": ["string", "boolean", "object"],
+								"description": "Use function for reactive: () => getState('selected')"
+							},
+							"tabIndex": {
+								"type": ["number", "object"],
+								"description": "Tab index - use function for reactive"
+							},
+							"hidden": {
+								"type": ["boolean", "object"],
+								"description": "Hidden state - use function for reactive"
+							},
+							"style": {
+								"type": ["object"],
+								"description": "CSS styles object (inline if simple, newline if complex)"
+							},
+							"data-testid": { "type": "string" },
+							"data-id": { "type": "string" }
+						}
+					},
+					"ReactiveProps": {
+						"type": "object",
+						"description": "Properties that should be on new lines with reactive functions",
+						"properties": {
+							"text": {
+								"type": ["string", "object"],
+								"description": "NEWLINE: Text content - use () => getState('text') for reactive"
+							},
+							"children": {
+								"type": ["array", "object"],
+								"description": "NEWLINE: Child elements - use () => [...] for reactive"
+							},
+							"innerHTML": {
+								"type": ["string", "object"],
+								"description": "NEWLINE: Inner HTML - use () => getState('html') for reactive"
+							},
+							"value": {
+								"type": ["string", "number", "boolean", "object"],
+								"description": "NEWLINE: Input value - use () => getState('inputValue') for reactive"
+							},
+							"checked": {
+								"type": ["boolean", "object"],
+								"description": "NEWLINE: Checkbox state - use () => getState('isChecked') for reactive"
+							},
+							"disabled": {
+								"type": ["boolean", "object"],
+								"description": "NEWLINE: Disabled state - use () => getState('isDisabled') for reactive"
+							},
+							"src": {
+								"type": ["string", "object"],
+								"description": "NEWLINE: Image/media source - use () => getState('imageSrc') for reactive"
+							}
+						}
+					},
+					"EventHandlers": {
+						"type": "object",
+						"description": "Event handlers - always on new lines",
+						"properties": {
+							"onClick": {
+								"type": "object",
+								"description": "NEWLINE: Click handler - () => handleClick()"
+							},
+							"onInput": {
+								"type": "object",
+								"description": "NEWLINE: Input handler - (e) => setState('value', e.target.value)"
+							},
+							"onChange": {
+								"type": "object",
+								"description": "NEWLINE: Change handler"
+							},
+							"onSubmit": {
+								"type": "object",
+								"description": "NEWLINE: Form submit handler"
+							},
+							"onFocus": { "type": "object" },
+							"onBlur": { "type": "object" },
+							"onMouseEnter": { "type": "object" },
+							"onMouseLeave": { "type": "object" }
+						}
+					},
+					"DivElement": {
+						"allOf": [
+							{ "$ref": "#/definitions/BaseElementProps" },
+							{ "$ref": "#/definitions/ReactiveProps" },
+							{ "$ref": "#/definitions/EventHandlers" }
+						],
+						"description": "Div container - add //div.className comment at closing brace"
+					},
+					"ButtonElement": {
+						"allOf": [
+							{ "$ref": "#/definitions/BaseElementProps" },
+							{ "$ref": "#/definitions/ReactiveProps" },
+							{ "$ref": "#/definitions/EventHandlers" }
+						],
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": ["button", "submit", "reset"],
+								"description": "Button type (inline)"
+							}
+						},
+						"description": "Button element - add //button comment at closing brace"
+					},
+					"InputElement": {
+						"allOf": [
+							{ "$ref": "#/definitions/BaseElementProps" },
+							{ "$ref": "#/definitions/ReactiveProps" },
+							{ "$ref": "#/definitions/EventHandlers" }
+						],
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": [
+									"text",
+									"email",
+									"password",
+									"number",
+									"tel",
+									"url",
+									"search",
+									"checkbox",
+									"radio"
+								],
+								"description": "Input type (inline)"
+							},
+							"placeholder": {
+								"type": ["string", "object"],
+								"description": "Placeholder text (inline if static, newline if reactive)"
+							},
+							"required": { "type": ["boolean", "object"] },
+							"min": { "type": ["string", "number"] },
+							"max": { "type": ["string", "number"] },
+							"step": { "type": ["string", "number"] }
+						},
+						"description": "Input element - add //input comment at closing brace"
+					},
+					"TextElement": {
+						"allOf": [
+							{ "$ref": "#/definitions/BaseElementProps" },
+							{ "$ref": "#/definitions/ReactiveProps" },
+							{ "$ref": "#/definitions/EventHandlers" }
+						],
+						"description": "Text elements (p, h1-h6, span) - add //tagName comment at closing brace"
+					},
+					"FormElement": {
+						"allOf": [
+							{ "$ref": "#/definitions/BaseElementProps" },
+							{ "$ref": "#/definitions/ReactiveProps" },
+							{ "$ref": "#/definitions/EventHandlers" }
+						],
+						"properties": {
+							"action": { "type": ["string", "object"] },
+							"method": { "type": "string", "enum": ["get", "post"] }
+						},
+						"description": "Form element - add //form comment at closing brace"
+					},
+					"ListElement": {
+						"allOf": [
+							{ "$ref": "#/definitions/BaseElementProps" },
+							{ "$ref": "#/definitions/ReactiveProps" },
+							{ "$ref": "#/definitions/EventHandlers" }
+						],
+						"description": "List elements (ul, ol) - add //ul or //ol comment at closing brace"
+					},
+					"ListItemElement": {
+						"allOf": [
+							{ "$ref": "#/definitions/BaseElementProps" },
+							{ "$ref": "#/definitions/ReactiveProps" },
+							{ "$ref": "#/definitions/EventHandlers" }
+						],
+						"properties": {
+							"value": {
+								"type": "number",
+								"description": "List item value for ordered lists"
+							}
+						},
+						"description": "List item (li) - add //li comment at closing brace"
+					},
+					"ImageElement": {
+						"allOf": [
+							{ "$ref": "#/definitions/BaseElementProps" },
+							{ "$ref": "#/definitions/EventHandlers" }
+						],
+						"properties": {
+							"src": {
+								"type": ["string", "object"],
+								"description": "NEWLINE: Image source - use () => getState('imgSrc') for reactive"
+							},
+							"alt": {
+								"type": ["string", "object"],
+								"description": "Alt text (inline if static, newline if reactive)"
+							},
+							"width": { "type": ["number", "string"] },
+							"height": { "type": ["number", "string"] },
+							"loading": { "type": "string", "enum": ["lazy", "eager"] }
+						},
+						"description": "Image element - add //img comment at closing brace"
+					},
+					"LinkElement": {
+						"allOf": [
+							{ "$ref": "#/definitions/BaseElementProps" },
+							{ "$ref": "#/definitions/ReactiveProps" },
+							{ "$ref": "#/definitions/EventHandlers" }
+						],
+						"properties": {
+							"href": {
+								"type": ["string", "object"],
+								"description": "NEWLINE: Link URL - use () => getState('url') for reactive"
+							},
+							"target": {
+								"type": "string",
+								"enum": ["_blank", "_self", "_parent", "_top"]
+							},
+							"rel": { "type": "string" }
+						},
+						"description": "Link element - add //a comment at closing brace"
+					},
+					"ComponentChild": {
+						"oneOf": [
+							{
+								"type": "object",
+								"properties": { "div": { "$ref": "#/definitions/DivElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": {
+									"button": { "$ref": "#/definitions/ButtonElement" }
+								},
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "p": { "$ref": "#/definitions/TextElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": {
+									"span": { "$ref": "#/definitions/TextElement" }
+								},
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": {
+									"input": { "$ref": "#/definitions/InputElement" }
+								},
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": {
+									"form": { "$ref": "#/definitions/FormElement" }
+								},
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "ul": { "$ref": "#/definitions/ListElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "ol": { "$ref": "#/definitions/ListElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": {
+									"li": { "$ref": "#/definitions/ListItemElement" }
+								},
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": {
+									"img": { "$ref": "#/definitions/ImageElement" }
+								},
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "a": { "$ref": "#/definitions/LinkElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "h1": { "$ref": "#/definitions/TextElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "h2": { "$ref": "#/definitions/TextElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "h3": { "$ref": "#/definitions/TextElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "h4": { "$ref": "#/definitions/TextElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "h5": { "$ref": "#/definitions/TextElement" } },
+								"additionalProperties": false
+							},
+							{
+								"type": "object",
+								"properties": { "h6": { "$ref": "#/definitions/TextElement" } },
+								"additionalProperties": false
+							}
+						]
+					}
+				}
+			}
+		}
+	]
+}

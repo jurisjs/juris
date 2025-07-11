@@ -1,7 +1,7 @@
 {
   "name": "juris",
-  "version": "0.8.0",
-  "description": "JavaScript Unified Reactive Interface Solution - A non-blocking reactive framework. Transforms web development through comprehensive object-first architecture that makes reactivity an intentional choice rather than automatic behavior",
+  "version": "0.82.0",
+  "description": "JavaScript Unified Reactive Interface Solution - A non-blocking reactive and TypeSafe without build framework. Transforms web development through comprehensive object-first architecture that makes reactivity an intentional choice rather than automatic behavior",
   "main": "juris.js",
   "type": "module",
   "browser": "juris.js",

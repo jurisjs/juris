@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Juris Test Interface - Pure Juris Implementation</title>
-    <!--script src="../src/juris.mini.js"></script-->
     <script src="../src/juris.js"></script>
+    <!--script src="../src/juris.js"></script-->
+    <!--script src="https://unpkg.com/juris@0.8.1/juris.js"></script-->
     <!-- Prism.js for syntax highlighting -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
@@ -90,6 +91,7 @@
     <div id="app"></div>
 
     <script>
+        let assertionCount = 0;
         // Test Framework Implementation
         class JurisTestFramework {
             constructor() {
@@ -130,6 +132,7 @@
             }
 
             assert(condition, message) {
+                assertionCount++;
                 const assertion = { condition, message, passed: condition };
                 this.assertions.push(assertion);
                 
@@ -141,6 +144,7 @@
             }
 
             async runTest(testName) {
+                this.assertionCount=0;
                 const test = this.tests.get(testName);
                 if (!test) return;
 
@@ -9162,8 +9166,813 @@ juris.componentManager.clearAsyncPropsCache();  // Clear cache
 // Cache key based on prop structure`);
 
 
+// =============================================================================
+// JURIS EXECUTEBATCH TEST SNIPPETS
+// =============================================================================
+
+// Basic executeBatch functionality test
+testFramework.addTest('Basic ExecuteBatch Operation', 'State Management', async function() {
+    const juris = new Juris();
+    let renderCount = 0;
+    
+    // Subscribe to track renders
+    juris.subscribe('counter', () => renderCount++);
+    
+    // Execute multiple state updates in a batch
+    juris.executeBatch(() => {
+        juris.setState('counter.value', 10);
+        juris.setState('counter.step', 2);
+        juris.setState('counter.label', 'Test Counter');
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Should only render once despite 3 state changes
+    testFramework.expect(renderCount).toBe(1);
+    testFramework.expect(juris.getState('counter.value')).toBe(10);
+    testFramework.expect(juris.getState('counter.step')).toBe(2);
+    testFramework.expect(juris.getState('counter.label')).toBe('Test Counter');
+}, `const juris = new Juris();
+let renderCount = 0;
+
+juris.subscribe('counter', () => renderCount++);
+
+juris.executeBatch(() => {
+    juris.setState('counter.value', 10);
+    juris.setState('counter.step', 2);
+    juris.setState('counter.label', 'Test Counter');
+});
+
+// Only 1 render despite 3 state changes
+testFramework.expect(renderCount).toBe(1);`);
+
+// Nested batch operations test
+testFramework.addTest('Nested ExecuteBatch Operations', 'State Management', async function() {
+    const juris = new Juris();
+    let renderCount = 0;
+    
+    juris.subscribe('user', () => renderCount++);
+    
+    juris.executeBatch(() => {
+        juris.setState('user.name', 'John');
+        juris.setState('user.age', 30);
+        
+        // Nested batch should work seamlessly
+        juris.executeBatch(() => {
+            juris.setState('user.email', 'john@example.com');
+            juris.setState('user.active', true);
+        });
+        
+        juris.setState('user.role', 'admin');
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(renderCount).toBe(1);
+    testFramework.expect(juris.getState('user.name')).toBe('John');
+    testFramework.expect(juris.getState('user.email')).toBe('john@example.com');
+    testFramework.expect(juris.getState('user.active')).toBe(true);
+}, `juris.executeBatch(() => {
+    juris.setState('user.name', 'John');
+    
+    // Nested batches work seamlessly
+    juris.executeBatch(() => {
+        juris.setState('user.email', 'john@example.com');
+        juris.setState('user.active', true);
+    });
+    
+    juris.setState('user.role', 'admin');
+});`);
+
+testFramework.addTest('ExecuteBatch with Component Updates', 'Components', async function() {
+    const juris = new Juris();
+    let componentRenderCount = 0;
+    
+    juris.registerComponent('Counter', (props, context) => {
+        componentRenderCount++;
+        const { getState } = context;
+        
+        return {
+            div: {
+                text: () => `Count: ${getState('counter.value', 0)}, Step: ${getState('counter.step', 1)}`
+            }
+        };
+    });
+    
+    const container = document.createElement('div');
+    const element = juris.componentManager.create('Counter');
+    container.appendChild(element);
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    juris.executeBatch(() => {
+        juris.setState('counter.value', 5);
+        juris.setState('counter.step', 3);
+        juris.setState('counter.max', 100);
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 20));
+    
+    // Component renders only once (when created), not on state changes
+    testFramework.expect(componentRenderCount).toBe(1);
+    testFramework.expect(element.textContent).toContain('Count: 5');
+    testFramework.expect(element.textContent).toContain('Step: 3');
+}, `const element = juris.componentManager.create('Counter');
+container.appendChild(element);
+
+juris.executeBatch(() => {
+    juris.setState('counter.value', 5);
+    juris.setState('counter.step', 3);
+    juris.setState('counter.max', 100);
+});
+
+// Component renders only once (when created)`);
+
+// Batch with async operations
+testFramework.addTest('ExecuteBatch with Async Operations', 'State Management', async function() {
+    const juris = new Juris();
+    let renderCount = 0;
+    
+    juris.subscribe('data', () => renderCount++);
+    
+    // Batch with async operations inside
+    juris.executeBatch(async () => {
+        juris.setState('data.loading', true);
+        
+        // Simulate async operation
+        const result = await new Promise(resolve => 
+            setTimeout(() => resolve({ id: 1, name: 'Test Data' }), 5)
+        );
+        
+        juris.setState('data.result', result);
+        juris.setState('data.loading', false);
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    testFramework.expect(juris.getState('data.loading')).toBe(false);
+    testFramework.expect(juris.getState('data.result.name')).toBe('Test Data');
+    testFramework.expect(renderCount).toBeLessThan(4); // Should batch most updates
+}, `juris.executeBatch(async () => {
+    juris.setState('data.loading', true);
+    
+    const result = await fetchData();
+    
+    juris.setState('data.result', result);
+    juris.setState('data.loading', false);
+});`);
+
+// Batch error handling
+testFramework.addTest('ExecuteBatch Error Handling', 'State Management', async function() {
+    const juris = new Juris();
+    let errorCaught = false;
+    
+    try {
+        juris.executeBatch(() => {
+            juris.setState('valid.data', 'test');
+            throw new Error('Batch operation failed');
+            juris.setState('invalid.data', 'should not be set');
+        });
+    } catch (error) {
+        errorCaught = true;
+        testFramework.expect(error.message).toBe('Batch operation failed');
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(errorCaught).toBe(true);
+    testFramework.expect(juris.getState('valid.data')).toBe('test');
+    testFramework.expect(juris.getState('invalid.data')).toBe(null);
+}, `try {
+    juris.executeBatch(() => {
+        juris.setState('valid.data', 'test');
+        throw new Error('Batch operation failed');
+        juris.setState('invalid.data', 'should not be set');
+    });
+} catch (error) {
+    // Error is caught, valid data persists
+}`);
+
+// Batch performance comparison
+testFramework.addTest('ExecuteBatch Performance Comparison', 'Performance', async function() {
+    const juris = new Juris();
+    let batchedRenderCount = 0;
+    let individualRenderCount = 0;
+    
+    // Test batched updates first
+    juris.subscribe('test', () => batchedRenderCount++);
+    
+    const startBatched = performance.now();
+    juris.executeBatch(() => {
+        for (let i = 0; i < 50; i++) {
+            juris.setState(`test.item${i}`, i);
+        }
+    });
+    await new Promise(resolve => setTimeout(resolve, 10));
+    const batchedTime = performance.now() - startBatched;
+    
+    // Test individual updates
+    const juris2 = new Juris();
+    juris2.subscribe('individual', () => individualRenderCount++);
+    
+    const startIndividual = performance.now();
+    for (let i = 0; i < 50; i++) {
+        juris2.setState(`individual.item${i}`, i);
+        // Small delay to ensure each update is processed separately
+        await new Promise(resolve => setTimeout(resolve, 1));
+    }
+    const individualTime = performance.now() - startIndividual;
+    
+    // Batched should have significantly fewer renders
+    testFramework.expect(batchedRenderCount).toBe(1);
+    testFramework.expect(individualRenderCount).toBeGreaterThan(40); // Allow some tolerance
+    testFramework.expect(individualRenderCount).toBeLessThanOrEqual(50);
+    
+    console.log(`Batched renders: ${batchedRenderCount}, Individual renders: ${individualRenderCount}`);
+    console.log(`Batched time: ${batchedTime.toFixed(2)}ms, Individual time: ${individualTime.toFixed(2)}ms`);
+}, `// Individual updates: ~50 renders (one per setState)
+for (let i = 0; i < 50; i++) {
+    juris.setState(\`individual.item\${i}\`, i);
+    await new Promise(resolve => setTimeout(resolve, 1));
+}
+
+// Batched updates: 1 render (all updates batched)
+juris.executeBatch(() => {
+    for (let i = 0; i < 50; i++) {
+        juris.setState(\`test.item\${i}\`, i);
+    }
+});`);
+
+// Batch with conditional updates
+testFramework.addTest('ExecuteBatch with Conditional Updates', 'State Management', async function() {
+    const juris = new Juris();
+    let renderCount = 0;
+    
+    juris.subscribe('settings', () => renderCount++);
+    
+    const userType = 'admin';
+    const isActive = true;
+    
+    juris.executeBatch(() => {
+        juris.setState('settings.theme', 'dark');
+        
+        if (userType === 'admin') {
+            juris.setState('settings.adminPanel', true);
+            juris.setState('settings.permissions', ['read', 'write', 'delete']);
+        }
+        
+        if (isActive) {
+            juris.setState('settings.lastLogin', new Date().toISOString());
+            juris.setState('settings.status', 'online');
+        }
+        
+        juris.setState('settings.version', '1.0.0');
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(renderCount).toBe(1);
+    testFramework.expect(juris.getState('settings.adminPanel')).toBe(true);
+    testFramework.expect(juris.getState('settings.permissions')).toHaveLength(3);
+    testFramework.expect(juris.getState('settings.status')).toBe('online');
+}, `const userType = 'admin';
+const isActive = true;
+
+juris.executeBatch(() => {
+    juris.setState('settings.theme', 'dark');
+    
+    if (userType === 'admin') {
+        juris.setState('settings.adminPanel', true);
+        juris.setState('settings.permissions', ['read', 'write', 'delete']);
+    }
+    
+    if (isActive) {
+        juris.setState('settings.status', 'online');
+    }
+});`);
+
+// Batch with middleware
+testFramework.addTest('ExecuteBatch with Middleware', 'State Management', async function() {
+    let middlewareCallCount = 0;
+    
+    const loggingMiddleware = ({ path, newValue }) => {
+        middlewareCallCount++;
+        console.log(`State change: ${path} = ${newValue}`);
+        return newValue;
+    };
+    
+    const juris = new Juris({
+        middleware: [loggingMiddleware]
+    });
+    
+    juris.executeBatch(() => {
+        juris.setState('user.name', 'Alice');
+        juris.setState('user.email', 'alice@example.com');
+        juris.setState('user.preferences.theme', 'light');
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Middleware should be called for each state change
+    testFramework.expect(middlewareCallCount).toBe(3);
+    testFramework.expect(juris.getState('user.name')).toBe('Alice');
+    testFramework.expect(juris.getState('user.preferences.theme')).toBe('light');
+}, `const loggingMiddleware = ({ path, newValue }) => {
+    console.log(\`State change: \${path} = \${newValue}\`);
+    return newValue;
+};
+
+const juris = new Juris({ middleware: [loggingMiddleware] });
+
+juris.executeBatch(() => {
+    juris.setState('user.name', 'Alice');
+    juris.setState('user.email', 'alice@example.com');
+    juris.setState('user.preferences.theme', 'light');
+});`);
+
+// Complex batch scenario with form data
+testFramework.addTest('Complex Form Data Batch Update', 'Real-world Usage', async function() {
+    const juris = new Juris();
+    let validationRuns = 0;
+    let renderCount = 0;
+    
+    // Simulate form validation
+    juris.subscribe('form', () => {
+        renderCount++;
+        const name = juris.getState('form.name');
+        const email = juris.getState('form.email');
+        const age = juris.getState('form.age');
+        
+        validationRuns++;
+        
+        // Validation logic would run here
+        const isValid = name && email && age >= 18;
+        juris.setState('form.isValid', isValid);
+    });
+    
+    // Simulate user filling out form quickly
+    juris.executeBatch(() => {
+        juris.setState('form.name', 'John Doe');
+        juris.setState('form.email', 'john@example.com');
+        juris.setState('form.age', 25);
+        juris.setState('form.country', 'USA');
+        juris.setState('form.newsletter', true);
+        juris.setState('form.terms', true);
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 20));
+    
+    // Should trigger minimal validation runs due to batching
+    testFramework.expect(renderCount).toBeLessThan(3);
+    testFramework.expect(validationRuns).toBeLessThan(3);
+    testFramework.expect(juris.getState('form.isValid')).toBe(true);
+    testFramework.expect(juris.getState('form.name')).toBe('John Doe');
+}, `// Form updates batched to prevent multiple validations
+juris.executeBatch(() => {
+    juris.setState('form.name', 'John Doe');
+    juris.setState('form.email', 'john@example.com');
+    juris.setState('form.age', 25);
+    juris.setState('form.country', 'USA');
+    juris.setState('form.newsletter', true);
+    juris.setState('form.terms', true);
+});`);
+
+// Batch with array operations
+testFramework.addTest('ExecuteBatch with Array Operations', 'State Management', async function() {
+    const juris = new Juris();
+    let renderCount = 0;
+    
+    juris.subscribe('todos', () => renderCount++);
+    
+    // Initialize empty array
+    juris.setState('todos.items', []);
+    
+    await new Promise(resolve => setTimeout(resolve, 5));
+    
+    // Batch multiple array operations
+    juris.executeBatch(() => {
+        const currentTodos = juris.getState('todos.items', []);
+        
+        // Add multiple todos
+        const newTodos = [
+            ...currentTodos,
+            { id: 1, text: 'Learn Juris', completed: false },
+            { id: 2, text: 'Build app', completed: false },
+            { id: 3, text: 'Test thoroughly', completed: true }
+        ];
+        
+        juris.setState('todos.items', newTodos);
+        juris.setState('todos.count', newTodos.length);
+        juris.setState('todos.completed', newTodos.filter(t => t.completed).length);
+        juris.setState('todos.pending', newTodos.filter(t => !t.completed).length);
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Should render only twice (initial + batch)
+    testFramework.expect(renderCount).toBe(2);
+    testFramework.expect(juris.getState('todos.count')).toBe(3);
+    testFramework.expect(juris.getState('todos.completed')).toBe(1);
+    testFramework.expect(juris.getState('todos.pending')).toBe(2);
+}, `juris.executeBatch(() => {
+    const currentTodos = juris.getState('todos.items', []);
+    
+    const newTodos = [
+        ...currentTodos,
+        { id: 1, text: 'Learn Juris', completed: false },
+        { id: 2, text: 'Build app', completed: false }
+    ];
+    
+    juris.setState('todos.items', newTodos);
+    juris.setState('todos.count', newTodos.length);
+    juris.setState('todos.completed', newTodos.filter(t => t.completed).length);
+});`);
 
 
+// Test 1: Basic Element Parameter Access
+testFramework.addTest('Element Parameter in Reactive Attribute', 'DOM Rendering', async function() {
+   const juris = new Juris();
+   juris.setState('counter', 0);
+   
+   const vnode = {
+       div: {
+           children: [{ span: { text: 'child' } }],
+           className: (element) => {
+               const count = juris.getState('counter');
+               // Use element properties that are available at processing time
+               const tagName = element ? element.tagName.toLowerCase() : 'unknown';
+               return `${tagName}-${count}`;
+           }
+       }
+   };
+   
+   const element = juris.domRenderer.render(vnode);
+   testFramework.expect(element.className).toBe('div-0');
+   
+   juris.setState('counter', 5);
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(element.className).toBe('div-5');
+},`const juris = new Juris();
+   juris.setState('counter', 0);
+   
+   const vnode = {
+       div: {
+           children: [{ span: { text: 'child' } }],
+           className: (element) => {
+               const count = juris.getState('counter');
+               // Use element properties that are available at processing time
+               const tagName = element ? element.tagName.toLowerCase() : 'unknown';
+               return \`\${tagName}-\${count}\`;
+           }
+       }
+   };
+   
+   const element = juris.domRenderer.render(vnode);
+   testFramework.expect(element.className).toBe('div-0');
+   
+   juris.setState('counter', 5);
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(element.className).toBe('div-5');`);
+
+// Test 2: Backward Compatibility
+testFramework.addTest('Backward Compatibility with Non-Element Functions', 'DOM Rendering', async function() {
+    const juris = new Juris();
+    juris.setState('value', 'test');
+    
+    const vnode = {
+        div: {
+            // Old pattern - no element parameter
+            'data-old': () => juris.getState('value'),
+            // New pattern - with element parameter  
+            'data-new': (element) => element ? juris.getState('value') + '-enhanced' : juris.getState('value')
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.getAttribute('data-old')).toBe('test');
+    testFramework.expect(element.getAttribute('data-new')).toBe('test-enhanced');
+},`const juris = new Juris();
+    juris.setState('value', 'test');
+    
+    const vnode = {
+        div: {
+            // Old pattern - no element parameter
+            'data-old': () => juris.getState('value'),
+            // New pattern - with element parameter  
+            'data-new': (element) => element ? juris.getState('value') + '-enhanced' : juris.getState('value')
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.getAttribute('data-old')).toBe('test');
+    testFramework.expect(element.getAttribute('data-new')).toBe('test-enhanced');`);
+
+// Test 3: Performance Optimization - Skip Updates
+testFramework.addTest('Skip Unnecessary Updates with Element Inspection', 'DOM Rendering', async function() {
+    const juris = new Juris();
+    juris.setState('color', 'red');
+    let updateCount = 0;
+    
+    const vnode = {
+        div: {
+            style: (element) => {
+                updateCount++;
+                const newColor = juris.getState('color');
+                const currentColor = element && element.style.color;
+                
+                // Skip update if color hasn't actually changed
+                if (currentColor === newColor) {
+                    return 'ignore'; // Special return value
+                }
+                
+                return { color: newColor };
+            }
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.style.color).toBe('red');
+    
+    // Setting same value should be skipped
+    juris.setState('color', 'red');
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(updateCount).toBe(1); // Should not increment
+},`const juris = new Juris();
+    juris.setState('color', 'red');
+    let updateCount = 0;
+    
+    const vnode = {
+        div: {
+            style: (element) => {
+                updateCount++;
+                const newColor = juris.getState('color');
+                const currentColor = element && element.style.color;
+                
+                // Skip update if color hasn't actually changed
+                if (currentColor === newColor) {
+                    return 'ignore'; // Special return value
+                }
+                
+                return { color: newColor };
+            }
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.style.color).toBe('red');
+    
+    // Setting same value should be skipped
+    juris.setState('color', 'red');
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(updateCount).toBe(1); // Should not increment`);
+
+// Test 4: Element Context Awareness
+testFramework.addTest('Element Context Aware Validation', 'DOM Rendering', async function() {
+    const juris = new Juris();
+    juris.setState('formData', { email: 'invalid-email' });
+    
+    const vnode = {
+        input: {
+            type: 'email',
+            required: true,
+            name: 'email',
+            className: (element) => {
+                const formData = juris.getState('formData');
+                const fieldValue = formData[element.name];
+                const isRequired = element && element.hasAttribute('required');
+                const inputType = element && element.type;
+                
+                let classes = ['field'];
+                
+                if (isRequired && !fieldValue) {
+                    classes.push('field-required');
+                }
+                
+                if (inputType === 'email' && fieldValue && !fieldValue.includes('@')) {
+                    classes.push('field-invalid');
+                }
+                
+                return classes.join(' ');
+            }
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.className).toBe('field field-invalid');
+    
+    juris.setState('formData', { email: 'test@example.com' });
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(element.className).toBe('field');
+},`const juris = new Juris();
+    juris.setState('formData', { email: 'invalid-email' });
+    
+    const vnode = {
+        input: {
+            type: 'email',
+            required: true,
+            name: 'email',
+            className: (element) => {
+                const formData = juris.getState('formData');
+                const fieldValue = formData[element.name];
+                const isRequired = element && element.hasAttribute('required');
+                const inputType = element && element.type;
+                
+                let classes = ['field'];
+                
+                if (isRequired && !fieldValue) {
+                    classes.push('field-required');
+                }
+                
+                if (inputType === 'email' && fieldValue && !fieldValue.includes('@')) {
+                    classes.push('field-invalid');
+                }
+                
+                return classes.join(' ');
+            }
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.className).toBe('field field-invalid');
+    
+    juris.setState('formData', { email: 'test@example.com' });
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(element.className).toBe('field');`);
+
+// Test 5: SSR Compatibility
+testFramework.addTest('SSR Safe Element Parameter Handling', 'DOM Rendering', async function() {
+    const juris = new Juris();
+    juris.setState('text', 'hello');
+    
+    const vnode = {
+        div: {
+            className: (element) => {
+                const text = juris.getState('text');
+                // SSR safe - check if element exists
+                const hasElement = !!element;
+                return hasElement ? `client-${text}` : `server-${text}`;
+            }
+        }
+    };
+    
+    // Simulate SSR by passing null element (would need framework modification)
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.className).toBe('client-hello');
+},`const juris = new Juris();
+    juris.setState('text', 'hello');
+    
+    const vnode = {
+        div: {
+            className: (element) => {
+                const text = juris.getState('text');
+                // SSR safe - check if element exists
+                const hasElement = !!element;
+                return hasElement ? \`client-\${text}\` : \`server-\${text}\`;
+            }
+        }
+    };
+    
+    // Simulate SSR by passing null element (would need framework modification)
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.className).toBe('client-hello');`);
+
+// Test 6: Element Measurement Based Updates
+testFramework.addTest('Element Measurement Reactive Updates', 'DOM Rendering', async function() {
+    const juris = new Juris();
+    juris.setState('scale', 1);
+    
+    const vnode = {
+        div: {
+            style: { width: '200px', height: '100px' },
+            'data-scaled-width': (element) => {
+                const scale = juris.getState('scale');
+                // Force layout calculation or use fallback
+                const currentWidth = element && element.offsetWidth > 0 ? element.offsetWidth : 200;
+                return Math.floor(currentWidth * scale);
+            }
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    document.body.appendChild(element);
+    
+    // Force layout recalculation
+    element.offsetHeight; // Trigger reflow
+    
+    // Wait for layout
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
+    testFramework.expect(element.getAttribute('data-scaled-width')).toBe('200');
+    
+    juris.setState('scale', 2);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(element.getAttribute('data-scaled-width')).toBe('400');
+    
+    document.body.removeChild(element);
+},`testFramework.addTest('Element Measurement Reactive Updates', 'DOM Rendering', async function() {
+    const juris = new Juris();
+    juris.setState('scale', 1);
+    
+    const vnode = {
+        div: {
+            style: { width: '200px', height: '100px' },
+            'data-scaled-width': (element) => {
+                const scale = juris.getState('scale');
+                // Force layout calculation or use fallback
+                const currentWidth = element && element.offsetWidth > 0 ? element.offsetWidth : 200;
+                return Math.floor(currentWidth * scale);
+            }
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    document.body.appendChild(element);
+    
+    // Force layout recalculation
+    element.offsetHeight; // Trigger reflow
+    
+    // Wait for layout
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
+    testFramework.expect(element.getAttribute('data-scaled-width')).toBe('200');
+    
+    juris.setState('scale', 2);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(element.getAttribute('data-scaled-width')).toBe('400');
+    
+    document.body.removeChild(element);`);
+
+testFramework.addTest('Element Parameter in Reactive Children', 'DOM Rendering', async function() {
+    const juris = new Juris();
+    juris.setState('counter', 0);
+    
+    const vnode = {
+        div: {
+            children: (element) => {
+                const count = juris.getState('counter');
+                // Children function gets the element parameter
+                if (element && element.tagName === 'DIV') {
+                    return [
+                        { span: { text: `Child of ${element.tagName}: ${count}` } }
+                    ];
+                }
+                return [{ span: { text: `Unknown parent: ${count}` } }];
+            },
+            className: (element) => {
+                const count = juris.getState('counter');
+                // This runs before children, so element.children.length is still 0
+                return `container-${count}`;
+            }
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.children[0].textContent).toBe('Child of DIV: 0');
+    testFramework.expect(element.className).toBe('container-0');
+    
+    juris.setState('counter', 5);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(element.children[0].textContent).toBe('Child of DIV: 5');
+},`const juris = new Juris();
+    juris.setState('counter', 0);
+    
+    const vnode = {
+        div: {
+            children: (element) => {
+                const count = juris.getState('counter');
+                // Children function gets the element parameter
+                if (element && element.tagName === 'DIV') {
+                    return [
+                        { span: { text: \`Child of \${element.tagName}: \${count}\` } }
+                    ];
+                }
+                return [{ span: { text: \`Unknown parent: \${count}\` } }];
+            },
+            className: (element) => {
+                const count = juris.getState('counter');
+                // This runs before children, so element.children.length is still 0
+                return \`container-\${count}\`;
+            }
+        }
+    };
+    
+    const element = juris.domRenderer.render(vnode);
+    testFramework.expect(element.children[0].textContent).toBe('Child of DIV: 0');
+    testFramework.expect(element.className).toBe('container-0');
+    
+    juris.setState('counter', 5);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    testFramework.expect(element.children[0].textContent).toBe('Child of DIV: 5');`);
 
 }
 
@@ -9244,6 +10053,12 @@ juris.componentManager.clearAsyncPropsCache();  // Clear cache
                             span: {
                                 style: { color: '#888' },
                                 text: `(${total}/${testFramework.tests.size})`
+                            }
+                        },
+                        {
+                            span: {
+                                style: { color: '#888' },
+                                text: `Assertions: ${assertionCount}`
                             }
                         }
                     ];
@@ -9330,7 +10145,7 @@ juris.componentManager.clearAsyncPropsCache();  // Clear cache
                             }
                         }
                     },
-                    { 'TestSummary': {} }
+                    { TestSummary: {} }
                 ]
             }
         });

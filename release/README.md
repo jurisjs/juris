@@ -16,6 +16,7 @@ Transforms web development through its comprehensive object-first architecture t
 - **Automatic Async Support**: Built-in support for asynchronous operations all over the place
 - **Progressive Enhancement done Right**: Progressively enhance your applications with reactive features without editing your HTML
 - **Template Compilation**: Compiles your template at runtime to pure functional component
+- **TypeSafe**: IntelliSence and auto-suggestion that covers HTML and CSS Semantics and
 
 ## Installation
 
@@ -26,12 +27,12 @@ Transforms web development through its comprehensive object-first architecture t
 ```html
 <!-- Development version -->
 <script type="module">
-	import Juris from "https://unpkg.com/juris@0.8.0/juris.js";
+	import Juris from "https://unpkg.com/juris@0.82.0/juris.js";
 </script>
 
 <!-- Production version (minified) -->
 <script type="module">
-	import Juris from "https://unpkg.com/juris@0.8.0/juris.mini.js";
+	import Juris from "https://unpkg.com/juris@0.82.0/juris.mini.js";
 </script>
 ```
 
@@ -39,10 +40,10 @@ Transforms web development through its comprehensive object-first architecture t
 
 ```html
 <!-- Development version -->
-<script src="https://unpkg.com/juris@0.8.0/juris.js"></script>
+<script src="https://unpkg.com/juris@0.82.0/juris.js"></script>
 
 <!-- Production version (minified) -->
-<script src="https://unpkg.com/juris@0.8.0/juris.mini.js"></script>
+<script src="https://unpkg.com/juris@0.82.0/juris.mini.js"></script>
 <script>
 	// Juris is now available as a global variable
 </script>
@@ -61,7 +62,7 @@ import Juris from "juris";
 ## Usage
 
 ```javascript
-import Juris from "https://unpkg.com/juris@0.8.0/juris.js";
+import Juris from "https://unpkg.com/juris@0.82.0/juris.js";
 
 // Your implementation examples here
 ```

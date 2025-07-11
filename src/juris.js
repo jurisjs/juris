@@ -3,7 +3,7 @@
  * The only Non-Blocking Reactive Framework for JavaScript
  * Juris aims to eliminate build complexity from small to large applications.
  * Author: Resti Guay
- * Version: 0.8.0
+ * Version: 0.81.0
  * License: MIT
  * GitHub: https://github.com/jurisjs/juris
  * Website: https://jurisjs.com/
@@ -44,11 +44,11 @@
  *          onClick:()=>clickHandler()
  *        }}//button
  *        {input:{type:'text',min:'1', max:'10',
-            value: () => juris.getState('counter.step', 1), //note: reactive value
+                        value: () => juris.getState('counter.step', 1), //note: reactive value
  *          oninput: (e) => {
-                const newStep = parseInt(e.target.value) || 1;
-                juris.setState('counter.step', Math.max(1, Math.min(10, newStep)));
-            }
+                                const newStep = parseInt(e.target.value) || 1;
+                                juris.setState('counter.step', Math.max(1, Math.min(10, newStep)));
+                        }
  *        }}//input
  *      ]
  *   }}//div.main
@@ -57,7 +57,9 @@
 
 (function () {
     'use strict';
-
+    const jurisLinesOfCode = 2829; // Total lines of code in Juris
+    const jurisVersion = '0.82.0'; // Current version of Juris
+    const jurisMinifiedSize = '55.22 kB'; // Minified version of Juris
     // Utilities
     const isValidPath = path => typeof path === 'string' && path.trim().length > 0 && !path.includes('..');
     const getPathParts = path => path.split('.').filter(Boolean);
@@ -73,9 +75,6 @@
         }
         return false;
     };
-    const jurisLinesOfCode = 2559; // Total lines of code in Juris
-    const jurisVersion = '0.8.0'; // Current version of Juris
-    const jurisMinifiedSize = '50.63 kB'; // Minified version of Juris
     // the leanest and sophisticated logger
     const createLogger = () => {
         const s = [];
@@ -197,6 +196,40 @@
             this._setStateImmediate(path, value, context);
         }
 
+        executeBatch(callback) {
+            if (this.isBatching) {
+                // Already in a batch, just execute callback
+                return callback();
+            }
+
+            this.beginBatch();
+
+            try {
+                const result = callback();
+
+                // Handle Promise-returning callbacks
+                if (result && typeof result.then === 'function') {
+                    return result
+                        .then(value => {
+                            this.endBatch();
+                            return value;
+                        })
+                        .catch(error => {
+                            this.endBatch();
+                            throw error;
+                        });
+                }
+
+                // Synchronous callback
+                this.endBatch();
+                return result;
+
+            } catch (error) {
+                this.endBatch();
+                throw error;
+            }
+        }
+
         beginBatch() {
             console.debug(log.d('Manual batch started', {}, 'framework'));
             this.isBatching = true;
@@ -252,19 +285,14 @@
             this.isUpdating = true;
 
             const appliedUpdates = [];
+
             pathGroups.forEach(update => {
                 const oldValue = this.getState(update.path);
                 let finalValue = update.value;
 
                 for (const middleware of this.middleware) {
                     try {
-                        const result = middleware({
-                            path: update.path,
-                            oldValue,
-                            newValue: finalValue,
-                            context: update.context,
-                            state: this.state
-                        });
+                        const result = middleware({ path: update.path, oldValue, newValue: finalValue, context: update.context, state: this.state });
                         if (result !== undefined) finalValue = result;
                     } catch (error) {
                         console.error(log.e('Middleware error in batch', {
@@ -287,20 +315,35 @@
                 }
                 current[parts[parts.length - 1]] = finalValue;
 
-                appliedUpdates.push({
-                    path: update.path,
-                    oldValue,
-                    newValue: finalValue
-                });
+                appliedUpdates.push({ path: update.path, oldValue, newValue: finalValue });
             });
 
             this.isUpdating = wasUpdating;
 
-            appliedUpdates.forEach(({ path, oldValue, newValue }) => {
-                this._notifySubscribers(path, newValue, oldValue);
-                this._notifyExternalSubscribers(path, newValue, oldValue);
+            // Collect all parent paths that need notification
+            const parentPaths = new Set();
+            appliedUpdates.forEach(({ path }) => {
+                const parts = getPathParts(path);
+                for (let i = 1; i <= parts.length; i++) {
+                    parentPaths.add(parts.slice(0, i).join('.'));
+                }
+            });
+
+            // Notify each parent path only if it has subscribers
+            parentPaths.forEach(path => {
+                if (this.subscribers.has(path)) this._triggerPathSubscribers(path);
+                if (this.externalSubscribers.has(path)) {
+                    this.externalSubscribers.get(path).forEach(({ callback, hierarchical }) => {
+                        try {
+                            callback(this.getState(path), null, path);
+                        } catch (error) {
+                            console.error(log.e('External subscriber error:', error), 'application');
+                        }
+                    });
+                }
             });
         }
+
 
         _setStateImmediate(path, value, context = {}) {
             const oldValue = this.getState(path);
@@ -311,11 +354,7 @@
                     const result = middleware({ path, oldValue, newValue: finalValue, context, state: this.state });
                     if (result !== undefined) finalValue = result;
                 } catch (error) {
-                    console.error(log.e('Middleware error', {
-                        path,
-                        error: error.message,
-                        middlewareName: middleware.name || 'anonymous'
-                    }, 'application'));
+                    console.error(log.e('Middleware error', { path, error: error.message, middlewareName: middleware.name || 'anonymous' }, 'application'));
                 }
             }
 
@@ -324,11 +363,7 @@
                 return;
             }
 
-            console.debug(log.d('State updated', {
-                path,
-                oldValue: typeof oldValue,
-                newValue: typeof finalValue
-            }, 'application'));
+            console.debug(log.d('State updated', { path, oldValue: typeof oldValue, newValue: typeof finalValue }, 'application'));
 
             const parts = getPathParts(path);
             let current = this.state;
@@ -413,14 +448,13 @@
 
         _triggerPathSubscribers(path) {
             const subs = this.subscribers.get(path);
-            if (subs) {
-                console.debug(log.d('Triggering subscribers', {
-                    path,
-                    subscriberCount: subs.size
-                }, 'framework'));
+            if (subs && subs.size > 0) {
+                console.debug(log.d('Triggering subscribers', { path, subscriberCount: subs.size }, 'framework'));
+
                 new Set(subs).forEach(callback => {
+                    let oldTracking
                     try {
-                        const oldTracking = this.currentTracking;
+                        oldTracking = this.currentTracking;
                         const newTracking = new Set();
                         this.currentTracking = newTracking;
                         callback();
@@ -930,7 +964,6 @@
 
         getAsyncStats() {
             return {
-                activePlaceholders: this.asyncPlaceholders.size,
                 registeredComponents: this.components.size,
                 cachedAsyncProps: this.asyncPropsCache.size
             };
@@ -1296,7 +1329,7 @@
                 const tagName = Object.keys(newChild)[0];
                 const props = newChild[tagName] || {};
 
-                const key = props.key || this._generateKey(tagName, props, index);
+                const key = props.key || this._generateKey(tagName, props);
 
                 const existingElement = oldChildrenByKey.get(key);
 
@@ -1429,7 +1462,7 @@
 
             const updateChildren = () => {
                 try {
-                    const result = childrenFn();
+                    const result = childrenFn(element);
                     if (this._isPromiseLike(result)) {
                         promisify(result)
                             .then(resolvedResult => {
@@ -1674,7 +1707,7 @@
 
             const updateAttribute = () => {
                 try {
-                    const result = valueFn();
+                    const result = valueFn(element);
                     if (this._isPromiseLike(result)) {
                         promisify(result)
                             .then(resolvedValue => {
@@ -1839,7 +1872,7 @@
         }
 
         clearAsyncCache() { this.asyncCache.clear(); }
-        getAsyncStats() { return { cachedAsyncProps: this.asyncCache.size, activePlaceholders: this.asyncPlaceholders.size }; }
+        getAsyncStats() { return { cachedAsyncProps: this.asyncCache.size }; }
     }
 
     class TemplateCompiler {
@@ -1847,9 +1880,7 @@
             const name = template.getAttribute('data-component');
             const contextConfig = template.getAttribute('data-context');
             const content = template.content;
-
             const script = content.querySelector('script')?.textContent.trim() || '';
-
             const div = document.createElement('div');
             div.appendChild(content.cloneNode(true));
             div.querySelector('script')?.remove();
@@ -1921,7 +1952,7 @@
                     return { __REACTIVE_TEXT__: textMatch[1] };
                 }
 
-                // NEW: Handle generic {expression} syntax for text
+                // Handle generic {expression} syntax for text
                 const expressionMatch = text.match(/^\{(.+)\}$/s);
                 if (expressionMatch) {
                     return { __REACTIVE_TEXT__: expressionMatch[1] };
@@ -1949,10 +1980,8 @@
 
         generateComponent(parsed) {
             const objStr = this.objectToString(this.htmlToObject(parsed.html));
-
             // Generate context destructuring if specified
             const contextDestructuring = this.generateContextDestructuring(parsed.contextConfig);
-
             // Combine context destructuring with user script
             const combinedScript = contextDestructuring ?
                 `${contextDestructuring}\n${parsed.script}` :
@@ -2005,8 +2034,6 @@ ${combinedScript}
         }
     }
 
-
-
     // DOM Enhancer
     class DOMEnhancer {
         constructor(juris) {
@@ -2016,7 +2043,7 @@ ${combinedScript}
             this.enhancedElements = new WeakSet();
             this.enhancementRules = new Map();
             this.containerEnhancements = new WeakMap();
-            this.options = { debounceMs: 5, batchUpdates: true, observeSubtree: true, observeChildList: true };
+            this.options = { debounceMs: 5, batchUpdates: true, observeSubtree: true, observeChildList: true, observeNewElements: true };
             this.pendingEnhancements = new Set();
             this.enhancementTimer = null;
         }
@@ -2511,13 +2538,7 @@ ${combinedScript}
                 this.setupLogging(config.logLevel);
             }
 
-            console.info(log.i('Juris framework initializing', {
-                hasServices: !!config.services,
-                hasLayout: !!config.layout,
-                hasStates: !!config.states,
-                hasComponents: !!config.components,
-                renderMode: config.renderMode || 'auto'
-            }, 'framework'));
+            console.info(log.i('Juris framework initializing', { hasServices: !!config.services, hasLayout: !!config.layout, hasStates: !!config.states, hasComponents: !!config.components, renderMode: config.renderMode || 'auto' }, 'framework'));
 
             this.services = config.services || {};
             this.layout = config.layout;
@@ -2528,7 +2549,7 @@ ${combinedScript}
             this.domRenderer = new DOMRenderer(this);
             this.domEnhancer = new DOMEnhancer(this);
             this.templateCompiler = new TemplateCompiler();
-
+            this.headlessAPIs = {};
             const templateConfig = config.templateObserver || {};
             const observerEnabled = templateConfig.enabled !== false; // Default: true
 
@@ -2589,6 +2610,7 @@ ${combinedScript}
             const context = {
                 getState: (path, defaultValue, track) => this.stateManager.getState(path, defaultValue, track),
                 setState: (path, value, context) => this.stateManager.setState(path, value, context),
+                executeBatch: (callback) => this.executeBatch(callback),
                 subscribe: (path, callback) => this.stateManager.subscribe(path, callback),
                 services: this.services,
                 ...(this.services || {}),
@@ -2618,11 +2640,14 @@ ${combinedScript}
             if (element) context.element = element;
             return context;
         }
-
+        executeBatch(callback) {
+            return this.stateManager.executeBatch(callback);
+        }
         createContext(element = null) {
             const context = {
                 getState: (path, defaultValue, track) => this.stateManager.getState(path, defaultValue, track),
                 setState: (path, value, context) => this.stateManager.setState(path, value, context),
+                executeBatch: (callback) => this.executeBatch(callback),
                 subscribe: (path, callback) => this.stateManager.subscribe(path, callback),
                 services: this.services,
                 ...(this.services || {}),
@@ -2700,9 +2725,6 @@ ${combinedScript}
             const startTime = performance.now();
             console.info(log.i('Render started with template compilation', { container }, 'application'));
 
-
-
-            // STEP 2: Proceed with normal rendering
             const containerEl = typeof container === 'string' ?
                 document.querySelector(container) : container;
 
@@ -2721,10 +2743,7 @@ ${combinedScript}
                 }
 
                 const duration = performance.now() - startTime;
-                console.info(log.i('Render completed with templates', {
-                    duration: `${duration.toFixed(2)}ms`,
-                    isHydration
-                }, 'application'));
+                console.info(log.i('Render completed with templates', { duration: `${duration.toFixed(2)}ms`, isHydration }, 'application'));
             } catch (error) {
                 console.error(log.e('Render failed', { error: error.message, container }, 'application'));
                 this._renderError(containerEl, error);
@@ -2796,32 +2815,15 @@ ${combinedScript}
     // Export
     if (typeof window !== 'undefined') {
         window.Juris = Juris;
-        window.deepEquals = deepEquals;
         window.jurisVersion = jurisVersion; // Current version of Juris
         window.jurisLinesOfCode = jurisLinesOfCode; // Total lines of code in Juris
         window.jurisMinifiedSize = jurisMinifiedSize; // Minified size of Juris
-        window.log = log; // Logger
-        window.logSub = logSub; // Subscribe function
-        window.logUnsub = logUnsub; // Unsubscribe function
-        window.promisify = promisify; // Promisify utility
-        window.startTracking = startTracking; // Start tracking function
-        window.stopTracking = stopTracking; // Stop tracking function
-        window.onAllComplete = onAllComplete; // On all complete function
-
     }
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = Juris;
-        module.exports.deepEquals = deepEquals;
         module.exports.jurisVersion = jurisVersion;
         module.exports.jurisLinesOfCode = jurisLinesOfCode;
         module.exports.jurisMinifiedSize = jurisMinifiedSize;
-        module.exports.log = log;
-        module.exports.logSub = logSub;
-        module.exports.logUnsub = logUnsub;
-        module.exports.promisify = promisify;
-        module.exports.startTracking = startTracking;
-        module.exports.stopTracking = stopTracking;
-        module.exports.onAllComplete = onAllComplete;
     }
 })();

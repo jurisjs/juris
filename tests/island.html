@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏝️ Island Counter Demo - Juris enhance() API Showcase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .demo-notice {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .demo-notice h3 {
+            color: #4CAF50;
+            margin-bottom: 8px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 65, 108, 0.4);
+        }
+
+        .grid-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 25px;
+            margin: 25px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: inline-block;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(20, 24px);
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .cell {
+            width: 24px;
+            height: 24px;
+            background: #2196F3; /* Default water color */
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+
+        .cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            border-color: #FFD700;
+        }
+
+        .cell.land {
+            background: #4CAF50 !important; /* Green for land */
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+            border-color: #66BB6A;
+        }
+
+        .cell.water {
+            background: #2196F3 !important; /* Blue for water */
+            box-shadow: 0 0 4px rgba(33, 150, 243, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .algorithm-info {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .algorithm-switch {
+            margin: 15px 0;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+            backdrop-filter: blur(10px);
+        }
+
+        .instructions h4 {
+            color: #FFD700;
+            margin-bottom: 10px;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .instructions li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .instructions li:before {
+            content: '🏝️';
+            position: absolute;
+            left: 0;
+        }
+
+        @media (max-width: 600px) {
+            .grid {
+                grid-template-columns: repeat(15, 20px);
+            }
+            
+            .cell {
+                width: 20px;
+                height: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏝️ Island Counter Demo</h1>
+        <p class="subtitle">Juris enhance() API Progressive Enhancement Showcase</p>
+        
+        <div class="demo-notice">
+            <h3>✨ Progressive Enhancement Magic</h3>
+            <p>This grid started as 400 static HTML divs. With Juris enhance() API, they became a complex island detection algorithm - with ZERO HTML changes!</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number island-count">0</div>
+                <div class="stat-label">Islands Found</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number land-count">0</div>
+                <div class="stat-label">Land Cells</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number algorithm-name">Flood Fill</div>
+                <div class="stat-label">Algorithm</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number calc-time">0ms</div>
+                <div class="stat-label">Calc Time</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-primary randomize-btn">🎲 Randomize Islands</button>
+            <button class="btn-secondary preset-archipelago">🏖️ Archipelago</button>
+            <button class="btn-secondary preset-continent">🌍 Continent</button>
+            <button class="btn-danger clear-btn">🌊 Clear All</button>
+        </div>
+
+        <div class="algorithm-switch">
+            <button class="btn-secondary algo-flood">Flood Fill Algorithm</button>
+            <button class="btn-secondary algo-union">Union Find Algorithm</button>
+        </div>
+
+        <div class="grid-container">
+            <div class="grid" id="island-grid">
+                <!-- Generate 400 static cells with JavaScript for cleaner code -->
+            </div>
+        </div>
+
+        <div class="algorithm-info">
+            <h4>🧠 Algorithm Performance</h4>
+            <p>Watch the calculation time as you switch between algorithms. The Union-Find algorithm typically performs better on sparse grids, while Flood Fill is more intuitive.</p>
+        </div>
+
+        <div class="instructions">
+            <h4>How to Use This Demo</h4>
+            <ul>
+                <li>Click any blue cell to create land (green)</li>
+                <li>Click green land to turn it back to water</li>
+                <li>Watch the island count update in real-time</li>
+                <li>Try different algorithm implementations</li>
+                <li>Use presets to see complex island patterns</li>
+                <li>All 400 cells are enhanced with ZERO HTML changes!</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Juris Framework -->
+    <script src="https://unpkg.com/juris"></script>
+    
+    <script>
+        // Generate 400 static HTML cells
+        const grid = document.getElementById('island-grid');
+        for (let y = 0; y < 20; y++) {
+            for (let x = 0; x < 20; x++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell water';
+                cell.setAttribute('data-x', x);
+                cell.setAttribute('data-y', y);
+                grid.appendChild(cell);
+            }
+        }
+        
+        // Check if Juris is available
+        if (typeof Juris === 'undefined') {
+            document.body.innerHTML = `
+                <div style="text-align: center; padding: 50px; font-family: system-ui;">
+                    <h1>🏝️ Island Counter Demo</h1>
+                    <div style="background: #f44336; color: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h3>⚠️ Juris Framework Required</h3>
+                        <p>This demo requires the actual <code>juris.js</code> file to demonstrate the real enhance() API.</p>
+                        <p>Please ensure <code>juris.js</code> is available at the specified path.</p>
+                    </div>
+                    <div style="background: #2196F3; color: white; padding: 20px; border-radius: 8px; text-align: left;">
+                        <h4>📋 What this demo shows with real Juris:</h4>
+                        <ul>
+                            <li>✨ 400 static HTML divs enhanced with ZERO changes</li>
+                            <li>🧠 Complex island detection algorithms (Flood Fill, Union Find)</li>
+                            <li>🎯 Real-time state management across all cells</li>
+                            <li>⚡ Performance metrics and visual feedback</li>
+                            <li>🔄 Automatic DOM observation for new elements</li>
+                            <li>🛠️ Component APIs for programmatic control</li>
+                        </ul>
+                        <p><strong>This demonstrates progressive enhancement that NO other framework can achieve!</strong></p>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Real Juris implementation
+            const app = new Juris({
+                states: {
+                    grid: {},
+                    islandCount: 0,
+                    landCount: 0,
+                    algorithm: 'floodFill'
+                }
+            });
+            
+            // ENHANCE THE STATIC HTML CELLS
+            app.enhance('.cell', (props, { getState, setState }) => {
+                const x = parseInt(props.element.dataset.x);
+                const y = parseInt(props.element.dataset.y);
+                
+                return {
+                    className: () => {
+                        const isLand = getState(`grid.${x}-${y}`, false);
+                        return `cell ${isLand ? 'land' : 'water'}`;
+                    },
+                    
+                    onClick: () => {
+                        const current = getState(`grid.${x}-${y}`, false);
+                        setState(`grid.${x}-${y}`, !current);
+                        updateLandCount();
+                        setTimeout(() => countIslands(), 50);
+                    }
+                };
+            });
+            
+            // ENHANCE CONTROL BUTTONS
+            app.enhance('.randomize-btn', (props, { setState }) => ({
+                onClick: () => {
+                    for (let x = 0; x < 20; x++) {
+                        for (let y = 0; y < 20; y++) {
+                            setState(`grid.${x}-${y}`, Math.random() > 0.75);
+                        }
+                    }
+                    updateLandCount();
+                    setTimeout(() => countIslands(), 50);
+                }
+            }));
+            
+            app.enhance('.clear-btn', (props, { setState }) => ({
+                onClick: () => {
+                    for (let x = 0; x < 20; x++) {
+                        for (let y = 0; y < 20; y++) {
+                            setState(`grid.${x}-${y}`, false);
+                        }
+                    }
+                    updateStats(0, 0, 0);
+                }
+            }));
+            
+            app.enhance('.preset-archipelago', (props, { setState }) => ({
+                onClick: () => {
+                    // Clear first
+                    for (let x = 0; x < 20; x++) {
+                        for (let y = 0; y < 20; y++) {
+                            setState(`grid.${x}-${y}`, false);
+                        }
+                    }
+                    // Create islands
+                    const islands = [
+                        {x: 3, y: 3, size: 2}, {x: 8, y: 5, size: 3}, {x: 15, y: 8, size: 2},
+                        {x: 6, y: 12, size: 1}, {x: 12, y: 15, size: 2}, {x: 16, y: 3, size: 1}
+                    ];
+                    islands.forEach(island => {
+                        for (let dx = 0; dx < island.size; dx++) {
+                            for (let dy = 0; dy < island.size; dy++) {
+                                const x = island.x + dx, y = island.y + dy;
+                                if (x < 20 && y < 20) setState(`grid.${x}-${y}`, true);
+                            }
+                        }
+                    });
+                    updateLandCount();
+                    setTimeout(() => countIslands(), 50);
+                }
+            }));
+            
+            app.enhance('.preset-continent', (props, { setState }) => ({
+                onClick: () => {
+                    // Clear and create continent
+                    for (let x = 0; x < 20; x++) {
+                        for (let y = 0; y < 20; y++) {
+                            setState(`grid.${x}-${y}`, x >= 5 && x < 15 && y >= 4 && y < 16);
+                        }
+                    }
+                    // Add lakes
+                    [[8,7],[9,7],[8,8],[9,8],[11,12],[12,12],[11,13]].forEach(([x,y]) => {
+                        setState(`grid.${x}-${y}`, false);
+                    });
+                    updateLandCount();
+                    setTimeout(() => countIslands(), 50);
+                }
+            }));
+            
+            app.enhance('.algo-flood', () => ({
+                onClick: () => {
+                    app.setState('algorithm', 'floodFill');
+                    countIslands();
+                }
+            }));
+            
+            app.enhance('.algo-union', () => ({
+                onClick: () => {
+                    app.setState('algorithm', 'unionFind');
+                    countIslands();
+                }
+            }));
+            
+            // BUSINESS LOGIC
+            function updateLandCount() {
+                let count = 0;
+                for (let x = 0; x < 20; x++) {
+                    for (let y = 0; y < 20; y++) {
+                        if (app.getState(`grid.${x}-${y}`, false)) count++;
+                    }
+                }
+                app.setState('landCount', count);
+                document.querySelector('.land-count').textContent = count;
+            }
+            
+            function countIslands() {
+                const startTime = performance.now();
+                const algorithm = app.getState('algorithm', 'floodFill');
+                let count = algorithm === 'floodFill' ? floodFillCount() : unionFindCount();
+                const calcTime = Math.round(performance.now() - startTime);
+                
+                updateStats(count, app.getState('landCount', 0), calcTime);
+                showNotification(`🏝️ ${count} islands found using ${algorithm} (${calcTime}ms)`);
+            }
+            
+            function updateStats(islands, land, time) {
+                document.querySelector('.island-count').textContent = islands;
+                document.querySelector('.land-count').textContent = land;
+                document.querySelector('.algorithm-name').textContent = 
+                    app.getState('algorithm') === 'floodFill' ? 'Flood Fill' : 'Union Find';
+                document.querySelector('.calc-time').textContent = time + 'ms';
+            }
+            
+            function floodFillCount() {
+                const visited = new Set();
+                let islands = 0;
+                for (let x = 0; x < 20; x++) {
+                    for (let y = 0; y < 20; y++) {
+                        if (!visited.has(`${x}-${y}`) && app.getState(`grid.${x}-${y}`, false)) {
+                            dfs(x, y, visited);
+                            islands++;
+                        }
+                    }
+                }
+                return islands;
+            }
+            
+            function dfs(x, y, visited) {
+                if (x < 0 || x >= 20 || y < 0 || y >= 20 || 
+                    visited.has(`${x}-${y}`) || !app.getState(`grid.${x}-${y}`, false)) return;
+                visited.add(`${x}-${y}`);
+                dfs(x + 1, y, visited); dfs(x - 1, y, visited);
+                dfs(x, y + 1, visited); dfs(x, y - 1, visited);
+            }
+            
+            function unionFindCount() {
+                const parent = {}, rank = {};
+                for (let x = 0; x < 20; x++) {
+                    for (let y = 0; y < 20; y++) {
+                        if (app.getState(`grid.${x}-${y}`, false)) {
+                            const key = `${x}-${y}`;
+                            parent[key] = key; rank[key] = 0;
+                        }
+                    }
+                }
+                
+                const find = (x) => parent[x] !== x ? (parent[x] = find(parent[x])) : x;
+                const union = (x, y) => {
+                    const [rootX, rootY] = [find(x), find(y)];
+                    if (rootX !== rootY) {
+                        if (rank[rootX] < rank[rootY]) parent[rootX] = rootY;
+                        else if (rank[rootX] > rank[rootY]) parent[rootY] = rootX;
+                        else { parent[rootY] = rootX; rank[rootX]++; }
+                    }
+                };
+                
+                for (let x = 0; x < 20; x++) {
+                    for (let y = 0; y < 20; y++) {
+                        if (app.getState(`grid.${x}-${y}`, false)) {
+                            const current = `${x}-${y}`;
+                            if (x + 1 < 20 && app.getState(`grid.${x + 1}-${y}`, false)) 
+                                union(current, `${x + 1}-${y}`);
+                            if (y + 1 < 20 && app.getState(`grid.${x}-${y + 1}`, false)) 
+                                union(current, `${x}-${y + 1}`);
+                        }
+                    }
+                }
+                
+                return new Set(Object.keys(parent).map(find)).size;
+            }
+            
+            function showNotification(message) {
+                let notification = document.querySelector('.notification');
+                if (!notification) {
+                    notification = document.createElement('div');
+                    notification.className = 'notification';
+                    document.body.appendChild(notification);
+                }
+                notification.textContent = message;
+                notification.classList.add('show');
+                setTimeout(() => notification.classList.remove('show'), 3000);
+            }
+            
+            // Initialize stats display
+            updateStats(0, 0, 0);
+            
+            console.log('🏝️ Juris Island Counter Demo Ready!');
+            console.log('🎯 Grid starts all blue (water) - click buttons or cells to create islands!');
+        }
+    </script>
+</body>
+</html>

@@ -15,6 +15,8 @@ Transforms web development through its comprehensive object-first architecture t
 - **Precise Control**: Fine-grained control over reactive behaviors
 - **Automatic Async Support**: Built-in support for asynchronous operations all over the place
 - **Progressive Enhancement done Right**: Progressively enhance your applications with reactive features without editing your HTML
+- **Template Compilation**: Compiles your template at runtime to pure functional component
+- **TypeSafe**: IntelliSence and auto-suggestion that covers HTML and CSS Semantics and
 
 ## Installation
 
@@ -25,12 +27,12 @@ Transforms web development through its comprehensive object-first architecture t
 ```html
 <!-- Development version -->
 <script type="module">
-	import Juris from "https://unpkg.com/juris@0.8.0/juris.js";
+	import Juris from "https://unpkg.com/juris@0.82.0/juris.js";
 </script>
 
 <!-- Production version (minified) -->
 <script type="module">
-	import Juris from "https://unpkg.com/juris@0.8.0/juris.mini.js";
+	import Juris from "https://unpkg.com/juris@0.82.0/juris.mini.js";
 </script>
 ```
 
@@ -38,10 +40,10 @@ Transforms web development through its comprehensive object-first architecture t
 
 ```html
 <!-- Development version -->
-<script src="https://unpkg.com/juris@0.8.0/juris.js"></script>
+<script src="https://unpkg.com/juris@0.82.0/juris.js"></script>
 
 <!-- Production version (minified) -->
-<script src="https://unpkg.com/juris@0.8.0/juris.mini.js"></script>
+<script src="https://unpkg.com/juris@0.82.0/juris.mini.js"></script>
 <script>
 	// Juris is now available as a global variable
 </script>
@@ -60,7 +62,7 @@ import Juris from "juris";
 ## Usage
 
 ```javascript
-import Juris from "https://unpkg.com/juris@0.8.0";
+import Juris from "https://unpkg.com/juris@0.82.0";
 
 // Your implementation examples here
 ```
@@ -75,8 +77,10 @@ Visit [jurisjs.com](https://jurisjs.com) for complete documentation and examples
 - Online Testing: https://jurisjs.com/tests/juris_pure_test_interface.html
 
 ## Power Up your Juris Development with Intellisense and TypeSafety
-- VSCode Setup Guides:  [JSDoc-TypeScript-Definitions](https://github.com/jurisjs/juris/wiki/%F0%9F%9A%80-Juris-JSDoc-TypeScript-Definitions)
-[VSCode-Snippets](https://github.com/jurisjs/juris/wiki/%F0%9F%9A%80-Juris-VSCode-Snippets)
+
+- VSCode Setup Guides: [JSDoc-TypeScript-Definitions](https://github.com/jurisjs/juris/wiki/%F0%9F%9A%80-Juris-JSDoc-TypeScript-Definitions)
+  [VSCode-Snippets](https://github.com/jurisjs/juris/wiki/%F0%9F%9A%80-Juris-VSCode-Snippets)
+
 ## Contributing
 
 Contributions are welcome! Please visit our [GitHub repository](https://github.com/jurisjs/juris) to:
