@@ -1,37 +1,39 @@
 <html>
 
 <head>
-  <script src="https://unpkg.com/juris@0.76.0/juris.js"></script>
+  <script src="../src/juris.js"></script>
 </head>
 
 <body>
-  <div id="app">1</div>
+  <div id="app"></div>
 </body>
 <script>
 	const Counter = (props, {getState,setState}) => ({
     div: {
-        children:[
-					{h1: {
-                text: () => `Count: ${getState('count', 0)}`//reactive
-          }}, 
-					{h1: {
-                text: `Count: ${getState('count', 0)}`//static
-          }}, 
-					{button: {
-                text: 'Increment',
-                onClick: () => {
-                    const current = getState('count', 0);
-                    setState('count', current + 1);
-                }
-					}}
-				]
+      children:[
+        {h1: {
+              text: () => `Count: ${getState('count', 0)}`//reactive
+        }}, 
+        {h1: {
+              text: `Count: ${getState('count', 0)}`//static
+        }},
+        {button: {
+          text: 'Increment',
+          onClick: () => {
+              const current = getState('count', 0);
+              setState('count', current + 1);
+          }
+        }}
+      ]
     }
-});
+  });
+  
+	const Counter2 = (props, {getState,setState}) => ({Counter:{}});
 	const juris = new Juris({states: {
         count: 0  // Initialize the state
     },
-		components:{Counter},
-  	layout:{Counter:{}}
+		components:{Counter,Counter2},
+  	layout:{Counter2:{}}
 });
 juris.render();
 </script>

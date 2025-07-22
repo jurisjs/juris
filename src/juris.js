@@ -3,7 +3,7 @@
  * The First and Only Non-blocking Reactive Platform, Architecturally Optimized for Next Generation Cutting-Edge Cross-Platform Application.
  * Juris aims to eliminate build complexity from small to large applications.
  * Author: Resti Guay
- * Version: 0.87.2
+ * Version: 0.88.0
  * License: MIT
  * GitHub: https://github.com/jurisjs/juris
  * Website: https://jurisjs.com/
@@ -23,7 +23,8 @@
  * - SVG Support
  * - Dual rendering mode, fine-grained or batch rendering
  * - Dual Template Mode (HTML and Object VDOM)
- * - supports innerHtml in Object VDOM for critical rendering requirements
+ * - CSS-in-JS Compilation
+ * - Supports innerHtml in Object VDOM for critical rendering requirements
  *
  * Performance:
  * - Sub 3ms render on simple apps
@@ -60,13 +61,12 @@
 
 (function () {
     'use strict';
-    const jurisLinesOfCode = 3377; // Total lines of code in Juris
-    const jurisVersion = '0.87.2'; // Current version of Juris
+    const jurisLinesOfCode = 3535; // Total lines of code in Juris
+    const jurisVersion = '0.88.0'; // Current version of Juris
     const jurisMinifiedSize = '66.96 kB'; // Minified version of Juris
     // Utilities
     const isValidPath = path => typeof path === 'string' && path.trim().length > 0 && !path.includes('..');
     const getPathParts = path => path.split('.').filter(Boolean);
-
     const deepEquals = (a, b) => {
         if (a === b) return true;
         if (a == null || b == null || typeof a !== typeof b) return false;
@@ -94,21 +94,17 @@
         };
     };
     const { log, logSub, logUnsub } = createLogger();
-
     const createPromisify = () => {
         const activePromises = new Set();
         let isTracking = false;
         const subscribers = new Set();
-
         const checkAllComplete = () => {
             if (activePromises.size === 0 && subscribers.size > 0) {
                 subscribers.forEach(callback => callback());
             }
         };
-
         const trackingPromisify = result => {
             const promise = result?.then ? result : Promise.resolve(result);
-
             if (isTracking && promise !== result) {
                 activePromises.add(promise);
                 promise.finally(() => {
@@ -116,10 +112,8 @@
                     setTimeout(checkAllComplete, 0);
                 });
             }
-
             return promise;
         };
-
         return {
             promisify: trackingPromisify,
             startTracking: () => {
@@ -140,7 +134,6 @@
         };
     };
     const { promisify, startTracking, stopTracking, onAllComplete } = createPromisify();
-
     // State Manager
     class StateManager {
         constructor(initialState = {}, middleware = []) {
@@ -164,7 +157,6 @@
             this.batchQueue = [];
             this.batchedPaths = new Set();
         }
-
         reset() {
             console.info(log.i('State reset to initial state', {}, 'framework'));
             if (this.isBatching) {
@@ -174,7 +166,6 @@
             }
             this.state = JSON.parse(JSON.stringify(this.initialState));
         }
-
         getState(path, defaultValue = null, track = true) {
             if (!isValidPath(path)) return defaultValue;
             if (track) this.currentTracking?.add(path);
@@ -186,7 +177,6 @@
             }
             return current;
         }
-
         setState(path, value, context = {}) {
             console.debug(log.d('State change initiated', { path, hasValue: value !== undefined }, 'application'));
             if (!isValidPath(path) || this._hasCircularUpdate(path)) return;
@@ -642,14 +632,11 @@
 
         _createWithAsyncProps(name, componentFn, props) {
             console.debug(log.d('Creating component with async props', { name }, 'framework'));
-
             // Create a temporary element with the component name as ID for config lookup
             const tempElement = document.createElement('div');
             tempElement.id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
             const placeholder = this._createPlaceholder(`Loading ${name}...`, 'juris-async-props-loading', tempElement);
             this.asyncPlaceholders.set(placeholder, { name, props, type: 'async-props' });
-
             this._resolveAsyncProps(props).then(resolvedProps => {
                 try {
                     const realElement = this._createSyncComponent(name, componentFn, resolvedProps);
@@ -734,7 +721,7 @@
                 }
                 const keys = Object.keys(result);
                 if (keys.length === 1 && typeof keys[0] === 'string' && keys[0].length > 0) {
-                    const element = this.juris.domRenderer.render(result);
+                    const element = this.juris.domRenderer.render(result, false, name);
                     if (element && componentStates.size > 0) this.componentStates.set(element, componentStates);
                     return element;
                 }
@@ -758,7 +745,6 @@
             const placeholder = indicator ?
                 this.juris.domRenderer.render(indicator) :
                 this._createPlaceholder(`Loading ${name}...`, 'juris-async-loading', tempElement);
-
             renderPromise.then(renderResult => {
                 try {
                     const element = this.juris.domRenderer.render(renderResult);
@@ -805,9 +791,7 @@
             // Create a temporary element with the component name as ID for config lookup
             const tempElement = document.createElement('div');
             tempElement.id = instance.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
             const placeholder = this._createPlaceholder(`Loading ${instance.name}...`, 'juris-async-lifecycle', tempElement);
-
             renderPromise.then(renderResult => {
                 try {
                     const element = this.juris.domRenderer.render(renderResult);
@@ -819,7 +803,6 @@
                         if (placeholder.parentNode) {
                             placeholder.parentNode.replaceChild(element, placeholder);
                         }
-
                         if (instance.hooks.onMount) {
                             setTimeout(() => {
                                 try {
@@ -947,14 +930,19 @@
         }
     }
 
-    // DOM Renderer
-    // DOM Renderer v0.86.0 with Static Mode Optimization
-    // Complete Optimized DOMRenderer - All methods included with optimizations
+    // Enhanced DOMRenderer v0.87.0 with CSS Extraction
+    // Based on your existing code with CSS extraction seamlessly integrated
     class DOMRenderer {
         constructor(juris) {
             console.info(log.i('DOMRenderer initialized', { renderMode: 'fine-grained' }, 'framework'));
             this.juris = juris;
             this.subscriptions = new WeakMap();
+            this.componentStack = [];
+            // CSS Extraction System - NEW
+            this.cssCache = new Map();          // styleHash -> { css, className }
+            this.injectedCSS = new Set();       // Track injected CSS rules
+            this.styleSheet = null;             // Single stylesheet for extracted CSS
+            this.camelCaseRegex = /([A-Z])/g;   // Pre-compiled for performance
 
             this.eventMap = {
                 ondoubleclick: 'dblclick', onmousedown: 'mousedown', onmouseup: 'mouseup',
@@ -1006,7 +994,6 @@
 
             // Recycling configuration
             this.RECYCLE_POOL_SIZE = 100;
-
         }
 
         setRenderMode(mode) {
@@ -1022,19 +1009,20 @@
         isFineGrained() { return this.renderMode === 'fine-grained'; }
         isBatchMode() { return this.renderMode === 'batch'; }
 
-        render(vnode, staticMode = false) {
-            console.debug(log.d('Render started', {
-                vnodeType: typeof vnode,
-                isArray: Array.isArray(vnode),
-                staticMode
-            }, 'framework'));
+        // Enhanced render method with CSS extraction
+        // In DOMRenderer, modify the render method to handle component references in Object VDOM:
+        render(vnode, staticMode = false, componentName = null) {
+            // Initialize componentStack if not exists (safety check)
+            if (!this.componentStack) {
+                this.componentStack = [];
+            }
 
             if (!vnode || typeof vnode !== 'object') return null;
 
             if (Array.isArray(vnode)) {
                 const fragment = document.createDocumentFragment();
                 for (let i = 0; i < vnode.length; i++) {
-                    const childElement = this.render(vnode[i], staticMode);
+                    const childElement = this.render(vnode[i], staticMode, componentName);
                     if (childElement) fragment.appendChild(childElement);
                 }
                 return fragment;
@@ -1043,39 +1031,191 @@
             const tagName = Object.keys(vnode)[0];
             const props = vnode[tagName] || {};
 
-            // Skip component resolution in static mode
+            // Check if component is already in the call stack (recursion detection)
+            if (!staticMode && this.componentStack.includes(tagName)) {
+                return this._createDeepRecursionErrorElement(tagName, this.componentStack);
+            }
+
+            // Component resolution - ENHANCED to work in Object VDOM returns
             if (!staticMode && this.juris.componentManager.components.has(tagName)) {
                 const parentTracking = this.juris.stateManager.currentTracking;
                 this.juris.stateManager.currentTracking = null;
+                
+                // Add to component stack before rendering
+                this.componentStack.push(tagName);
                 const result = this.juris.componentManager.create(tagName, props);
+                // Remove from stack after rendering
+                this.componentStack.pop();
+                
                 this.juris.stateManager.currentTracking = parentTracking;
                 return result;
             }
 
-            if (typeof tagName !== 'string' || tagName.length === 0) return null;
-
-            if (staticMode) {
-                return this._createElementStatic(tagName, props);
+            // If capitalized but not registered, show error
+            if (!staticMode && /^[A-Z]/.test(tagName)) {
+                return this._createComponentErrorElement(tagName);
             }
 
-            if (this.renderMode === 'fine-grained') return this._createElementFineGrained(tagName, props);
+            if (typeof tagName !== 'string' || tagName.length === 0) return null;
+
+            // Enhanced CSS extraction
+            let modifiedProps = props;
+            if (props.style && !staticMode && this.cssExtraction) {
+                const elementName = componentName || tagName;
+                const extraction = this.extractCSS(elementName, props.style);
+                if (extraction.className) {
+                    modifiedProps = { ...props };
+                    modifiedProps.className = this.combineClassNames(props.className, extraction.className);
+                    
+                    if (extraction.reactiveStyle) {
+                        modifiedProps.style = extraction.reactiveStyle;
+                    } else {
+                        delete modifiedProps.style;
+                    }
+                }
+            }
+
+            // Pass component context to children for deep extraction
+            const inheritedComponentName = componentName || (props.style ? tagName : null);
+
+            if (staticMode) {
+                return this._createElementStatic(tagName, modifiedProps, inheritedComponentName);
+            }
+
+            if (this.renderMode === 'fine-grained') {
+                return this._createElementFineGrained(tagName, modifiedProps, inheritedComponentName);
+            }
 
             try {
-                const key = props.key || this._generateKey(tagName, props);
+                const key = modifiedProps.key || this._generateKey(tagName, modifiedProps);
                 const cachedElement = this.elementCache.get(key);
-                if (cachedElement && this._canReuseElement(cachedElement, tagName, props)) {
-                    this._updateElementProperties(cachedElement, props);
+                if (cachedElement && this._canReuseElement(cachedElement, tagName, modifiedProps)) {
+                    this._updateElementProperties(cachedElement, modifiedProps);
                     return cachedElement;
                 }
-                return this._createElementOptimized(tagName, props, key);
+                return this._createElementOptimized(tagName, modifiedProps, key, inheritedComponentName);
             } catch (error) {
                 this.failureCount++;
                 if (this.failureCount >= this.maxFailures) this.renderMode = 'fine-grained';
-                return this._createElementFineGrained(tagName, props);
+                return this._createElementFineGrained(tagName, modifiedProps, inheritedComponentName);
+            }
+        }
+        _createComponentErrorElement(tagName) {
+            const errorElement = document.createElement('div');
+            errorElement.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
+            errorElement.textContent = `Component "${tagName}" not registered`;
+            return errorElement;
+        }
+
+        _createDeepRecursionErrorElement(tagName, callStack) {
+            const errorElement = document.createElement('div');
+            errorElement.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
+            const chain = [...callStack, tagName].join(' → ');
+            errorElement.textContent = `Recursion detected: ${chain}`;
+            return errorElement;
+        }
+        // CSS Extraction with intelligent caching - NEW
+        extractCSS(componentName, styleObj) {
+            if (!this.cssExtraction) return { reactiveStyle: styleObj };
+            const { staticStyles, reactiveStyles } = this.separateStyles(styleObj);
+            
+            if (Object.keys(staticStyles).length === 0) {
+                return { 
+                    reactiveStyle: Object.keys(reactiveStyles).length ? reactiveStyles : null 
+                };
+            }
+            
+            // Generate deterministic hash from static styles
+            const styleHash = this.hashStyles(staticStyles);
+            const cacheKey = `${componentName}-${styleHash}`;
+            
+            // Check cache first for reuse
+            if (!this.cssCache.has(cacheKey)) {
+                const className = `j-${componentName.replace(/[^a-zA-Z0-9]/g, '')}-${styleHash}`;
+                const css = this.generateCSS(className, staticStyles);
+                this.cssCache.set(cacheKey, { css, className });
+            }
+            
+            const cached = this.cssCache.get(cacheKey);
+            
+            // Inject CSS if not already done
+            if (!this.injectedCSS.has(cacheKey)) {
+                this.injectCSS(cached.css);
+                this.injectedCSS.add(cacheKey);
+            }
+            
+            return {
+                className: cached.className,
+                reactiveStyle: Object.keys(reactiveStyles).length ? reactiveStyles : null
+            };
+        }
+
+        // Separate static styles from reactive functions - NEW
+        separateStyles(styleObj) {
+            const staticStyles = {};
+            const reactiveStyles = {};
+            
+            for (const [key, value] of Object.entries(styleObj)) {
+                if (typeof value === 'function') {
+                    reactiveStyles[key] = value;
+                } else {
+                    staticStyles[key] = value;
+                }
+            }
+            
+            return { staticStyles, reactiveStyles };
+        }
+
+        // Fast deterministic hashing for style objects - NEW
+        hashStyles(styles) {
+            const sortedEntries = Object.entries(styles).sort(([a], [b]) => a.localeCompare(b));
+            const str = JSON.stringify(sortedEntries);
+            
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash + str.charCodeAt(i)) & 0x7fffffff;
+            }
+            
+            return hash.toString(36);
+        }
+
+        // Generate CSS rule from className and styles - NEW
+        generateCSS(className, styles) {
+            const rules = Object.entries(styles)
+                .map(([prop, value]) => {
+                    const cssProp = prop.replace(this.camelCaseRegex, '-$1').toLowerCase();
+                    return `  ${cssProp}: ${value};`;
+                })
+                .join('\n');
+            
+            return `.${className} {\n${rules}\n}`;
+        }
+
+        // Inject CSS into document stylesheet - NEW
+        injectCSS(css) {
+            if (!this.styleSheet) {
+                const style = document.createElement('style');
+                style.setAttribute('data-juris-extracted', '');
+                document.head.appendChild(style);
+                this.styleSheet = style.sheet;
+            }
+            
+            try {
+                this.styleSheet.insertRule(css, this.styleSheet.cssRules.length);
+                console.debug(log.d('CSS injected', { css }, 'framework'));
+            } catch (error) {
+                console.warn('CSS injection failed:', error);
+                // Fallback: append to style element
+                this.styleSheet.ownerNode.textContent += css + '\n';
             }
         }
 
-        _createElementStatic(tagName, props) {
+        // Combine multiple class names safely - NEW
+        combineClassNames(...classNames) {
+            return classNames.filter(Boolean).join(' ');
+        }
+
+        _createElementStatic(tagName, props, componentName = null) {
             const element = this.SVG_ELEMENTS.has(tagName.toLowerCase())
                 ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
                 : document.createElement(tagName);
@@ -1085,7 +1225,7 @@
 
                 const value = props[key];
                 if (key === 'children') {
-                    this._updateChildrenStatic(element, value);
+                    this._updateChildrenStatic(element, value, componentName); // Pass context
                 } else if (key === 'text') {
                     element.textContent = value;
                 } else if (key === 'style' && typeof value === 'object') {
@@ -1117,50 +1257,41 @@
             }
         }
 
-        _updateChildrenStatic(element, children) {
+        _updateChildrenStatic(element, children, componentName = null) {
             if (children === "ignore") return;
-
             element.textContent = '';
             const fragment = document.createDocumentFragment();
-
             if (Array.isArray(children)) {
                 let actualChildren = children;
                 let childStaticMode = false;
-
                 if (children.length > 0 && children[0]?.config?.staticMode) {
                     childStaticMode = true;
                     actualChildren = children.slice(1);
                 }
-
                 for (let i = 0; i < actualChildren.length; i++) {
-                    const childElement = this.render(actualChildren[i], childStaticMode);
+                    // Pass component context to enable CSS extraction in children
+                    const childElement = this.render(actualChildren[i], childStaticMode, componentName);
                     if (childElement) fragment.appendChild(childElement);
                 }
             } else if (children) {
-                const childElement = this.render(children, false);
+                const childElement = this.render(children, false, componentName);
                 if (childElement) fragment.appendChild(childElement);
             }
-
             if (fragment.hasChildNodes()) element.appendChild(fragment);
         }
 
-        _createElementFineGrained(tagName, props) {
-            console.debug(log.d('Creating element (fine-grained)', { tagName, propsCount: Object.keys(props).length }, 'framework'));
-
+        _createElementFineGrained(tagName, props, componentName = null) {
             const element = this.SVG_ELEMENTS.has(tagName.toLowerCase())
                 ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
                 : document.createElement(tagName);
-
             this.tempArray.length = 0;
             const subscriptions = this.tempArray;
             const eventListeners = [];
-
             for (const key in props) {
                 if (!props.hasOwnProperty(key)) continue;
-
                 const value = props[key];
                 if (key === 'children') {
-                    this._handleChildren(element, value, subscriptions);
+                    this._handleChildren(element, value, subscriptions, componentName); // Pass context
                 } else if (key === 'text') {
                     this._handleText(element, value, subscriptions);
                 } else if (key === 'style') {
@@ -1175,14 +1306,12 @@
                     this._setStaticAttribute(element, key, value);
                 }
             }
-
             if (subscriptions.length > 0 || eventListeners.length > 0) {
                 this.subscriptions.set(element, {
                     subscriptions: [...subscriptions],
                     eventListeners
                 });
             }
-
             return element;
         }
 
@@ -1198,7 +1327,6 @@
             if (Array.isArray(children) && children.length > 0 && children[0]?.config?.staticMode) {
                 return this._updateChildrenStatic(element, children);
             }
-
             if (typeof children === 'function') {
                 this._handleReactiveChildren(element, children, subscriptions);
             } else if (this._isPromiseLike(children)) {
@@ -1212,12 +1340,10 @@
             if (Array.isArray(children) && children.length > 0 && children[0]?.config?.staticMode) {
                 return this._updateChildrenStatic(element, children);
             }
-
             if (typeof children === 'function') {
                 let lastChildrenState = null;
                 let childElements = [];
                 let useOptimizedPath = true;
-
                 const updateChildren = () => {
                     try {
                         const newChildren = children(element);
@@ -1273,9 +1399,7 @@
                         }
                     }
                 };
-
                 this._createReactiveUpdate(element, updateChildren, subscriptions);
-
                 try {
                     const initialChildren = children();
                     if (this._isPromiseLike(initialChildren)) {
@@ -1595,7 +1719,7 @@
             this._createReactiveUpdate(element, updateChildren, subscriptions);
         }
 
-        _updateChildren(element, children) {
+        _updateChildren(element, children, componentName = null) {
             if (children === "ignore") return;
             const childNodes = Array.from(element.children);
             for (let i = 0; i < childNodes.length; i++) {
@@ -1605,11 +1729,11 @@
             const fragment = document.createDocumentFragment();
             if (Array.isArray(children)) {
                 for (let i = 0; i < children.length; i++) {
-                    const childElement = this.render(children[i]);
+                    const childElement = this.render(children[i], false, componentName);
                     if (childElement) fragment.appendChild(childElement);
                 }
             } else if (children) {
-                const childElement = this.render(children);
+                const childElement = this.render(children, false, componentName);
                 if (childElement) fragment.appendChild(childElement);
             }
             if (fragment.hasChildNodes()) element.appendChild(fragment);
@@ -2100,8 +2224,40 @@
             this.asyncCache.clear();
         }
 
+        // Enhanced stats with CSS extraction info - NEW
         getAsyncStats() {
-            return { cachedAsyncProps: this.asyncCache.size };
+            return { 
+                cachedAsyncProps: this.asyncCache.size,
+                cachedCSS: this.cssCache.size,
+                injectedCSS: this.injectedCSS.size
+            };
+        }
+
+        // Clear CSS cache (for development) - NEW
+        clearCSSCache() {
+            this.cssCache.clear();
+            this.injectedCSS.clear();
+            
+            if (this.styleSheet) {
+                try {
+                    this.styleSheet.ownerNode.remove();
+                } catch (e) { /* ignore */ }
+                this.styleSheet = null;
+            }
+        }
+
+        // Get comprehensive stats - NEW
+        getStats() {
+            return {
+                cssCache: this.cssCache.size,
+                injectedCSS: this.injectedCSS.size,
+                // Note: Cannot count WeakMap size, but we can estimate
+                estimatedSubscriptions: this.cssCache.size * 2, // Rough estimate
+                elementCache: this.elementCache.size,
+                recyclePoolSize: Array.from(this.recyclePool.values()).reduce((total, pool) => total + pool.length, 0),
+                renderMode: this.renderMode,
+                failureCount: this.failureCount
+            };
         }
     }
 
@@ -2259,37 +2415,72 @@ ${combinedScript}
                 batchUpdates: true,
                 observeSubtree: true,
                 observeChildList: true,
-                observeNewElements: true
+                observeNewElements: true,                
+                viewportAware: false,
+                viewportMargin: '50px'
             };
             this.enhancementRegistry = new Map();
             this.unifiedObserver = null;
             this.observerRefCount = 0;
             this.pendingEnhancements = new Set();
             this.enhancementTimer = null;
+            this.intersectionObserver = null;
+            this.viewportElements = new WeakMap();
         }
 
         enhance(selectorOrElement, definition, options = {}) {
+            if (typeof MutationObserver === 'undefined') {
+                return () => {};
+            }
+            // Following existing config merge pattern
+            const config = { ...this.options, ...options };                
+            // NEW: Following existing early return pattern for special cases
+            if (config.viewportAware) {
+                return this._enhanceViewportAware(selectorOrElement, definition, config);
+            }
+            // Existing element enhancement path unchanged
             if (selectorOrElement instanceof Element) {
                 if (this.enhancedElements.has(selectorOrElement)) return () => { };
-                this._enhanceElement(selectorOrElement, definition, { ...this.options, ...options });
+                this._enhanceElement(selectorOrElement, definition, config);
                 return () => this._cleanupElement(selectorOrElement);
             }
-            const config = { ...this.options, ...options };
+            // Existing selector enhancement path unchanged
             const selector = selectorOrElement;
-            const enhancementType = this._determineEnhancementType(selector, definition);
-            console.info(log.i('Enhancement registered', {
-                selector,
-                type: enhancementType,
-                hasSelectors: enhancementType === 'selectors',
-                optionKeys: Object.keys(options)
-            }, 'framework'));
+            const enhancementType = this._determineEnhancementType(selector, definition);                
+            console.info(log.i('Enhancement registered', {selector,type: enhancementType,viewportAware: config.viewportAware,optionKeys: Object.keys(options)}, 'framework'));
             this.enhancementRegistry.set(selector, { definition, config, type: enhancementType });
-            this._enhanceExistingElements(selector, definition, config, enhancementType);
+            this._enhanceExistingElements(selector, definition, config, enhancementType);                
             if (config.observeNewElements !== false) {
                 this._ensureUnifiedObserver(config);
                 this.observerRefCount++;
             }
             return () => this._unenhance(selector);
+        }
+
+        _enhanceViewportAware(selectorOrElement, definition, config) {
+            console.debug(log.d('Viewport-aware enhancement starting', {
+                selector: typeof selectorOrElement === 'string' ? selectorOrElement : 'element',
+                margin: config.viewportMargin
+            }, 'framework'));
+            // Following existing element vs selector handling pattern
+            if (selectorOrElement instanceof Element) {
+                this._setupViewportObserver(config);
+                this._observeElementForViewport(selectorOrElement, definition, config);
+                return () => this._cleanupViewportElement(selectorOrElement);
+            }
+            // Following existing selector processing pattern
+            const selector = selectorOrElement;
+            const elements = document.querySelectorAll(selector);            
+            this._setupViewportObserver(config);            
+            // Following existing forEach element processing pattern
+            elements.forEach(element => {
+                this._observeElementForViewport(element, definition, config);
+            });
+            // Following existing cleanup return pattern
+            return () => {
+                elements.forEach(element => this._cleanupViewportElement(element));
+                this._cleanupViewportObserver();
+            };
         }
 
         _determineEnhancementType(selector, definition) {
@@ -2311,6 +2502,146 @@ ${combinedScript}
             return false;
         }
 
+        _setupViewportObserver(config) {
+            if (this.intersectionObserver) return;
+            // Following existing observer setup pattern (like unifiedObserver)
+            this.intersectionObserver = new IntersectionObserver(entries => {
+                // Following existing debounced processing pattern
+                if (config.debounceMs > 0) {
+                    this._debouncedProcessViewportChanges(entries);
+                } else {
+                    this._processViewportChanges(entries);
+                }
+            }, {
+                root: null,
+                rootMargin: config.viewportMargin,
+                threshold: 0
+            });
+            console.debug(log.d('IntersectionObserver created', {margin: config.viewportMargin}, 'framework'));
+        }
+
+        _processViewportChanges(entries) {
+            entries.forEach(entry => {
+                const element = entry.target;
+                const viewportData = this.viewportElements.get(element);
+                
+                if (!viewportData) return;
+
+                console.debug(log.d('Viewport visibility changed', {
+                    element: element.tagName,
+                    isVisible: entry.isIntersecting
+                }, 'framework'));
+
+                if (entry.isIntersecting) {
+                    // Following existing enhancement application pattern
+                    this._enhanceElement(element, viewportData.definition, viewportData.config);
+                } else {
+                    // Following existing cleanup pattern
+                    this._cleanupElement(element);
+                    
+                    // Apply minimal enhancement if configured
+                    if (viewportData.minimal) {
+                        this._enhanceElement(element, viewportData.minimal, viewportData.config);
+                    }
+                }
+            });
+        }
+
+        _debouncedProcessViewportChanges(entries) {
+            entries.forEach(entry => {
+                this.pendingEnhancements.add({
+                    entry,
+                    timestamp: Date.now(),
+                    type: 'viewport'
+                });
+            });
+            if (this.enhancementTimer) clearTimeout(this.enhancementTimer);
+            this.enhancementTimer = setTimeout(() => {
+                this._processPendingViewportChanges();
+                this.enhancementTimer = null;
+            }, this.options.debounceMs);
+        }
+        _processPendingViewportChanges() {
+            const viewportChanges = Array.from(this.pendingEnhancements)
+                .filter(item => item.type === 'viewport')
+                .map(item => item.entry);
+            
+            // Remove processed entries
+            this.pendingEnhancements = new Set(
+                Array.from(this.pendingEnhancements).filter(item => item.type !== 'viewport')
+            );
+            
+            this._processViewportChanges(viewportChanges);
+        }
+
+        _observeElementForViewport(element, definition, config) {
+            // Following existing element data storage pattern (like componentStates)
+            const minimal = config.minimal || this._createMinimalDefinition(definition);
+            
+            this.viewportElements.set(element, {
+                definition,
+                config,
+                minimal
+            });
+
+            this.intersectionObserver.observe(element);
+
+            // Following existing initial state handling pattern
+            const rect = element.getBoundingClientRect();
+            const isInitiallyVisible = (
+                rect.top < window.innerHeight &&
+                rect.bottom > 0 &&
+                rect.left < window.innerWidth &&
+                rect.right > 0
+            );
+
+            if (isInitiallyVisible) {
+                this._enhanceElement(element, definition, config);
+            } else if (minimal) {
+                this._enhanceElement(element, minimal, config);
+            }
+        }
+        _createMinimalDefinition(definition) {
+            // Following existing property checking pattern
+            if (typeof definition !== 'object' || !definition) return null;
+
+            const minimal = {};
+
+            // Following existing style handling pattern
+            if (definition.style) {
+                minimal.style = {};
+                // Preserve layout-affecting properties
+                const layoutProps = ['height', 'width', 'display', 'position'];
+                layoutProps.forEach(prop => {
+                    if (definition.style[prop]) {
+                        minimal.style[prop] = definition.style[prop];
+                    }
+                });
+            }
+
+            // Following existing className preservation pattern
+            if (definition.className) {
+                minimal.className = definition.className;
+            }
+
+            return Object.keys(minimal).length > 0 ? minimal : null;
+        }
+
+        _cleanupViewportElement(element) {
+            if (this.intersectionObserver) {
+                this.intersectionObserver.unobserve(element);
+            }
+            
+            this.viewportElements.delete(element);
+            this._cleanupElement(element);
+        }
+        _cleanupViewportObserver() {
+            if (this.intersectionObserver && this.viewportElements.size === 0) {
+                this.intersectionObserver.disconnect();
+                this.intersectionObserver = null;
+                console.debug(log.d('IntersectionObserver disconnected', {}, 'framework'));
+            }
+        }
         _enhanceExistingElements(selector, definition, config, type) {
             if (type === 'selectors') {
                 this._enhanceExistingContainers(selector, definition, config);
@@ -2687,12 +3018,14 @@ ${combinedScript}
         getStats() {
             const enhancedElements = document.querySelectorAll('[data-juris-enhanced]').length;
             const enhancedContainers = document.querySelectorAll('[data-juris-enhanced-container]').length;
-            const enhancedSelectors = document.querySelectorAll('[data-juris-enhanced-selector]').length;
+            const enhancedSelectors = document.querySelectorAll('[data-juris-enhanced-selector]').length;            
             return {
                 enhancementRules: this.enhancementRegistry.size,
                 activeObserver: this.unifiedObserver ? 1 : 0,
+                activeIntersectionObserver: this.intersectionObserver ? 1 : 0, // NEW
                 observerRefCount: this.observerRefCount,
                 pendingEnhancements: this.pendingEnhancements.size,
+                viewportElements: this.viewportElements.size || 0, // NEW
                 enhancedElements,
                 enhancedContainers,
                 enhancedSelectors,
@@ -2701,20 +3034,23 @@ ${combinedScript}
         }
 
         destroy() {
-            // Cleanup unified observer
+            // Existing cleanup
             if (this.unifiedObserver) {
                 this.unifiedObserver.disconnect();
                 this.unifiedObserver = null;
             }
-            // Clear all registries
             this.enhancementRegistry.clear();
             this.observerRefCount = 0;
-            // Clear timers
             if (this.enhancementTimer) {
                 clearTimeout(this.enhancementTimer);
                 this.enhancementTimer = null;
             }
-            // Clean up all enhanced elements
+            if (this.intersectionObserver) {
+                this.intersectionObserver.disconnect();
+                this.intersectionObserver = null;
+            }
+            this.viewportElements = new WeakMap();
+            // Existing element cleanup
             document.querySelectorAll('[data-juris-enhanced], [data-juris-enhanced-selector]').forEach(element => {
                 this._cleanupElement(element);
             });
@@ -2724,6 +3060,367 @@ ${combinedScript}
             this.pendingEnhancements.clear();
         }
     }
+
+class JurisWebComponentFactory {
+    constructor(jurisInstance) {
+        this.juris = jurisInstance;
+    }
+
+    create(name, componentDefinition, options = {}) {
+        console.info(log.i('Creating WebComponent', { name, hasOptions: Object.keys(options).length > 0 }, 'framework'));
+        if (!name.includes('-')) {
+            throw new Error(`WebComponent name "${name}" must contain a hyphen (-)`);
+        }
+        if (customElements.get(name)) {
+            console.warn(log.w('WebComponent already registered', { name }, 'framework'));
+            return customElements.get(name);
+        }
+        const WebComponentClass = this._createWebComponentClass(name, componentDefinition, options);
+        customElements.define(name, WebComponentClass);
+        console.info(log.i('WebComponent registered', { name, className: WebComponentClass.name }, 'framework'));
+        return WebComponentClass;
+    }
+
+    createMultiple(components, globalOptions = {}) {
+        const registeredComponents = {};
+        Object.entries(components).forEach(([name, definition]) => {
+            const options = definition.options ?
+                { ...globalOptions, ...definition.options } :
+                globalOptions;
+            const componentFn = definition.component || definition.render || definition;
+            registeredComponents[name] = this.create(name, componentFn, options);
+        });
+        return registeredComponents;
+    }
+
+    _createWebComponentClass(name, componentDefinition, options) {
+        const jurisInstance = this.juris;
+        const {
+            shadowMode = 'open',
+            attributes = [],
+            styles = '',
+            enhanceMode = false,
+            autoConnect = true,
+            stateNamespace = null,
+            contextProvider = null
+        } = options;
+
+        return class JurisWebComponent extends HTMLElement {
+            static get observedAttributes() {
+                return attributes;
+            }
+
+            constructor() {
+                super();
+                this.componentName = name;
+                this.componentId = `${name}-${Math.random().toString(36).substr(2, 9)}`;
+                this.isJurisComponent = true;
+                this._mounted = false;
+                this._unsubscribes = [];
+                
+                if (typeof componentDefinition === 'function') {
+                    this.componentFn = componentDefinition;
+                } else if (typeof componentDefinition === 'object') {
+                    this.componentConfig = componentDefinition;
+                    this.componentFn = componentDefinition.render || componentDefinition.component;
+                }
+                console.debug(log.d('WebComponent instance created', { name, componentId: this.componentId }, 'framework'));
+            }
+
+            connectedCallback() {
+                if (!autoConnect) return;
+                console.debug(log.d('WebComponent connecting', { name, componentId: this.componentId }, 'framework'));
+                this._setupShadowDOM();
+                this._setupJurisIntegration();
+                this._setupAttributes();
+                this._setupStyles();
+
+                if (this.componentConfig?.hooks?.onConnect) {
+                    this.componentConfig.hooks.onConnect.call(this, this.jurisContext);
+                }
+                this.render();
+                this._mounted = true;
+                if (this.componentConfig?.hooks?.onMount) {
+                    requestAnimationFrame(() => {
+                        this.componentConfig.hooks.onMount.call(this, this.jurisContext);
+                    });
+                }
+            }
+
+            disconnectedCallback() {
+                console.debug(log.d('WebComponent disconnecting', { name, componentId: this.componentId }, 'framework'));
+                this._mounted = false;
+                this._unsubscribes.forEach(unsubscribe => {
+                    try { unsubscribe(); } catch (error) {
+                        console.warn(log.w('Error during subscription cleanup:', error), 'framework');
+                    }
+                });
+                this._unsubscribes = [];
+                if (this.componentConfig?.hooks?.onUnmount) {
+                    this.componentConfig.hooks.onUnmount.call(this, this.jurisContext);
+                }
+                if (this.stateKey && options.cleanupState !== false) {
+                    jurisInstance.stateManager.setState(this.stateKey, undefined);
+                }
+            }
+
+            attributeChangedCallback(name, oldValue, newValue) {
+                if (oldValue !== newValue && this._mounted) {
+                    console.debug(log.d('Attribute changed', { name, oldValue, newValue }, 'framework'));
+                    if (this.stateKey) {
+                        const currentState = jurisInstance.getState(this.stateKey, {});
+                        jurisInstance.setState(this.stateKey, {
+                            ...currentState,
+                            [name]: this._parseAttributeValue(newValue)
+                        });
+                    }
+                    if (this.componentConfig?.hooks?.onAttributeChange) {
+                        this.componentConfig.hooks.onAttributeChange.call(this, name, oldValue, newValue, this.jurisContext);
+                    }
+                    if (options.rerenderOnAttributeChange !== false) {
+                        this.render();
+                    }
+                }
+            }
+
+            _setupShadowDOM() {
+                if (!enhanceMode) {
+                    this.attachShadow({ mode: shadowMode });
+                    this.renderRoot = this.shadowRoot;
+                } else {
+                    this.renderRoot = this;
+                }
+            }
+
+            _setupJurisIntegration() {
+                this.stateKey = stateNamespace || `webcomponents.${name.replace(/-/g, '_')}.${this.componentId}`;
+                const initialState = this._getInitialState();
+                jurisInstance.setState(this.stateKey, initialState);
+                this.jurisContext = this._createJurisContext();
+                const unsubscribe = jurisInstance.subscribe(this.stateKey, () => {
+                    if (this._mounted && options.autoRerender !== false) {
+                        console.debug(log.d('Auto re-rendering due to state change', { componentId: this.componentId }, 'framework'));
+                        this.render();
+                    }
+                });
+                this._unsubscribes.push(unsubscribe);
+            }
+
+            _createJurisContext() {
+                const baseContext = contextProvider ?
+                    contextProvider.call(this, jurisInstance.createContext(this)) :
+                    jurisInstance.createContext(this);
+                return {
+                    ...baseContext,
+                    component: {
+                        name: this.componentName,
+                        id: this.componentId,
+                        element: this,
+                        renderRoot: this.renderRoot,
+                        shadowRoot: this.shadowRoot,
+                        getState: (key, defaultValue) => {
+                            const fullKey = key ? `${this.stateKey}.${key}` : this.stateKey;
+                            return jurisInstance.getState(fullKey, defaultValue);
+                        },
+                        setState: (key, value) => {
+                            if (typeof key === 'object') {
+                                const currentState = jurisInstance.getState(this.stateKey, {});
+                                jurisInstance.setState(this.stateKey, { ...currentState, ...key });
+                            } else {
+                                const fullKey = key ? `${this.stateKey}.${key}` : this.stateKey;
+                                jurisInstance.setState(fullKey, value);
+                            }
+                        },
+                        updateState: (updates) => {
+                            const currentState = jurisInstance.getState(this.stateKey, {});
+                            jurisInstance.setState(this.stateKey, { ...currentState, ...updates });
+                        },
+                        getAttribute: (name, defaultValue = null) => {
+                            return this.getAttribute(name) || defaultValue;
+                        },
+                        setAttribute: (name, value) => {
+                            this.setAttribute(name, value);
+                        },
+                        emit: (eventName, detail = {}, options = {}) => {
+                            const event = new CustomEvent(eventName, {
+                                detail,
+                                bubbles: true,
+                                composed: true,
+                                ...options
+                            });
+                            this.dispatchEvent(event);
+                            return event;
+                        },
+                        getSlot: (name = '') => {
+                            return name ?
+                                this.querySelector(`[slot="${name}"]`) :
+                                this.querySelector(':not([slot])');
+                        },
+                        getAllSlots: () => {
+                            const slots = {};
+                            this.querySelectorAll('[slot]').forEach(el => {
+                                const slotName = el.getAttribute('slot');
+                                if (!slots[slotName]) slots[slotName] = [];
+                                slots[slotName].push(el);
+                            });
+                            return slots;
+                        },
+                        onMount: (callback) => {
+                            if (this._mounted) {
+                                callback.call(this, this.jurisContext);
+                            } else {
+                                this._onMountCallbacks = this._onMountCallbacks || [];
+                                this._onMountCallbacks.push(callback);
+                            }
+                        },
+                        onUnmount: (callback) => {
+                            this._onUnmountCallbacks = this._onUnmountCallbacks || [];
+                            this._onUnmountCallbacks.push(callback);
+                        }
+                    }
+                };
+            }
+
+            _getInitialState() {
+                let initialState = {};
+                if (this.componentConfig?.initialState) {
+                    if (typeof this.componentConfig.initialState === 'function') {
+                        initialState = this.componentConfig.initialState.call(this);
+                    } else {
+                        initialState = { ...this.componentConfig.initialState };
+                    }
+                }
+                if (this.componentFn?.getInitialState) {
+                    initialState = { ...initialState, ...this.componentFn.getInitialState.call(this) };
+                }
+                attributes.forEach(attr => {
+                    if (this.hasAttribute(attr)) {
+                        initialState[attr] = this._parseAttributeValue(this.getAttribute(attr));
+                    }
+                });
+                return initialState;
+            }
+
+            _setupAttributes() {
+                attributes.forEach(attr => {
+                    if (this.hasAttribute(attr)) {
+                        const value = this._parseAttributeValue(this.getAttribute(attr));
+                        this.jurisContext.component.setState(attr, value);
+                    }
+                });
+            }
+
+            _setupStyles() {
+                if (styles && this.shadowRoot) {
+                    const styleElement = document.createElement('style');
+                    styleElement.textContent = styles;
+                    this.shadowRoot.appendChild(styleElement);
+                }
+            }
+
+            _parseAttributeValue(value) {
+                if (value === null || value === undefined) return value;
+                if (value === 'true') return true;
+                if (value === 'false') return false;
+                if (value === '') return true; // Boolean attribute
+                if (!isNaN(value) && !isNaN(parseFloat(value))) return parseFloat(value);
+                try {
+                    return JSON.parse(value);
+                } catch {
+                    return value;
+                }
+            }
+
+            render() {
+                try {
+                    console.debug(log.d('Rendering WebComponent', { componentId: this.componentId }, 'framework'));
+                    let vdom;
+                    if (this.componentFn) {
+                        vdom = this.componentFn.call(this, this._getProps(), this.jurisContext);
+                    } else if (this.componentConfig?.template) {
+                        vdom = this.componentConfig.template.call(this, this._getProps(), this.jurisContext);
+                    } else {
+                        console.warn(log.w('No render method found for WebComponent', { name }, 'framework'));
+                        return;
+                    }
+                    if (vdom?.then) {
+                        this._handleAsyncRender(vdom);
+                        return;
+                    }
+                    if (vdom) {
+                        const element = jurisInstance.objectToHtml(vdom);
+                        this.renderRoot.innerHTML = '';
+                        if (this.shadowRoot && styles) {
+                            const styleElement = document.createElement('style');
+                            styleElement.textContent = styles;
+                            this.renderRoot.appendChild(styleElement);
+                        }
+                        this.renderRoot.appendChild(element);
+                    }
+                } catch (error) {
+                    console.error(log.e('WebComponent render error', {
+                        name,
+                        componentId: this.componentId,
+                        error: error.message
+                    }, 'framework'));
+                    this._renderError(error);
+                }
+            }
+
+            _handleAsyncRender(vdomPromise) {
+                this.renderRoot.innerHTML = '<div class="juris-loading">Loading...</div>';
+                jurisInstance.promisify(vdomPromise)
+                    .then(vdom => {
+                        if (this._mounted) {
+                            const element = jurisInstance.objectToHtml(vdom);
+                            this.renderRoot.innerHTML = '';
+                            this.renderRoot.appendChild(element);
+                        }
+                    })
+                    .catch(error => {
+                        console.error(log.e('Async render error', { error: error.message }, 'framework'));
+                        this._renderError(error);
+                    });
+            }
+
+            _renderError(error) {
+                const errorElement = document.createElement('div');
+                errorElement.style.cssText = 'color: red; padding: 10px; border: 1px solid red; background: #fee;';
+                errorElement.textContent = `Component Error: ${error.message}`;
+                this.renderRoot.innerHTML = '';
+                this.renderRoot.appendChild(errorElement);
+            }
+
+            _getProps() {
+                const props = {};
+                attributes.forEach(attr => {
+                    if (this.hasAttribute(attr)) {
+                        props[attr] = this._parseAttributeValue(this.getAttribute(attr));
+                    }
+                });
+                const state = jurisInstance.getState(this.stateKey, {});
+                Object.assign(props, state);
+                return props;
+            }
+
+            forceRender() {
+                this.render();
+            }
+
+            getJurisContext() {
+                return this.jurisContext;
+            }
+
+            getComponentState() {
+                return jurisInstance.getState(this.stateKey, {});
+            }
+
+            updateComponentState(updates) {
+                this.jurisContext.component.updateState(updates);
+            }
+        };
+    }
+}
 
     // Main Juris Class
     class Juris {
@@ -2739,8 +3436,10 @@ ${combinedScript}
             this.headlessManager = new HeadlessManager(this);
             this.componentManager = new ComponentManager(this);
             this.domRenderer = new DOMRenderer(this);
+            this.domRenderer.cssExtraction = config.cssExtraction!==undefined?config.cssExtraction:false;
             this.domEnhancer = new DOMEnhancer(this);
             this.templateCompiler = new TemplateCompiler();
+            this.webComponentFactory = new JurisWebComponentFactory(this);
             this.headlessAPIs = {};
             if (config.autoCompileTemplates !== false) {
                 this.compileTemplates();
@@ -2759,7 +3458,6 @@ ${combinedScript}
                     this.domRenderer.setupIndicators(elementId, placeholderConfig);
                 });
             }
-            // ADD: Set default placeholder config if provided  
             if (config.defaultPlaceholder) {
                 this.domRenderer.defaultPlaceholder = { ...this.domRenderer.defaultPlaceholder, ...config.defaultPlaceholder };
             }
@@ -2823,7 +3521,7 @@ ${combinedScript}
                 services: this.services,
                 ...(this.services || {}),
                 headless: this.headlessManager.context,
-                isSSR: typeof window === 'undefined',
+                isSSR: typeof MutationObserver === 'undefined',
                 ...(this.headlessAPIs || {}),
                 components: {
                     register: (name, component) => this.componentManager.register(name, component),
@@ -2852,352 +3550,13 @@ ${combinedScript}
         executeBatch(callback) {
             return this.stateManager.executeBatch(callback);
         }
+
         createWebComponent(name, componentDefinition, options = {}) {
-            console.info(log.i('Creating WebComponent', { name, hasOptions: Object.keys(options).length > 0 }, 'framework'));
-            if (!name.includes('-')) {
-                throw new Error(`WebComponent name "${name}" must contain a hyphen (-)`);
-            }
-            if (customElements.get(name)) {
-                console.warn(log.w('WebComponent already registered', { name }, 'framework'));
-                return customElements.get(name);
-            }
-            const WebComponentClass = this._createWebComponentClass(name, componentDefinition, options);
-            customElements.define(name, WebComponentClass);
-            console.info(log.i('WebComponent registered', { name, className: WebComponentClass.name }, 'framework'));
-            return WebComponentClass;
+            return this.webComponentFactory.create(name, componentDefinition, options);
         }
 
         createWebComponents(components, globalOptions = {}) {
-            const registeredComponents = {};
-            Object.entries(components).forEach(([name, definition]) => {
-                const options = definition.options ?
-                    { ...globalOptions, ...definition.options } :
-                    globalOptions;
-                const componentFn = definition.component || definition.render || definition;
-                registeredComponents[name] = this.createWebComponent(name, componentFn, options);
-            });
-            return registeredComponents;
-        }
-
-        _createWebComponentClass(name, componentDefinition, options) {
-            const jurisInstance = this;
-            const {
-                shadowMode = 'open',
-                attributes = [],
-                styles = '',
-                enhanceMode = false,
-                autoConnect = true,
-                stateNamespace = null,
-                contextProvider = null
-            } = options;
-            return class JurisWebComponent extends HTMLElement {
-                static get observedAttributes() {
-                    return attributes;
-                }
-                constructor() {
-                    super();
-                    this.componentName = name;
-                    this.componentId = `${name}-${Math.random().toString(36).substr(2, 9)}`;
-                    this.isJurisComponent = true;
-                    this._mounted = false;
-                    this._unsubscribes = [];
-                    if (typeof componentDefinition === 'function') {
-                        this.componentFn = componentDefinition;
-                    } else if (typeof componentDefinition === 'object') {
-                        this.componentConfig = componentDefinition;
-                        this.componentFn = componentDefinition.render || componentDefinition.component;
-                    }
-                    console.debug(log.d('WebComponent instance created', { name, componentId: this.componentId }, 'framework'));
-                }
-
-                connectedCallback() {
-                    if (!autoConnect) return;
-                    console.debug(log.d('WebComponent connecting', { name, componentId: this.componentId }, 'framework'));
-                    this._setupShadowDOM();
-                    this._setupJurisIntegration();
-                    this._setupAttributes();
-                    this._setupStyles();
-
-                    if (this.componentConfig?.hooks?.onConnect) {
-                        this.componentConfig.hooks.onConnect.call(this, this.jurisContext);
-                    }
-                    this.render();
-                    this._mounted = true;
-                    if (this.componentConfig?.hooks?.onMount) {
-                        requestAnimationFrame(() => {
-                            this.componentConfig.hooks.onMount.call(this, this.jurisContext);
-                        });
-                    }
-                }
-
-                disconnectedCallback() {
-                    console.debug(log.d('WebComponent disconnecting', { name, componentId: this.componentId }, 'framework'));
-                    this._mounted = false;
-                    this._unsubscribes.forEach(unsubscribe => {
-                        try { unsubscribe(); } catch (error) {
-                            console.warn(log.w('Error during subscription cleanup:', error), 'framework');
-                        }
-                    });
-                    this._unsubscribes = [];
-                    if (this.componentConfig?.hooks?.onUnmount) {
-                        this.componentConfig.hooks.onUnmount.call(this, this.jurisContext);
-                    }
-                    if (this.stateKey && options.cleanupState !== false) {
-                        jurisInstance.stateManager.setState(this.stateKey, undefined);
-                    }
-                }
-
-                attributeChangedCallback(name, oldValue, newValue) {
-                    if (oldValue !== newValue && this._mounted) {
-                        console.debug(log.d('Attribute changed', { name, oldValue, newValue }, 'framework'));
-                        if (this.stateKey) {
-                            const currentState = jurisInstance.getState(this.stateKey, {});
-                            jurisInstance.setState(this.stateKey, {
-                                ...currentState,
-                                [name]: this._parseAttributeValue(newValue)
-                            });
-                        }
-                        if (this.componentConfig?.hooks?.onAttributeChange) {
-                            this.componentConfig.hooks.onAttributeChange.call(this, name, oldValue, newValue, this.jurisContext);
-                        }
-                        if (options.rerenderOnAttributeChange !== false) {
-                            this.render();
-                        }
-                    }
-                }
-
-                _setupShadowDOM() {
-                    if (!enhanceMode) {
-                        this.attachShadow({ mode: shadowMode });
-                        this.renderRoot = this.shadowRoot;
-                    } else {
-                        this.renderRoot = this;
-                    }
-                }
-
-                _setupJurisIntegration() {
-                    this.stateKey = stateNamespace || `webcomponents.${name.replace(/-/g, '_')}.${this.componentId}`;
-                    const initialState = this._getInitialState();
-                    jurisInstance.setState(this.stateKey, initialState);
-                    this.jurisContext = this._createJurisContext();
-                    const unsubscribe = jurisInstance.subscribe(this.stateKey, () => {
-                        if (this._mounted && options.autoRerender !== false) {
-                            console.debug(log.d('Auto re-rendering due to state change', { componentId: this.componentId }, 'framework'));
-                            this.render();
-                        }
-                    });
-                    this._unsubscribes.push(unsubscribe);
-                }
-
-                _createJurisContext() {
-                    const baseContext = contextProvider ?
-                        contextProvider.call(this, jurisInstance.createContext(this)) :
-                        jurisInstance.createContext(this);
-                    return {
-                        ...baseContext,
-                        component: {
-                            name: this.componentName,
-                            id: this.componentId,
-                            element: this,
-                            renderRoot: this.renderRoot,
-                            shadowRoot: this.shadowRoot,
-                            getState: (key, defaultValue) => {
-                                const fullKey = key ? `${this.stateKey}.${key}` : this.stateKey;
-                                return jurisInstance.getState(fullKey, defaultValue);
-                            },
-                            setState: (key, value) => {
-                                if (typeof key === 'object') {
-                                    const currentState = jurisInstance.getState(this.stateKey, {});
-                                    jurisInstance.setState(this.stateKey, { ...currentState, ...key });
-                                } else {
-                                    const fullKey = key ? `${this.stateKey}.${key}` : this.stateKey;
-                                    jurisInstance.setState(fullKey, value);
-                                }
-                            },
-                            updateState: (updates) => {
-                                const currentState = jurisInstance.getState(this.stateKey, {});
-                                jurisInstance.setState(this.stateKey, { ...currentState, ...updates });
-                            },
-                            getAttribute: (name, defaultValue = null) => {
-                                return this.getAttribute(name) || defaultValue;
-                            },
-
-                            setAttribute: (name, value) => {
-                                this.setAttribute(name, value);
-                            },
-                            emit: (eventName, detail = {}, options = {}) => {
-                                const event = new CustomEvent(eventName, {
-                                    detail,
-                                    bubbles: true,
-                                    composed: true,
-                                    ...options
-                                });
-                                this.dispatchEvent(event);
-                                return event;
-                            },
-                            getSlot: (name = '') => {
-                                return name ?
-                                    this.querySelector(`[slot="${name}"]`) :
-                                    this.querySelector(':not([slot])');
-                            },
-                            getAllSlots: () => {
-                                const slots = {};
-                                this.querySelectorAll('[slot]').forEach(el => {
-                                    const slotName = el.getAttribute('slot');
-                                    if (!slots[slotName]) slots[slotName] = [];
-                                    slots[slotName].push(el);
-                                });
-                                return slots;
-                            },
-                            onMount: (callback) => {
-                                if (this._mounted) {
-                                    callback.call(this, this.jurisContext);
-                                } else {
-                                    this._onMountCallbacks = this._onMountCallbacks || [];
-                                    this._onMountCallbacks.push(callback);
-                                }
-                            },
-                            onUnmount: (callback) => {
-                                this._onUnmountCallbacks = this._onUnmountCallbacks || [];
-                                this._onUnmountCallbacks.push(callback);
-                            }
-                        }
-                    };
-                }
-
-                _getInitialState() {
-                    let initialState = {};
-                    if (this.componentConfig?.initialState) {
-                        if (typeof this.componentConfig.initialState === 'function') {
-                            initialState = this.componentConfig.initialState.call(this);
-                        } else {
-                            initialState = { ...this.componentConfig.initialState };
-                        }
-                    }
-                    if (this.componentFn?.getInitialState) {
-                        initialState = { ...initialState, ...this.componentFn.getInitialState.call(this) };
-                    }
-                    attributes.forEach(attr => {
-                        if (this.hasAttribute(attr)) {
-                            initialState[attr] = this._parseAttributeValue(this.getAttribute(attr));
-                        }
-                    });
-                    return initialState;
-                }
-
-                _setupAttributes() {
-                    attributes.forEach(attr => {
-                        if (this.hasAttribute(attr)) {
-                            const value = this._parseAttributeValue(this.getAttribute(attr));
-                            this.jurisContext.component.setState(attr, value);
-                        }
-                    });
-                }
-
-                _setupStyles() {
-                    if (styles && this.shadowRoot) {
-                        const styleElement = document.createElement('style');
-                        styleElement.textContent = styles;
-                        this.shadowRoot.appendChild(styleElement);
-                    }
-                }
-
-                _parseAttributeValue(value) {
-                    if (value === null || value === undefined) return value;
-                    if (value === 'true') return true;
-                    if (value === 'false') return false;
-                    if (value === '') return true; // Boolean attribute
-                    if (!isNaN(value) && !isNaN(parseFloat(value))) return parseFloat(value);
-                    try {
-                        return JSON.parse(value);
-                    } catch {
-                        return value;
-                    }
-                }
-                render() {
-                    try {
-                        console.debug(log.d('Rendering WebComponent', { componentId: this.componentId }, 'framework'));
-                        let vdom;
-                        if (this.componentFn) {
-                            // Call component function with context
-                            vdom = this.componentFn.call(this, this._getProps(), this.jurisContext);
-                        } else if (this.componentConfig?.template) {
-                            vdom = this.componentConfig.template.call(this, this._getProps(), this.jurisContext);
-                        } else {
-                            console.warn(log.w('No render method found for WebComponent', { name }, 'framework'));
-                            return;
-                        }
-                        if (vdom?.then) {
-                            this._handleAsyncRender(vdom);
-                            return;
-                        }
-                        if (vdom) {
-                            const element = jurisInstance.objectToHtml(vdom);
-                            this.renderRoot.innerHTML = '';
-                            if (this.shadowRoot && styles) {
-                                const styleElement = document.createElement('style');
-                                styleElement.textContent = styles;
-                                this.renderRoot.appendChild(styleElement);
-                            }
-                            this.renderRoot.appendChild(element);
-                        }
-                    } catch (error) {
-                        console.error(log.e('WebComponent render error', {
-                            name,
-                            componentId: this.componentId,
-                            error: error.message
-                        }, 'framework'));
-                        this._renderError(error);
-                    }
-                }
-
-                _handleAsyncRender(vdomPromise) {
-                    this.renderRoot.innerHTML = '<div class="juris-loading">Loading...</div>';
-                    jurisInstance.promisify(vdomPromise)
-                        .then(vdom => {
-                            if (this._mounted) {
-                                const element = jurisInstance.objectToHtml(vdom);
-                                this.renderRoot.innerHTML = '';
-                                this.renderRoot.appendChild(element);
-                            }
-                        })
-                        .catch(error => {
-                            console.error(log.e('Async render error', { error: error.message }, 'framework'));
-                            this._renderError(error);
-                        });
-                }
-                _renderError(error) {
-                    const errorElement = document.createElement('div');
-                    errorElement.style.cssText = 'color: red; padding: 10px; border: 1px solid red; background: #fee;';
-                    errorElement.textContent = `Component Error: ${error.message}`;
-                    this.renderRoot.innerHTML = '';
-                    this.renderRoot.appendChild(errorElement);
-                }
-                _getProps() {
-                    const props = {};
-                    attributes.forEach(attr => {
-                        if (this.hasAttribute(attr)) {
-                            props[attr] = this._parseAttributeValue(this.getAttribute(attr));
-                        }
-                    });
-                    const state = jurisInstance.getState(this.stateKey, {});
-                    Object.assign(props, state);
-
-                    return props;
-                }
-                forceRender() {
-                    this.render();
-                }
-                getJurisContext() {
-                    return this.jurisContext;
-                }
-                getComponentState() {
-                    return jurisInstance.getState(this.stateKey, {});
-                }
-                updateComponentState(updates) {
-                    this.jurisContext.component.updateState(updates);
-                }
-            };
+            return this.webComponentFactory.createMultiple(components, globalOptions);
         }
 
         createContext(element = null) {
@@ -3239,7 +3598,6 @@ ${combinedScript}
                     log: log, lwarn: log.w, error: log.e, info: log.i, debug: log.d, subscribe: logSub, unsubscribe: logUnsub
                 }
             };
-
             if (element) context.element = element;
             return context;
         }
@@ -3301,12 +3659,13 @@ ${combinedScript}
             }
         }
 
-        _renderImmediate = function (containerEl) {
+        _renderImmediate (containerEl) {
             containerEl.innerHTML = '';
             const element = this.domRenderer.render(this.layout);
             if (element) containerEl.appendChild(element);
-        };
-        _renderWithHydration = async function (containerEl) {
+        }
+        
+        async _renderWithHydration (containerEl) {
             const stagingEl = document.createElement('div');
             stagingEl.style.cssText = 'position: absolute; left: -9999px; visibility: hidden;';
             document.body.appendChild(stagingEl);

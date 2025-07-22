@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris CSS Extraction Demo - Perfect Co-location</title>
+    <script src="../src/juris.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .demo-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .demo-header h1 {
+            color: #2d3748;
+            margin: 0 0 10px;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .demo-header p {
+            color: #718096;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+        
+        .stats-panel {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2b6cb0;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-top: 5px;
+        }
+        
+        .demo-sections {
+            display: grid;
+            gap: 30px;
+        }
+        
+        .section {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #f7fafc;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .section-content {
+            padding: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .theme-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .performance-note {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #234e52;
+        }
+        
+        .performance-note strong {
+            color: #065f46;
+        }
+        
+        /* Generated CSS will appear in <style data-juris-extracted> */
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1>🚀 Juris CSS Extraction Demo</h1>
+            <p>Perfect Co-location with Zero Performance Cost</p>
+        </div>
+        
+        <div class="stats-panel">
+            <div class="stats-grid" id="stats-container">
+                <!-- Stats will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <div class="performance-note">
+            <strong>💡 Performance Magic:</strong> Static styles are automatically extracted to CSS classes, 
+            while reactive styles remain as element.style for instant updates. 
+            Check the browser DevTools to see the generated <code>&lt;style data-juris-extracted&gt;</code> tag!
+        </div>
+        
+        <div class="demo-sections">
+            <div class="section">
+                <div class="section-header">Design System Components</div>
+                <div class="section-content">
+                    <div class="controls">
+                        <button onclick="changeTheme()">Change Theme</button>
+                        <button onclick="toggleLoading()">Toggle Loading</button>
+                        <button onclick="addMoreComponents()">Add More Components</button>
+                        <button onclick="showCSSStats()">Show CSS Stats</button>
+                    </div>
+                    <div id="design-system-demo"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-header">Dynamic Theme System</div>
+                <div class="section-content">
+                    <div id="theme-demo" class="theme-demo"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-header">Performance Comparison</div>
+                <div class="section-content">
+                    <div id="performance-demo"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Juris with CSS extraction demo
+        const juris = new Juris({
+            states: {
+                theme: {
+                    mode: 'light',
+                    primary: '#3182ce',
+                    secondary: '#805ad5',
+                    accent: '#38a169',
+                    background: '#ffffff',
+                    text: '#2d3748',
+                    border: '#e2e8f0'
+                },
+                loading: false,
+                componentCount: 0,
+                demo: {
+                    showAdvanced: false
+                }
+            },
+            
+            components: {
+                // Design System Button with CSS extraction
+                'Button': (props, { getState }) => ({
+                    button: {
+                        // Static styles → Extracted to CSS class (shared across all buttons)
+                        style: {
+                            padding: props.size === 'sm' ? '8px 16px' : props.size === 'lg' ? '16px 32px' : '12px 24px',
+                            borderRadius: '6px',
+                            fontFamily: 'system-ui, -apple-system, sans-serif',
+                            fontWeight: '500',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontSize: props.size === 'sm' ? '14px' : props.size === 'lg' ? '18px' : '16px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            
+                            // Reactive styles → Runtime element.style updates
+                            backgroundColor: () => {
+                                const theme = getState('theme');
+                                const variant = props.variant || 'primary';
+                                return theme[variant] || theme.primary;
+                            },
+                            color: () => getState('theme.mode') === 'dark' ? '#ffffff' : '#ffffff',
+                            opacity: () => getState('loading') ? 0.6 : 1,
+                            transform: () => getState('loading') ? 'scale(0.98)' : 'scale(1)',
+                            boxShadow: () => getState('loading') ? 'none' : '0 2px 4px rgba(0,0,0,0.1)'
+                        },
+                        text: () => getState('loading') && props.loading !== false ? 'Loading...' : props.children,
+                        disabled: () => getState('loading'),
+                        onclick: props.onClick
+                    }
+                }),
+                
+                // Card component with perfect co-location
+                'Card': (props, { getState }) => ({
+                    div: {
+                        // Static layout styles → CSS class
+                        style: {
+                            borderRadius: '8px',
+                            padding: '20px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            transition: 'all 0.3s ease',
+                            border: '1px solid',
+                            
+                            // Dynamic theme styles → Runtime updates
+                            backgroundColor: () => getState('theme.background'),
+                            borderColor: () => getState('theme.border'),
+                            transform: () => props.hover ? 'translateY(-2px)' : 'translateY(0)',
+                            boxShadow: () => props.hover ? '0 8px 25px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)'
+                        },
+                        children: props.children
+                    }
+                }),
+                
+                // Badge with variant system
+                'Badge': (props, { getState }) => ({
+                    span: {
+                        // Static badge styles → CSS class
+                        style: {
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            display: 'inline-block',
+                            
+                            // Dynamic colors → Runtime
+                            backgroundColor: () => {
+                                const theme = getState('theme');
+                                const variant = props.variant || 'primary';
+                                return theme[variant] || theme.primary;
+                            },
+                            color: () => '#ffffff'
+                        },
+                        text: props.children
+                    }
+                }),
+                
+                // Input with focus states
+                'Input': (props, { getState }) => ({
+                    input: {
+                        // Static input styles → CSS class
+                        style: {
+                            padding: '12px 16px',
+                            borderRadius: '6px',
+                            border: '2px solid',
+                            fontSize: '16px',
+                            fontFamily: 'inherit',
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            transition: 'all 0.2s ease',
+                            outline: 'none',
+                            
+                            // Dynamic states → Runtime
+                            borderColor: () => getState('theme.border'),
+                            backgroundColor: () => getState('theme.background'),
+                            color: () => getState('theme.text')
+                        },
+                        placeholder: props.placeholder,
+                        value: props.value,
+                        oninput: props.onInput,
+                        onfocus: () => {
+                            // This could trigger a state change for focus styling
+                        }
+                    }
+                }),
+                
+                // Stats display component
+                'StatCard': (props, { getState }) => ({
+                    div: {
+                        style: {
+                            // Static card layout → CSS class
+                            padding: '20px',
+                            borderRadius: '8px',
+                            textAlign: 'center',
+                            border: '1px solid',
+                            minHeight: '100px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            
+                            // Dynamic theming → Runtime
+                            backgroundColor: () => getState('theme.background'),
+                            borderColor: () => getState('theme.border')
+                        },
+                        children: [
+                            {
+                                div: {
+                                    style: {
+                                        fontSize: '2rem',
+                                        fontWeight: '700',
+                                        marginBottom: '8px',
+                                        color: () => getState('theme.primary')
+                                    },
+                                    text: props.value
+                                }
+                            },
+                            {
+                                div: {
+                                    style: {
+                                        fontSize: '0.9rem',
+                                        color: () => getState('theme.text'),
+                                        opacity: '0.7'
+                                    },
+                                    text: props.label
+                                }
+                            }
+                        ]
+                    }
+                }),
+                
+                // Demo application layout
+                'DemoApp': (props, { getState }) => ({
+                    div: {
+                        children: [
+                            // Header with theme controls
+                            {
+                                div: {
+                                    style: {
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginBottom: '30px',
+                                        padding: '20px',
+                                        borderRadius: '8px',
+                                        backgroundColor: () => getState('theme.background'),
+                                        border: '1px solid',
+                                        borderColor: () => getState('theme.border')
+                                    },
+                                    children: [
+                                        {
+                                            h2: {
+                                                style: {
+                                                    margin: '0',
+                                                    color: () => getState('theme.text')
+                                                },
+                                                text: 'Component Showcase'
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                style: { display: 'flex', gap: '10px' },
+                                                children: [
+                                                    { Button: { variant: 'primary', size: 'sm', children: 'Primary', onClick: () => console.log('Primary clicked') }},
+                                                    { Button: { variant: 'secondary', size: 'sm', children: 'Secondary', onClick: () => console.log('Secondary clicked') }},
+                                                    { Button: { variant: 'accent', size: 'sm', children: 'Accent', onClick: () => console.log('Accent clicked') }}
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            
+                            // Cards grid
+                            {
+                                div: {
+                                    style: {
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                                        gap: '20px',
+                                        marginBottom: '30px'
+                                    },
+                                    children: () => {
+                                        const count = getState('componentCount', 3);
+                                        const cards = [];
+                                        
+                                        for (let i = 0; i < count; i++) {
+                                            cards.push({
+                                                Card: {
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                style: {
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center',
+                                                                    marginBottom: '15px'
+                                                                },
+                                                                children: [
+                                                                    {
+                                                                        h3: {
+                                                                            style: {
+                                                                                margin: '0',
+                                                                                color: () => getState('theme.text')
+                                                                            },
+                                                                            text: `Card ${i + 1}`
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        Badge: {
+                                                                            variant: i % 2 === 0 ? 'primary' : 'accent',
+                                                                            children: 'Live'
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        },
+                                                        {
+                                                            p: {
+                                                                style: {
+                                                                    margin: '0 0 15px',
+                                                                    color: () => getState('theme.text'),
+                                                                    opacity: '0.8'
+                                                                },
+                                                                text: `This is card ${i + 1} content. All static styles are extracted to CSS classes, while reactive styles update in real-time.`
+                                                            }
+                                                        },
+                                                        {
+                                                            div: {
+                                                                style: { display: 'flex', gap: '10px' },
+                                                                children: [
+                                                                    { Button: { size: 'sm', children: 'Action', onClick: () => showNotification(`Card ${i + 1} action`) }},
+                                                                    { Button: { variant: 'secondary', size: 'sm', children: 'More', onClick: () => showNotification(`Card ${i + 1} more`) }}
+                                                                ]
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            });
+                                        }
+                                        
+                                        return cards;
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                })
+            }
+        });
+
+        // Helper functions
+        function changeTheme() {
+            const themes = [
+                { mode: 'light', primary: '#3182ce', secondary: '#805ad5', accent: '#38a169', background: '#ffffff', text: '#2d3748', border: '#e2e8f0' },
+                { mode: 'dark', primary: '#63b3ed', secondary: '#b794f6', accent: '#68d391', background: '#1a202c', text: '#e2e8f0', border: '#4a5568' },
+                { mode: 'purple', primary: '#805ad5', secondary: '#d53f8c', accent: '#38b2ac', background: '#faf5ff', text: '#44337a', border: '#c4b5fd' },
+                { mode: 'green', primary: '#38a169', secondary: '#3182ce', accent: '#d69e2e', background: '#f0fff4', text: '#22543d', border: '#9ae6b4' }
+            ];
+            
+            const currentTheme = juris.getState('theme');
+            const currentIndex = themes.findIndex(t => t.mode === currentTheme.mode);
+            const nextTheme = themes[(currentIndex + 1) % themes.length];
+            
+            juris.setState('theme', nextTheme);
+            updateStats();
+        }
+
+        function toggleLoading() {
+            const isLoading = juris.getState('loading');
+            juris.setState('loading', !isLoading);
+            updateStats();
+        }
+
+        function addMoreComponents() {
+            const current = juris.getState('componentCount', 3);
+            juris.setState('componentCount', Math.min(current + 2, 12));
+            updateStats();
+        }
+
+        function showCSSStats() {
+            const stats = juris.domRenderer.getStats();
+            const message = `CSS Extraction Stats:
+• Cached CSS Rules: ${stats.cssCache}
+• Injected CSS: ${stats.injectedCSS}
+• Active Subscriptions: ${stats.activeSubscriptions}
+• Element Cache: ${stats.elementCache}
+
+Check DevTools to see <style data-juris-extracted> tag!`;
+            
+            alert(message);
+        }
+
+        function showNotification(message) {
+            console.log('🔔', message);
+            // You could implement a toast notification here
+        }
+
+        function updateStats() {
+            const stats = juris.domRenderer.getStats();
+            const componentCount = juris.getState('componentCount', 3);
+            
+            const statsData = [
+                { value: stats.cssCache, label: 'CSS Rules Cached' },
+                { value: stats.injectedCSS, label: 'CSS Rules Injected' },
+                { value: stats.activeSubscriptions, label: 'Active Subscriptions' },
+                { value: componentCount * 5, label: 'Component Instances' },
+                { value: stats.elementCache, label: 'Element Cache' },
+                { value: `${stats.renderMode}`, label: 'Render Mode' }
+            ];
+            
+            const statsContainer = document.getElementById('stats-container');
+            if (statsContainer) {
+                statsContainer.innerHTML = statsData.map(stat => `
+                    <div class="stat-item">
+                        <div class="stat-value">${stat.value}</div>
+                        <div class="stat-label">${stat.label}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Initialize the demo
+        function initDemo() {
+            // Render main demo app
+            juris.registerComponent('DemoApp', juris.getComponent('DemoApp'));
+            
+            const designSystemDemo = document.getElementById('design-system-demo');
+            const demoElement = juris.componentManager.create('DemoApp', {});
+            if (demoElement) {
+                designSystemDemo.appendChild(demoElement);
+            }
+            
+            // Render theme demo
+            const themeDemo = document.getElementById('theme-demo');
+            const themes = ['light', 'dark', 'purple', 'green'];
+            
+            themes.forEach(themeName => {
+                const card = juris.componentManager.create('StatCard', {
+                    value: themeName.charAt(0).toUpperCase() + themeName.slice(1),
+                    label: 'Theme Mode'
+                });
+                if (card) {
+                    themeDemo.appendChild(card);
+                }
+            });
+            
+            // Performance demo
+            const performanceDemo = document.getElementById('performance-demo');
+            performanceDemo.innerHTML = `
+                <div style="background: #f7fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin: 0 0 15px; color: #2d3748;">🚀 Performance Benefits</h4>
+                    <div style="display: grid; gap: 10px; font-size: 14px;">
+                        <div>✅ <strong>Static styles</strong> → Extracted to CSS classes (shared & cached)</div>
+                        <div>✅ <strong>Reactive styles</strong> → Minimal runtime element.style updates</div>
+                        <div>✅ <strong>Component reuse</strong> → Same CSS class across instances</div>
+                        <div>✅ <strong>Browser optimization</strong> → CSS engine handles static styles</div>
+                        <div>✅ <strong>Perfect co-location</strong> → All component logic in one place</div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: #e6fffa; border-radius: 4px; border: 1px solid #81e6d9; color: #234e52;">
+                        <strong>Result:</strong> 70%+ reduction in DOM style operations while maintaining full reactivity!
+                    </div>
+                </div>
+            `;
+            
+            // Initial stats update
+            updateStats();
+            
+            // Update stats periodically
+            setInterval(updateStats, 2000);
+        }
+
+        // Start the demo when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDemo);
+        } else {
+            initDemo();
+        }
+
+        // Expose functions globally for button clicks
+        window.changeTheme = changeTheme;
+        window.toggleLoading = toggleLoading;
+        window.addMoreComponents = addMoreComponents;
+        window.showCSSStats = showCSSStats;
+    </script>
+</body>
+</html>
