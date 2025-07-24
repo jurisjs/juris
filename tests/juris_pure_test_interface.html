@@ -117,6 +117,7 @@
                     toBeLessThanOrEqual: (expected) => this.assert(actual <= expected, `Expected ${actual} to be less than or equal to ${expected}`),
                     toBeGreaterThanOrEqual: (expected) => this.assert(actual >= expected, `Expected ${actual} to be greater than or equal to ${expected}`),
                     toBeNull: () => this.assert(actual === null, `Expected ${actual} to be null`),
+                    toBeNotNull: () => this.assert(actual !== null, `Expected ${actual} to be NOT null`),
                     toBeUndefined: () => this.assert(actual === undefined, `Expected ${actual} to be undefined`),
                     toBeDefined: () => this.assert(actual !== undefined, `Expected ${actual} to be defined`),
                     toHaveLength: (length) => this.assert(actual.length === length, `Expected ${actual} to have length ${length}, but got ${actual.length}`),
@@ -766,7 +767,9 @@ testFramework.expect(element.style.backgroundColor).toBe('rgb(51, 51, 51)');`);
 
 // Test 1: Mixed Static/Reactive Sub-Properties
 testFramework.addTest('Mixed Static/Reactive Style Properties', 'DOM Rendering', async function() {
-    const juris = new Juris();
+    const juris = new Juris({        
+	    cssExtraction:false,
+    });
     juris.setState('ui.fontSize', '16px');
     juris.setState('ui.visible', true);
     
@@ -995,7 +998,9 @@ juris.setState('element.size', 'large');`);
 
 // Test 3: IIFE Static Style Values
 testFramework.addTest('IIFE Static Style Values', 'DOM Rendering', function() {
-    const juris = new Juris();
+    const juris = new Juris({
+        cssExtraction:false,
+    });
     
     const vnode = {
         div: {
@@ -1171,7 +1176,9 @@ testFramework.expect(element.style.backgroundColor).toBe('rgb(255, 107, 107)');`
 
 // FIXED: Complex Mixed Style Scenario with correct transform expectation
 testFramework.addTest('Complex Mixed Style Scenario', 'DOM Rendering', async function() {
-    const juris = new Juris();
+    const juris = new Juris({
+        cssExtraction:false,
+    });
     juris.setState('theme.mode', 'light');
     juris.setState('ui.scale', 1);
     
@@ -11732,7 +11739,9 @@ testFramework.expect(button).toRenderElement('button');
 // Testing all 100 HTML elements for proper creation`);
 
 testFramework.addTest('Static Attributes', 'Object VDOM', async function() {
-   const juris = new Juris();
+   const juris = new Juris({
+    cssExtraction:false,
+   });
    
    // Test className
    const divWithClass = juris.objectToHtml({div: {className: 'test-class'}});
@@ -13294,7 +13303,9 @@ testFramework.expect(svgElement.namespaceURI).toBe('http://www.w3.org/2000/svg')
 // Test SVG with circle, rect, path, line, ellipse, polygon, polyline, text, group, and complex structures`);
 
 testFramework.addTest('Combined Attributes and Children', 'Object VDOM', async function() {
-   const juris = new Juris();
+   const juris = new Juris({
+    cssExtraction:false,
+   });
    
    // Test element with both attributes and text
    const divWithAttributesAndText = juris.objectToHtml({
@@ -14620,6 +14631,867 @@ const emptyObject = juris.objectToHtml({});
 testFramework.expect(emptyObject).toBeNull();
 
 // Testing invalid structures, null properties, malformed children, circular references, large values, special characters, invalid events, reactive errors, deeply nested errors, invalid tags, mixed arrays, and error recovery`);
+
+// CSS Extraction Tests
+testFramework.addTest('CSS Extraction Basic', 'CSS Extraction', async function() {
+    const juris = new Juris({ cssExtraction: true });
+    
+    const vdom = {
+        div: {
+            style: {
+                padding: '16px',
+                color: () => 'blue'
+            }
+        }
+    };
+    
+    const element = juris.objectToHtml(vdom);
+    
+    // Should have extracted class for static styles
+    testFramework.expect(element.className).toContain('j-');
+    // Should have inline style for reactive styles
+    testFramework.expect(element.style.color).toBe('blue');
+    // Should not have inline padding (extracted to CSS)
+    testFramework.expect(element.style.padding).toBe('');
+}, `const juris = new Juris({ cssExtraction: true });
+
+const vdom = {
+    div: {
+        style: {
+            padding: '16px',
+            color: () => 'blue'
+        }
+    }
+};
+
+const element = juris.objectToHtml(vdom);
+
+testFramework.expect(element.className).toContain('j-');
+testFramework.expect(element.style.color).toBe('blue');
+testFramework.expect(element.style.padding).toBe('');`);
+
+testFramework.addTest('CSS Extraction Cache', 'CSS Extraction', async function() {
+    const juris = new Juris({ cssExtraction: true });
+    
+    const vdom1 = { div: { style: { padding: '8px' } } };
+    const vdom2 = { div: { style: { padding: '8px' } } };
+    
+    const element1 = juris.objectToHtml(vdom1);
+    const element2 = juris.objectToHtml(vdom2);
+    
+    // Same static styles should get same class
+    testFramework.expect(element1.className).toBe(element2.className);
+    
+    // Clear cache should work
+    juris.domRenderer.clearCSSCache();
+    testFramework.expect(juris.domRenderer.cssCache.size).toBe(0);
+}, `const juris = new Juris({ cssExtraction: true });
+
+const vdom1 = { div: { style: { padding: '8px' } } };
+const vdom2 = { div: { style: { padding: '8px' } } };
+
+const element1 = juris.objectToHtml(vdom1);
+const element2 = juris.objectToHtml(vdom2);
+
+testFramework.expect(element1.className).toBe(element2.className);
+
+juris.domRenderer.clearCSSCache();
+testFramework.expect(juris.domRenderer.cssCache.size).toBe(0);`);
+
+
+// Placeholder Configuration Tests
+testFramework.addTest('Default Placeholder Config', 'Placeholders', async function() {
+    const juris = new Juris({
+        defaultPlaceholder: {
+            className: 'custom-loading',
+            text: 'Please wait...',
+            style: 'opacity: 0.5;'
+        }
+    });
+    
+    testFramework.expect(juris.domRenderer.defaultPlaceholder.className).toBe('custom-loading');
+    testFramework.expect(juris.domRenderer.defaultPlaceholder.text).toBe('Please wait...');
+    testFramework.expect(juris.domRenderer.defaultPlaceholder.style).toBe('opacity: 0.5;');
+}, `const juris = new Juris({
+    defaultPlaceholder: {
+        className: 'custom-loading',
+        text: 'Please wait...',
+        style: 'opacity: 0.5;'
+    }
+});
+
+testFramework.expect(juris.domRenderer.defaultPlaceholder.className).toBe('custom-loading');
+testFramework.expect(juris.domRenderer.defaultPlaceholder.text).toBe('Please wait...');`);
+
+testFramework.addTest('Element Specific Placeholders', 'Placeholders', async function() {
+    const juris = new Juris({
+        placeholders: {
+            'user-profile': {
+                className: 'profile-loading',
+                text: 'Loading user...'
+            }
+        }
+    });
+    
+    testFramework.expect(juris.domRenderer.placeholderConfigs.has('user-profile')).toBe(true);
+    
+    const config = juris.domRenderer.placeholderConfigs.get('user-profile');
+    testFramework.expect(config.className).toBe('profile-loading');
+    testFramework.expect(config.text).toBe('Loading user...');
+}, `const juris = new Juris({
+    placeholders: {
+        'user-profile': {
+            className: 'profile-loading',
+            text: 'Loading user...'
+        }
+    }
+});
+
+testFramework.expect(juris.domRenderer.placeholderConfigs.has('user-profile')).toBe(true);
+const config = juris.domRenderer.placeholderConfigs.get('user-profile');
+testFramework.expect(config.className).toBe('profile-loading');`);
+
+testFramework.addTest('Runtime Placeholder Setup', 'Placeholders', async function() {
+    const juris = new Juris();
+    
+    juris.setupIndicators('test-element', {
+        className: 'test-loading',
+        text: 'Testing...'
+    });
+    
+    testFramework.expect(juris.domRenderer.placeholderConfigs.has('test-element')).toBe(true);
+    
+    const config = juris.domRenderer.placeholderConfigs.get('test-element');
+    testFramework.expect(config.className).toBe('test-loading');
+    testFramework.expect(config.text).toBe('Testing...');
+}, `const juris = new Juris();
+
+juris.setupIndicators('test-element', {
+    className: 'test-loading',
+    text: 'Testing...'
+});
+
+testFramework.expect(juris.domRenderer.placeholderConfigs.has('test-element')).toBe(true);
+const config = juris.domRenderer.placeholderConfigs.get('test-element');
+testFramework.expect(config.className).toBe('test-loading');`);
+
+
+// Web Components Tests
+testFramework.addTest('Web Component Creation', 'Web Components', async function() {
+    const juris = new Juris();
+    
+    const TestComponent = juris.createWebComponent('test-component', (props, context) => ({
+        div: {
+            text: props.message || 'Hello World'
+        }
+    }), {
+        attributes: ['message']
+    });
+    
+    testFramework.expect(TestComponent).toBeDefined();
+    testFramework.expect(customElements.get('test-component')).toBe(TestComponent);
+}, `const juris = new Juris();
+
+const TestComponent = juris.createWebComponent('test-component', (props, context) => ({
+    div: {
+        text: props.message || 'Hello World'
+    }
+}), {
+    attributes: ['message']
+});
+
+testFramework.expect(TestComponent).toBeDefined();
+testFramework.expect(customElements.get('test-component')).toBe(TestComponent);`);
+
+testFramework.addTest('Web Component Multiple Creation', 'Web Components', async function() {
+    const juris = new Juris();
+    
+    const components = juris.createWebComponents({
+        'test-card': {
+            component: (props) => ({ div: { text: props.title } }),
+            options: { attributes: ['title'] }
+        },
+        'test-button': {
+            component: (props) => ({ button: { text: props.label } }),
+            options: { attributes: ['label'] }
+        }
+    });
+    
+    testFramework.expect(components['test-card']).toBeDefined();
+    testFramework.expect(components['test-button']).toBeDefined();
+    testFramework.expect(customElements.get('test-card')).toBe(components['test-card']);
+    testFramework.expect(customElements.get('test-button')).toBe(components['test-button']);
+}, `const juris = new Juris();
+
+const components = juris.createWebComponents({
+    'test-card': {
+        component: (props) => ({ div: { text: props.title } }),
+        options: { attributes: ['title'] }
+    },
+    'test-button': {
+        component: (props) => ({ button: { text: props.label } }),
+        options: { attributes: ['label'] }
+    }
+});
+
+testFramework.expect(components['test-card']).toBeDefined();
+testFramework.expect(customElements.get('test-card')).toBe(components['test-card']);`);
+
+
+// Enhanced Context API Tests
+testFramework.addTest('Context subscribeExact', 'Enhanced Context', async function() {
+    const juris = new Juris({ states: { user: { name: 'John' } } });
+    let callCount = 0;
+    
+    const unsubscribe = juris.subscribeExact('user', () => {
+        callCount++;
+    });
+    
+    juris.setState('user.name', 'Jane');
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Should not trigger for child path changes
+    testFramework.expect(callCount).toBe(0);
+    
+    juris.setState('user', { name: 'Bob' });
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Should trigger for exact path change
+    testFramework.expect(callCount).toBe(1);
+    
+    unsubscribe();
+}, `const juris = new Juris({ states: { user: { name: 'John' } } });
+let callCount = 0;
+
+const unsubscribe = juris.subscribeExact('user', () => {
+    callCount++;
+});
+
+juris.setState('user.name', 'Jane');
+await new Promise(resolve => setTimeout(resolve, 10));
+testFramework.expect(callCount).toBe(0);
+
+juris.setState('user', { name: 'Bob' });
+await new Promise(resolve => setTimeout(resolve, 10));
+testFramework.expect(callCount).toBe(1);`);
+
+testFramework.addTest('Context newState', 'Enhanced Context', async function() {
+    const juris = new Juris();
+    let getterResult, setterCalled = false;
+    
+    juris.registerComponent('TestComponent', (props, { newState }) => {
+        const [getCount, setCount] = newState('count', 0);
+        
+        getterResult = getCount();
+        setCount(5);
+        setterCalled = true;
+        
+        return { div: { text: 'test' } };
+    });
+    
+    juris.objectToHtml({ TestComponent: {} });
+    
+    testFramework.expect(getterResult).toBe(0);
+    testFramework.expect(setterCalled).toBe(true);
+}, `const juris = new Juris();
+let getterResult, setterCalled = false;
+
+juris.registerComponent('TestComponent', (props, { newState }) => {
+    const [getCount, setCount] = newState('count', 0);
+    
+    getterResult = getCount();
+    setCount(5);
+    setterCalled = true;
+    
+    return { div: { text: 'test' } };
+});
+
+juris.objectToHtml({ TestComponent: {} });
+testFramework.expect(getterResult).toBe(0);
+testFramework.expect(setterCalled).toBe(true);`);
+
+testFramework.addTest('Context Utils objectToHtml', 'Enhanced Context', async function() {
+    const juris = new Juris();
+    let resultElement;
+    
+    juris.registerComponent('TestComponent', (props, { utils }) => {
+        resultElement = utils.objectToHtml({ span: { text: 'converted' } });
+        return { div: { text: 'test' } };
+    });
+    
+    juris.objectToHtml({ TestComponent: {} });
+    
+    testFramework.expect(resultElement.tagName).toBe('SPAN');
+    testFramework.expect(resultElement.textContent).toBe('converted');
+}, `const juris = new Juris();
+let resultElement;
+
+juris.registerComponent('TestComponent', (props, { utils }) => {
+    resultElement = utils.objectToHtml({ span: { text: 'converted' } });
+    return { div: { text: 'test' } };
+});
+
+juris.objectToHtml({ TestComponent: {} });
+testFramework.expect(resultElement.tagName).toBe('SPAN');
+testFramework.expect(resultElement.textContent).toBe('converted');`);
+
+testFramework.addTest('Context Utils Render Mode', 'Enhanced Context', async function() {
+    const juris = new Juris();
+    let initialMode, changedMode;
+    
+    juris.registerComponent('TestComponent', (props, { utils }) => {
+        initialMode = utils.getRenderMode();
+        utils.setRenderMode('batch');
+        changedMode = utils.getRenderMode();
+        
+        return { div: { text: 'test' } };
+    });
+    
+    juris.objectToHtml({ TestComponent: {} });
+    
+    testFramework.expect(initialMode).toBe('fine-grained');
+    testFramework.expect(changedMode).toBe('batch');
+    testFramework.expect(juris.getRenderMode()).toBe('batch');
+}, `const juris = new Juris();
+let initialMode, changedMode;
+
+juris.registerComponent('TestComponent', (props, { utils }) => {
+    initialMode = utils.getRenderMode();
+    utils.setRenderMode('batch');
+    changedMode = utils.getRenderMode();
+    return { div: { text: 'test' } };
+});
+
+juris.objectToHtml({ TestComponent: {} });
+testFramework.expect(initialMode).toBe('fine-grained');
+testFramework.expect(changedMode).toBe('batch');`);
+
+// Enhancement Options Tests
+testFramework.addTest('Enhancement with Options', 'Enhancement Options', async function() {
+    const juris = new Juris();
+    const container = document.createElement('div');
+    container.innerHTML = '<button class="test-btn">Click me</button>';
+    document.body.appendChild(container);
+    
+    let enhancedElement = null;
+    
+    const cleanup = juris.enhance('.test-btn', {
+        text: 'Enhanced Button'
+    }, {
+        debounceMs: 50,
+        batchUpdates: true,
+        onEnhanced: (element, context) => {
+            enhancedElement = element;
+        }
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    testFramework.expect(enhancedElement).toBeNotNull(null);
+    testFramework.expect(enhancedElement.textContent).toBe('Enhanced Button');
+    
+    cleanup();
+    document.body.removeChild(container);
+}, `const juris = new Juris();
+const container = document.createElement('div');
+container.innerHTML = '<button class="test-btn">Click me</button>';
+document.body.appendChild(container);
+
+let enhancedElement = null;
+
+const cleanup = juris.enhance('.test-btn', {
+    text: 'Enhanced Button'
+}, {
+    debounceMs: 50,
+    batchUpdates: true,
+    onEnhanced: (element, context) => {
+        enhancedElement = element;
+    }
+});
+
+await new Promise(resolve => setTimeout(resolve, 100));
+testFramework.expect(enhancedElement).toBeNull(null);
+testFramework.expect(enhancedElement.textContent).toBe('Enhanced Button');`);
+
+testFramework.addTest('Viewport Aware Enhancement', 'Enhancement Options', async function() {
+    const juris = new Juris();
+    const container = document.createElement('div');
+    container.innerHTML = '<div class="viewport-test" style="height: 100px;">Content</div>';
+    document.body.prepend(container);
+    
+    const cleanup = juris.enhance('.viewport-test', {
+        text: 'Fully Enhanced'
+    }, {
+        viewportAware: true,
+        viewportMargin: '50px',
+        minimal: {
+            text: 'Minimal',
+            className: 'minimal-state'
+        }
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const element = document.querySelector('.viewport-test');
+    // Element should have some enhancement applied
+    testFramework.expect(element.textContent).toBeTruthy();
+    
+    cleanup();
+    document.body.removeChild(container);
+}, `const juris = new Juris();
+const container = document.createElement('div');
+container.innerHTML = '<div class="viewport-test" style="height: 100px;">Content</div>';
+document.body.appendChild(container);
+
+const cleanup = juris.enhance('.viewport-test', {
+    text: 'Fully Enhanced'
+}, {
+    viewportAware: true,
+    viewportMargin: '50px',
+    minimal: {
+        text: 'Minimal',
+        className: 'minimal-state'
+    }
+});
+
+await new Promise(resolve => setTimeout(resolve, 100));
+const element = container.querySelector('.viewport-test');
+testFramework.expect(element.textContent).toBeTruthy();`);
+
+
+// Template System Extensions Tests
+testFramework.addTest('Template Data Context', 'Template Extensions', async function() {
+    const juris = new Juris({
+        services: {
+            api: { get: () => Promise.resolve({}) },
+            storage: { save: () => {}, load: () => {} }
+        }
+    });
+    
+    // Create a template element
+    const template = document.createElement('template');
+    template.setAttribute('data-component', 'TestTemplate');
+    template.setAttribute('data-context', 'setState, getState, api, storage');
+    template.innerHTML = `
+        <script>
+            const testValue = () => getState('test', 'default');
+        <\/script>
+        <div>{()=>testValue()}<\/div>
+    `;
+    
+    document.body.appendChild(template);
+    
+    juris.compileTemplates();
+    
+    testFramework.expect(juris.getComponent('TestTemplate')).toBeDefined();
+    
+    document.body.removeChild(template);
+}, `const juris = new Juris({
+    services: {
+        api: { get: () => Promise.resolve({}) },
+        storage: { save: () => {}, load: () => {} }
+    }
+});
+
+const template = document.createElement('template');
+template.setAttribute('data-component', 'TestTemplate');
+template.setAttribute('data-context', 'setState, getState, api, storage');
+template.innerHTML = \`
+    <script>const testValue = () => getState('test', 'default');<\/script>
+    <div>{()=>testValue()}<\/div>
+\`;
+
+document.body.appendChild(template);
+juris.compileTemplates();
+testFramework.expect(juris.getComponent('TestTemplate')).toBeDefined();`);
+
+// State Management Extensions Tests
+testFramework.addTest('Non-Reactive State Access', 'State Extensions', async function() {
+    const juris = new Juris({ states: { counter: 0 } });
+    let callCount = 0;
+    
+    juris.registerComponent('TestComponent', (props, { getState }) => {
+        // This should not create a subscription
+        const value = getState('counter', 0, false);
+        callCount++;
+        
+        return { div: { text: `Count: ${value}` } };
+    });
+    
+    const element = juris.objectToHtml({ TestComponent: {} });
+    testFramework.expect(callCount).toBe(1);
+    testFramework.expect(element.textContent).toBe('Count: 0');
+    
+    // Changing state should not trigger re-render
+    juris.setState('counter', 5);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Call count should remain 1 (no re-render)
+    testFramework.expect(callCount).toBe(1);
+}, `const juris = new Juris({ states: { counter: 0 } });
+let callCount = 0;
+
+juris.registerComponent('TestComponent', (props, { getState }) => {
+    const value = getState('counter', 0, false); // No subscription
+    callCount++;
+    return { div: { text: \`Count: \${value}\` } };
+});
+
+const element = juris.objectToHtml({ TestComponent: {} });
+testFramework.expect(callCount).toBe(1);
+
+juris.setState('counter', 5);
+await new Promise(resolve => setTimeout(resolve, 10));
+testFramework.expect(callCount).toBe(1); // No re-render`);
+
+testFramework.addTest('State Reset', 'State Extensions', async function() {
+    const juris = new Juris({ 
+        states: { 
+            user: { name: 'John', age: 30 },
+            counter: 0 
+        } 
+    });
+    
+    // Modify state
+    juris.setState('user.name', 'Jane');
+    juris.setState('counter', 5);
+    
+    testFramework.expect(juris.getState('user.name')).toBe('Jane');
+    testFramework.expect(juris.getState('counter')).toBe(5);
+    
+    // Reset state
+    juris.stateManager.reset();
+    
+    testFramework.expect(juris.getState('user.name')).toBe('John');
+    testFramework.expect(juris.getState('counter')).toBe(0);
+}, `const juris = new Juris({ 
+    states: { 
+        user: { name: 'John', age: 30 },
+        counter: 0 
+    } 
+});
+
+juris.setState('user.name', 'Jane');
+juris.setState('counter', 5);
+testFramework.expect(juris.getState('user.name')).toBe('Jane');
+
+juris.stateManager.reset();
+testFramework.expect(juris.getState('user.name')).toBe('John');
+testFramework.expect(juris.getState('counter')).toBe(0);`);
+
+
+// Development Tools Tests
+testFramework.addTest('Framework Statistics', 'Development Tools', async function() {
+    const juris = new Juris();
+    
+    // Register some components for stats
+    juris.registerComponent('TestComp', () => ({ div: { text: 'test' } }));
+    juris.registerHeadlessComponent('TestHeadless', () => ({ api: {} }));
+    
+    const enhancementStats = juris.getEnhancementStats();
+    const headlessStatus = juris.getHeadlessStatus();
+    
+    testFramework.expect(typeof enhancementStats).toBe('object');
+    testFramework.expect(typeof headlessStatus).toBe('object');
+    testFramework.expect(Array.isArray(headlessStatus.registered)).toBe(true);
+    testFramework.expect(headlessStatus.registered).toContain('TestHeadless');
+}, `const juris = new Juris();
+
+juris.registerComponent('TestComp', () => ({ div: { text: 'test' } }));
+juris.registerHeadlessComponent('TestHeadless', () => ({ api: {} }));
+
+const enhancementStats = juris.getEnhancementStats();
+const headlessStatus = juris.getHeadlessStatus();
+
+testFramework.expect(typeof enhancementStats).toBe('object');
+testFramework.expect(typeof headlessStatus).toBe('object');
+testFramework.expect(headlessStatus.registered).toContain('TestHeadless');`);
+
+testFramework.addTest('Render Mode Control', 'Development Tools', async function() {
+    const juris = new Juris();
+    
+    // Initial mode
+    testFramework.expect(juris.getRenderMode()).toBe('fine-grained');
+    testFramework.expect(juris.isFineGrained()).toBe(true);
+    testFramework.expect(juris.isBatchMode()).toBe(false);
+    
+    // Change mode
+    juris.setRenderMode('batch');
+    testFramework.expect(juris.getRenderMode()).toBe('batch');
+    testFramework.expect(juris.isFineGrained()).toBe(false);
+    testFramework.expect(juris.isBatchMode()).toBe(true);
+}, `const juris = new Juris();
+
+testFramework.expect(juris.getRenderMode()).toBe('fine-grained');
+testFramework.expect(juris.isFineGrained()).toBe(true);
+testFramework.expect(juris.isBatchMode()).toBe(false);
+
+juris.setRenderMode('batch');
+testFramework.expect(juris.getRenderMode()).toBe('batch');
+testFramework.expect(juris.isBatchMode()).toBe(true);`);
+
+testFramework.addTest('VDOM Utilities', 'Development Tools', async function() {
+    const juris = new Juris();
+    
+    const vdom = {
+        div: {
+            className: 'test',
+            children: [
+                { span: { text: 'Hello' } },
+                { p: { text: 'World' } }
+            ]
+        }
+    };
+    
+    const element = juris.objectToHtml(vdom);
+    
+    testFramework.expect(element.tagName).toBe('DIV');
+    testFramework.expect(element.className).toBe('test');
+    testFramework.expect(element.children.length).toBe(2);
+    testFramework.expect(element.children[0].tagName).toBe('SPAN');
+    testFramework.expect(element.children[0].textContent).toBe('Hello');
+    testFramework.expect(element.children[1].tagName).toBe('P');
+    testFramework.expect(element.children[1].textContent).toBe('World');
+}, `const juris = new Juris();
+
+const vdom = {
+    div: {
+        className: 'test',
+        children: [
+            { span: { text: 'Hello' } },
+            { p: { text: 'World' } }
+        ]
+    }
+};
+
+const element = juris.objectToHtml(vdom);
+
+testFramework.expect(element.tagName).toBe('DIV');
+testFramework.expect(element.className).toBe('test');
+testFramework.expect(element.children.length).toBe(2);`);
+
+
+
+testFramework.addTest('Framework Lifecycle', 'Development Tools', async function() {
+    const juris = new Juris();
+    
+    // Add some state and components
+    juris.setState('test', 'value');
+    juris.registerComponent('TestComp', () => ({ div: { text: 'test' } }));
+    
+    testFramework.expect(juris.getState('test')).toBe('value');
+    testFramework.expect(juris.getComponent('TestComp')).toBeDefined();
+    
+    // Cleanup should work
+    juris.cleanup();
+    
+    // Destroy should work
+    juris.destroy();
+    
+    // After destroy, components should be cleared
+    testFramework.expect(juris.componentManager.components.size).toBe(0);
+}, `const juris = new Juris();
+
+juris.setState('test', 'value');
+juris.registerComponent('TestComp', () => ({ div: { text: 'test' } }));
+
+testFramework.expect(juris.getState('test')).toBe('value');
+testFramework.expect(juris.getComponent('TestComp')).toBeDefined();
+
+juris.cleanup();
+juris.destroy();
+
+testFramework.expect(juris.componentManager.components.size).toBe(0);`);
+
+// Edge Cases Tests
+testFramework.addTest('CSS Extraction Edge Cases', 'Edge Cases', async function() {
+    const juris = new Juris({ cssExtraction: true });
+    
+    // Test with no styles
+    const noStyleElement = juris.objectToHtml({ div: { text: 'no styles' } });
+    testFramework.expect(noStyleElement.className).toBe('');
+    
+    // Test with only reactive styles
+    const reactiveOnlyElement = juris.objectToHtml({
+        div: { style: { color: () => 'red' } }
+    });
+    testFramework.expect(reactiveOnlyElement.className).toBe('');
+    testFramework.expect(reactiveOnlyElement.style.color).toBe('red');
+    
+    // Test with mixed styles
+    const mixedElement = juris.objectToHtml({
+        div: {
+            style: {
+                padding: '10px',  // static
+                margin: '5px',    // static
+                color: () => 'blue' // reactive
+            }
+        }
+    });
+    testFramework.expect(mixedElement.className).toContain('j-');
+    testFramework.expect(mixedElement.style.color).toBe('blue');
+}, `const juris = new Juris({ cssExtraction: true });
+
+// No styles
+const noStyleElement = juris.objectToHtml({ div: { text: 'no styles' } });
+testFramework.expect(noStyleElement.className).toBe('');
+
+// Only reactive styles
+const reactiveOnlyElement = juris.objectToHtml({
+    div: { style: { color: () => 'red' } }
+});
+testFramework.expect(reactiveOnlyElement.className).toBe('');
+testFramework.expect(reactiveOnlyElement.style.color).toBe('red');`);
+
+testFramework.addTest('Web Component Edge Cases', 'Edge Cases', async function() {
+    const juris = new Juris();
+    
+    // Test component without hyphen should throw
+    try {
+        juris.createWebComponent('invalid', () => ({}));
+        testFramework.expect(false).toBe(true); // Should not reach here
+    } catch (error) {
+        testFramework.expect(error.message).toContain('hyphen');
+    }
+    
+    // Test already registered component should warn but not throw
+    juris.createWebComponent('test-comp', () => ({ div: { text: 'first' } }));
+    const secondAttempt = juris.createWebComponent('test-comp', () => ({ div: { text: 'second' } }));
+    
+    testFramework.expect(secondAttempt).toBe(customElements.get('test-comp'));
+}, `const juris = new Juris();
+
+// Invalid name without hyphen
+try {
+    juris.createWebComponent('invalid', () => ({}));
+    testFramework.expect(false).toBe(true);
+} catch (error) {
+    testFramework.expect(error.message).toContain('hyphen');
+}
+
+// Duplicate registration
+juris.createWebComponent('test-comp', () => ({ div: { text: 'first' } }));
+const secondAttempt = juris.createWebComponent('test-comp', () => ({ div: { text: 'second' } }));
+testFramework.expect(secondAttempt).toBe(customElements.get('test-comp'));`);
+
+testFramework.addTest('State Subscription Edge Cases', 'Edge Cases', async function() {
+    const juris = new Juris();
+    
+    // Test invalid paths
+    const invalidSub1 = juris.subscribe('', () => {}); // Empty string
+    const invalidSub2 = juris.subscribe('..invalid', () => {}); // Contains ..
+    const invalidSub3 = juris.subscribe(123, () => {}); // Not a string
+    
+    // All should return functions but not actually subscribe
+    testFramework.expect(typeof invalidSub1).toBe('function');
+    testFramework.expect(typeof invalidSub2).toBe('function');
+    testFramework.expect(typeof invalidSub3).toBe('function');
+    
+    // Test subscribeExact with invalid paths
+    const invalidExactSub = juris.subscribeExact('', () => {});
+    testFramework.expect(typeof invalidExactSub).toBe('function');
+}, `const juris = new Juris();
+
+// Invalid subscription paths
+const invalidSub1 = juris.subscribe('', () => {}); // Empty string
+const invalidSub2 = juris.subscribe('..invalid', () => {}); // Contains ..
+const invalidSub3 = juris.subscribe(123, () => {}); // Not a string
+
+testFramework.expect(typeof invalidSub1).toBe('function');
+testFramework.expect(typeof invalidSub2).toBe('function');
+testFramework.expect(typeof invalidSub3).toBe('function');
+
+const invalidExactSub = juris.subscribeExact('', () => {});
+testFramework.expect(typeof invalidExactSub).toBe('function');`);
+
+testFramework.addTest('Enhancement Edge Cases', 'Edge Cases', async function() {
+    const juris = new Juris();
+    
+    // Test enhancement with non-existent selector
+    const cleanup1 = juris.enhance('.non-existent', { text: 'test' });
+    testFramework.expect(typeof cleanup1).toBe('function');
+    
+    // Test enhancement with invalid options
+    const cleanup2 = juris.enhance('.test', { text: 'test' }, {
+        debounceMs: -1,
+        viewportMargin: 'invalid'
+    });
+    testFramework.expect(typeof cleanup2).toBe('function');
+    
+    // Multiple enhancements on same selector
+    const cleanup3 = juris.enhance('.test', { text: 'first' });
+    const cleanup4 = juris.enhance('.test', { text: 'second' });
+    
+    testFramework.expect(typeof cleanup3).toBe('function');
+    testFramework.expect(typeof cleanup4).toBe('function');
+    
+    cleanup1();
+    cleanup2();
+    cleanup3();
+    cleanup4();
+}, `const juris = new Juris();
+
+// Non-existent selector
+const cleanup1 = juris.enhance('.non-existent', { text: 'test' });
+testFramework.expect(typeof cleanup1).toBe('function');
+
+// Invalid options
+const cleanup2 = juris.enhance('.test', { text: 'test' }, {
+    debounceMs: -1,
+    viewportMargin: 'invalid'
+});
+testFramework.expect(typeof cleanup2).toBe('function');
+
+// Multiple enhancements
+const cleanup3 = juris.enhance('.test', { text: 'first' });
+const cleanup4 = juris.enhance('.test', { text: 'second' });
+testFramework.expect(typeof cleanup3).toBe('function');`);
+
+
+testFramework.addTest('newState Edge Cases', 'Edge Cases', async function() {
+    const juris = new Juris();
+    let stateResults = [];
+    
+    juris.registerComponent('TestComponent', (props, { newState }) => {
+
+        const [get1, set1] = newState('same', 'first');
+        const [get2, set2] = newState('same', 'second'); 
+        
+        stateResults.push(get1(), get2());
+        
+        // Test different keys work independently
+        const [get3, set3] = newState('different', 'third');
+        stateResults.push(get3());
+        
+        return { div: { text: 'test' } };
+    });
+    
+    juris.objectToHtml({ TestComponent: {} });
+    console.log(juris.stateManager.state);
+    testFramework.expect(stateResults[0]).toBe('first');
+    testFramework.expect(stateResults[1]).toBe('second'); 
+    testFramework.expect(stateResults[2]).toBe('third');
+}, `const juris = new Juris();
+let stateResults = [];
+
+juris.registerComponent('TestComponent', (props, { newState }) => {
+    // Multiple newState calls with same key
+    const [get1, set1] = newState('same', 'first');
+    const [get2, set2] = newState('same', 'second'); // Should return existing 'first'
+    
+    stateResults.push(get1(), get2());
+    
+    // Test different keys work independently
+    const [get3, set3] = newState('different', 'third');
+    stateResults.push(get3());
+    
+    return { div: { text: 'test' } };
+});
+
+juris.objectToHtml({ TestComponent: {} });
+testFramework.expect(stateResults[0]).toBe('first');
+testFramework.expect(stateResults[1]).toBe('first'); // Returns existing
+testFramework.expect(stateResults[2]).toBe('third');`);
 
 
 

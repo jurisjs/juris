@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Reactive Animation Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .demo-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .demo-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        
+        .demo-description {
+            color: #718096;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+        }
+        
+        .demo-output {
+            border: 2px dashed #e2e8f0;
+            border-radius: 8px;
+            padding: 40px;
+            margin: 16px 0;
+            background: #f7fafc;
+            min-height: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .trigger-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .trigger-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 12px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }
+        
+        .counter-display {
+            display: inline-block;
+            background: #edf2f7;
+            padding: 8px 16px;
+            border-radius: 6px;
+            margin: 0 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .animated-box {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            border-radius: 12px;
+            position: relative;
+            margin: 20px;
+            transition: none; /* We'll handle animation manually */
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; color: white; margin-bottom: 30px; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+        🎨 Juris Reactive Animation Demo
+    </h1>
+    
+    <div class="demo-section">
+        <div class="demo-title">🎯 State-Triggered Self-Animating Div</div>
+        <div class="demo-description">
+            Click the trigger button to start a 2-second animation. The animation is triggered by state changes but runs independently using the element's own animation loop.
+        </div>
+        <div class="code-block">
+// Reactive style that triggers on state change but self-animates
+style: (el) => {
+    const trigger = getState('animation.trigger', 0); // Reactive trigger
+    
+    if (!el.isConnected || trigger === 0) return {};
+    
+    // Start self-contained 2-second animation loop
+    const startTime = Date.now();
+    const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / 2000, 1); // 2 seconds
+        
+        if (progress < 1) {
+            // Animation calculations
+            const bounce = Math.sin(progress * Math.PI * 4) * (1 - progress);
+            const scale = 1 + bounce * 0.5;
+            const rotation = progress * 360 * 2;
+            const x = Math.sin(progress * Math.PI * 6) * 100;
+            
+            // Direct style manipulation
+            el.style.transform = `translateX(${x}px) scale(${scale}) rotate(${rotation}deg)`;
+            el.style.boxShadow = `0 ${20 + bounce * 10}px 40px rgba(0,0,0,0.3)`;
+            
+            requestAnimationFrame(animate);
+        } else {
+            // Animation complete - reset
+            el.style.transform = 'translateX(0) scale(1) rotate(0deg)';
+            el.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
+        }
+    };
+    
+    requestAnimationFrame(animate);
+    return {}; // Return empty - we're manipulating style directly
+}</div>
+        <div class="demo-output" id="animation-demo"></div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">🌊 Multiple Animation Types</div>
+        <div class="demo-description">
+            Different animation patterns triggered by state changes.
+        </div>
+        <div class="demo-output" id="multi-animation-demo"></div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">🎮 Interactive Animation Chain</div>
+        <div class="demo-description">
+            Chain multiple animations with different triggers and patterns.
+        </div>
+        <div class="demo-output" id="chain-animation-demo"></div>
+    </div>
+
+    <script src="../src/juris.js"></script>
+    <script>
+        // Initialize Juris
+        const juris = new Juris({
+            states: {
+                animation: {
+                    trigger: 0,
+                    bounceCount: 0,
+                    waveCount: 0,
+                    spinCount: 0,
+                    chainStep: 0
+                }
+            }
+        });
+
+        // 1. Basic State-Triggered Self-Animating Div
+        juris.registerComponent('AnimatedBox', (props, context) => {
+            const { getState, setState } = context;
+            
+            return [
+                {button: {
+                    text: '🚀 Trigger Animation',
+                    className: 'trigger-btn',
+                    onClick: () => {
+                        const current = getState('animation.trigger', 0);
+                        setState('animation.trigger', current + 1);
+                    }
+                }},
+                {span: {
+                    className: 'counter-display',
+                    text: () => `Triggered: ${getState('animation.trigger', 0)} times`
+                }},
+                {br: {}},
+                {br: {}},
+                {div: {
+                    className: 'animated-box',
+                    style: (el) => {
+                        const trigger = getState('animation.trigger', 0);
+                        
+                        if (!el.isConnected || trigger === 0) {
+                            return {
+                                transform: 'translateX(0) scale(1) rotate(0deg)',
+                                boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+                            };
+                        }
+                        
+                        // Start self-contained 2-second animation
+                        const startTime = Date.now();
+                        let animationId;
+                        
+                        const animate = () => {
+                            const elapsed = Date.now() - startTime;
+                            const progress = Math.min(elapsed / 2000, 1); // 2 seconds
+                            
+                            if (progress < 1) {
+                                // Complex bounce with rotation and movement
+                                const bounce = Math.sin(progress * Math.PI * 4) * (1 - progress);
+                                const scale = 1 + bounce * 0.5;
+                                const rotation = progress * 360 * 2;
+                                const x = Math.sin(progress * Math.PI * 6) * 100;
+                                const hue = progress * 360;
+                                
+                                el.style.transform = `translateX(${x}px) scale(${scale}) rotate(${rotation}deg)`;
+                                el.style.boxShadow = `0 ${20 + bounce * 10}px 40px rgba(0,0,0,0.3)`;
+                                el.style.filter = `hue-rotate(${hue}deg)`;
+                                
+                                animationId = requestAnimationFrame(animate);
+                            } else {
+                                // Reset to original state
+                                el.style.transform = 'translateX(0) scale(1) rotate(0deg)';
+                                el.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
+                                el.style.filter = 'hue-rotate(0deg)';
+                            }
+                        };
+                        
+                        // Start animation
+                        requestAnimationFrame(animate);
+                        
+                        // Clean up on unmount
+                        el.dataset.animationId = animationId;
+                        
+                        return {}; // We're manipulating styles directly
+                    }
+                }}
+            ];
+        });
+
+        // 2. Multiple Animation Types
+        juris.registerComponent('MultiAnimations', (props, context) => {
+            const { getState, setState } = context;
+            
+            const createAnimator = (type, duration = 2000) => (el) => {
+                const trigger = getState(`animation.${type}Count`, 0);
+                
+                if (!el.isConnected || trigger === 0) return {};
+                
+                const startTime = Date.now();
+                
+                const animations = {
+                    bounce: (progress) => {
+                        const bounce = Math.abs(Math.sin(progress * Math.PI * 8)) * (1 - progress);
+                        const y = -bounce * 100;
+                        el.style.transform = `translateY(${y}px) scale(${1 + bounce * 0.3})`;
+                    },
+                    wave: (progress) => {
+                        const wave = Math.sin(progress * Math.PI * 10) * 50;
+                        const rotation = progress * 180;
+                        el.style.transform = `translateX(${wave}px) rotate(${rotation}deg)`;
+                    },
+                    spin: (progress) => {
+                        const rotation = progress * 720; // 2 full rotations
+                        const scale = 1 + Math.sin(progress * Math.PI) * 0.5;
+                        el.style.transform = `rotate(${rotation}deg) scale(${scale})`;
+                        el.style.borderRadius = `${12 + Math.sin(progress * Math.PI * 4) * 20}px`;
+                    }
+                };
+                
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    if (progress < 1) {
+                        animations[type](progress);
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Reset
+                        el.style.transform = 'translateX(0) translateY(0) rotate(0deg) scale(1)';
+                        el.style.borderRadius = '12px';
+                    }
+                };
+                
+                requestAnimationFrame(animate);
+                return {};
+            };
+            
+            return [
+                {div: {
+                    style: { display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' },
+                    children: [
+                        {button: {
+                            text: '⬆️ Bounce',
+                            className: 'trigger-btn',
+                            onClick: () => setState('animation.bounceCount', getState('animation.bounceCount', 0) + 1)
+                        }},
+                        {button: {
+                            text: '🌊 Wave',
+                            className: 'trigger-btn',
+                            onClick: () => setState('animation.waveCount', getState('animation.waveCount', 0) + 1)
+                        }},
+                        {button: {
+                            text: '🌀 Spin',
+                            className: 'trigger-btn',
+                            onClick: () => setState('animation.spinCount', getState('animation.spinCount', 0) + 1)
+                        }}
+                    ]
+                }},
+                {br: {}},
+                {div: {
+                    style: { display: 'flex', gap: '20px', justifyContent: 'center' },
+                    children: [
+                        {div: {
+                            className: 'animated-box',
+                            style: Object.assign(createAnimator('bounce'), {
+                                background: 'linear-gradient(45deg, #ff9a9e, #fecfef)'
+                            })
+                        }},
+                        {div: {
+                            className: 'animated-box',
+                            style: Object.assign(createAnimator('wave'), {
+                                background: 'linear-gradient(45deg, #a8edea, #fed6e3)'
+                            })
+                        }},
+                        {div: {
+                            className: 'animated-box',
+                            style: Object.assign(createAnimator('spin'), {
+                                background: 'linear-gradient(45deg, #ffecd2, #fcb69f)'
+                            })
+                        }}
+                    ]
+                }}
+            ];
+        });
+
+        // 3. Animation Chain
+        juris.registerComponent('AnimationChain', (props, context) => {
+            const { getState, setState } = context;
+            
+            return [
+                {button: {
+                    text: '⚡ Start Chain Animation',
+                    className: 'trigger-btn',
+                    onClick: () => {
+                        setState('animation.chainStep', 1);
+                        // Auto-progress through chain
+                        setTimeout(() => setState('animation.chainStep', 2), 500);
+                        setTimeout(() => setState('animation.chainStep', 3), 1000);
+                        setTimeout(() => setState('animation.chainStep', 0), 2500);
+                    }
+                }},
+                {br: {}},
+                {br: {}},
+                {div: {
+                    style: { display: 'flex', gap: '20px', justifyContent: 'center' },
+                    children: [1, 2, 3].map(boxNum => ({
+                        div: {
+                            className: 'animated-box',
+                            style: (el) => {
+                                const chainStep = getState('animation.chainStep', 0);
+                                
+                                if (!el.isConnected || chainStep !== boxNum) {
+                                    return {
+                                        transform: 'scale(1) rotate(0deg)',
+                                        opacity: chainStep === 0 ? 1 : (chainStep < boxNum ? 0.3 : 1)
+                                    };
+                                }
+                                
+                                // Animate when it's this box's turn
+                                const startTime = Date.now();
+                                
+                                const animate = () => {
+                                    const elapsed = Date.now() - startTime;
+                                    const progress = Math.min(elapsed / 800, 1);
+                                    
+                                    if (progress < 1) {
+                                        const pulse = 1 + Math.sin(progress * Math.PI * 6) * 0.3;
+                                        const rotation = progress * 360;
+                                        
+                                        el.style.transform = `scale(${pulse}) rotate(${rotation}deg)`;
+                                        el.style.boxShadow = `0 0 ${20 + pulse * 10}px rgba(102, 126, 234, 0.6)`;
+                                        
+                                        requestAnimationFrame(animate);
+                                    }
+                                };
+                                
+                                requestAnimationFrame(animate);
+                                
+                                return {
+                                    background: `linear-gradient(45deg, hsl(${boxNum * 120}, 70%, 60%), hsl(${boxNum * 120 + 60}, 70%, 70%))`,
+                                    opacity: 1
+                                };
+                            }
+                        }
+                    }))
+                }}
+            ];
+        });
+
+        // Render all demos
+        document.addEventListener('DOMContentLoaded', () => {
+            const demo1 = juris.objectToHtml({AnimatedBox: {}});
+            document.getElementById('animation-demo').appendChild(demo1);
+
+            const demo2 = juris.objectToHtml({MultiAnimations: {}});
+            document.getElementById('multi-animation-demo').appendChild(demo2);
+
+            const demo3 = juris.objectToHtml({AnimationChain: {}});
+            document.getElementById('chain-animation-demo').appendChild(demo3);
+
+            console.log('🎨 Juris Reactive Animation Demos Loaded!');
+            console.log('✨ State triggers animation, element animates itself!');
+        });
+    </script>
+</body>
+</html>

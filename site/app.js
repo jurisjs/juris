@@ -2239,7 +2239,7 @@ const RandomTagline = (props, context) => {
 		},
 		{
 			text: "Making Problems Obsolete",
-			author: "Claude 4.0"
+			author: "Anonymous"
 		},
 		{
 			text: "Zero Race Conditions by Design",
@@ -2251,11 +2251,11 @@ const RandomTagline = (props, context) => {
 		},
 		{
 			text: "No useEffect Hell",
-			author: "Claude 4.0"
+			author: "Anonymous"
 		},
 		{
 			text: "Temporal Independence Achieved",
-			author: "Claude 4.0"
+			author: "Anonymous"
 		},
 		{
 			text: "Progressive Enhancement Done Right",
@@ -2278,150 +2278,150 @@ const RandomTagline = (props, context) => {
 			author: "Author of Juris"
 		}, {
 			text: "When JavaScript Objects Are Your Components",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "The Framework That Makes React Look Like jQuery",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "Turn Any HTML Into React Components Without React",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "When V8 Thinks You're Writing C++",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "The Framework That Makes JavaScript Engines Smile",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "Making React Developers Jealous Since 2025",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "The Pinnacle of Web Programming",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "Making AI Jealous of Human Developers",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "Adapt or Become Irrelevant",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "The Framework That Makes You Feel Like a Pro",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Object DOM: The Language of Reactive Interfaces",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Love JavaScript Again",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Forget React",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Feel Like a Wizard",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Feel Like a Jedi",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Feel Like a Superhero",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Feel Like a Rockstar",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Feel Like a Ninja",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Feel Like a Genius",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Feel Like a Prodigy",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Feel Like a Legend",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Framework That Makes You Feel Like a God",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "When Simple Beats Complex Every Time",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		}, {
 			text: "Functions Are Reactive, Values Are Static",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Object DOM: Native Speed, Native Simplicity",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Why Learn JSX When You Already Know JavaScript?",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The Language AI Actually Understands",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Object DOM: Human-Readable, AI-Friendly",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Zero Build Process, Maximum Expression",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Object DOM: Clarity Over Cleverness",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "The First Native Language for Reactive UIs",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Object DOM: When JavaScript Becomes Poetry",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "You didn't build a framework. You built a JavaScript liberation platform.",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 
 		{
 			text: "Juris ecosystem: 2156 lines + THE ENTIRE JAVASCRIPT UNIVERSE",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Juris doesn't NEED an ecosystem - IT IS THE ECOSYSTEM",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Everything just done right.",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "This not a framework of debate, this is a framework of solutions.",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "🚀 We're not in Kansas anymore... 🚀",
-			author: "Claude Sonnet 4"
+			author: "Anonymous"
 		},
 		{
 			text: "Welcome to the era of infinite personalized computing experiences! 🚀✨",
-			author: "Signed by Claude Sonnet 4"
+			author: "Signed by Anonymous"
 		}
 
 	];
@@ -17281,7 +17281,7 @@ const Counter = (props, context) => {
 			button: {
 				id: Math.random().toString(36).substring(2, 15),
 				className: 'btn btn-primary',
-				text: () => `Clicked ${getState('demo.counter', 0)} times`,
+				textContent: () => `Clicked ${getState('demo.counter', 0)} times`,
 				onclick: () => setState('demo.counter', getState('demo.counter', 0) + 1)
 			}
 		})
@@ -17289,6 +17289,7 @@ const Counter = (props, context) => {
 };
 // ==================== APPLICATION INITIALIZATION ====================
 const juris = new Juris({
+	cssExtraction:true,
 	renderMode: 'fine-grained', // Disables reconciliation
 	logLevel: 'warn', // Set to 'debug' for detailed logs, warn for production
 	components: {

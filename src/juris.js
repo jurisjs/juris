@@ -61,7 +61,7 @@
 
 (function () {
     'use strict';
-    const jurisLinesOfCode = 3535; // Total lines of code in Juris
+    const jurisLinesOfCode = 3800; // Total lines of code in Juris
     const jurisVersion = '0.88.0'; // Current version of Juris
     const jurisMinifiedSize = '66.96 kB'; // Minified version of Juris
     // Utilities
@@ -596,8 +596,8 @@
                 if (result?.then) return this._handleAsyncComponent(promisify(result), name, props, componentStates);
                 return this._processComponentResult(result, name, props, componentStates);
             } catch (error) {
-                console.error(log.e('Component creation failed', { name, error: error.message }, 'application'));
-                return this._createErrorElement(error);
+                console.error(log.e('Component creation failed. Did you forgot to use children:?', { name, error: error.message }, 'application'));
+                return this._createErrorElement(new Error(error.message + ' Did you forgot to use children:[]?'));
             }
         }
 
@@ -713,11 +713,45 @@
                     return this._createLifecycleComponent(result, name, props, componentStates);
                 }
                 if (typeof result.render === 'function' && !this._hasLifecycleHooks(result)) {
-                    const renderResult = result.render();
-                    if (renderResult?.then) return this._handleAsyncRender(promisify(renderResult), name, componentStates, result.indicator);
-                    const element = this.juris.domRenderer.render(renderResult);
-                    if (element && componentStates.size > 0) this.componentStates.set(element, componentStates);
-                    return element;
+                    const container = document.createElement('div');
+                    container.setAttribute('data-juris-reactive-render', name);
+                    const updateRender = () => {
+                        try {
+                            const renderResult = result.render();
+                            if (renderResult?.then) {
+                                container.innerHTML = '<div class="juris-loading">Loading...</div>';
+                                promisify(renderResult).then(resolvedResult => {
+                                    container.innerHTML = '';
+                                    const element = this.juris.domRenderer.render(resolvedResult);
+                                    if (element) container.appendChild(element);
+                                }).catch(error => {
+                                    console.error(`Async render error for ${name}:`, error);
+                                    container.innerHTML = `<div class="juris-error">Error: ${error.message}</div>`;
+                                });
+                                return;
+                            }
+                            const children = Array.from(container.children);
+                            children.forEach(child => this.cleanup(child));
+                            container.innerHTML = '';
+                            const element = this.juris.domRenderer.render(renderResult);
+                            if (element) container.appendChild(element);                            
+                        } catch (error) {
+                            console.error(`Error in reactive render for ${name}:`, error);
+                            container.innerHTML = `<div class="juris-error">Render Error: ${error.message}</div>`;
+                        }
+                    };                    
+                    const subscriptions = [];
+                    this.juris.domRenderer._createReactiveUpdate(container, updateRender, subscriptions);
+                    if (subscriptions.length > 0) {
+                        this.juris.domRenderer.subscriptions.set(container, { 
+                            subscriptions, 
+                            eventListeners: [] 
+                        });
+                    }                    
+                    if (componentStates?.size > 0) {
+                        this.componentStates.set(container, componentStates);
+                    }                    
+                    return container;
                 }
                 const keys = Object.keys(result);
                 if (keys.length === 1 && typeof keys[0] === 'string' && keys[0].length > 0) {
@@ -726,7 +760,6 @@
                     return element;
                 }
             }
-
             const element = this.juris.domRenderer.render(result);
             if (element && componentStates.size > 0) this.componentStates.set(element, componentStates);
             return element;
@@ -738,10 +771,8 @@
         }
 
         _handleAsyncRender(renderPromise, name, componentStates, indicator = null) {
-            // Create a temporary element with the component name as ID for config lookup
             const tempElement = document.createElement('div');
             tempElement.id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
             const placeholder = indicator ?
                 this.juris.domRenderer.render(indicator) :
                 this._createPlaceholder(`Loading ${name}...`, 'juris-async-loading', tempElement);
@@ -754,7 +785,6 @@
                     this._replaceWithError(placeholder, error);
                 }
             }).catch(error => this._replaceWithError(placeholder, error));
-
             return placeholder;
         }
 
@@ -788,7 +818,6 @@
         }
 
         _handleAsyncLifecycleRender(renderPromise, instance, componentStates) {
-            // Create a temporary element with the component name as ID for config lookup
             const tempElement = document.createElement('div');
             tempElement.id = instance.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
             const placeholder = this._createPlaceholder(`Loading ${instance.name}...`, 'juris-async-lifecycle', tempElement);
@@ -822,7 +851,6 @@
                     this._replaceWithError(placeholder, error);
                 }
             }).catch(error => this._replaceWithError(placeholder, error));
-
             return placeholder;
         }
 
@@ -881,6 +909,14 @@
                     console.error(log.e(`onUnmount error in ${instance.name}:`, error), 'application');
                 }
             }
+            if (element._reactiveSubscriptions) {
+                element._reactiveSubscriptions.forEach(unsubscribe => {
+                    try { unsubscribe(); } catch (error) { 
+                        console.warn('Error cleaning up reactive subscription:', error); 
+                    }
+                });
+                element._reactiveSubscriptions = [];
+            }
             const states = this.componentStates.get(element);
             if (states) {
                 states.forEach(statePath => {
@@ -894,6 +930,7 @@
                 });
                 this.componentStates.delete(element);
             }
+
             if (this.asyncPlaceholders.has(element)) this.asyncPlaceholders.delete(element);
             this.instances.delete(element);
         }
@@ -1010,13 +1047,11 @@
         isBatchMode() { return this.renderMode === 'batch'; }
 
         // Enhanced render method with CSS extraction
-        // In DOMRenderer, modify the render method to handle component references in Object VDOM:
         render(vnode, staticMode = false, componentName = null) {
-            // Initialize componentStack if not exists (safety check)
-            if (!this.componentStack) {
-                this.componentStack = [];
+            // Handle primitives
+            if (typeof vnode === 'string' || typeof vnode === 'number') {
+                return document.createTextNode(String(vnode));
             }
-
             if (!vnode || typeof vnode !== 'object') return null;
 
             if (Array.isArray(vnode)) {
@@ -1031,34 +1066,28 @@
             const tagName = Object.keys(vnode)[0];
             const props = vnode[tagName] || {};
 
-            // Check if component is already in the call stack (recursion detection)
             if (!staticMode && this.componentStack.includes(tagName)) {
                 return this._createDeepRecursionErrorElement(tagName, this.componentStack);
             }
 
-            // Component resolution - ENHANCED to work in Object VDOM returns
             if (!staticMode && this.juris.componentManager.components.has(tagName)) {
                 const parentTracking = this.juris.stateManager.currentTracking;
                 this.juris.stateManager.currentTracking = null;
                 
-                // Add to component stack before rendering
                 this.componentStack.push(tagName);
                 const result = this.juris.componentManager.create(tagName, props);
-                // Remove from stack after rendering
                 this.componentStack.pop();
                 
                 this.juris.stateManager.currentTracking = parentTracking;
                 return result;
             }
 
-            // If capitalized but not registered, show error
             if (!staticMode && /^[A-Z]/.test(tagName)) {
                 return this._createComponentErrorElement(tagName);
             }
 
             if (typeof tagName !== 'string' || tagName.length === 0) return null;
 
-            // Enhanced CSS extraction
             let modifiedProps = props;
             if (props.style && !staticMode && this.cssExtraction) {
                 const elementName = componentName || tagName;
@@ -1075,7 +1104,6 @@
                 }
             }
 
-            // Pass component context to children for deep extraction
             const inheritedComponentName = componentName || (props.style ? tagName : null);
 
             if (staticMode) {
@@ -1100,6 +1128,7 @@
                 return this._createElementFineGrained(tagName, modifiedProps, inheritedComponentName);
             }
         }
+
         _createComponentErrorElement(tagName) {
             const errorElement = document.createElement('div');
             errorElement.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
@@ -1269,12 +1298,22 @@
                     actualChildren = children.slice(1);
                 }
                 for (let i = 0; i < actualChildren.length; i++) {
-                    // Pass component context to enable CSS extraction in children
-                    const childElement = this.render(actualChildren[i], childStaticMode, componentName);
+                    const child = actualChildren[i];
+                    let childElement;
+                    if (typeof child === 'string' || typeof child === 'number') {
+                        childElement = document.createTextNode(String(child));
+                    } else {
+                        childElement = this.render(child, childStaticMode, componentName);
+                    }
                     if (childElement) fragment.appendChild(childElement);
                 }
             } else if (children) {
-                const childElement = this.render(children, false, componentName);
+                let childElement;
+                if (typeof children === 'string' || typeof children === 'number') {
+                    childElement = document.createTextNode(String(children));
+                } else {
+                    childElement = this.render(children, false, componentName);
+                }
                 if (childElement) fragment.appendChild(childElement);
             }
             if (fragment.hasChildNodes()) element.appendChild(fragment);
@@ -1699,7 +1738,11 @@
                         promisify(result)
                             .then(resolvedResult => {
                                 if (resolvedResult !== "ignore" && (!isInitialized || !deepEquals(resolvedResult, lastChildrenResult))) {
-                                    this._updateChildren(element, resolvedResult);
+                                    if (typeof resolvedResult === 'string' || typeof resolvedResult === 'number') {
+                                        element.textContent = String(resolvedResult);
+                                    } else {
+                                        this._updateChildren(element, resolvedResult);
+                                    }
                                     lastChildrenResult = resolvedResult;
                                     isInitialized = true;
                                 }
@@ -1707,7 +1750,11 @@
                             .catch(error => console.error(log.e('Error in async reactive children:', error), 'application'));
                     } else {
                         if (result !== "ignore" && (!isInitialized || !deepEquals(result, lastChildrenResult))) {
-                            this._updateChildren(element, result);
+                            if (typeof result === 'string' || typeof result === 'number') {
+                                element.textContent = String(result);
+                            } else {
+                                this._updateChildren(element, result);
+                            }
                             lastChildrenResult = result;
                             isInitialized = true;
                         }
@@ -1721,19 +1768,34 @@
 
         _updateChildren(element, children, componentName = null) {
             if (children === "ignore") return;
-            const childNodes = Array.from(element.children);
-            for (let i = 0; i < childNodes.length; i++) {
-                this.cleanup(childNodes[i]);
-            }
             element.textContent = '';
             const fragment = document.createDocumentFragment();
+            
             if (Array.isArray(children)) {
-                for (let i = 0; i < children.length; i++) {
-                    const childElement = this.render(children[i], false, componentName);
+                let actualChildren = children;
+                let childStaticMode = false;
+                if (children.length > 0 && children[0]?.config?.staticMode) {
+                    childStaticMode = true;
+                    actualChildren = children.slice(1);
+                }
+                for (let i = 0; i < actualChildren.length; i++) {
+                    const child = actualChildren[i];
+                    if (child === null || child === undefined) continue;
+                    let childElement;
+                    if (typeof child === 'string' || typeof child === 'number') {
+                        childElement = document.createTextNode(String(child));
+                    } else {
+                        childElement = this.render(child, childStaticMode, componentName);
+                    }
                     if (childElement) fragment.appendChild(childElement);
                 }
             } else if (children) {
-                const childElement = this.render(children, false, componentName);
+                let childElement;
+                if (typeof children === 'string' || typeof children === 'number') {
+                    childElement = document.createTextNode(String(children));
+                } else {
+                    childElement = this.render(children, false, componentName);
+                }
                 if (childElement) fragment.appendChild(childElement);
             }
             if (fragment.hasChildNodes()) element.appendChild(fragment);
@@ -2195,7 +2257,6 @@
             element.textContent = '';
             element.className = '';
             element.removeAttribute('style');
-
             const attrs = Array.from(element.attributes);
             for (let i = 0; i < attrs.length; i++) {
                 const attr = attrs[i];
@@ -2236,8 +2297,7 @@
         // Clear CSS cache (for development) - NEW
         clearCSSCache() {
             this.cssCache.clear();
-            this.injectedCSS.clear();
-            
+            this.injectedCSS.clear();            
             if (this.styleSheet) {
                 try {
                     this.styleSheet.ownerNode.remove();
@@ -2251,8 +2311,7 @@
             return {
                 cssCache: this.cssCache.size,
                 injectedCSS: this.injectedCSS.size,
-                // Note: Cannot count WeakMap size, but we can estimate
-                estimatedSubscriptions: this.cssCache.size * 2, // Rough estimate
+                estimatedSubscriptions: this.cssCache.size * 2,
                 elementCache: this.elementCache.size,
                 recyclePoolSize: Array.from(this.recyclePool.values()).reduce((total, pool) => total + pool.length, 0),
                 renderMode: this.renderMode,
@@ -2284,7 +2343,6 @@
             const obj = {};
             const tag = element.tagName.toLowerCase();
             obj[tag] = {};
-            // Process attributes
             for (const attr of element.attributes) {
                 let value = attr.value;
                 if (value.startsWith('{') && value.endsWith('}')) {
@@ -3060,367 +3118,367 @@ ${combinedScript}
             this.pendingEnhancements.clear();
         }
     }
-
-class JurisWebComponentFactory {
-    constructor(jurisInstance) {
-        this.juris = jurisInstance;
-    }
-
-    create(name, componentDefinition, options = {}) {
-        console.info(log.i('Creating WebComponent', { name, hasOptions: Object.keys(options).length > 0 }, 'framework'));
-        if (!name.includes('-')) {
-            throw new Error(`WebComponent name "${name}" must contain a hyphen (-)`);
+ 
+    class WebComponentFactory {
+        constructor(jurisInstance) {
+            this.juris = jurisInstance;
         }
-        if (customElements.get(name)) {
-            console.warn(log.w('WebComponent already registered', { name }, 'framework'));
-            return customElements.get(name);
+
+        create(name, componentDefinition, options = {}) {
+            console.info(log.i('Creating WebComponent', { name, hasOptions: Object.keys(options).length > 0 }, 'framework'));
+            if (!name.includes('-')) {
+                throw new Error(`WebComponent name "${name}" must contain a hyphen (-)`);
+            }
+            if (customElements.get(name)) {
+                console.warn(log.w('WebComponent already registered', { name }, 'framework'));
+                return customElements.get(name);
+            }
+            const WebComponentClass = this._createWebComponentClass(name, componentDefinition, options);
+            customElements.define(name, WebComponentClass);
+            console.info(log.i('WebComponent registered', { name, className: WebComponentClass.name }, 'framework'));
+            return WebComponentClass;
         }
-        const WebComponentClass = this._createWebComponentClass(name, componentDefinition, options);
-        customElements.define(name, WebComponentClass);
-        console.info(log.i('WebComponent registered', { name, className: WebComponentClass.name }, 'framework'));
-        return WebComponentClass;
-    }
 
-    createMultiple(components, globalOptions = {}) {
-        const registeredComponents = {};
-        Object.entries(components).forEach(([name, definition]) => {
-            const options = definition.options ?
-                { ...globalOptions, ...definition.options } :
-                globalOptions;
-            const componentFn = definition.component || definition.render || definition;
-            registeredComponents[name] = this.create(name, componentFn, options);
-        });
-        return registeredComponents;
-    }
+        createMultiple(components, globalOptions = {}) {
+            const registeredComponents = {};
+            Object.entries(components).forEach(([name, definition]) => {
+                const options = definition.options ?
+                    { ...globalOptions, ...definition.options } :
+                    globalOptions;
+                const componentFn = definition.component || definition.render || definition;
+                registeredComponents[name] = this.create(name, componentFn, options);
+            });
+            return registeredComponents;
+        }
 
-    _createWebComponentClass(name, componentDefinition, options) {
-        const jurisInstance = this.juris;
-        const {
-            shadowMode = 'open',
-            attributes = [],
-            styles = '',
-            enhanceMode = false,
-            autoConnect = true,
-            stateNamespace = null,
-            contextProvider = null
-        } = options;
+        _createWebComponentClass(name, componentDefinition, options) {
+            const jurisInstance = this.juris;
+            const {
+                shadowMode = 'open',
+                attributes = [],
+                styles = '',
+                enhanceMode = false,
+                autoConnect = true,
+                stateNamespace = null,
+                contextProvider = null
+            } = options;
 
-        return class JurisWebComponent extends HTMLElement {
-            static get observedAttributes() {
-                return attributes;
-            }
-
-            constructor() {
-                super();
-                this.componentName = name;
-                this.componentId = `${name}-${Math.random().toString(36).substr(2, 9)}`;
-                this.isJurisComponent = true;
-                this._mounted = false;
-                this._unsubscribes = [];
-                
-                if (typeof componentDefinition === 'function') {
-                    this.componentFn = componentDefinition;
-                } else if (typeof componentDefinition === 'object') {
-                    this.componentConfig = componentDefinition;
-                    this.componentFn = componentDefinition.render || componentDefinition.component;
+            return class JurisWebComponent extends HTMLElement {
+                static get observedAttributes() {
+                    return attributes;
                 }
-                console.debug(log.d('WebComponent instance created', { name, componentId: this.componentId }, 'framework'));
-            }
 
-            connectedCallback() {
-                if (!autoConnect) return;
-                console.debug(log.d('WebComponent connecting', { name, componentId: this.componentId }, 'framework'));
-                this._setupShadowDOM();
-                this._setupJurisIntegration();
-                this._setupAttributes();
-                this._setupStyles();
-
-                if (this.componentConfig?.hooks?.onConnect) {
-                    this.componentConfig.hooks.onConnect.call(this, this.jurisContext);
-                }
-                this.render();
-                this._mounted = true;
-                if (this.componentConfig?.hooks?.onMount) {
-                    requestAnimationFrame(() => {
-                        this.componentConfig.hooks.onMount.call(this, this.jurisContext);
-                    });
-                }
-            }
-
-            disconnectedCallback() {
-                console.debug(log.d('WebComponent disconnecting', { name, componentId: this.componentId }, 'framework'));
-                this._mounted = false;
-                this._unsubscribes.forEach(unsubscribe => {
-                    try { unsubscribe(); } catch (error) {
-                        console.warn(log.w('Error during subscription cleanup:', error), 'framework');
+                constructor() {
+                    super();
+                    this.componentName = name;
+                    this.componentId = `${name}-${Math.random().toString(36).substr(2, 9)}`;
+                    this.isJurisComponent = true;
+                    this._mounted = false;
+                    this._unsubscribes = [];
+                    
+                    if (typeof componentDefinition === 'function') {
+                        this.componentFn = componentDefinition;
+                    } else if (typeof componentDefinition === 'object') {
+                        this.componentConfig = componentDefinition;
+                        this.componentFn = componentDefinition.render || componentDefinition.component;
                     }
-                });
-                this._unsubscribes = [];
-                if (this.componentConfig?.hooks?.onUnmount) {
-                    this.componentConfig.hooks.onUnmount.call(this, this.jurisContext);
+                    console.debug(log.d('WebComponent instance created', { name, componentId: this.componentId }, 'framework'));
                 }
-                if (this.stateKey && options.cleanupState !== false) {
-                    jurisInstance.stateManager.setState(this.stateKey, undefined);
-                }
-            }
 
-            attributeChangedCallback(name, oldValue, newValue) {
-                if (oldValue !== newValue && this._mounted) {
-                    console.debug(log.d('Attribute changed', { name, oldValue, newValue }, 'framework'));
-                    if (this.stateKey) {
-                        const currentState = jurisInstance.getState(this.stateKey, {});
-                        jurisInstance.setState(this.stateKey, {
-                            ...currentState,
-                            [name]: this._parseAttributeValue(newValue)
+                connectedCallback() {
+                    if (!autoConnect) return;
+                    console.debug(log.d('WebComponent connecting', { name, componentId: this.componentId }, 'framework'));
+                    this._setupShadowDOM();
+                    this._setupJurisIntegration();
+                    this._setupAttributes();
+                    this._setupStyles();
+
+                    if (this.componentConfig?.hooks?.onConnect) {
+                        this.componentConfig.hooks.onConnect.call(this, this.jurisContext);
+                    }
+                    this.render();
+                    this._mounted = true;
+                    if (this.componentConfig?.hooks?.onMount) {
+                        requestAnimationFrame(() => {
+                            this.componentConfig.hooks.onMount.call(this, this.jurisContext);
                         });
                     }
-                    if (this.componentConfig?.hooks?.onAttributeChange) {
-                        this.componentConfig.hooks.onAttributeChange.call(this, name, oldValue, newValue, this.jurisContext);
+                }
+
+                disconnectedCallback() {
+                    console.debug(log.d('WebComponent disconnecting', { name, componentId: this.componentId }, 'framework'));
+                    this._mounted = false;
+                    this._unsubscribes.forEach(unsubscribe => {
+                        try { unsubscribe(); } catch (error) {
+                            console.warn(log.w('Error during subscription cleanup:', error), 'framework');
+                        }
+                    });
+                    this._unsubscribes = [];
+                    if (this.componentConfig?.hooks?.onUnmount) {
+                        this.componentConfig.hooks.onUnmount.call(this, this.jurisContext);
                     }
-                    if (options.rerenderOnAttributeChange !== false) {
-                        this.render();
+                    if (this.stateKey && options.cleanupState !== false) {
+                        jurisInstance.stateManager.setState(this.stateKey, undefined);
                     }
                 }
-            }
 
-            _setupShadowDOM() {
-                if (!enhanceMode) {
-                    this.attachShadow({ mode: shadowMode });
-                    this.renderRoot = this.shadowRoot;
-                } else {
-                    this.renderRoot = this;
-                }
-            }
-
-            _setupJurisIntegration() {
-                this.stateKey = stateNamespace || `webcomponents.${name.replace(/-/g, '_')}.${this.componentId}`;
-                const initialState = this._getInitialState();
-                jurisInstance.setState(this.stateKey, initialState);
-                this.jurisContext = this._createJurisContext();
-                const unsubscribe = jurisInstance.subscribe(this.stateKey, () => {
-                    if (this._mounted && options.autoRerender !== false) {
-                        console.debug(log.d('Auto re-rendering due to state change', { componentId: this.componentId }, 'framework'));
-                        this.render();
-                    }
-                });
-                this._unsubscribes.push(unsubscribe);
-            }
-
-            _createJurisContext() {
-                const baseContext = contextProvider ?
-                    contextProvider.call(this, jurisInstance.createContext(this)) :
-                    jurisInstance.createContext(this);
-                return {
-                    ...baseContext,
-                    component: {
-                        name: this.componentName,
-                        id: this.componentId,
-                        element: this,
-                        renderRoot: this.renderRoot,
-                        shadowRoot: this.shadowRoot,
-                        getState: (key, defaultValue) => {
-                            const fullKey = key ? `${this.stateKey}.${key}` : this.stateKey;
-                            return jurisInstance.getState(fullKey, defaultValue);
-                        },
-                        setState: (key, value) => {
-                            if (typeof key === 'object') {
-                                const currentState = jurisInstance.getState(this.stateKey, {});
-                                jurisInstance.setState(this.stateKey, { ...currentState, ...key });
-                            } else {
-                                const fullKey = key ? `${this.stateKey}.${key}` : this.stateKey;
-                                jurisInstance.setState(fullKey, value);
-                            }
-                        },
-                        updateState: (updates) => {
+                attributeChangedCallback(name, oldValue, newValue) {
+                    if (oldValue !== newValue && this._mounted) {
+                        console.debug(log.d('Attribute changed', { name, oldValue, newValue }, 'framework'));
+                        if (this.stateKey) {
                             const currentState = jurisInstance.getState(this.stateKey, {});
-                            jurisInstance.setState(this.stateKey, { ...currentState, ...updates });
-                        },
-                        getAttribute: (name, defaultValue = null) => {
-                            return this.getAttribute(name) || defaultValue;
-                        },
-                        setAttribute: (name, value) => {
-                            this.setAttribute(name, value);
-                        },
-                        emit: (eventName, detail = {}, options = {}) => {
-                            const event = new CustomEvent(eventName, {
-                                detail,
-                                bubbles: true,
-                                composed: true,
-                                ...options
+                            jurisInstance.setState(this.stateKey, {
+                                ...currentState,
+                                [name]: this._parseAttributeValue(newValue)
                             });
-                            this.dispatchEvent(event);
-                            return event;
-                        },
-                        getSlot: (name = '') => {
-                            return name ?
-                                this.querySelector(`[slot="${name}"]`) :
-                                this.querySelector(':not([slot])');
-                        },
-                        getAllSlots: () => {
-                            const slots = {};
-                            this.querySelectorAll('[slot]').forEach(el => {
-                                const slotName = el.getAttribute('slot');
-                                if (!slots[slotName]) slots[slotName] = [];
-                                slots[slotName].push(el);
-                            });
-                            return slots;
-                        },
-                        onMount: (callback) => {
-                            if (this._mounted) {
-                                callback.call(this, this.jurisContext);
-                            } else {
-                                this._onMountCallbacks = this._onMountCallbacks || [];
-                                this._onMountCallbacks.push(callback);
+                        }
+                        if (this.componentConfig?.hooks?.onAttributeChange) {
+                            this.componentConfig.hooks.onAttributeChange.call(this, name, oldValue, newValue, this.jurisContext);
+                        }
+                        if (options.rerenderOnAttributeChange !== false) {
+                            this.render();
+                        }
+                    }
+                }
+
+                _setupShadowDOM() {
+                    if (!enhanceMode) {
+                        this.attachShadow({ mode: shadowMode });
+                        this.renderRoot = this.shadowRoot;
+                    } else {
+                        this.renderRoot = this;
+                    }
+                }
+
+                _setupJurisIntegration() {
+                    this.stateKey = stateNamespace || `webcomponents.${name.replace(/-/g, '_')}.${this.componentId}`;
+                    const initialState = this._getInitialState();
+                    jurisInstance.setState(this.stateKey, initialState);
+                    this.jurisContext = this._createJurisContext();
+                    const unsubscribe = jurisInstance.subscribe(this.stateKey, () => {
+                        if (this._mounted && options.autoRerender !== false) {
+                            console.debug(log.d('Auto re-rendering due to state change', { componentId: this.componentId }, 'framework'));
+                            this.render();
+                        }
+                    });
+                    this._unsubscribes.push(unsubscribe);
+                }
+
+                _createJurisContext() {
+                    const baseContext = contextProvider ?
+                        contextProvider.call(this, jurisInstance.createContext(this)) :
+                        jurisInstance.createContext(this);
+                    return {
+                        ...baseContext,
+                        component: {
+                            name: this.componentName,
+                            id: this.componentId,
+                            element: this,
+                            renderRoot: this.renderRoot,
+                            shadowRoot: this.shadowRoot,
+                            getState: (key, defaultValue) => {
+                                const fullKey = key ? `${this.stateKey}.${key}` : this.stateKey;
+                                return jurisInstance.getState(fullKey, defaultValue);
+                            },
+                            setState: (key, value) => {
+                                if (typeof key === 'object') {
+                                    const currentState = jurisInstance.getState(this.stateKey, {});
+                                    jurisInstance.setState(this.stateKey, { ...currentState, ...key });
+                                } else {
+                                    const fullKey = key ? `${this.stateKey}.${key}` : this.stateKey;
+                                    jurisInstance.setState(fullKey, value);
+                                }
+                            },
+                            updateState: (updates) => {
+                                const currentState = jurisInstance.getState(this.stateKey, {});
+                                jurisInstance.setState(this.stateKey, { ...currentState, ...updates });
+                            },
+                            getAttribute: (name, defaultValue = null) => {
+                                return this.getAttribute(name) || defaultValue;
+                            },
+                            setAttribute: (name, value) => {
+                                this.setAttribute(name, value);
+                            },
+                            emit: (eventName, detail = {}, options = {}) => {
+                                const event = new CustomEvent(eventName, {
+                                    detail,
+                                    bubbles: true,
+                                    composed: true,
+                                    ...options
+                                });
+                                this.dispatchEvent(event);
+                                return event;
+                            },
+                            getSlot: (name = '') => {
+                                return name ?
+                                    this.querySelector(`[slot="${name}"]`) :
+                                    this.querySelector(':not([slot])');
+                            },
+                            getAllSlots: () => {
+                                const slots = {};
+                                this.querySelectorAll('[slot]').forEach(el => {
+                                    const slotName = el.getAttribute('slot');
+                                    if (!slots[slotName]) slots[slotName] = [];
+                                    slots[slotName].push(el);
+                                });
+                                return slots;
+                            },
+                            onMount: (callback) => {
+                                if (this._mounted) {
+                                    callback.call(this, this.jurisContext);
+                                } else {
+                                    this._onMountCallbacks = this._onMountCallbacks || [];
+                                    this._onMountCallbacks.push(callback);
+                                }
+                            },
+                            onUnmount: (callback) => {
+                                this._onUnmountCallbacks = this._onUnmountCallbacks || [];
+                                this._onUnmountCallbacks.push(callback);
                             }
-                        },
-                        onUnmount: (callback) => {
-                            this._onUnmountCallbacks = this._onUnmountCallbacks || [];
-                            this._onUnmountCallbacks.push(callback);
+                        }
+                    };
+                }
+
+                _getInitialState() {
+                    let initialState = {};
+                    if (this.componentConfig?.initialState) {
+                        if (typeof this.componentConfig.initialState === 'function') {
+                            initialState = this.componentConfig.initialState.call(this);
+                        } else {
+                            initialState = { ...this.componentConfig.initialState };
                         }
                     }
-                };
-            }
-
-            _getInitialState() {
-                let initialState = {};
-                if (this.componentConfig?.initialState) {
-                    if (typeof this.componentConfig.initialState === 'function') {
-                        initialState = this.componentConfig.initialState.call(this);
-                    } else {
-                        initialState = { ...this.componentConfig.initialState };
+                    if (this.componentFn?.getInitialState) {
+                        initialState = { ...initialState, ...this.componentFn.getInitialState.call(this) };
                     }
-                }
-                if (this.componentFn?.getInitialState) {
-                    initialState = { ...initialState, ...this.componentFn.getInitialState.call(this) };
-                }
-                attributes.forEach(attr => {
-                    if (this.hasAttribute(attr)) {
-                        initialState[attr] = this._parseAttributeValue(this.getAttribute(attr));
-                    }
-                });
-                return initialState;
-            }
-
-            _setupAttributes() {
-                attributes.forEach(attr => {
-                    if (this.hasAttribute(attr)) {
-                        const value = this._parseAttributeValue(this.getAttribute(attr));
-                        this.jurisContext.component.setState(attr, value);
-                    }
-                });
-            }
-
-            _setupStyles() {
-                if (styles && this.shadowRoot) {
-                    const styleElement = document.createElement('style');
-                    styleElement.textContent = styles;
-                    this.shadowRoot.appendChild(styleElement);
-                }
-            }
-
-            _parseAttributeValue(value) {
-                if (value === null || value === undefined) return value;
-                if (value === 'true') return true;
-                if (value === 'false') return false;
-                if (value === '') return true; // Boolean attribute
-                if (!isNaN(value) && !isNaN(parseFloat(value))) return parseFloat(value);
-                try {
-                    return JSON.parse(value);
-                } catch {
-                    return value;
-                }
-            }
-
-            render() {
-                try {
-                    console.debug(log.d('Rendering WebComponent', { componentId: this.componentId }, 'framework'));
-                    let vdom;
-                    if (this.componentFn) {
-                        vdom = this.componentFn.call(this, this._getProps(), this.jurisContext);
-                    } else if (this.componentConfig?.template) {
-                        vdom = this.componentConfig.template.call(this, this._getProps(), this.jurisContext);
-                    } else {
-                        console.warn(log.w('No render method found for WebComponent', { name }, 'framework'));
-                        return;
-                    }
-                    if (vdom?.then) {
-                        this._handleAsyncRender(vdom);
-                        return;
-                    }
-                    if (vdom) {
-                        const element = jurisInstance.objectToHtml(vdom);
-                        this.renderRoot.innerHTML = '';
-                        if (this.shadowRoot && styles) {
-                            const styleElement = document.createElement('style');
-                            styleElement.textContent = styles;
-                            this.renderRoot.appendChild(styleElement);
+                    attributes.forEach(attr => {
+                        if (this.hasAttribute(attr)) {
+                            initialState[attr] = this._parseAttributeValue(this.getAttribute(attr));
                         }
-                        this.renderRoot.appendChild(element);
-                    }
-                } catch (error) {
-                    console.error(log.e('WebComponent render error', {
-                        name,
-                        componentId: this.componentId,
-                        error: error.message
-                    }, 'framework'));
-                    this._renderError(error);
+                    });
+                    return initialState;
                 }
-            }
 
-            _handleAsyncRender(vdomPromise) {
-                this.renderRoot.innerHTML = '<div class="juris-loading">Loading...</div>';
-                jurisInstance.promisify(vdomPromise)
-                    .then(vdom => {
-                        if (this._mounted) {
+                _setupAttributes() {
+                    attributes.forEach(attr => {
+                        if (this.hasAttribute(attr)) {
+                            const value = this._parseAttributeValue(this.getAttribute(attr));
+                            this.jurisContext.component.setState(attr, value);
+                        }
+                    });
+                }
+
+                _setupStyles() {
+                    if (styles && this.shadowRoot) {
+                        const styleElement = document.createElement('style');
+                        styleElement.textContent = styles;
+                        this.shadowRoot.appendChild(styleElement);
+                    }
+                }
+
+                _parseAttributeValue(value) {
+                    if (value === null || value === undefined) return value;
+                    if (value === 'true') return true;
+                    if (value === 'false') return false;
+                    if (value === '') return true; // Boolean attribute
+                    if (!isNaN(value) && !isNaN(parseFloat(value))) return parseFloat(value);
+                    try {
+                        return JSON.parse(value);
+                    } catch {
+                        return value;
+                    }
+                }
+
+                render() {
+                    try {
+                        console.debug(log.d('Rendering WebComponent', { componentId: this.componentId }, 'framework'));
+                        let vdom;
+                        if (this.componentFn) {
+                            vdom = this.componentFn.call(this, this._getProps(), this.jurisContext);
+                        } else if (this.componentConfig?.template) {
+                            vdom = this.componentConfig.template.call(this, this._getProps(), this.jurisContext);
+                        } else {
+                            console.warn(log.w('No render method found for WebComponent', { name }, 'framework'));
+                            return;
+                        }
+                        if (vdom?.then) {
+                            this._handleAsyncRender(vdom);
+                            return;
+                        }
+                        if (vdom) {
                             const element = jurisInstance.objectToHtml(vdom);
                             this.renderRoot.innerHTML = '';
+                            if (this.shadowRoot && styles) {
+                                const styleElement = document.createElement('style');
+                                styleElement.textContent = styles;
+                                this.renderRoot.appendChild(styleElement);
+                            }
                             this.renderRoot.appendChild(element);
                         }
-                    })
-                    .catch(error => {
-                        console.error(log.e('Async render error', { error: error.message }, 'framework'));
+                    } catch (error) {
+                        console.error(log.e('WebComponent render error', {
+                            name,
+                            componentId: this.componentId,
+                            error: error.message
+                        }, 'framework'));
                         this._renderError(error);
-                    });
-            }
-
-            _renderError(error) {
-                const errorElement = document.createElement('div');
-                errorElement.style.cssText = 'color: red; padding: 10px; border: 1px solid red; background: #fee;';
-                errorElement.textContent = `Component Error: ${error.message}`;
-                this.renderRoot.innerHTML = '';
-                this.renderRoot.appendChild(errorElement);
-            }
-
-            _getProps() {
-                const props = {};
-                attributes.forEach(attr => {
-                    if (this.hasAttribute(attr)) {
-                        props[attr] = this._parseAttributeValue(this.getAttribute(attr));
                     }
-                });
-                const state = jurisInstance.getState(this.stateKey, {});
-                Object.assign(props, state);
-                return props;
-            }
+                }
 
-            forceRender() {
-                this.render();
-            }
+                _handleAsyncRender(vdomPromise) {
+                    this.renderRoot.innerHTML = '<div class="juris-loading">Loading...</div>';
+                    jurisInstance.promisify(vdomPromise)
+                        .then(vdom => {
+                            if (this._mounted) {
+                                const element = jurisInstance.objectToHtml(vdom);
+                                this.renderRoot.innerHTML = '';
+                                this.renderRoot.appendChild(element);
+                            }
+                        })
+                        .catch(error => {
+                            console.error(log.e('Async render error', { error: error.message }, 'framework'));
+                            this._renderError(error);
+                        });
+                }
 
-            getJurisContext() {
-                return this.jurisContext;
-            }
+                _renderError(error) {
+                    const errorElement = document.createElement('div');
+                    errorElement.style.cssText = 'color: red; padding: 10px; border: 1px solid red; background: #fee;';
+                    errorElement.textContent = `Component Error: ${error.message}`;
+                    this.renderRoot.innerHTML = '';
+                    this.renderRoot.appendChild(errorElement);
+                }
 
-            getComponentState() {
-                return jurisInstance.getState(this.stateKey, {});
-            }
+                _getProps() {
+                    const props = {};
+                    attributes.forEach(attr => {
+                        if (this.hasAttribute(attr)) {
+                            props[attr] = this._parseAttributeValue(this.getAttribute(attr));
+                        }
+                    });
+                    const state = jurisInstance.getState(this.stateKey, {});
+                    Object.assign(props, state);
+                    return props;
+                }
 
-            updateComponentState(updates) {
-                this.jurisContext.component.updateState(updates);
-            }
-        };
+                forceRender() {
+                    this.render();
+                }
+
+                getJurisContext() {
+                    return this.jurisContext;
+                }
+
+                getComponentState() {
+                    return jurisInstance.getState(this.stateKey, {});
+                }
+
+                updateComponentState(updates) {
+                    this.jurisContext.component.updateState(updates);
+                }
+            };
+        }
     }
-}
 
     // Main Juris Class
     class Juris {
@@ -3439,7 +3497,7 @@ class JurisWebComponentFactory {
             this.domRenderer.cssExtraction = config.cssExtraction!==undefined?config.cssExtraction:false;
             this.domEnhancer = new DOMEnhancer(this);
             this.templateCompiler = new TemplateCompiler();
-            this.webComponentFactory = new JurisWebComponentFactory(this);
+            this.webComponentFactory = new WebComponentFactory(this);
             this.headlessAPIs = {};
             if (config.autoCompileTemplates !== false) {
                 this.compileTemplates();

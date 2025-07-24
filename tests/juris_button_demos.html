@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Button Demos</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .demo-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .demo-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        
+        .demo-description {
+            color: #718096;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+        }
+        
+        .demo-output {
+            border: 2px dashed #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 16px 0;
+            background: #f7fafc;
+            min-height: 60px;
+        }
+        
+        /* Button Styles */
+        .primary-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .primary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .secondary-btn {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .secondary-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        .danger-btn {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .danger-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 101, 101, 0.4);
+        }
+        
+        .success-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .counter-display {
+            display: inline-block;
+            background: #edf2f7;
+            padding: 8px 16px;
+            border-radius: 6px;
+            margin: 0 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .status-display {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border-left: 4px solid #38a169;
+        }
+        
+        .status-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border-left: 4px solid #e53e3e;
+        }
+        
+        .status-info {
+            background: #bee3f8;
+            color: #2a4365;
+            border-left: 4px solid #3182ce;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 12px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; color: white; margin-bottom: 30px; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+        🎯 Juris Button Demos
+    </h1>
+    
+    <div class="demo-section">
+        <div class="demo-title">🚀 Multiple Buttons Without Wrapper Divs</div>
+        <div class="demo-description">
+            In React, you'd need a wrapper div or Fragment. Juris returns arrays directly - no wrapper needed!
+        </div>
+        <div class="code-block">
+// Juris Component returning multiple buttons
+function MultipleButtons() {
+  return [
+    {button: {text: 'Button 1', className: 'primary-btn'}},
+    {button: {text: 'Button 2', className: 'secondary-btn'}},
+    {button: {text: 'Button 3', className: 'danger-btn'}}
+  ];
+}</div>
+        <div class="demo-output" id="multiple-buttons-demo"></div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">🔄 Interactive Counter Buttons</div>
+        <div class="demo-description">
+            Reactive buttons that update state and respond to changes.
+        </div>
+        <div class="demo-output" id="counter-demo"></div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">📊 Dynamic Button Generator</div>
+        <div class="demo-description">
+            Generate different numbers of buttons based on state.
+        </div>
+        <div class="demo-output" id="dynamic-demo"></div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">🎨 Style Variants</div>
+        <div class="demo-description">
+            Different button styles and states.
+        </div>
+        <div class="demo-output" id="variants-demo"></div>
+    </div>
+    
+    <div class="demo-section">
+        <div class="demo-title">🎯 Action Buttons with Status</div>
+        <div class="demo-description">
+            Buttons that trigger actions and show status updates.
+        </div>
+        <div class="demo-output" id="actions-demo"></div>
+    </div>
+
+    <script src="../src/juris.js"></script>
+    <script>
+        // Initialize Juris
+        const juris = new Juris({
+            states: {
+                counter: 0,
+                buttonCount: 3,
+                status: '',
+                lastAction: '',
+                actionHistory: []
+            }
+        });
+
+        // 1. Multiple Buttons Component (no wrapper div needed!)
+        juris.registerComponent('MultipleButtons', () => {
+            return [
+                {button: {
+                    text: 'Primary Button',
+                    className: 'primary-btn',
+                    onClick: () => console.log('Primary clicked!')
+                }},
+                {button: {
+                    text: 'Secondary Button',
+                    className: 'secondary-btn',
+                    onClick: () => console.log('Secondary clicked!')
+                }},
+                {button: {
+                    text: 'Danger Button',
+                    className: 'danger-btn',
+                    onClick: () => console.log('Danger clicked!')
+                }}
+            ];
+        });
+
+        // 2. Counter Buttons Component
+        juris.registerComponent('CounterButtons', (props, context) => {
+            const { getState, setState } = context;
+            
+            return [
+                {button: {
+                    text: '➖ Decrement',
+                    className: 'secondary-btn',
+                    onClick: () => setState('counter', getState('counter', 0) - 1)
+                }},
+                {span: {
+                    className: 'counter-display',
+                    text: () => `Count: ${getState('counter', 0)}`
+                }},
+                {button: {
+                    text: '➕ Increment',
+                    className: 'primary-btn',
+                    onClick: () => setState('counter', getState('counter', 0) + 1)
+                }},
+                {button: {
+                    text: '🔄 Reset',
+                    className: 'danger-btn',
+                    onClick: () => setState('counter', 0)
+                }}
+            ];
+        });
+
+        // 3. Dynamic Button Generator
+        juris.registerComponent('DynamicButtons', (props, context) => {
+            const { getState, setState } = context;
+            const count = getState('buttonCount', 3);
+            
+            const buttons = [];
+            
+            // Controls
+            buttons.push({button: {
+                text: '➖ Less Buttons',
+                className: 'secondary-btn',
+                onClick: () => setState('buttonCount', Math.max(1, count - 1))
+            }});
+            
+            buttons.push({span: {
+                className: 'counter-display',
+                text: () => `${getState('buttonCount', 3)} buttons`
+            }});
+            
+            buttons.push({button: {
+                text: '➕ More Buttons',
+                className: 'primary-btn',
+                onClick: () => setState('buttonCount', Math.min(10, count + 1))
+            }});
+            
+            buttons.push({br: {}});
+            buttons.push({br: {}});
+            
+            // Generate dynamic buttons
+            for (let i = 0; i < count; i++) {
+                buttons.push({button: {
+                    text: `Dynamic Button ${i + 1}`,
+                    className: i % 2 === 0 ? 'primary-btn' : 'success-btn',
+                    onClick: () => {
+                        setState('status', `Clicked Dynamic Button ${i + 1}`);
+                        setTimeout(() => setState('status', ''), 2000);
+                    }
+                }});
+            }
+            
+            const status = getState('status', '');
+            if (status) {
+                buttons.push({br: {}});
+                buttons.push({div: {
+                    className: 'status-display status-info',
+                    text: status
+                }});
+            }
+            
+            return buttons;
+        });
+
+        // 4. Style Variants Component
+        juris.registerComponent('StyleVariants', () => {
+            return [
+                {button: {
+                    text: '🎨 Primary',
+                    className: 'primary-btn'
+                }},
+                {button: {
+                    text: '📝 Secondary',
+                    className: 'secondary-btn'
+                }},
+                {button: {
+                    text: '⚠️ Danger',
+                    className: 'danger-btn'
+                }},
+                {button: {
+                    text: '✅ Success',
+                    className: 'success-btn'
+                }},
+                {br: {}},
+                {button: {
+                    text: '🚫 Disabled',
+                    className: 'secondary-btn',
+                    disabled: true,
+                    style: { opacity: 0.5 }
+                }},
+                {button: {
+                    text: '🔥 Custom Style',
+                    style: {
+                        background: 'linear-gradient(45deg, #ff6b6b, #feca57)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '12px 24px',
+                        borderRadius: '20px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        margin: '8px',
+                        transition: 'transform 0.2s ease'
+                    },
+                    onClick: (e) => {
+                        e.target.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            e.target.style.transform = 'scale(1)';
+                        }, 150);
+                    }
+                }}
+            ];
+        });
+
+        // 5. Action Buttons with Status
+        juris.registerComponent('ActionButtons', (props, context) => {
+            const { getState, setState } = context;
+            
+            const addToHistory = (action) => {
+                const history = getState('actionHistory', []);
+                const newHistory = [...history, {
+                    action,
+                    timestamp: new Date().toLocaleTimeString()
+                }].slice(-5); // Keep last 5 actions
+                setState('actionHistory', newHistory);
+            };
+            
+            return [
+                {button: {
+                    text: '💾 Save Data',
+                    className: 'success-btn',
+                    onClick: () => {
+                        setState('lastAction', 'Data saved successfully!');
+                        addToHistory('Save Data');
+                        setTimeout(() => setState('lastAction', ''), 3000);
+                    }
+                }},
+                {button: {
+                    text: '🗑️ Delete',
+                    className: 'danger-btn',
+                    onClick: () => {
+                        setState('lastAction', 'Item deleted!');
+                        addToHistory('Delete Item');
+                        setTimeout(() => setState('lastAction', ''), 3000);
+                    }
+                }},
+                {button: {
+                    text: '📤 Export',
+                    className: 'primary-btn',
+                    onClick: () => {
+                        setState('lastAction', 'Export completed!');
+                        addToHistory('Export Data');
+                        setTimeout(() => setState('lastAction', ''), 3000);
+                    }
+                }},
+                {button: {
+                    text: '🔄 Refresh',
+                    className: 'secondary-btn',
+                    onClick: () => {
+                        setState('lastAction', 'Data refreshed!');
+                        addToHistory('Refresh Data');
+                        setTimeout(() => setState('lastAction', ''), 3000);
+                    }
+                }},
+                
+                // Status display
+                ...(getState('lastAction', '') ? [{br: {}}, {div: {
+                    className: 'status-display status-success',
+                    text: () => getState('lastAction', '')
+                }}] : []),
+                
+                // Action history
+                ...(getState('actionHistory', []).length > 0 ? [
+                    {br: {}},
+                    {h4: { text: 'Recent Actions:' }},
+                    ...getState('actionHistory', []).map(item => ({
+                        div: {
+                            text: `${item.timestamp}: ${item.action}`,
+                            style: {
+                                padding: '4px 8px',
+                                margin: '2px 0',
+                                background: '#f7fafc',
+                                borderRadius: '4px',
+                                fontSize: '0.9em'
+                            }
+                        }
+                    }))
+                ] : [])
+            ];
+        });
+
+        // Render all demos
+        document.addEventListener('DOMContentLoaded', () => {
+            // Demo 1: Multiple buttons
+            const demo1 = juris.objectToHtml({MultipleButtons: {}});
+            document.getElementById('multiple-buttons-demo').appendChild(demo1);
+
+            // Demo 2: Counter buttons
+            const demo2 = juris.objectToHtml({CounterButtons: {}});
+            document.getElementById('counter-demo').appendChild(demo2);
+
+            // Demo 3: Dynamic buttons
+            const demo3 = juris.objectToHtml({DynamicButtons: {}});
+            document.getElementById('dynamic-demo').appendChild(demo3);
+
+            // Demo 4: Style variants
+            const demo4 = juris.objectToHtml({StyleVariants: {}});
+            document.getElementById('variants-demo').appendChild(demo4);
+
+            // Demo 5: Action buttons
+            const demo5 = juris.objectToHtml({ActionButtons: {}});
+            document.getElementById('actions-demo').appendChild(demo5);
+
+            console.log('🎯 Juris Button Demos Loaded!');
+            console.log('✨ Notice: No wrapper divs needed for multiple button returns!');
+        });
+    </script>
+</body>
+</html>

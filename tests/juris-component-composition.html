@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Component Composition</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .demo-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .highlight { background: #f0f8ff; padding: 10px; border-radius: 3px; margin: 10px 0; }
+        .button { padding: 8px 16px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .card { border: 1px solid #ccc; padding: 15px; margin: 10px; border-radius: 5px; }
+        .alert { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .alert-success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .alert-warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .layout-container { border: 2px dashed #666; padding: 10px; margin: 5px; }
+        .component-box { background: #e7f3ff; border: 1px solid #b3d9ff; padding: 8px; margin: 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Juris Component Composition Examples</h1>
+    
+    <div class="demo-section">
+        <h2>Example 1: Direct Component Return (No Wrapper Div)</h2>
+        <div id="demo1"></div>
+        <div class="highlight">
+            <strong>Key Point:</strong> Components can return other components directly without wrapper elements.
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Example 2: Conditional Component Rendering</h2>
+        <div id="demo2"></div>
+        <button class="button" onclick="toggleMode()">Toggle Mode</button>
+    </div>
+
+    <div class="demo-section">
+        <h2>Example 3: Component Chain (A → B → C)</h2>
+        <div id="demo3"></div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Example 4: Layout Components</h2>
+        <div id="demo4"></div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Example 5: Dynamic Component Selection</h2>
+        <div id="demo5"></div>
+        <button class="button" onclick="changeComponent()">Change Component</button>
+    </div>
+
+    <script src="../src/juris.js"></script>
+    <script>
+        // Initialize Juris with initial state
+        const juris = new Juris({
+            states: {
+                demo: {
+                    mode: 'card',
+                    currentComponent: 0,
+                    counter: 0
+                }
+            }
+        });
+
+        // === BASIC COMPONENTS ===
+        
+        // Simple button component
+        juris.registerComponent('MyButton', (props, ctx) => {
+            return {
+                button: {
+                    className: 'button',
+                    text: props.text || 'Click me',
+                    onclick: props.onClick || (() => console.log('Button clicked'))
+                }
+            };
+        });
+
+        // Simple card component
+        juris.registerComponent('MyCard', (props, ctx) => {
+            return {
+                div: {
+                    className: 'card',
+                    children: [
+                        { h3: { text: props.title || 'Card Title' } },
+                        { p: { text: props.content || 'Card content goes here.' } }
+                    ]
+                }
+            };
+        });
+
+        // Alert component
+        juris.registerComponent('MyAlert', (props, ctx) => {
+            return {
+                div: {
+                    className: `alert alert-${props.type || 'success'}`,
+                    text: props.message || 'Alert message'
+                }
+            };
+        });
+
+        // === EXAMPLE 1: Direct Component Return ===
+        
+        // This component returns another component directly - NO wrapper div!
+        juris.registerComponent('DirectWrapper', (props, ctx) => {
+            // Directly return another component - this is the key feature!
+            return { MyCard: { title: 'Direct Return', content: 'This card was returned directly from DirectWrapper component without any wrapper div!' } };
+        });
+
+        // === EXAMPLE 2: Conditional Component Rendering ===
+        
+        juris.registerComponent('ConditionalRenderer', (props, ctx) => {
+            const mode = ctx.getState('demo.mode', 'card');
+            
+            // Return different components based on state - no wrapper needed
+            if (mode === 'card') {
+                return { MyCard: { title: 'Card Mode', content: 'Currently showing a card component' } };
+            } else if (mode === 'alert') {
+                return { MyAlert: { type: 'warning', message: 'Currently showing an alert component' } };
+            } else {
+                return { MyButton: { text: 'Button Mode Active' } };
+            }
+        });
+
+        // === EXAMPLE 3: Component Chain ===
+        
+        // Component A returns Component B
+        juris.registerComponent('ComponentA', (props, ctx) => {
+            return { ComponentB: { from: 'A', message: props.message } };
+        });
+
+        // Component B returns Component C  
+        juris.registerComponent('ComponentB', (props, ctx) => {
+            return { ComponentC: { from: props.from + ' → B', message: props.message } };
+        });
+
+        // Component C renders the final result
+        juris.registerComponent('ComponentC', (props, ctx) => {
+            return {
+                div: {
+                    className: 'component-box',
+                    children: [
+                        { strong: { text: 'Component Chain Result:' } },
+                        { p: { text: `Path: ${props.from} → C` } },
+                        { p: { text: `Message: ${props.message}` } }
+                    ]
+                }
+            };
+        });
+
+        // === EXAMPLE 4: Layout Components ===
+        
+        // Layout component that returns another component
+        juris.registerComponent('AppLayout', (props, ctx) => {
+            return { ContentArea: { page: props.page } };
+        });
+
+        // Content area component
+        juris.registerComponent('ContentArea', (props, ctx) => {
+            return {
+                div: {
+                    className: 'layout-container',
+                    children: [
+                        { h4: { text: 'Layout System' } },
+                        { p: { text: `Current page: ${props.page}` } },
+                        { MyCard: { title: 'Nested in Layout', content: 'This card is rendered through the layout system' } }
+                    ]
+                }
+            };
+        });
+
+        // === EXAMPLE 5: Dynamic Component Selection ===
+        
+        juris.registerComponent('DynamicSelector', (props, ctx) => {
+            const componentIndex = ctx.getState('demo.currentComponent', 0);
+            const components = ['MyCard', 'MyAlert', 'MyButton'];
+            const selectedComponent = components[componentIndex % components.length];
+            
+            const componentProps = {
+                MyCard: { title: 'Dynamic Card', content: 'Dynamically selected card component' },
+                MyAlert: { type: 'success', message: 'Dynamically selected alert component' },
+                MyButton: { text: 'Dynamically Selected Button' }
+            };
+
+            // Return the selected component directly
+            return { [selectedComponent]: componentProps[selectedComponent] };
+        });
+
+        // === RENDER FUNCTIONS ===
+        
+        function renderDemo1() {
+            const element = juris.objectToHtml({ DirectWrapper: {} });
+            document.getElementById('demo1').innerHTML = '';
+            document.getElementById('demo1').appendChild(element);
+        }
+
+        function renderDemo2() {
+            const element = juris.objectToHtml({ ConditionalRenderer: {} });
+            document.getElementById('demo2').innerHTML = '';
+            document.getElementById('demo2').appendChild(element);
+        }
+
+        function renderDemo3() {
+            const element = juris.objectToHtml({ ComponentA: { message: 'Hello from component chain!' } });
+            document.getElementById('demo3').innerHTML = '';
+            document.getElementById('demo3').appendChild(element);
+        }
+
+        function renderDemo4() {
+            const element = juris.objectToHtml({ AppLayout: { page: 'Home' } });
+            document.getElementById('demo4').innerHTML = '';
+            document.getElementById('demo4').appendChild(element);
+        }
+
+        function renderDemo5() {
+            const element = juris.objectToHtml({ DynamicSelector: {} });
+            document.getElementById('demo5').innerHTML = '';
+            document.getElementById('demo5').appendChild(element);
+        }
+
+        // === EVENT HANDLERS ===
+        
+        function toggleMode() {
+            const currentMode = juris.getState('demo.mode');
+            const modes = ['card', 'alert', 'button'];
+            const currentIndex = modes.indexOf(currentMode);
+            const nextMode = modes[(currentIndex + 1) % modes.length];
+            juris.setState('demo.mode', nextMode);
+            renderDemo2();
+        }
+
+        function changeComponent() {
+            const current = juris.getState('demo.currentComponent', 0);
+            juris.setState('demo.currentComponent', current + 1);
+            renderDemo5();
+        }
+
+        // === INITIAL RENDER ===
+        
+        // Render all demos
+        renderDemo1();
+        renderDemo2();
+        renderDemo3();
+        renderDemo4();
+        renderDemo5();
+
+        // Add some helpful info to console
+        console.log('Juris Component Composition Demo loaded!');
+        console.log('Key insight: Components can return other components directly using Object VDOM syntax');
+        console.log('Example: return { MyComponent: { prop1: "value1" } }');
+    </script>
+</body>
+</html>
