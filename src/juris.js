@@ -91,7 +91,7 @@ const createLogger = () => {
         unsub: cb => s.splice(s.indexOf(cb), 1)
     };
 };
-const { log, logSub, logUnsub } = createLogger();
+const { log, sub: logSub, unsub: logUnsub } = createLogger();
 const createPromisify = () => {
     const activePromises = new Set();
     let isTracking = false;
@@ -102,7 +102,7 @@ const createPromisify = () => {
         }
     };
     const trackingPromisify = result => {
-        const promise = result?.then ? result : Promise.resolve(result);
+        const promise = typeof result?.then === "function" ? result : Promise.resolve(result);
         if (isTracking && promise !== result) {
             activePromises.add(promise);
             promise.finally(() => {
