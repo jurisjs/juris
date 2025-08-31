@@ -1463,8 +1463,6 @@ class DOMRenderer {
         operations.filter(op => op.type === 'update').forEach(op => {
             this.#updateExistingNode(op.node, op.child);
         });
-        
-        // Reorder nodes
         const targetOrder = [];
         newChildren.forEach((child, index) => {
             const key = this.#extractKey(child, index) ?? `__index_${index}`;
@@ -1474,8 +1472,7 @@ class DOMRenderer {
             } else if (createdNodes.has(key)) {
                 targetOrder.push(createdNodes.get(key));
             }
-        });
-        
+        });        
         this.#reorderNodes(parent, targetOrder);
     }
     
@@ -1491,16 +1488,14 @@ class DOMRenderer {
         if (node.nodeType === Node.ELEMENT_NODE && typeof vnode === 'object' && !Array.isArray(vnode)) {
             const tagName = Object.keys(vnode)[0];
             const props = vnode[tagName] || {};
-            const subscriptions = [];
-            
+            const subscriptions = [];            
             for (const key in props) {
                 if (key === 'key') continue;
                 const cleanup = this.applyProp(node, key, props[key]);
                 if (cleanup && typeof cleanup === 'function') {
                     subscriptions.push(cleanup);
                 }
-            }
-            
+            }            
             if (subscriptions.length > 0) {
                 const existing = this.subscriptions.get(node) || { subscriptions: [], eventListeners: [] };
                 existing.subscriptions.push(...subscriptions);
@@ -1510,12 +1505,10 @@ class DOMRenderer {
     }
     
     #reorderNodes(parent, targetOrder) {
-        let lastNode = null;
-        
+        let lastNode = null;        
         for (let i = targetOrder.length - 1; i >= 0; i--) {
             const targetNode = targetOrder[i];
-            if (!targetNode) continue;
-            
+            if (!targetNode) continue;            
             if (targetNode.parentNode === parent) {
                 if (lastNode && targetNode.nextSibling !== lastNode) {
                     parent.insertBefore(targetNode, lastNode);
@@ -1543,58 +1536,46 @@ class DOMRenderer {
     _renderToDOM(vnode, componentName = null) {
         if (typeof vnode === 'string' || typeof vnode === 'number') {
             return document.createTextNode(String(vnode));
-        }
-        
-        if (!vnode || typeof vnode !== 'object') return null;
-        
+        }        
+        if (!vnode || typeof vnode !== 'object') return null;        
         if (Array.isArray(vnode)) {
             return this.#createArrayFragment(vnode, componentName);
-        }
-        
+        }        
         const tagName = Object.keys(vnode)[0];
-        const props = vnode[tagName] || {};
-        
+        const props = vnode[tagName] || {};        
         if (this.componentStack.includes(tagName)) {
             return this.#newErrElm('recursion', [...this.componentStack, tagName].join(' → '));
-        }
-        
+        }        
         if (this.juris.getCM().components.has(tagName)) {
             return this.#renderComponent(tagName, props);
-        }
-        
+        }        
         if (/^[A-Z]/.test(tagName)) {
             return this.#newErrElm('component', `Component "${tagName}" not registered`);
-        }
-        
-        if (typeof tagName !== 'string' || tagName.length === 0) return null;
-        
+        }        
+        if (typeof tagName !== 'string' || tagName.length === 0) return null;        
         let modifiedProps = props;
         if (props.style && this.cssExtractor) {
             const elementName = componentName || tagName;
             modifiedProps = this.cssExtractor.processProps(props, elementName, this);
-        }
-        
+        }        
         return this.#createElement(tagName, modifiedProps, componentName);
     }
     
     #createElement(tagName, props, componentName = null) {
         const elm = this.#createElementByType(tagName);
-        const allSubscriptions = [];
-        
+        const allSubscriptions = [];        
         for (const key in props) {
             if (!props.hasOwnProperty(key) || key === 'key') continue;
             const cleanup = this.applyProp(elm, key, props[key], componentName);
             if (cleanup && typeof cleanup === 'function') {
                 allSubscriptions.push(cleanup);
             }
-        }
-        
+        }        
         if (allSubscriptions.length > 0) {
             const existing = this.subscriptions.get(elm) || { subscriptions: [], eventListeners: [] };
             existing.subscriptions.push(...allSubscriptions);
             this.subscriptions.set(elm, existing);
-        }
-        
+        }        
         return elm;
     }
     
@@ -1610,8 +1591,7 @@ class DOMRenderer {
                 isSVG = false;
                 this.elementTypeCache.set(tagName, false);
             }
-        }
-        
+        }        
         return isSVG 
             ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
             : document.createElement(tagName);
@@ -1619,14 +1599,11 @@ class DOMRenderer {
     
     #createArrayFragment(vnode, componentName) {
         const hasReactiveFunctions = vnode.some(item => typeof item === 'function');
-        const hasKeys = vnode.some(item => this.#extractKey(item) !== null);
-        
+        const hasKeys = vnode.some(item => this.#extractKey(item) !== null);        
         if (hasReactiveFunctions || hasKeys) {
             const fragment = document.createDocumentFragment();
-            const subscriptions = [];
-            
+            const subscriptions = [];            
             if (hasKeys && !hasReactiveFunctions) {
-                // Static keyed fragment
                 for (let i = 0; i < vnode.length; i++) {
                     const child = vnode[i];
                     const childElement = this.render(child, componentName);
@@ -1639,10 +1616,8 @@ class DOMRenderer {
                     }
                 }
             } else {
-                // Reactive fragment
                 this.#handleReactiveFragmentChildren(fragment, vnode, subscriptions, componentName);
             }
-            
             if (subscriptions.length > 0) {
                 fragment._jurisCleanup = () => {
                     subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
@@ -1650,8 +1625,6 @@ class DOMRenderer {
             }
             return fragment;
         }
-        
-        // Static fragment
         const fragment = document.createDocumentFragment();
         for (let i = 0; i < vnode.length; i++) {
             const childElement = this.render(vnode[i], componentName);
@@ -2423,7 +2396,7 @@ class Juris {
                 setupIndicators: (elementId, config) => this.setupIndicators(elementId, config),
                 juris: this,
                 logger: {
-                    log: log, lwarn: log.w, error: log.e, info: log.i, debug: log.d, subscribe: logSub, unsubscribe: logUnsub
+                    warn: log.w, error: log.e, info: log.i, debug: log.d, subscribe: logSub, unsubscribe: logUnsub
                 }
             };
         }
