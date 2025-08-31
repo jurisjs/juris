@@ -596,15 +596,15 @@ class ComponentManager {
 
     #callComponentFunction(componentFn, props, context) {
         const funcStr = componentFn.toString();
-        const paramMatch = funcStr.match(/^[^(]*\(([^)]*)\)/);        
+        const paramMatch = funcStr.match(/^[^(]*\(([^)]*)\)/);
         if (!paramMatch || !paramMatch[1].trim()) {
             return componentFn();
-        }
-        const params = paramMatch[1].split(',').map(p => p.trim());
+        }        
+        const params = paramMatch[1].split(',').map(p => p.trim());        
         if (params.length === 1) {
             const param = params[0];
-            if (param.startsWith('{') && param.includes('}')) {
-                return componentFn(props, context);
+            if (param.startsWith('{') && param.includes('}') || param === 'props'|| param === 'prp') {
+                return componentFn(props);
             } else {
                 return componentFn(context);
             }
@@ -2457,10 +2457,10 @@ class Juris {
             const headlessAPIs = this.getHM().getAllAPIs();
             Object.assign(context, headlessAPIs);
         }
-        if (elm) context.elm = elm;
+        if (elm) context.element = elm;
         return context;
     }
-
+    promisify(result) { return promisify(result);}
     getState(path, defaultValue, track) { return this.getSM().getState(path, defaultValue, track); }
     setState(path, value, context) {
         return this.getSM().setState(path, value, context);
