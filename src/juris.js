@@ -1458,8 +1458,6 @@ class DOMRenderer {
                 }
             }
         });
-        
-        // Update existing nodes
         operations.filter(op => op.type === 'update').forEach(op => {
             this.#updateExistingNode(op.node, op.child);
         });
