@@ -17429,7 +17429,6 @@ const juris = new Juris({
 		}
 	}
 });
-juris.setupLogging('info')
 // Start the application
 juris.render('#app');
 juris.enhance('#counter-btn', {
