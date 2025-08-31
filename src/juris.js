@@ -139,7 +139,7 @@ class StateManager {
         this.state = { ...initialState };
         this.middleware = [...middleware];
         this.subscribers = new Map();
-        this.externalSubscribers = new Map();
+        this.extSubs = new Map();
         this.deps = null;
         this.isUpdating = false;
         this.initialState = JSON.parse(JSON.stringify(initialState));
@@ -149,11 +149,69 @@ class StateManager {
         this.isBatching = false;
         this.batchQueue = [];
         this.batchedPaths = new Set();
-        
         this.pathCache = new Map();
         this.maxCacheSize = 500;
+        this.plugins = new Map();
     }
 
+    addPlugin(name, plugin) {
+        this.plugins.set(name, plugin);
+        if (plugin.initialize && typeof plugin.initialize === 'function') {
+            plugin.initialize(this);
+        }
+        return plugin;
+    }
+
+    getPlugin(name) {
+        return this.plugins.get(name);
+    }
+
+    hasPlugin(name) {
+        return this.plugins.has(name);
+    }
+
+    removePlugin(name) {
+        const plugin = this.plugins.get(name);
+        if (plugin && plugin.destroy && typeof plugin.destroy === 'function') {
+            plugin.destroy();
+        }
+        return this.plugins.delete(name);
+    }
+
+    destroy() {
+        this.plugins.forEach((plugin, name) => {
+            this.removePlugin(name);
+        });
+        this.plugins.clear();
+    }
+    // Compute delegation methods
+    compute(name, fn, options = {}) {
+        const computePlugin = this.getPlugin('compute');
+        if (!computePlugin) {
+            throw new Error('Compute plugin not available. Add ComputePlugin via features.compute in Juris config.');
+        }
+        return computePlugin.compute(name, fn, options);
+    }
+
+    configureCompute(defaults) {
+        const computePlugin = this.getPlugin('compute');
+        if (!computePlugin) {
+            throw new Error('Compute plugin not available.');
+        }
+        return computePlugin.configureCompute(defaults);
+    }
+
+    getComputeStats(name = null) {
+        const computePlugin = this.getPlugin('compute');
+        return computePlugin ? computePlugin.getComputeStats(name) : null;
+    }
+
+    clearCompute(name = null) {
+        const computePlugin = this.getPlugin('compute');
+        if (computePlugin) {
+            computePlugin.clearCompute(name);
+        }
+    }
     #getPathParts(path) {
         let parts = this.pathCache.get(path);
         if (parts) return parts;
@@ -188,7 +246,14 @@ class StateManager {
             this.isBatching = false;
         }
         this.state = JSON.parse(JSON.stringify(this.initialState));
-        this.pathCache.clear(); 
+        this.pathCache.clear();
+        
+        // Add this:
+        this.plugins.forEach(plugin => {
+            if (plugin.reset && typeof plugin.reset === 'function') {
+                plugin.reset();
+            }
+        });
     }
 
     getState(path, defaultValue = null, track = true) {
@@ -312,8 +377,8 @@ class StateManager {
         });
         parentPaths.forEach(path => {
             if (this.subscribers.has(path)) this.#triggerPathSubscribers(path);
-            if (this.externalSubscribers.has(path)) {
-                this.externalSubscribers.get(path).forEach(({ callback, hierarchical }) => {
+            if (this.extSubs.has(path)) {
+                this.extSubs.get(path).forEach(({ callback, hierarchical }) => {
                     try {
                         callback(this.getState(path, null, false), null, path);
                     } catch (error) {
@@ -385,14 +450,14 @@ class StateManager {
     }
 
     subscribe(path, callback, hierarchical = true) {
-        if (!this.externalSubscribers.has(path)) this.externalSubscribers.set(path, new Set());
+        if (!this.extSubs.has(path)) this.extSubs.set(path, new Set());
         const subscription = { callback, hierarchical };
-        this.externalSubscribers.get(path).add(subscription);
+        this.extSubs.get(path).add(subscription);
         return () => {
-            const subs = this.externalSubscribers.get(path);
+            const subs = this.extSubs.get(path);
             if (subs) {
                 subs.delete(subscription);
-                if (subs.size === 0) this.externalSubscribers.delete(path);
+                if (subs.size === 0) this.extSubs.delete(path);
             }
         };
     }
@@ -420,7 +485,7 @@ class StateManager {
             this.#triggerPathSubscribers(parts.slice(0, i).join('.'));
         }
         const prefix = path ? path + '.' : '';
-        const allPaths = new Set([...this.subscribers.keys(), ...this.externalSubscribers.keys()]);
+        const allPaths = new Set([...this.subscribers.keys(), ...this.extSubs.keys()]);
         allPaths.forEach(subscriberPath => {
             if (subscriberPath.startsWith(prefix) && subscriberPath !== path) {
                 this.#triggerPathSubscribers(subscriberPath);
@@ -429,7 +494,7 @@ class StateManager {
     }
 
     #notifyExternalSubscribers(changedPath, newValue, oldValue) {
-        this.externalSubscribers.forEach((subscriptions, subscribedPath) => {
+        this.extSubs.forEach((subscriptions, subscribedPath) => {
             subscriptions.forEach(({ callback, hierarchical }) => {
                 const shouldNotify = hierarchical ?
                     (changedPath === subscribedPath || changedPath.startsWith(subscribedPath + '.')) :
@@ -490,8 +555,8 @@ class ComponentManager {
     constructor(juris) {
         this.juris = juris;
         this.components = new Map();
-        this.instances = new Map();
-        this.namedComponents = new Map();
+        this.insts = new Map();
+        this.namedComps = new Map();
         this.comps = new Map();
         this.compStates = new Map();
         this.placeholders = new Map();
@@ -514,28 +579,47 @@ class ComponentManager {
             return null;
         }
         try {
-            if (this.juris.domRenderer._hasAsyncProps(props)) {
+            if (this.juris.getDR()._hasAsyncProps(props)) {
                 return this.#createWithAsyncProps(name, compFn, props);
             }
-            const { comptId, compStates, context } = this.#setupComponentContext(name);
-            const result = compFn(props, context);
+            const { comptId, compStates, context } = this.#getCompContext(name);
+            const result = this.#callComponentFunction(compFn, props, context);
             if (result?.then) {
-                return this.#handleAsyncComponent(promisify(result), name, props, compStates);
+                return this.#handleAsyncComp(promisify(result), name, props, compStates);
             }
-            return this.#processComponentResult(result, name, props, compStates);
+            return this.#procCompResult(result, name, props, compStates);
         } catch (error) {
             log.ee && console.error(log.e('Component creation failed!', { name, error: error.message }, 'application'));
-            return this.#createErrorElement(name, error);
+            return this.#newErrElm(name, error);
         }
     }
 
-    #setupComponentContext(name) {
-        const { comptId, compStates } = this.#generatecomptId(name);
-        const context = this.#createComponentContext(comptId, compStates);
+    #callComponentFunction(componentFn, props, context) {
+        const funcStr = componentFn.toString();
+        const paramMatch = funcStr.match(/^[^(]*\(([^)]*)\)/);        
+        if (!paramMatch || !paramMatch[1].trim()) {
+            return componentFn();
+        }
+        const params = paramMatch[1].split(',').map(p => p.trim());
+        if (params.length === 1) {
+            const param = params[0];
+            if (param.startsWith('{') && param.includes('}')) {
+                return componentFn(props, context);
+            } else {
+                return componentFn(context);
+            }
+        } else {
+            return componentFn(props, context);
+        }
+    }
+
+    #getCompContext(name) {
+        const { comptId, compStates } = this.#newCompId(name);
+        const context = this.#getCompCxt(comptId, compStates);
         return { comptId, compStates, context };
     }
 
-    #generatecomptId(name) {
+    #newCompId(name) {
         if (!this.comps.has(name)) {
             this.comps.set(name, 0);
         }
@@ -546,225 +630,225 @@ class ComponentManager {
         return { comptId, compStates };
     }
 
-    #createComponentContext(comptId, compStates) {
-        const context = this.juris.createContext();
-        context.newState = (key, initialValue) => {
-            const statePath = `##local.${comptId}.${key}`;
-            if (this.juris.stateManager.getState(statePath, Symbol('not-found')) === Symbol('not-found')) {
-                this.juris.stateManager.setState(statePath, initialValue);
+    #getCompCxt(compId, states) {
+        const ctx = this.juris.createContext();
+        ctx.newState = (key, initVal) => {
+            const path = `##local.${compId}.${key}`;
+            if (this.juris.getSM().getState(path, Symbol('not-found')) === Symbol('not-found')) {
+                this.juris.getSM().setState(path, initVal);
             }
-            compStates.add(statePath);
+            states.add(path);
             return [
-                () => this.juris.stateManager.getState(statePath, initialValue),
-                value => this.juris.stateManager.setState(statePath, value)
+                () => this.juris.getSM().getState(path, initVal),
+                val => this.juris.getSM().setState(path, val)
             ];
         };
-        return context;
+        return ctx;
     }
 
-    #createWithAsyncProps(name, componentFn, props) {
-        const placeholder = this.#createAsyncPlaceholder(name, 'async-props-loading');
-        this.placeholders.set(placeholder, { name, props, type: 'async-props' });
-        this.#resolveAsyncProps(props).then(resolvedProps => {
+    #createWithAsyncProps(name, compFn, props) {
+        const ph = this.#newPlaceholder(name, 'async-props-loading');
+        this.placeholders.set(ph, { name, props, type: 'async-props' });
+        this.#resolveAsyncProps(props).then(resolved => {
             try {
-                const realElement = this.#createSyncComponent(name, componentFn, resolvedProps);
-                this.#replacePlaceholder(placeholder, realElement);
-            } catch (error) {
-                this.#replaceWithError(placeholder, error);
+                const elem = this.#createSyncComponent(name, compFn, resolved);
+                this.#replacePlaceholder(ph, elem);
+            } catch (err) {
+                this.#replaceWithError(ph, err);
             }
-        }).catch(error => this.#replaceWithError(placeholder, error));
-        return placeholder;
+        }).catch(err => this.#replaceWithError(ph, err));
+        return ph;
     }
 
     async #resolveAsyncProps(props) {
-        const cacheKey = this.#generateCacheKey(props);
-        const cached = this.asyncPropsCache.get(cacheKey);
+        const key = this.#newKey(props);
+        const cached = this.asyncPropsCache.get(key);
         if (cached && Date.now() - cached.timestamp < 5000) {
             return cached.props;
         }
         const resolved = {};
-        for (const [key, value] of Object.entries(props)) {
-            if (value?.then) {
+        for (const [k, v] of Object.entries(props)) {
+            if (v?.then) {
                 try {
-                    resolved[key] = await value;
-                } catch (error) {
-                    resolved[key] = { __asyncError: error.message };
+                    resolved[k] = await v;
+                } catch (err) {
+                    resolved[k] = { __asyncError: err.message };
                 }
             } else {
-                resolved[key] = value;
+                resolved[k] = v;
             }
         }
-        this.asyncPropsCache.set(cacheKey, { props: resolved, timestamp: Date.now() });
+        this.asyncPropsCache.set(key, { props: resolved, timestamp: Date.now() });
         return resolved;
     }
 
-    #createSyncComponent(name, componentFn, props) {
-        const { comptId, compStates, context } = this.#setupComponentContext(name);
-        const result = componentFn(props, context);        
+    #createSyncComponent(name, compFn, props) {
+        const { comptId, compStates, context } = this.#getCompContext(name);
+        const result = this.#callComponentFunction(compFn, props, context);
         if (result?.then) {
-            return this.#handleAsyncComponent(promisify(result), name, props, compStates);
+            return this.#handleAsyncComp(promisify(result), name, props, compStates);
         }
-        return this.#processComponentResult(result, name, props, compStates);
+        return this.#procCompResult(result, name, props, compStates);
     }
 
-    #handleAsyncComponent(resultPromise, name, props, compStates) {
-        const placeholder = this.#createAsyncPlaceholder(name, 'async-loading');
-        this.placeholders.set(placeholder, { name, props, compStates });
-        resultPromise.then(result => {
+    #handleAsyncComp(promise, name, props, states) {
+        const ph = this.#newPlaceholder(name, 'async-loading');
+        this.placeholders.set(ph, { name, props, states });
+        promise.then(result => {
             try {
-                const realElement = this.#processComponentResult(result, name, props, compStates);
-                this.#replacePlaceholder(placeholder, realElement);
-            } catch (error) {
-                log.ee && console.error(log.e('Async component failed', { name, error: error.message }, 'application'));
-                this.#replaceWithError(placeholder, error);
+                const elem = this.#procCompResult(result, name, props, states);
+                this.#replacePlaceholder(ph, elem);
+            } catch (err) {
+                log.ee && console.error(log.e('Async component failed', { name, error: err.message }, 'application'));
+                this.#replaceWithError(ph, err);
             }
-        }).catch(error => this.#replaceWithError(placeholder, error));
-        return placeholder;
+        }).catch(err => this.#replaceWithError(ph, err));
+        return ph;
     }
 
-    #processComponentResult(result, name, props, compStates) {
+    #procCompResult(result, name, props, states) {
         if (Array.isArray(result)) {
-            return this.#createComponentFragment(result, name, props, compStates);
+            return this.#newCompFrag(result, name, props, states);
         }
         if (result && typeof result === 'object') {
-            if (this.#hasLifecycleHooks(result)) {
-                return this.#createLifecycleComponent(result, name, props, compStates);
+            if (this.#hasHooks(result)) {
+                return this.#newHooksComp(result, name, props, states);
             }
-            if (typeof result.render === 'function' && !this.#hasLifecycleHooks(result)) {
-                return this.#createReactiveRenderComponent(result, name, props, compStates);
+            if (typeof result.render === 'function' && !this.#hasHooks(result)) {
+                return this.#newRenderComp(result, name, props, states);
             }
             const keys = Object.keys(result);
             if (keys.length === 1 && typeof keys[0] === 'string' && keys[0].length > 0) {
-                const element = this.juris.domRenderer.render(result, name);
-                if (element && compStates.size > 0) {
-                    this.compStates.set(element, compStates);
+                const el = this.juris.getDR().render(result, name);
+                if (el && states.size > 0) {
+                    this.compStates.set(el, states);
                 }
-                if (result.api && typeof result.api === 'object' && element) {
-                    element.api = result.api;
+                if (result.api && typeof result.api === 'object' && el) {
+                    el.api = result.api;
                 }
-                if (element && element.setAttribute) {
-                    element.setAttribute('data-juris-component', name);
-                    element._jurisComponent = name;
+                if (el && el.setAttribute) {
+                    el.setAttribute('data-juris-component', name);
+                    el._jurisComponent = name;
                 }
-                return element;
+                return el;
             }
         }
-        const element = this.juris.domRenderer.render(result, name);
-        if (element && compStates.size > 0) {
-            this.compStates.set(element, compStates);
+        const el = this.juris.getDR().render(result, name);
+        if (el && states.size > 0) {
+            this.compStates.set(el, states);
         }
-        if (element && element.setAttribute) {
-            element.setAttribute('data-juris-component', name);
-            element._jurisComponent = name;
+        if (el && el.setAttribute) {
+            el.setAttribute('data-juris-component', name);
+            el._jurisComponent = name;
         }
-        return element;
+        return el;
     }
 
-    #createComponentFragment(result, name, props, compStates) {
-        const fragment = document.createDocumentFragment();
-        const virtualContainer = this.#createVirtualContainer(fragment, name, props);
-        const subscriptions = [];
-        this.juris.domRenderer._handleChildren(virtualContainer, result, subscriptions);
-        fragment._jurisComponent = {
+    #newCompFrag(result, name, props, states) {
+        const frag = document.createDocumentFragment();
+        const virt = this.#newVirtContainer(frag, name, props);
+        const subs = [];
+        this.juris.getDR()._handleChildren(virt, result, subs);
+        frag._jurisComponent = {
             name,
             props,
-            virtual: virtualContainer,
+            virtual: virt,
             cleanup: () => {
-                subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
+                subs.forEach(unsub => { try { unsub(); } catch(e) {} });
             }
         };
-        if (compStates?.size > 0) {
-            fragment._juriscompStates = compStates;
+        if (states?.size > 0) {
+            frag._juriscompStates = states;
         }
-        return fragment;
+        return frag;
     }
 
-    #createLifecycleComponent(result, name, props, compStates) {
-        const instance = this.#createComponentInstance(result, name, props);
-        let container = document.createElement('div');
-        container.setAttribute('data-juris-component', name);
+    #newHooksComp(result, name, props, states) {
+        const inst = this.#newComp(result, name, props);
+        let cont = document.createElement('div');
+        cont.setAttribute('data-juris-component', name);
         const updateRender = () => {
-            const { result: renderResult, deps } = this.juris.stateManager.track(() => {
-                return instance.render ? instance.render() : result;
+            const { result: res, deps } = this.juris.getSM().track(() => {
+                return inst.render ? inst.render() : result;
             });
-            const renderedContent = this.juris.domRenderer.render(renderResult, name, props);
-            if (container.parentNode) {
-                if (container._reactiveSubscriptions) {
-                    container._reactiveSubscriptions.forEach(unsub => unsub());
+            const content = this.juris.getDR().render(res, name, props);
+            if (cont.parentNode) {
+                if (cont._reactiveSubscriptions) {
+                    cont._reactiveSubscriptions.forEach(unsub => unsub());
                 }
-                let newContainer;
-                if (renderedContent.constructor === HTMLDivElement) {
-                    newContainer = renderedContent;
+                let newCont;
+                if (content.constructor === HTMLDivElement) {
+                    newCont = content;
                 } else {
-                    newContainer = document.createElement('div');
-                    newContainer.setAttribute('data-juris-component', name);
-                    newContainer.appendChild(renderedContent);
+                    newCont = document.createElement('div');
+                    newCont.setAttribute('data-juris-component', name);
+                    newCont.appendChild(content);
                 }
-                container.parentNode.replaceChild(newContainer, container);
-                container = newContainer;
+                cont.parentNode.replaceChild(newCont, cont);
+                cont = newCont;
             } else {
-                if (renderedContent.constructor === HTMLDivElement) {
-                    container = renderedContent;
+                if (content.constructor === HTMLDivElement) {
+                    cont = content;
                 } else {
-                    container.appendChild(renderedContent);
+                    cont.appendChild(content);
                 }
             }
             
             // Subscribe to dependencies for future updates
             deps.forEach(path => {
-                const unsub = this.juris.stateManager.subscribeInternal(path, updateRender);
+                const unsub = this.juris.getSM().subscribeInternal(path, updateRender);
                 // Store subscription for cleanup
-                if (!container._reactiveSubscriptions) {
-                    container._reactiveSubscriptions = [];
+                if (!cont._reactiveSubscriptions) {
+                    cont._reactiveSubscriptions = [];
                 }
-                container._reactiveSubscriptions.push(unsub);
+                cont._reactiveSubscriptions.push(unsub);
             });
         };
         
         // Initial render
         updateRender();
         
-        if (container) {
-            this.#setupComponentInstance(container, instance, compStates, name);
-            if (instance.api && typeof instance.api === 'object') {
-                container.api = instance.api;
+        if (cont) {
+            this.#setupComp(cont, inst, states, name);
+            if (inst.api && typeof inst.api === 'object') {
+                cont.api = inst.api;
             }
         }
         
-        return container;
+        return cont;
     }
 
-    #createReactiveRenderComponent(result, name, props, compStates) {
-        const container = document.createElement('div');
-        container.setAttribute('data-juris-reactive-render', name);
-        const componentData = { 
+    #newRenderComp(result, name, props, states) {
+        const cont = document.createElement('div');
+        cont.setAttribute('data-juris-reactive-render', name);
+        const data = { 
             name, 
             api: result.api || {}, 
             render: result.render 
         };
-        this.instances.set(container, componentData);
-            if (result.api && typeof result.api === 'object') {
-            container.api = result.api;
+        this.insts.set(cont, data);
+        if (result.api && typeof result.api === 'object') {
+            cont.api = result.api;
         }
         if (result.api) {
-            this.namedComponents.set(name, { element: container, instance: componentData });
+            this.namedComps.set(name, { elm: cont, instance: data });
         }
-        const updateRender = () => this.#executeReactiveRender(result.render, container, name);
-        const subscriptions = [];
-        this.juris.domRenderer._createReactiveUpdate(container, updateRender, subscriptions);
-        if (subscriptions.length > 0) {
-            this.juris.domRenderer.subscriptions.set(container, { 
-                subscriptions, 
+        const updateRender = () => this.#runRender(result.render, cont, name);
+        const subs = [];
+        this.juris.getDR()._createReactiveUpdate(cont, updateRender, subs);
+        if (subs.length > 0) {
+            this.juris.getDR().subscriptions.set(cont, { 
+                subscriptions: subs, 
                 eventListeners: [] 
             });
         }
-        if (compStates?.size > 0) {
-            this.compStates.set(container, compStates);
+        if (states?.size > 0) {
+            this.compStates.set(cont, states);
         }
-        return container;
+        return cont;
     }
 
-    #createComponentInstance(result, name, props) {
+    #newComp(result, name, props) {
         return {
             name, props,
             hooks: result.hooks || { onMount: result.onMount, onUpdate: result.onUpdate, onUnmount: result.onUnmount },
@@ -773,65 +857,49 @@ class ComponentManager {
         };
     }
 
-    #setupComponentInstance(element, instance, compStates, name) {
-        this.instances.set(element, instance);        
-        if (compStates?.size > 0) {
-            this.compStates.set(element, compStates);
+    #setupComp(el, inst, states, name) {
+        this.insts.set(el, inst);        
+        if (states?.size > 0) {
+            this.compStates.set(el, states);
         }
-        if (instance.api && typeof instance.api === 'object') {
-            element.api = instance.api;
+        if (inst.api && typeof inst.api === 'object') {
+            el.api = inst.api;
         }       
-        if (instance.api && Object.keys(instance.api).length > 0) {
-            this.namedComponents.set(name, { element, instance });
+        if (inst.api && Object.keys(inst.api).length > 0) {
+            this.namedComps.set(name, { elm: el, instance: inst });
         }
-        if (instance.hooks.onMount) {
-            setTimeout(() => this.#executeLifecycleHook(instance.hooks.onMount, element, name, 'onMount'), 0);
+        if (inst.hooks.onMount) {
+            setTimeout(() => this.#runHook(inst.hooks.onMount, el, name, 'onMount'), 0);
         }
     }
 
-    #handleAsyncLifecycleRender(renderPromise, instance, compStates) {
-        const placeholder = this.#createAsyncPlaceholder(instance.name, 'async-lifecycle');
-        renderPromise.then(renderResult => {
-            try {
-                const element = this.juris.domRenderer.render(renderResult);
-                if (element) {
-                    this.#setupComponentInstance(element, instance, compStates, instance.name);
-                    this.#replacePlaceholder(placeholder, element);
-                }
-            } catch (error) {
-                this.#replaceWithError(placeholder, error);
-            }
-        }).catch(error => this.#replaceWithError(placeholder, error));
-        return placeholder;
-    }
-
-    #executeReactiveRender(renderFn, container, name) {
+    #runRender(renderFn, cont, name) {
         try {
-            const renderResult = renderFn(container);
-            if (renderResult?.then) {
-                container.innerHTML = '<div class="juris-loading">Loading...</div>';
-                promisify(renderResult).then(resolvedResult => {
-                    container.innerHTML = '';
-                    const element = this.juris.domRenderer.render(resolvedResult);
-                    if (element) container.appendChild(element);
-                }).catch(error => {
-                    log.ee && console.error(`Async render error for ${name}:`, error);
-                    container.innerHTML = `<div class="juris-error">Render Error: ${error.message}</div>`;
+            const res = renderFn(cont);
+            if (res?.then) {
+                cont.innerHTML = '<div class="juris-loading">Loading...</div>';
+                promisify(res).then(resolved => {
+                    cont.innerHTML = '';
+                    const el = this.juris.getDR().render(resolved);
+                    if (el) cont.appendChild(el);
+                }).catch(err => {
+                    log.ee && console.error(`Async render error for ${name}:`, err);
+                    cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
                 });
                 return;
             }
-            const children = Array.from(container.children);
+            const children = Array.from(cont.children);
             children.forEach(child => this.cleanup(child));
-            container.innerHTML = '';
-            const element = this.juris.domRenderer.render(renderResult);
-            if (element) container.appendChild(element);
-        } catch (error) {
-            log.ee && console.error(`Error in reactive render for ${name}:`, error);
-            container.innerHTML = `<div class="juris-error">Render Error: ${error.message}</div>`;
+            cont.innerHTML = '';
+            const el = this.juris.getDR().render(res);
+            if (el) cont.appendChild(el);
+        } catch (err) {
+            log.ee && console.error(`Error in reactive render for ${name}:`, err);
+            cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
         }
     }
 
-    #executeLifecycleHook(hook, args, componentName, hookName) {
+    #runHook(hook, args, componentName, hookName) {
         try {
             const result = Array.isArray(args) ? hook(...args) : hook(args);
             if (result?.then) {
@@ -844,44 +912,44 @@ class ComponentManager {
         }
     }
 
-    #createVirtualContainer(fragment, name, props) {
-        const virtualContainer = {
+    #newVirtContainer(frag, name, props) {
+        const virt = {
             _isVirtual: true,
-            _fragment: fragment,
+            _fragment: frag,
             _componentName: name,
             _componentProps: props,
-            appendChild: (child) => fragment.appendChild(child),
+            appendChild: (child) => frag.appendChild(child),
             removeChild: (child) => {
-                if (child.parentNode === fragment) {
-                    fragment.removeChild(child);
+                if (child.parentNode === frag) {
+                    frag.removeChild(child);
                 }
             },
             replaceChild: (newChild, oldChild) => {
-                if (oldChild.parentNode === fragment) {
-                    fragment.replaceChild(newChild, oldChild);
+                if (oldChild.parentNode === frag) {
+                    frag.replaceChild(newChild, oldChild);
                 }
             },
             get children() {
-                return Array.from(fragment.childNodes);
+                return Array.from(frag.childNodes);
             },
             get parentNode() { return null; },
             textContent: ''
         };
-        Object.defineProperty(virtualContainer, 'textContent', {
-            set(value) {
-                while (fragment.firstChild) {
-                    fragment.removeChild(fragment.firstChild);
+        Object.defineProperty(virt, 'textContent', {
+            set(val) {
+                while (frag.firstChild) {
+                    frag.removeChild(frag.firstChild);
                 }
-                if (value) {
-                    fragment.appendChild(document.createTextNode(value));
+                if (val) {
+                    frag.appendChild(document.createTextNode(val));
                 }
             },
             get() { return ''; }
         });
-        return virtualContainer;
+        return virt;
     }
 
-    #createAsyncPlaceholder(name, className) {
+    #newPlaceholder(name, className) {
         const tempElement = document.createElement('div');
         tempElement.id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
         return this._createPlaceholder(`Loading ${name}...`, className, tempElement);
@@ -895,7 +963,7 @@ class ComponentManager {
     }
 
     #replaceWithError(placeholder, error) {
-        const errorElement = this.#createErrorElement(
+        const errorElement = this.#newErrElm(
             placeholder._jurisComponent?.name || 'Unknown Component', 
             error
         );
@@ -905,44 +973,44 @@ class ComponentManager {
         this.placeholders.delete(placeholder);
     }
 
-    #createErrorElement(name, error) {
-        const element = document.createElement('div');
-        element.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
-        element.textContent = `Component Error in ${name}: ${error.message}`;
-        return element;
+    #newErrElm(name, error) {
+        const elm = document.createElement('div');
+        elm.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
+        elm.textContent = `Component Error in ${name}: ${error.message}`;
+        return elm;
     }
 
-    #hasLifecycleHooks(result) {
+    #hasHooks(result) {
         return result.hooks && (result.hooks.onMount || result.hooks.onUpdate || result.hooks.onUnmount) ||
             result.onMount || result.onUpdate || result.onUnmount;
     }
 
-    #generateCacheKey(props) {
+    #newKey(props) {
         return JSON.stringify(props, (key, value) => value?.then ? '[Promise]' : value);
     }
 
-    cleanup(element) {
-        if (element instanceof DocumentFragment) {
-            this.#cleanupFragment(element);
+    cleanup(elm) {
+        if (elm instanceof DocumentFragment) {
+            this.#cleanupFragment(elm);
             return;
         }
-        const instance = this.instances.get(element);
+        const instance = this.insts.get(elm);
         if (instance?.hooks?.onUnmount) {
-            this.#executeLifecycleHook(instance.hooks.onUnmount, element, instance.name, 'onUnmount');
+            this.#runHook(instance.hooks.onUnmount, elm, instance.name, 'onUnmount');
         }
-        if (element._reactiveSubscriptions) {
-            element._reactiveSubscriptions.forEach(unsubscribe => {
+        if (elm._reactiveSubscriptions) {
+            elm._reactiveSubscriptions.forEach(unsubscribe => {
                 try { unsubscribe(); } catch (error) { 
                     log.ew && console.warn('Error cleaning up reactive subscription:', error); 
                 }
             });
-            element._reactiveSubscriptions = [];
+            elm._reactiveSubscriptions = [];
         }
-        this.#cleanupcompStates(element);
-        if (this.placeholders.has(element)) {
-            this.placeholders.delete(element);
+        this.#cleanupcompStates(elm);
+        if (this.placeholders.has(elm)) {
+            this.placeholders.delete(elm);
         }
-        this.instances.delete(element);
+        this.insts.delete(elm);
     }
 
     #cleanupFragment(fragment) {
@@ -954,18 +1022,18 @@ class ComponentManager {
         }
     }
 
-    #cleanupcompStates(element) {
-        const states = this.compStates.get(element);
+    #cleanupcompStates(elm) {
+        const states = this.compStates.get(elm);
         if (states) {
             this.#cleanupStateSet(states);
-            this.compStates.delete(element);
+            this.compStates.delete(elm);
         }
     }
 
     #cleanupStateSet(stateSet) {
         stateSet.forEach(statePath => {
             const pathParts = statePath.split('.');
-            let current = this.juris.stateManager.state;
+            let current = this.juris.getSM().state;
             for (let i = 0; i < pathParts.length - 1; i++) {
                 if (current[pathParts[i]]) {
                     current = current[pathParts[i]];
@@ -977,18 +1045,18 @@ class ComponentManager {
         });
     }
 
-    getComponent(name) {return this.namedComponents.get(name)?.instance || null;}
+    getComponent(name) {return this.namedComps.get(name)?.instance || null;}
 
-    getComponentAPI(name) {return this.namedComponents.get(name)?.instance?.api || null;}
+    getComponentAPI(name) {return this.namedComps.get(name)?.instance?.api || null;}
 
-    getComponentElement(name) {return this.namedComponents.get(name)?.element || null;}
+    getComponentElement(name) {return this.namedComps.get(name)?.elm || null;}
 
-    getNamedComponents() { return Array.from(this.namedComponents.keys()); }
+    getNamedComponents() { return Array.from(this.namedComps.keys()); }
 
     clearAsyncPropsCache() { this.asyncPropsCache.clear(); }
 
-    _createPlaceholder(text, className, element = null) {
-        const config = this.juris.domRenderer._getPlaceholderConfig(element);
+    _createPlaceholder(text, className, elm = null) {
+        const config = this.juris.getDR()._getPlaceholderConfig(elm);
         const placeholder = document.createElement('div');
         placeholder.className = config.className;
         placeholder.textContent = config.text;
@@ -1002,7 +1070,7 @@ class DOMRenderer {
         this.juris = juris;
         this.subscriptions = new Map();
         this.componentStack = [];
-        this.objectTreeAnalyzer = null;
+        this.objTreeAnalyzer = null;
         this.keyedNodes = new Map();
         this.nodeKeys = new Map();
         this.SKIP_ATTRS = new Set(['children', 'key']);
@@ -1029,9 +1097,9 @@ class DOMRenderer {
         new MutationObserver(() => {
             if (this.cleanupTimeout) clearTimeout(this.cleanupTimeout);
             this.cleanupTimeout = setTimeout(() => {
-                this.subscriptions.forEach((data, element) => {
-                    if (!element.isConnected) {
-                        this.cleanup(element);
+                this.subscriptions.forEach((data, elm) => {
+                    if (!elm.isConnected) {
+                        this.cleanup(elm);
                     }
                 });
             }, 100);
@@ -1058,8 +1126,8 @@ class DOMRenderer {
         }
         
         // Apply placeholder if context provided
-        if (context.element && context.type) {
-            this.#applyPlaceholder(context.element, context.type, context);
+        if (context.elm && context.type) {
+            this.#applyPlaceholder(context.elm, context.type, context);
         }
         onStart();
         
@@ -1067,15 +1135,15 @@ class DOMRenderer {
         
         return trackedPromise
             .then(resolved => {
-                if (context.element && context.type) {
-                    this.#removePlaceholder(context.element);
+                if (context.elm && context.type) {
+                    this.#removePlaceholder(context.elm);
                 }
                 onResolved(resolved);
                 return resolved;
             })
             .catch(error => {
-                if (context.element && context.type) {
-                    this.#applyErrorState(context.element, context.type, error, context);
+                if (context.elm && context.type) {
+                    this.#applyErrorState(context.elm, context.type, error, context);
                 }
                 onError(error);
                 throw error;
@@ -1085,31 +1153,31 @@ class DOMRenderer {
             });
     };
     
-    #applyPlaceholder(element, type, context = {}) {
-        const config = this._getPlaceholderConfig(element);
+    #applyPlaceholder(elm, type, context = {}) {
+        const config = this._getPlaceholderConfig(elm);
         
         switch(type) {
             case 'children':
             case 'reactive-children':
             case 'fragment-child':
-                this.#applyChildrenPlaceholder(element, config);
+                this.#applyChildrenPlaceholder(elm, config);
                 break;                
             case 'text':
-                this.#applyTextPlaceholder(element, config);
+                this.#applyTextPlaceholder(elm, config);
                 break;
             case 'attribute':
-                this.#applyAttributePlaceholder(element, config, context.attributeName);
+                this.#applyAttributePlaceholder(elm, config, context.attributeName);
                 break;
             case 'style':
-                this.#applyStylePlaceholder(element, config);
+                this.#applyStylePlaceholder(elm, config);
                 break;
             case 'component':
                 return this.#createComponentPlaceholder(config, context.componentName);
         }
     }
     
-    #applyChildrenPlaceholder(element, config) {
-        element.innerHTML = '';
+    #applyChildrenPlaceholder(elm, config) {
+        elm.innerHTML = '';
         let placeholder;
         
         if (config.children) {
@@ -1121,35 +1189,35 @@ class DOMRenderer {
             if (config.style) placeholder.style.cssText = config.style;
         }
         
-        element.appendChild(placeholder);
-        this.placeholders.set(element, { 
+        elm.appendChild(placeholder);
+        this.placeholders.set(elm, { 
             type: 'children', 
             placeholder,
-            originalContent: element._jurisLastChildren 
+            originalContent: elm._jurisLastChildren 
         });
     }
     
-    #applyTextPlaceholder(element, config) {
-        const originalText = element.textContent;
-        element.textContent = config.text;
-        element.classList.add(config.className);
+    #applyTextPlaceholder(elm, config) {
+        const originalText = elm.textContent;
+        elm.textContent = config.text;
+        elm.classList.add(config.className);
         if (config.style) {
-            element.setAttribute('data-juris-original-style', element.style.cssText);
-            element.style.cssText = config.style;
+            elm.setAttribute('data-juris-original-style', elm.style.cssText);
+            elm.style.cssText = config.style;
         }
-        this.placeholders.set(element, { 
+        this.placeholders.set(elm, { 
             type: 'text', 
             originalText,
             hadStyle: !!config.style 
         });
     }
     
-    #applyAttributePlaceholder(element, config, attributeName) {
-        element.classList.add(config.className);
+    #applyAttributePlaceholder(elm, config, attributeName) {
+        elm.classList.add(config.className);
         if (attributeName) {
-            const originalValue = element.getAttribute(attributeName);
-            element.setAttribute(attributeName, 'loading');
-            this.placeholders.set(element, { 
+            const originalValue = elm.getAttribute(attributeName);
+            elm.setAttribute(attributeName, 'loading');
+            this.placeholders.set(elm, { 
                 type: 'attribute',
                 attributeName,
                 originalValue 
@@ -1157,13 +1225,13 @@ class DOMRenderer {
         }
     }
     
-    #applyStylePlaceholder(element, config) {
-        element.classList.add(config.className);
-        const originalStyle = element.style.cssText;
+    #applyStylePlaceholder(elm, config) {
+        elm.classList.add(config.className);
+        const originalStyle = elm.style.cssText;
         if (config.style) {
-            element.style.cssText = config.style;
+            elm.style.cssText = config.style;
         }
-        this.placeholders.set(element, { 
+        this.placeholders.set(elm, { 
             type: 'style',
             originalStyle 
         });
@@ -1178,39 +1246,39 @@ class DOMRenderer {
         return placeholder;
     }
     
-    #removePlaceholder(element) {
-        const placeholderData = this.placeholders.get(element);
+    #removePlaceholder(elm) {
+        const placeholderData = this.placeholders.get(elm);
         if (!placeholderData) return;
         
-        const config = this._getPlaceholderConfig(element);
-        element.classList.remove(config.className);
+        const config = this._getPlaceholderConfig(elm);
+        elm.classList.remove(config.className);
         
         switch(placeholderData.type) {
             case 'children':
-                if (placeholderData.placeholder && placeholderData.placeholder.parentNode === element) {
-                    element.removeChild(placeholderData.placeholder);
+                if (placeholderData.placeholder && placeholderData.placeholder.parentNode === elm) {
+                    elm.removeChild(placeholderData.placeholder);
                 }
                 break;
                 
             case 'text':
                 if (placeholderData.hadStyle) {
-                    const originalStyle = element.getAttribute('data-juris-original-style');
-                    element.style.cssText = originalStyle || '';
-                    element.removeAttribute('data-juris-original-style');
+                    const originalStyle = elm.getAttribute('data-juris-original-style');
+                    elm.style.cssText = originalStyle || '';
+                    elm.removeAttribute('data-juris-original-style');
                 }
                 break;
                 
             case 'style':
-                element.style.cssText = placeholderData.originalStyle || '';
+                elm.style.cssText = placeholderData.originalStyle || '';
                 break;
         }
         
-        this.placeholders.delete(element);
+        this.placeholders.delete(elm);
     }
     
-    #applyErrorState(element, type, error, context = {}) {
-        const config = this._getPlaceholderConfig(element);
-        this.#removePlaceholder(element);
+    #applyErrorState(elm, type, error, context = {}) {
+        const config = this._getPlaceholderConfig(elm);
+        this.#removePlaceholder(elm);
         
         const errorMessage = `Error: ${error.message}`;
         
@@ -1218,31 +1286,31 @@ class DOMRenderer {
             case 'children':
             case 'reactive-children':
             case 'fragment-child':
-                element.innerHTML = `<div class="${config.errorClassName}" style="${config.errorStyle}">${errorMessage}</div>`;
+                elm.innerHTML = `<div class="${config.errorClassName}" style="${config.errorStyle}">${errorMessage}</div>`;
                 break;
                 
             case 'text':
-                element.textContent = errorMessage;
-                element.classList.add(config.errorClassName);
-                if (config.errorStyle) element.style.cssText = config.errorStyle;
+                elm.textContent = errorMessage;
+                elm.classList.add(config.errorClassName);
+                if (config.errorStyle) elm.style.cssText = config.errorStyle;
                 break;
                 
             case 'attribute':
-                element.classList.add(config.errorClassName);
+                elm.classList.add(config.errorClassName);
                 if (context.attributeName) {
-                    element.setAttribute(context.attributeName, 'error');
-                    element.setAttribute('data-juris-error', errorMessage);
+                    elm.setAttribute(context.attributeName, 'error');
+                    elm.setAttribute('data-juris-error', errorMessage);
                 }
                 break;
                 
             case 'style':
-                element.classList.add(config.errorClassName);
-                if (config.errorStyle) element.style.cssText = config.errorStyle;
+                elm.classList.add(config.errorClassName);
+                if (config.errorStyle) elm.style.cssText = config.errorStyle;
                 break;
         }
     }
     
-    #createReactiveHandler(element, getValue, updateDom, options = {}) {
+    #createReactiveHandler(elm, getValue, updateDom, options = {}) {
         let lastValue = options.trackChanges ? null : undefined;
         let isInitialized = false;
         
@@ -1251,7 +1319,7 @@ class DOMRenderer {
                 const result = getValue();
                 
                 const asyncContext = {
-                    element,
+                    elm,
                     type: options.type || 'generic',
                     attributeName: options.attributeName
                 };
@@ -1466,8 +1534,8 @@ class DOMRenderer {
     }
     
     render(vnode, componentName = null, returnObjectTree = false) {
-        if (this._testMode && returnObjectTree && this.objectTreeAnalyzer) {
-            return this.objectTreeAnalyzer.buildObjectTree(vnode, componentName);
+        if (this._testMode && returnObjectTree && this.objTreeAnalyzer) {
+            return this.objTreeAnalyzer.buildObjectTree(vnode, componentName);
         }
         return this._renderToDOM(vnode, componentName);
     }
@@ -1487,47 +1555,47 @@ class DOMRenderer {
         const props = vnode[tagName] || {};
         
         if (this.componentStack.includes(tagName)) {
-            return this.#createErrorElement('recursion', [...this.componentStack, tagName].join(' → '));
+            return this.#newErrElm('recursion', [...this.componentStack, tagName].join(' → '));
         }
         
-        if (this.juris.componentManager.components.has(tagName)) {
+        if (this.juris.getCM().components.has(tagName)) {
             return this.#renderComponent(tagName, props);
         }
         
         if (/^[A-Z]/.test(tagName)) {
-            return this.#createErrorElement('component', `Component "${tagName}" not registered`);
+            return this.#newErrElm('component', `Component "${tagName}" not registered`);
         }
         
         if (typeof tagName !== 'string' || tagName.length === 0) return null;
         
         let modifiedProps = props;
-        if (props.style && this.customCSSExtractor) {
+        if (props.style && this.cssExtractor) {
             const elementName = componentName || tagName;
-            modifiedProps = this.customCSSExtractor.processProps(props, elementName, this);
+            modifiedProps = this.cssExtractor.processProps(props, elementName, this);
         }
         
         return this.#createElement(tagName, modifiedProps, componentName);
     }
     
     #createElement(tagName, props, componentName = null) {
-        const element = this.#createElementByType(tagName);
+        const elm = this.#createElementByType(tagName);
         const allSubscriptions = [];
         
         for (const key in props) {
             if (!props.hasOwnProperty(key) || key === 'key') continue;
-            const cleanup = this.applyProp(element, key, props[key], componentName);
+            const cleanup = this.applyProp(elm, key, props[key], componentName);
             if (cleanup && typeof cleanup === 'function') {
                 allSubscriptions.push(cleanup);
             }
         }
         
         if (allSubscriptions.length > 0) {
-            const existing = this.subscriptions.get(element) || { subscriptions: [], eventListeners: [] };
+            const existing = this.subscriptions.get(elm) || { subscriptions: [], eventListeners: [] };
             existing.subscriptions.push(...allSubscriptions);
-            this.subscriptions.set(element, existing);
+            this.subscriptions.set(elm, existing);
         }
         
-        return element;
+        return elm;
     }
     
     #createElementByType(tagName) {
@@ -1593,70 +1661,70 @@ class DOMRenderer {
     }
     
     #renderComponent(tagName, props) {
-        const componentFn = this.juris.componentManager.components.get(tagName);
+        const componentFn = this.juris.getCM().components.get(tagName);
         if (!componentFn) {
             log.ee && console.error(log.e('Component not found', { name: tagName }, 'application'));
             return null;
         }
         
         if (this.componentStack.includes(tagName)) {
-            return this.#createErrorElement('recursion', [...this.componentStack, tagName].join(' → '));
+            return this.#newErrElm('recursion', [...this.componentStack, tagName].join(' → '));
         }
         
         this.componentStack.push(tagName);
-        const { result, deps } = this.juris.stateManager.track(() => 
-            this.juris.componentManager.create(tagName, props), true);
+        const { result, deps } = this.juris.getSM().track(() => 
+            this.juris.getCM().create(tagName, props), true);
         this.componentStack.pop();
         
         return result;
     }
     
-    #createErrorElement(type, message) {
-        const element = document.createElement('div');
-        element.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
-        element.textContent = message;
-        element.setAttribute('data-juris-error', type);
-        return element;
+    #newErrElm(type, message) {
+        const elm = document.createElement('div');
+        elm.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
+        elm.textContent = message;
+        elm.setAttribute('data-juris-error', type);
+        return elm;
     }
     
-    applyProp(element, propName, propValue, componentName = null) {
+    applyProp(elm, propName, propValue, componentName = null) {
         const subscriptions = [];
         const eventListeners = [];
         
         if (propName === 'children') {
-            this._handleChildren(element, propValue, subscriptions, componentName);
+            this._handleChildren(elm, propValue, subscriptions, componentName);
         } else if (propName === 'text') {
-            this._handleText(element, propValue, subscriptions);
+            this._handleText(elm, propValue, subscriptions);
         } else if (propName === 'style') {
-            this._handleStyle(element, propValue, subscriptions);
+            this._handleStyle(elm, propValue, subscriptions);
         } else if (propName.startsWith('on')) {
-            this._handleEvent(element, propName, propValue, eventListeners);
+            this._handleEvent(elm, propName, propValue, eventListeners);
         } else if (typeof propValue === 'function') {
-            this._handleReactiveAttribute(element, propName, propValue, subscriptions);
+            this._handleReactiveAttribute(elm, propName, propValue, subscriptions);
         } else if (this.#isPromiseLike(propValue)) {
-            this.#handleAsyncProp(element, propName, propValue);
+            this.#handleAsyncProp(elm, propName, propValue);
         } else {
-            this._setStaticAttribute(element, propName, propValue);
+            this._setStaticAttribute(elm, propName, propValue);
         }
         
         if (subscriptions.length > 0 || eventListeners.length > 0) {
-            const existing = this.subscriptions.get(element) || { subscriptions: [], eventListeners: [] };
+            const existing = this.subscriptions.get(elm) || { subscriptions: [], eventListeners: [] };
             existing.subscriptions.push(...subscriptions);
             existing.eventListeners.push(...eventListeners);
-            this.subscriptions.set(element, existing);
+            this.subscriptions.set(elm, existing);
         }
         
         return () => {
             subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
             eventListeners.forEach(({eventName, handler}) => {
-                try { element.removeEventListener(eventName, handler); } catch(e) {}
+                try { elm.removeEventListener(eventName, handler); } catch(e) {}
             });
         };
     }
     
-    #handleAsyncProp(element, propName, propValue) {
+    #handleAsyncProp(elm, propName, propValue) {
         const asyncContext = {
-            element,
+            elm,
             type: 'attribute',
             attributeName: propName
         };
@@ -1665,64 +1733,64 @@ class DOMRenderer {
             asyncContext.type = 'children';
             return this.#handleAsync(propValue, {
                 onResolved: (resolved) => {
-                    element.innerHTML = resolved;
+                    elm.innerHTML = resolved;
                 }
             }, asyncContext);
         }
         
         return this.#handleAsync(propValue, {
             onResolved: (resolved) => {
-                this._setStaticAttribute(element, propName, resolved);
+                this._setStaticAttribute(elm, propName, resolved);
             }
         }, asyncContext);
     }
     
-    _handleText(element, text, subscriptions) {
+    _handleText(elm, text, subscriptions) {
         if (typeof text === 'function') {
             const updateText = this.#createReactiveHandler(
-                element,
-                () => text(element),
-                (value) => { element.textContent = value; },
+                elm,
+                () => text(elm),
+                (value) => { elm.textContent = value; },
                 { trackChanges: true, name: 'text', type: 'text' }
             );
-            this._createReactiveUpdate(element, updateText, subscriptions);
+            this._createReactiveUpdate(elm, updateText, subscriptions);
         } else if (this.#isPromiseLike(text)) {
-            const asyncContext = { element, type: 'text' };
+            const asyncContext = { elm, type: 'text' };
             this.#handleAsync(text, {
                 onResolved: (resolved) => {
-                    element.textContent = resolved;
+                    elm.textContent = resolved;
                 }
             }, asyncContext);
         } else {
-            element.textContent = text;
+            elm.textContent = text;
         }
     }
     
-    _handleStyle(element, style, subscriptions) {
+    _handleStyle(elm, style, subscriptions) {
         if (typeof style === 'function') {
             const updateStyle = this.#createReactiveHandler(
-                element,
+                elm,
                 () => {
-                    let result = style.length > 0 ? style(element) : style();
-                    if (this.customCSSExtractor?.postProcessReactiveResult && typeof result === 'object') {
-                        result = this.customCSSExtractor.postProcessReactiveResult(result, 'reactive', element);
+                    let result = style.length > 0 ? style(elm) : style();
+                    if (this.cssExtractor?.postProcessReactiveResult && typeof result === 'object') {
+                        result = this.cssExtractor.postProcessReactiveResult(result, 'reactive', elm);
                     }
                     return result;
                 },
                 (value) => {
                     if (typeof value === 'object') {
-                        Object.assign(element.style, value);
+                        Object.assign(elm.style, value);
                     }
                 },
                 { trackChanges: true, name: 'style', type: 'style' }
             );
-            this._createReactiveUpdate(element, updateStyle, subscriptions);
+            this._createReactiveUpdate(elm, updateStyle, subscriptions);
         } else if (this.#isPromiseLike(style)) {
-            const asyncContext = { element, type: 'style' };
+            const asyncContext = { elm, type: 'style' };
             this.#handleAsync(style, {
                 onResolved: (resolved) => {
                     if (typeof resolved === 'object') {
-                        Object.assign(element.style, resolved);
+                        Object.assign(elm.style, resolved);
                     }
                 }
             }, asyncContext);
@@ -1731,103 +1799,103 @@ class DOMRenderer {
                 if (style.hasOwnProperty(prop)) {
                     const val = style[prop];
                     if (typeof val === 'function') {
-                        this.#handleReactiveStyleProperty(element, prop, val, subscriptions);
+                        this.#handleReactiveStyleProperty(elm, prop, val, subscriptions);
                     } else {
-                        this.#setStyleProperty(element, prop, val);
+                        this.#setStyleProperty(elm, prop, val);
                     }
                 }
             }
         }
     }
     
-    #handleReactiveStyleProperty(element, prop, valueFn, subscriptions) {
+    #handleReactiveStyleProperty(elm, prop, valueFn, subscriptions) {
         const updateStyleProperty = this.#createReactiveHandler(
-            element,
-            () => valueFn(element),
-            (value) => this.#setStyleProperty(element, prop, value),
+            elm,
+            () => valueFn(elm),
+            (value) => this.#setStyleProperty(elm, prop, value),
             { trackChanges: true, name: `style.${prop}`, type: 'style' }
         );
-        this._createReactiveUpdate(element, updateStyleProperty, subscriptions);
+        this._createReactiveUpdate(elm, updateStyleProperty, subscriptions);
     }
     
-    _handleReactiveAttribute(element, attr, valueFn, subscriptions) {
+    _handleReactiveAttribute(elm, attr, valueFn, subscriptions) {
         const updateAttribute = this.#createReactiveHandler(
-            element,
-            () => valueFn(element),
-            (value) => this._setStaticAttribute(element, attr, value),
+            elm,
+            () => valueFn(elm),
+            (value) => this._setStaticAttribute(elm, attr, value),
             { trackChanges: true, name: `attribute '${attr}'`, type: 'attribute', attributeName: attr }
         );
-        this._createReactiveUpdate(element, updateAttribute, subscriptions);
+        this._createReactiveUpdate(elm, updateAttribute, subscriptions);
     }
     
-    _handleChildren(element, children, subscriptions, componentName = null) {
+    _handleChildren(elm, children, subscriptions, componentName = null) {
         if (typeof children === 'function') {
-            this.#handleReactiveChildren(element, children, subscriptions, componentName);
+            this.#handleReactiveChildren(elm, children, subscriptions, componentName);
         } else if (this.#isPromiseLike(children)) {
-            const asyncContext = { element, type: 'children' };
+            const asyncContext = { elm, type: 'children' };
             this.#handleAsync(children, {
                 onResolved: (resolved) => {
-                    this.#updateChildren(element, resolved, componentName);
+                    this.#updateChildren(elm, resolved, componentName);
                 }
             }, asyncContext);
         } else {
-            this.#updateChildren(element, children, componentName);
+            this.#updateChildren(elm, children, componentName);
         }
     }
     
-    #handleReactiveChildren(element, childrenFn, subscriptions, componentName = null) {
+    #handleReactiveChildren(elm, childrenFn, subscriptions, componentName = null) {
         const updateChildren = () => {
-            const { result, deps } = this.juris.stateManager.track(() => childrenFn(element));
+            const { result, deps } = this.juris.getSM().track(() => childrenFn(elm));
             
-            const asyncContext = { element, type: 'reactive-children' };
+            const asyncContext = { elm, type: 'reactive-children' };
             
             this.#handleAsync(result, {
                 onResolved: (resolved) => {
                     if (result !== "ignore") {
                         if (typeof resolved === 'string' || typeof resolved === 'number') {
-                            element.textContent = String(resolved);
+                            elm.textContent = String(resolved);
                         } else {
-                            this.#updateChildren(element, resolved, componentName);
+                            this.#updateChildren(elm, resolved, componentName);
                         }
                     }
                 }
             }, asyncContext);
             
             deps.forEach(path => {
-                const unsub = this.juris.stateManager.subscribeInternal(path, updateChildren);
+                const unsub = this.juris.getSM().subscribeInternal(path, updateChildren);
                 subscriptions.push(unsub);
             });
         };
         updateChildren();
     }
     
-    #updateChildren(element, children, componentName = null) {
+    #updateChildren(elm, children, componentName = null) {
         if (children === "ignore") return;
         
-        const lastChildren = element._jurisLastChildren;
+        const lastChildren = elm._jurisLastChildren;
         if (lastChildren === children) {
             return;
         }
         
         if (Array.isArray(children)) {
-            if (!element._jurisChildrenKeyed) {
-                element._jurisChildrenKeyed = children.some(child => this.#extractKey(child) !== null);
+            if (!elm._jurisChildrenKeyed) {
+                elm._jurisChildrenKeyed = children.some(child => this.#extractKey(child) !== null);
             }
             
-            if (element._jurisChildrenKeyed) {
+            if (elm._jurisChildrenKeyed) {
                 if (lastChildren && Array.isArray(lastChildren)) {
-                    this.#diffChildren(element, lastChildren, children);
+                    this.#diffChildren(elm, lastChildren, children);
                 } else {
-                    this.#renderStaticChildren(element, children, componentName);
+                    this.#renderStaticChildren(elm, children, componentName);
                 }
             } else if (children.some(child => typeof child === 'function')) {
-                this.#renderReactiveChildren(element, children, componentName);
+                this.#renderReactiveChildren(elm, children, componentName);
             } else {
-                this.#renderStaticChildren(element, children, componentName);
+                this.#renderStaticChildren(elm, children, componentName);
             }
         }
         
-        element._jurisLastChildren = children;
+        elm._jurisLastChildren = children;
     }
     
     #handleReactiveFragmentChildren(fragment, children, subscriptions, componentName) {
@@ -1852,15 +1920,15 @@ class DOMRenderer {
         }
     }
     
-    #renderReactiveChildren(element, children, componentName) {
-        element.textContent = '';
+    #renderReactiveChildren(elm, children, componentName) {
+        elm.textContent = '';
         const cleanupFunctions = [];
         const fragment = document.createDocumentFragment();
         
         for (let i = 0; i < children.length; i++) {
             const child = children[i];
             if (typeof child === 'function') {
-                const { node, cleanup } = this.#createIndividualReactiveChild(child, i, componentName, element);
+                const { node, cleanup } = this.#createIndividualReactiveChild(child, i, componentName, elm);
                 if (node) {
                     fragment.appendChild(node);
                     cleanupFunctions.push(cleanup);
@@ -1873,9 +1941,9 @@ class DOMRenderer {
             }
         }
         
-        if (fragment.hasChildNodes()) element.appendChild(fragment);
+        if (fragment.hasChildNodes()) elm.appendChild(fragment);
         
-        element._reactiveCleanup = () => {
+        elm._reactiveCleanup = () => {
             cleanupFunctions.forEach(cleanup => { try { cleanup(); } catch(e) {} });
         };
     }
@@ -1891,7 +1959,7 @@ class DOMRenderer {
             subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
             subscriptions = [];
             
-            const { result, deps } = this.juris.stateManager.track(() => childFn(parentElement));
+            const { result, deps } = this.juris.getSM().track(() => childFn(parentElement));
             
             this.#handleAsync(result, {
                 onStart: () => {
@@ -1927,7 +1995,7 @@ class DOMRenderer {
             });
             
             deps.forEach(path => {
-                const unsub = this.juris.stateManager.subscribeInternal(path, updateThisChild);
+                const unsub = this.juris.getSM().subscribeInternal(path, updateThisChild);
                 subscriptions.push(unsub);
             });
         };
@@ -1966,8 +2034,8 @@ class DOMRenderer {
         return null;
     }
     
-    #renderStaticChildren(element, children, componentName) {
-        element.textContent = '';
+    #renderStaticChildren(elm, children, componentName) {
+        elm.textContent = '';
         const fragment = document.createDocumentFragment();
         
         for (let i = 0; i < children.length; i++) {
@@ -1978,33 +2046,33 @@ class DOMRenderer {
             }
         }
         
-        if (fragment.hasChildNodes()) element.appendChild(fragment);
+        if (fragment.hasChildNodes()) elm.appendChild(fragment);
     }
     
-    #setStyleProperty(element, prop, value) {
+    #setStyleProperty(elm, prop, value) {
         if (prop.startsWith('--')) {
-            element.style.setProperty(prop, value);
+            elm.style.setProperty(prop, value);
         } else {
-            element.style[prop] = value;
+            elm.style[prop] = value;
         }
     }
     
-    _setStaticAttribute(element, attr, value) {
+    _setStaticAttribute(elm, attr, value) {
         if (this.SKIP_ATTRS.has(attr)) return;
         
-        if (attr in element && typeof element[attr] === 'boolean') {
+        if (attr in elm && typeof elm[attr] === 'boolean') {
             const boolValue = value && value !== 'false';
             if (boolValue) {
-                element.setAttribute(attr, '');
+                elm.setAttribute(attr, '');
             } else {
-                element.removeAttribute(attr);
+                elm.removeAttribute(attr);
             }
-            element[attr] = boolValue;
+            elm[attr] = boolValue;
             return;
         }
         
-        if (element.namespaceURI === 'http://www.w3.org/2000/svg') {
-            element.setAttribute(attr, value);
+        if (elm.namespaceURI === 'http://www.w3.org/2000/svg') {
+            elm.setAttribute(attr, value);
             return;
         }
         
@@ -2013,32 +2081,32 @@ class DOMRenderer {
             (firstChar === 97 && attr.charCodeAt(4) === 45) ||  // aria-
             attr.indexOf('-') !== -1 ||
             attr.indexOf(':') !== -1) {
-            element.setAttribute(attr, value);
+            elm.setAttribute(attr, value);
             return;
         }
         
-        if (attr in element && typeof element[attr] !== 'function') {
-            element[attr] = value;
+        if (attr in elm && typeof elm[attr] !== 'function') {
+            elm[attr] = value;
         } else {
-            element.setAttribute(attr, value);
+            elm.setAttribute(attr, value);
         }
     }
     
-    _handleEvent(element, eventName, handler, eventListeners) {
+    _handleEvent(elm, eventName, handler, eventListeners) {
         eventName = eventName.toLowerCase();
         const actualEventName = eventName === 'onclick' ? 'click' : 
                                eventName === 'ondoubleclick' ? 'dblclick' :
                                eventName.slice(2);
         
-        element.addEventListener(actualEventName, handler);
+        elm.addEventListener(actualEventName, handler);
         eventListeners.push({ eventName: actualEventName, handler });
         
         if (eventName === 'onclick') {
-            this.#attachTouchSupport(element, handler, eventListeners);
+            this.#attachTouchSupport(elm, handler, eventListeners);
         }
     }
     
-    #attachTouchSupport(element, handler, eventListeners) {
+    #attachTouchSupport(elm, handler, eventListeners) {
         if (!/Mobi|Android/i.test(navigator.userAgent)) return;
         
         let touchState = { startTime: 0, moved: false, startX: 0, startY: 0 };
@@ -2076,21 +2144,21 @@ class DOMRenderer {
         ];
         
         touchEvents.forEach(({name, handler, options}) => {
-            element.addEventListener(name, handler, options);
+            elm.addEventListener(name, handler, options);
             eventListeners.push({ eventName: name, handler });
         });
     }
     
-    _createReactiveUpdate(element, updateFn, subscriptions) {
-        const { deps } = this.juris.stateManager.track(() => updateFn(element));
+    _createReactiveUpdate(elm, updateFn, subscriptions) {
+        const { deps } = this.juris.getSM().track(() => updateFn(elm));
         deps.forEach(path => {
-            const unsub = this.juris.stateManager.subscribeInternal(path, updateFn);
+            const unsub = this.juris.getSM().subscribeInternal(path, updateFn);
             subscriptions.push(unsub);
         });
     }
     
-    updateElementContent(element, newContent) {
-        this.#updateChildren(element, [newContent]);
+    updateElementContent(elm, newContent) {
+        this.#updateChildren(elm, [newContent]);
     }
     
     setupIndicators(elementId, config) {
@@ -2109,12 +2177,12 @@ class DOMRenderer {
         return false;
     }
     
-    _getPlaceholderConfig(element) {
-        if (element?.id && this.placeholderConfigs.has(element.id)) {
-            return this.placeholderConfigs.get(element.id);
+    _getPlaceholderConfig(elm) {
+        if (elm?.id && this.placeholderConfigs.has(elm.id)) {
+            return this.placeholderConfigs.get(elm.id);
         }
         
-        let current = element?.parentElement;
+        let current = elm?.parentElement;
         while (current) {
             if (current.id && this.placeholderConfigs.has(current.id)) {
                 return this.placeholderConfigs.get(current.id);
@@ -2129,38 +2197,38 @@ class DOMRenderer {
         return value?.then;
     }
     
-    cleanup(element) {
-        this.juris.componentManager.cleanup(element);
-        this.nodeKeys.delete(element);
+    cleanup(elm) {
+        this.juris.getCM().cleanup(elm);
+        this.nodeKeys.delete(elm);
         
-        if (this.keyedNodes.has(element)) {
-            this.keyedNodes.delete(element);
+        if (this.keyedNodes.has(elm)) {
+            this.keyedNodes.delete(elm);
         }
         
-        const data = this.subscriptions.get(element);
+        const data = this.subscriptions.get(elm);
         if (data) {
             if (data.subscriptions) {
                 data.subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
             }
             if (data.eventListeners) {
                 data.eventListeners.forEach(({eventName, handler}) => {
-                    try { element.removeEventListener(eventName, handler); } catch(e) {}
+                    try { elm.removeEventListener(eventName, handler); } catch(e) {}
                 });
             }
-            this.subscriptions.delete(element);
+            this.subscriptions.delete(elm);
         }
         
-        if (element._reactiveCleanup) {
-            try { element._reactiveCleanup(); } catch(e) {}
-            element._reactiveCleanup = null;
+        if (elm._reactiveCleanup) {
+            try { elm._reactiveCleanup(); } catch(e) {}
+            elm._reactiveCleanup = null;
         }
         
-        if (this.placeholders.has(element)) {
-            this.placeholders.delete(element);
+        if (this.placeholders.has(elm)) {
+            this.placeholders.delete(elm);
         }
         
         try {
-            const children = element.children;
+            const children = elm.children;
             for (let i = 0; i < children.length; i++) {
                 try { this.cleanup(children[i]); } catch(e) {}
             }
@@ -2168,14 +2236,14 @@ class DOMRenderer {
     }
     
     clearCSSCache() {
-        if (this.customCSSExtractor && typeof this.customCSSExtractor.clearCache === 'function') {
-            this.customCSSExtractor.clearCache();
+        if (this.cssExtractor && typeof this.cssExtractor.clearCache === 'function') {
+            this.cssExtractor.clearCache();
         }
     }
     
     attachObjectTreeAnalyzer(analyzer) {
-        this.objectTreeAnalyzer = analyzer;
-        return this.objectTreeAnalyzer;
+        this.objTreeAnalyzer = analyzer;
+        return this.objTreeAnalyzer;
     }
     
     setTestMode(enabled = true) {
@@ -2188,7 +2256,7 @@ class DOMRenderer {
     }
     
     getObjectTree() {
-        return this.objectTreeAnalyzer?.getObjectTree() || null;
+        return this.objTreeAnalyzer?.getObjectTree() || null;
     }
 }
 
@@ -2226,37 +2294,45 @@ class Juris {
             this.webComponentFactory = new features.webComponentFactory(this);
         }
         if (features.cssExtractor) {
-            this.domRenderer.customCSSExtractor = new features.cssExtractor();
+            this.getDR().cssExtractor = new features.cssExtractor();
         }
-        if (config.headlessComponents && this.headlessManager) {
+        if (features.compute) {
+            const computeOptions = config.computeOptions || {};
+            const computePlugin = new features.compute(this.stateManager, computeOptions);
+            this.stateManager.addPlugin('compute', computePlugin);
+            log.ei && console.info(log.i('Compute plugin initialized', { options: computeOptions }, 'framework'));
+        }
+        if (config.headlessComponents && this.getHM()) {
             Object.entries(config.headlessComponents).forEach(([name, config]) => {
                 if (typeof config === 'function') {
-                    this.headlessManager.register(name, config);
+                    this.getHM().register(name, config);
                 } else {
-                    this.headlessManager.register(name, config.fn, config.options);
+                    this.getHM().register(name, config.fn, config.options);
                 }
             });
         }
         if (config.placeholders) {
             Object.entries(config.placeholders).forEach(([elementId, placeholderConfig]) => {
-                this.domRenderer.setupIndicators(elementId, placeholderConfig);
+                this.getDR().setupIndicators(elementId, placeholderConfig);
             });
         }
         if (config.defaultPlaceholder) {
-            this.domRenderer.defaultPlaceholder = { ...this.domRenderer.defaultPlaceholder, ...config.defaultPlaceholder };
+            this.getDR().defaultPlaceholder = { ...this.getDR().defaultPlaceholder, ...config.defaultPlaceholder };
         }
-        if (this.headlessManager) {
-            this.headlessManager.initializeQueued();
+        if (this.getHM()) {
+            this.getHM().initializeQueued();
         }
         if (config.components) {
             Object.entries(config.components).forEach(([name, component]) => {
-                this.componentManager.register(name, component);
+                this.getCM().register(name, component);
             });
         }
         
         if (config.webComponents && this.webComponentFactory) {
             this.webComponentFactory.createMultiple(config.webComponents, config.webComponentOptions || {});
         }
+
+
         if (typeof requestIdleCallback === 'undefined') { 
             window.requestIdleCallback = function (callback, options) { 
                 const start = Date.now(); 
@@ -2274,13 +2350,17 @@ class Juris {
         this.#detectGlobalAndWarn();
     }
 
+    getDR() { return this.domRenderer; }
+    getSM() { return this.stateManager; }
+    getHM() { return this.headlessManager; }
+    getCM() { return this.componentManager; }
     #detectGlobalAndWarn() {
         if (!Juris._done) { (requestIdleCallback || setTimeout)(() => { if (Juris.#inGlobal) return; Juris.#inGlobal = true; for (let key in globalThis) { if (globalThis[key] instanceof Juris) { log.ew && console.warn(`âš ï¸ JURIS GLOBAL: '${key}'`); } } }); }
     }
     
-    getComponentAPI(name) { return this.componentManager.getComponentAPI(name); }
-    getComponentElement(name) {return this.componentManager.getComponentElement(name); }
-    getNamedComponents() { return this.componentManager.getNamedComponents();}
+    getComponentAPI(name) { return this.getCM().getComponentAPI(name); }
+    getComponentElement(name) {return this.getCM().getComponentElement(name); }
+    getNamedComponents() { return this.getCM().getNamedComponents();}
 
     compileTemplates(templates = null) {
         if (!this.templateCompiler) {
@@ -2306,36 +2386,37 @@ class Juris {
         }
     }
 
-    setupIndicators(elementId, config) { this.domRenderer.setupIndicators(elementId, config); }
+    setupIndicators(elementId, config) { this.getDR().setupIndicators(elementId, config); }
     #createBaseContext() {
         if (!this.contextTemplate) {
             this.contextTemplate = {
-                getState: (path, defaultValue, track) => this.stateManager.getState(path, defaultValue, track),
-                setState: (path, value, context) => this.stateManager.setState(path, value, context),
+                getState: (path, defaultValue, track) => this.getSM().getState(path, defaultValue, track),
+                setState: (path, value, context) => this.getSM().setState(path, value, context),
                 executeBatch: (callback) => this.executeBatch(callback),
-                subscribe: (path, callback) => this.stateManager.subscribe(path, callback),
+                subscribe: (path, callback) => this.getSM().subscribe(path, callback),
+                compute: (fn, deps) => this.getSM().compute(fn, deps),
                 services: this.services,
                 ...(this.services || {}),
                 ...(this.headlessAPIs || {}),
-                headless: this.headlessManager?.context,
+                headless: this.getHM()?.context,
                 isSSR: typeof window === 'undefined',
                 components: {
-                    register: (name, component) => this.componentManager.register(name, component),
-                    registerHeadless: (name, component, options) => this.headlessManager?.register(name, component, options),
-                    get: name => this.componentManager.components.get(name),
-                    getHeadless: name => this.headlessManager?.getInstance(name),
-                    initHeadless: (name, props) => this.headlessManager?.initialize(name, props),
-                    reinitHeadless: (name, props) => this.headlessManager?.reinitialize(name, props),
+                    register: (name, component) => this.getCM().register(name, component),
+                    registerHeadless: (name, component, options) => this.getHM()?.register(name, component, options),
+                    get: name => this.getCM().components.get(name),
+                    getHeadless: name => this.getHM()?.getInstance(name),
+                    initHeadless: (name, props) => this.getHM()?.initialize(name, props),
+                    reinitHeadless: (name, props) => this.getHM()?.reinitialize(name, props),
                     getComponentAPI: (name) => this.getComponentAPI(name),
-                    getHeadlessAPI: name => this.headlessManager?.getAPI(name),
+                    getHeadlessAPI: name => this.getHM()?.getAPI(name),
                     getComponentElement: (name) => this.getComponentElement(name),
-                    getNamedComponents: () => this.componentManager.getNamedComponents(),
+                    getNamedComponents: () => this.getCM().getNamedComponents(),
                 },
                 utils: {
                     render: container => this.render(container),
                     cleanup: () => this.cleanup(),
                     forceRender: () => this.render(),
-                    getHeadlessStatus: () => this.headlessManager?.getStatus(),
+                    getHeadlessStatus: () => this.getHM()?.getStatus(),
                     objectToHtml: (vnode) => this.objectToHtml(vnode)
                 },
                 objectToHtml: (vnode) => this.objectToHtml(vnode),
@@ -2348,11 +2429,11 @@ class Juris {
         }
         return this.contextTemplate;
     }
-    createHeadlessContext(element = null) {
-        return this.createContext(element);
+    createHeadlessContext(elm = null) {
+        return this.createContext(elm);
     }
 
-    executeBatch(callback) {return this.stateManager.executeBatch(callback);}
+    executeBatch(callback) {return this.getSM().executeBatch(callback);}
 
     createWebComponent(name, componentDefinition, options = {}) {
         if (!this.webComponentFactory) {
@@ -2369,43 +2450,42 @@ class Juris {
         }
         return this.webComponentFactory.createMultiple(components, globalOptions);
     }
-
     
-    createContext(element = null) {
+    createContext(elm = null) {
         const context = { ...this.#createBaseContext() };
-        if (this.headlessManager) {
-            const headlessAPIs = this.headlessManager.getAllAPIs();
+        if (this.getHM()) {
+            const headlessAPIs = this.getHM().getAllAPIs();
             Object.assign(context, headlessAPIs);
         }
-        if (element) context.element = element;
+        if (elm) context.elm = elm;
         return context;
     }
 
-    getState(path, defaultValue, track) { return this.stateManager.getState(path, defaultValue, track); }
+    getState(path, defaultValue, track) { return this.getSM().getState(path, defaultValue, track); }
     setState(path, value, context) {
-        return this.stateManager.setState(path, value, context);
+        return this.getSM().setState(path, value, context);
     }
-    subscribe(path, callback, hierarchical = true) { return this.stateManager.subscribe(path, callback, hierarchical); }
-    subscribeExact(path, callback) { return this.stateManager.subscribeExact(path, callback); }
+    subscribe(path, callback, hierarchical = true) { return this.getSM().subscribe(path, callback, hierarchical); }
+    subscribeExact(path, callback) { return this.getSM().subscribeExact(path, callback); }
     registerComponent(name, component) {
-        return this.componentManager.register(name, component);
+        return this.getCM().register(name, component);
     }
     // Headless component registration
-    registerHeadlessComponent(name, component, options) { return this.headlessManager.register(name, component, options); }
-    initializeQueuedHeadlessComponent() { this.headlessManager.initializeQueued(); }
-    initializeHeadlessComponent(name, props) { return this.headlessManager.initialize(name, props); }
-    getHeadlessComponent(name) { return this.headlessManager.getInstance(name); }
-    getHeadlessAPI(name) { return this.headlessManager?.getAPI(name); }
+    registerHeadlessComponent(name, component, options) { return this.getHM().register(name, component, options); }
+    initializeQueuedHeadlessComponent() { this.getHM().initializeQueued(); }
+    initializeHeadlessComponent(name, props) { return this.getHM().initialize(name, props); }
+    getHeadlessComponent(name) { return this.getHM().getInstance(name); }
+    getHeadlessAPI(name) { return this.getHM()?.getAPI(name); }
 
-    getComponent(name) { return this.componentManager.components.get(name); }
+    getComponent(name) { return this.getCM().components.get(name); }
 
     registerAndInitHeadless(name, componentFn, options = {}) {
-        this.headlessManager.register(name, componentFn, options);
-        return this.headlessManager.initialize(name, options);
+        this.getHM().register(name, componentFn, options);
+        return this.getHM().initialize(name, options);
     }
 
-    getHeadlessStatus() { return this.headlessManager.getStatus(); }
-    objectToHtml(vnode) { return this.domRenderer.render(vnode); }
+    getHeadlessStatus() { return this.getHM().getStatus(); }
+    objectToHtml(vnode) { return this.getDR().render(vnode); }
 
     render(container = '#app') {
         const startTime = performance.now();      
@@ -2422,9 +2502,9 @@ class Juris {
                 if (hasReactiveFunctions) {
                     containerEl.innerHTML = '';
                     const subscriptions = [];
-                    this.domRenderer._handleChildren(containerEl, this.layout, subscriptions);
+                    this.getDR()._handleChildren(containerEl, this.layout, subscriptions);
                     if (subscriptions.length > 0) {
-                        this.domRenderer.subscriptions.set(containerEl, {
+                        this.getDR().subscriptions.set(containerEl, {
                             subscriptions,
                             eventListeners: []
                         });
@@ -2444,8 +2524,8 @@ class Juris {
 
     #renderImmediate (containerEl) {
         containerEl.innerHTML = '';
-        const element = this.domRenderer.render(this.layout);
-        if (element) containerEl.appendChild(element);
+        const elm = this.getDR().render(this.layout);
+        if (elm) containerEl.appendChild(elm);
     }
     
     async #renderWithHydration (containerEl) {
@@ -2454,14 +2534,14 @@ class Juris {
         document.body.appendChild(stagingEl);
         try {
             startTracking();
-            const element = this.domRenderer.render(this.layout);
-            if (element) stagingEl.appendChild(element);
+            const elm = this.getDR().render(this.layout);
+            if (elm) stagingEl.appendChild(elm);
             await onAllComplete();
             containerEl.innerHTML = '';
             while (stagingEl.firstChild) {
                 containerEl.appendChild(stagingEl.firstChild);
             }
-            this.headlessManager.initializeQueued();
+            this.getHM().initializeQueued();
         } finally {
             stopTracking();
             document.body.removeChild(stagingEl);
@@ -2548,7 +2628,7 @@ class Juris {
 
     cleanup() {
         this.armedElements = new Map();
-        this.headlessManager?.cleanup();
+        this.getHM()?.cleanup();
     }
 
     destroy() {
@@ -2556,11 +2636,11 @@ class Juris {
         if (this.domEnhancer) {
             this.domEnhancer.destroy();
         }
-        this.stateManager.subscribers.clear();
-        this.stateManager.externalSubscribers.clear();
-        this.componentManager.components.clear();
-        if (this.headlessManager) {
-            this.headlessManager.components.clear();
+        this.getSM().subscribers.clear();
+        this.getSM().extSubs.clear();
+        this.getCM().components.clear();
+        if (this.getHM()) {
+            this.getHM().components.clear();
         }
         this.armedElements = new Map();
     }
