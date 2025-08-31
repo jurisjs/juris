@@ -421,8 +421,7 @@ if (typeof DOMEnhancer === 'undefined') {
                 
                 let actualDefinition = definition;
                 if (typeof definition === 'function') {
-                    const context = this.juris.createContext(element);
-                    actualDefinition = definition(context);
+                    actualDefinition = definition(element);
                     if (!actualDefinition || typeof actualDefinition !== 'object') {
                         console.warn(`Selector '${selector}' function must return a definition object`);
                         this.enhancedElements.delete(element);
@@ -446,8 +445,7 @@ if (typeof DOMEnhancer === 'undefined') {
                         processed[key] = value;
                     } else if (value.length > 0) {
                         try {
-                            const context = this.juris.createContext(element);
-                            const result = value(context);
+                            const result = value(element);
                             processed[key] = result && typeof result === 'object' ? result : value;
                         } catch (error) {
                             console.warn(`Error processing element-aware function '${key}':`, error);
