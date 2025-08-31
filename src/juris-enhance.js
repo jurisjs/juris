@@ -1,7 +1,6 @@
 if (typeof DOMEnhancer === 'undefined') {
     class DOMEnhancer {
         constructor(juris) {
-            console.info('DOMEnhancer initialized');
             this.juris = juris;
             this.enhancedElements = new WeakSet();
             this.containerEnhancements = new WeakMap();
@@ -42,8 +41,7 @@ if (typeof DOMEnhancer === 'undefined') {
                 return () => this._cleanupElement(selectorOrElement);
             }        
             const selector = selectorOrElement;
-            const enhancementType = this._determineEnhancementType(selector, definition);                
-            console.info(`Enhancement registered: ${selector}, type: ${enhancementType}`);
+            const enhancementType = this._determineEnhancementType(selector, definition);  
             this.enhancementRegistry.set(selector, { definition, config, type: enhancementType });
             this._enhanceExistingElements(selector, definition, config, enhancementType);                
             if (config.observeNewElements !== false) {
@@ -54,7 +52,6 @@ if (typeof DOMEnhancer === 'undefined') {
         }
 
         _enhanceViewportAware(selectorOrElement, definition, config) {
-            console.debug('Viewport-aware enhancement starting');
             if (selectorOrElement instanceof Element) {
                 this._setupViewportObserver(config);
                 this._observeElementForViewport(selectorOrElement, definition, config);
@@ -104,7 +101,6 @@ if (typeof DOMEnhancer === 'undefined') {
                 rootMargin: config.viewportMargin,
                 threshold: 0
             });
-            console.debug(`IntersectionObserver created with margin: ${config.viewportMargin}`);
         }
 
         _processViewportChanges(entries) {
@@ -112,7 +108,6 @@ if (typeof DOMEnhancer === 'undefined') {
                 const element = entry.target;
                 const viewportData = this.viewportElements.get(element);                
                 if (!viewportData) return;
-                console.debug(`Viewport visibility changed for ${element.tagName}: ${entry.isIntersecting}`);
                 if (entry.isIntersecting) {
                     this._enhanceElement(element, viewportData.definition, viewportData.config);
                 } else {
@@ -206,7 +201,6 @@ if (typeof DOMEnhancer === 'undefined') {
             if (this.intersectionObserver && this.viewportElements.size === 0) {
                 this.intersectionObserver.disconnect();
                 this.intersectionObserver = null;
-                console.debug('IntersectionObserver disconnected');
             }
         }
 
@@ -463,11 +457,9 @@ if (typeof DOMEnhancer === 'undefined') {
 
         _enhanceElement(element, definition, config) {
             if (this.enhancedElements.has(element)) {
-                console.debug(`Element ${element.tagName} already enhanced`);
                 return;
             }
             try {
-                console.debug(`Enhancing element ${element.tagName}`);
                 this.enhancedElements.add(element);
                 element.setAttribute('data-juris-enhanced', Date.now());                
                 let actualDefinition = definition;
@@ -475,7 +467,6 @@ if (typeof DOMEnhancer === 'undefined') {
                     const context = this.juris.createContext(element);
                     actualDefinition = definition(context);
                     if (!actualDefinition || typeof actualDefinition !== 'object') {
-                        console.warn('Enhancement function must return a definition object');
                         this.enhancedElements.delete(element);
                         return;
                     }
