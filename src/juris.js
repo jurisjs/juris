@@ -881,7 +881,7 @@ class ComponentManager {
                 promisify(res).then(resolved => {
                     cont.innerHTML = '';
                     const el = this.juris.getDR().render(resolved);
-                    if (el) cont.appendChild(el);
+                    if (el) this.#smartAppend(cont, el);
                 }).catch(err => {
                     log.ee && console.error(`Async render error for ${name}:`, err);
                     cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
@@ -892,10 +892,21 @@ class ComponentManager {
             children.forEach(child => this.cleanup(child));
             cont.innerHTML = '';
             const el = this.juris.getDR().render(res);
-            if (el) cont.appendChild(el);
+            if (el) this.#smartAppend(cont, el);
         } catch (err) {
             log.ee && console.error(`Error in reactive render for ${name}:`, err);
             cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
+        }
+    }
+
+    #smartAppend(cont, el) {
+        if (el.nodeType === Node.ELEMENT_NODE && el.hasAttribute('data-juris-reactive-render')) {
+            while (el.firstChild) {
+                cont.appendChild(el.firstChild);
+            }
+            this.cleanup(el);
+        } else {
+            cont.appendChild(el);
         }
     }
 
