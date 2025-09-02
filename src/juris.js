@@ -61,9 +61,9 @@
  */
 
 'use strict';
-const jurisLinesOfCode = 2357;
+const jurisLinesOfCode = 2557;
 const jurisVersion = '0.91.0';
-const jurisMinifiedSize = '38 kB, 11.5 kB gzipped';
+const jurisMinifiedSize = '38kB, 12kB gzipped';
 const isValidPath = path => typeof path === 'string' && path.trim().length > 0 && !path.includes('..');
 const getPathParts = path => path.split('.').filter(Boolean);
 const deepEquals = (a, b) => {
@@ -2326,7 +2326,7 @@ class Juris {
     getHM() { return this.headlessManager; }
     getCM() { return this.componentManager; }
     #detectGlobalAndWarn() {
-        if (!Juris._done) { (requestIdleCallback || setTimeout)(() => { if (Juris.#inGlobal) return; Juris.#inGlobal = true; for (let key in globalThis) { if (globalThis[key] instanceof Juris) { log.ew && console.warn(`âš ï¸ JURIS GLOBAL: '${key}'`); } } }); }
+        if (!Juris._done) { (requestIdleCallback || setTimeout)(() => { if (Juris.#inGlobal) return; Juris.#inGlobal = true; for (let key in globalThis) { if (globalThis[key] instanceof Juris) { log.ew && console.warn(`JURIS GLOBAL: '${key}'`); } } }); }
     }
     
     getComponentAPI(name) { return this.getCM().getComponentAPI(name); }

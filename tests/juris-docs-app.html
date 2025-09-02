@@ -1,0 +1,2894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Framework Documentation</title>
+    <script src="https://unpkg.com/monaco-editor@0.34.1/min/vs/loader.js"></script>
+     <link href="https://unpkg.com/tailwindcss@1.9.6/dist/tailwind.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <style>
+        /* ===== RESET & BASE STYLES ===== */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box;
+    transition: none !important;
+    animation: none !important;
+    font-size: 12px !important;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ===== MAIN LAYOUT STRUCTURE ===== */
+.docs-container {
+    display: flex;
+    height: 100vh;
+    flex-direction: row;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    min-height: 0;
+}
+
+.content-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Content area that holds both panels */
+.content-panels-wrapper {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+    width: 320px;
+    background: white;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.sidebar-header h1 {
+    font-size: 1.75rem !important;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.sidebar-header .version {
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+/* ===== SEARCH ===== */
+.search-container {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ===== NAVIGATION ===== */
+.navigation {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+    min-height: 0;
+}
+
+/* ===== BOOKMARKS ===== */
+.bookmarks-section {
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 1rem;
+}
+
+.bookmarks-header {
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.bookmark-button {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.bookmark-button:hover {
+    background: #e2e8f0;
+    color: #374151;
+}
+
+.bookmark-button.bookmarked {
+    color: #3b82f6;
+}
+
+.bookmarks-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.bookmark-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-left: 3px solid transparent;
+    font-size: 0.875rem;
+}
+
+.bookmark-link {
+    flex: 1;
+    color: #64748b;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.bookmark-link:hover {
+    color: #1e293b;
+}
+
+.bookmark-link.active {
+    color: #2563eb;
+    font-weight: 500;
+}
+
+.bookmark-remove {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.125rem;
+    border-radius: 0.25rem;
+    font-size: 0.625rem;
+    opacity: 0;
+}
+
+.bookmark-item:hover .bookmark-remove {
+    opacity: 1;
+}
+
+.bookmark-remove:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.empty-bookmarks {
+    padding: 1rem;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+/* ===== CATEGORIES ===== */
+.category {
+    margin-bottom: 0.5rem;
+}
+
+.category-header {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    user-select: none;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.category-header:hover {
+    background: #f1f5f9;
+}
+
+.category-icon {
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+}
+
+.category.collapsed .category-icon {
+    transform: rotate(-90deg);
+}
+
+.category-docs {
+    margin-left: 1rem;
+    border-left: 2px solid #f1f5f9;
+}
+
+.category.collapsed .category-docs {
+    display: none;
+}
+
+.doc-link {
+    display: block;
+    padding: 0.75rem 1rem;
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.875rem;
+    border-left: 3px solid transparent;
+}
+
+.doc-link:hover {
+    background: #f8fafc;
+    color: #1e293b;
+}
+
+.doc-link.active {
+    background: #eff6ff;
+    color: #2563eb;
+    border-left-color: #3b82f6;
+    font-weight: 500;
+}
+
+/* ===== CONTENT HEADER ===== */
+.content-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.content-title {
+    font-size: 1.8rem !important;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.content-description {
+    color: #64748b;
+    font-size: 1rem;
+}
+
+/* ===== CONTENT PANELS ===== */
+.content-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-right: 1px solid #e2e8f0;
+    min-height: 0;
+}
+
+.panel-tabs {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
+.panel-tab {
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+    border-bottom: 3px solid transparent;
+}
+
+.panel-tab:hover {
+    color: #1e293b;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.panel-tab.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+    background: white;
+}
+
+.panel-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ===== DOCUMENTATION CONTENT (MAIN SCROLLABLE AREA) ===== */
+.doc-content {
+    padding: 2rem;
+    overflow-y: auto;
+    flex: 1;
+    line-height: 1.7;
+    min-height: 0;
+}
+
+.doc-content h1, .doc-content h2, .doc-content h3 {
+    color: #1e293b;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.doc-content h1 { 
+    font-size: 2.25rem; 
+    margin-bottom: 2rem; 
+}
+
+.doc-content h2 { 
+    font-size: 1.5rem; 
+    margin-top: 2rem; 
+}
+
+.doc-content h3 { 
+    font-size: 1.25rem; 
+    margin-top: 1.5rem; 
+}
+
+.doc-content p {
+    margin-bottom: 1.25rem;
+    color: #475569;
+}
+
+/* Custom scrollbar for doc content */
+.doc-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.doc-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.doc-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.doc-content::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+.doc-content {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+/* ===== TECHNICAL DETAILS ===== */
+.technical-details {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.technical-details h4 {
+    color: #374151;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.technical-details dl {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 0.75rem;
+}
+
+.technical-details dt {
+    font-weight: 600;
+    color: #374151;
+}
+
+.technical-details dd {
+    color: #64748b;
+}
+
+/* ===== TAGS ===== */
+.tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.tag {
+    background: #eff6ff;
+    color: #2563eb;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* ===== EDITOR ===== */
+.editor-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-header {
+    padding: 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.editor-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.editor-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    background: white;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
+.monaco-editor-container {
+    flex: 1;
+    min-height: 0;
+}
+
+/* ===== PREVIEW PANEL ===== */
+.preview-panel {
+    width: 500px;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    min-height: 0;
+}
+
+.preview-header {
+    padding: 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.preview-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.preview-demo {
+    flex: 1;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    overflow-y: auto;
+    min-height: 200px;
+}
+
+/* ===== CONSOLE ===== */
+.console-container {
+    display: flex;
+    flex-direction: column;
+    background: #1e293b;
+    min-height: 120px;
+    max-height: 60vh;
+    height: 200px;
+    resize: vertical;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.console-resizer {
+    height: 4px;
+    background: #374151;
+    cursor: ns-resize;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.console-resizer:hover {
+    background: #4b5563;
+}
+
+.console-resizer::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px;
+    height: 2px;
+    background: #6b7280;
+    border-radius: 1px;
+}
+
+.console-header {
+    padding: 0.5rem 1rem;
+    background: #374151;
+    color: #e2e8f0;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    border-bottom: 1px solid #4b5563;
+}
+
+.console-clear {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 0.6rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.console-clear:hover {
+    background: #4b5563;
+    color: #e2e8f0;
+}
+
+.preview-console {
+    flex: 1;
+    padding: 1rem;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.75rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+.console-log {
+    margin-bottom: 0.25rem;
+    padding: 0.25rem 0;
+    word-wrap: break-word;
+    border-left: 3px solid transparent;
+}
+
+.console-error {
+    color: #ef4444;
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    padding-left: 0.5rem;
+}
+
+.preview-console::-webkit-scrollbar {
+    width: 6px;
+}
+
+.preview-console::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+.preview-console::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+}
+
+.preview-console::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
+/* ===== CENTERED NAVIGATION FOOTER ===== */
+.navigation-footer {
+    padding: 1rem 2rem;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    background: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    width: 100%;
+}
+
+.navigation-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    gap: 2rem;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    background: white;
+    color: #374151;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.nav-link:hover:not(.disabled) {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.nav-link.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.share-button {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+    min-width: auto;
+    padding: 0.75rem 1.5rem;
+}
+
+.share-button:hover {
+    background: #059669;
+}
+
+/* ===== UTILITIES ===== */
+.no-results {
+    padding: 2rem;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+/* ===== MOBILE STYLES ===== */
+.mobile-menu-toggle {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1000;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    cursor: pointer;
+    font-size: 1.25rem;
+}
+
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+}
+
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+@media (max-width: 1024px) {
+    .preview-panel {
+        width: 300px;
+    }
+    
+    .sidebar {
+        width: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: block;
+    }
+
+    .docs-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -320px;
+        width: 320px;
+        height: 100vh;
+        z-index: 999;
+        transition: left 0.3s ease;
+    }
+
+    .sidebar.mobile-open {
+        left: 0;
+    }
+
+    .mobile-overlay.active {
+        display: block;
+    }
+
+    .main-content {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .content-body {
+        flex-direction: column;
+    }
+    
+    .content-panels-wrapper {
+        flex-direction: column;
+    }
+
+    .preview-panel {
+        width: 100%;
+        order: -1;
+        max-height: 300px;
+    }
+
+    .content-panel {
+        order: 1;
+    }
+
+    .content-header {
+        padding: 1rem;
+        margin-top: 3.5rem;
+    }
+
+    .content-title {
+        font-size: 1.5rem;
+    }
+
+    .panel-tabs {
+        flex-wrap: wrap;
+    }
+
+    .panel-tab {
+        flex: 1;
+        text-align: center;
+    }
+
+    .navigation-footer {
+        padding: 1rem;
+        border-left: none;
+        border-right: none;
+    }
+
+    .navigation-content {
+        flex-direction: column;
+        gap: 1rem;
+        max-width: 100%;
+    }
+
+    .nav-link {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .console-container {
+        max-height: 40vh;
+        height: 150px;
+        min-height: 100px;
+    }
+    
+    .preview-demo {
+        min-height: 150px;
+    }
+
+    .doc-content {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar-header {
+        padding: 1rem;
+    }
+
+    .sidebar-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .content-header {
+        padding: 0.75rem;
+    }
+
+    .content-title {
+        font-size: 1.25rem;
+    }
+
+    .doc-content {
+        padding: 0.75rem;
+    }
+
+    .panel-tab {
+        padding: 0.75rem 1rem;
+        font-size: 0.75rem;
+    }
+
+    .editor-header {
+        padding: 0.75rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .editor-actions {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    .console-container {
+        height: 120px;
+        min-height: 80px;
+    }
+    
+    .preview-demo {
+        min-height: 120px;
+    }
+    
+    .preview-console {
+        font-size: 0.65rem;
+    }
+
+    .navigation-footer {
+        padding: 0.75rem;
+    }
+    
+    .navigation-content {
+        gap: 0.75rem;
+    }
+}
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="../src/juris.js"></script>    
+    <script src="../docs/juris-document.js"></script>    
+
+    <script>
+        // Monaco Editor Management
+        let monacoEditor = null;
+        let monacoLoaded = false;
+        let editorContainerCounter = 0;
+        let pendingCodeLoad = null;
+        let isEditorReady = false;
+
+        function createUniqueEditorContainer() {
+            const baseContainer = document.getElementById('monaco-editor-base');
+            if (!baseContainer) return null;
+
+            if (monacoEditor && isEditorReady && baseContainer.children.length > 0) {
+                return baseContainer.children[0];
+            }
+
+            baseContainer.innerHTML = '';
+            
+            const uniqueContainer = document.createElement('div');
+            uniqueContainer.id = 'monaco-' + (++editorContainerCounter);
+            uniqueContainer.style.cssText = 'width: 100%; height: 100%;';
+            baseContainer.appendChild(uniqueContainer);
+            
+            return uniqueContainer;
+        }
+
+        function disposeMonacoEditor() {
+            if (monacoEditor) {
+                try {
+                    monacoEditor.dispose();
+                } catch (e) {
+                    console.warn('Monaco dispose error:', e);
+                }
+                monacoEditor = null;
+                isEditorReady = false;
+            }
+        }
+
+        function createMonacoEditor() {
+            disposeMonacoEditor();
+            
+            const container = createUniqueEditorContainer();
+            if (!container) return;
+
+            if (!monacoLoaded) {
+                require.config({ 
+                    paths: { vs: 'https://unpkg.com/monaco-editor@0.34.1/min/vs' },
+                    'vs/nls': {
+                        availableLanguages: {
+                            '*': 'en'
+                        }
+                    }
+                });
+                require(['vs/editor/editor.main'], function () {
+                    monacoLoaded = true;
+                    initEditor(container);
+                });
+            } else {
+                initEditor(container);
+            }
+        }
+
+        function initEditor(container) {
+            setTimeout(() => {
+                try {
+                    monacoEditor = monaco.editor.create(container, {
+                        value: '',
+                        language: 'javascript',
+                        theme: 'vs-light',
+                        automaticLayout: true,
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        wordWrap: 'on',
+                        scrollBeyondLastLine: false
+                    });
+
+                    isEditorReady = true;
+                    
+                    if (pendingCodeLoad) {
+                        monacoEditor.setValue(pendingCodeLoad);
+                        pendingCodeLoad = null;
+                    } else {
+                        loadCodeIntoEditor();
+                    }
+                } catch (error) {
+                    console.error('Monaco creation error:', error);
+                }
+            }, 0);
+        }
+
+        function loadCodeIntoEditor(forceCode = null) {
+            const currentDocId = juris.getState('currentDoc');
+            const doc = docFramework.getDoc(currentDocId);
+            const codeToLoad = forceCode || (doc && doc.code) || '';
+            
+            if (monacoEditor && isEditorReady) {
+                try {
+                    monacoEditor.setValue(codeToLoad);
+                } catch (error) {
+                    console.error('Failed to load code:', error);
+                }
+            } else if (codeToLoad) {
+                pendingCodeLoad = codeToLoad;
+            }
+        }
+
+        const docFramework = new DocumentFramework();
+
+        // Beginner-Friendly Juris Documentation with Tailwind CSS
+
+// =============================================================================
+// GETTING STARTED
+// =============================================================================
+
+docFramework.addDoc('what-is-juris', {
+    title: 'What is Juris?',
+    category: 'Getting Started',
+    content: 'Juris is the first and only non-blocking reactive platform, architecturally optimized for next-generation cross-platform applications. It uses object-first architecture where interfaces are expressed as pure JavaScript objects.',
+    
+    codeSnippet: [
+        `// Traditional DOM manipulation
+document.getElementById('app').innerHTML = '<div>Hello World<\/div>';`,
+        
+        { text: "With Juris, you express UI as objects:" },
+        
+        `// Juris object-first approach
+const HelloWorld = () => ({
+    div: { 
+        class: 'text-blue-500 font-bold',
+        text: 'Hello World' 
+    }
+});`
+    ],
+    
+    code: `// Complete working example
+const juris = new Juris({
+    layout: {
+        div: {
+            class: 'bg-gray-100 flex items-center justify-center',
+            children: [{
+                h1: {
+                    class: 'text-4xl font-bold text-blue-600 p-4',
+                    text: 'Welcome to Juris'
+                }
+            }]
+        }
+    }
+});
+juris.render('#demo');`,
+    
+    technicalDetails: {
+        'Architecture': 'Object-first reactive platform',
+        'Reactivity': 'Intentional reactive functions',
+        'Performance': 'Non-blocking rendering',
+        'Deployment': 'Zero-build complexity'
+    },
+    
+    tags: ['introduction', 'concepts', 'overview']
+});
+
+docFramework.addDoc('installation-cdn', {
+    title: 'CDN Installation',
+    category: 'Getting Started',
+    content: 'Get started instantly with Juris using CDN. No build tools, no complexity - just include the script and start building.',
+    
+    codeSnippet: [
+        `<!-- Latest version (development) -->
+<script src="https://unpkg.com/juris@latest/juris.js"><\/script>`,
+        
+        { text: "For production, use specific versions:" },
+        
+        `<!-- Specific version (recommended for production) -->
+<script src="https://unpkg.com/juris@0.9.0/juris.js"><\/script>
+<script src="https://unpkg.com/juris@0.9.0/juris.mini.js"><\/script>`,
+        
+        { text: "Alternative CDN providers:" },
+        
+        `<!-- JSDelivr -->
+<script src="https://cdn.jsdelivr.net/npm/juris@0.9.0/juris.js"><\/script>`
+    ],
+    
+    code: `<!DOCTYPE html>
+<html>
+<head>
+    <title>Juris App<\/title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <script src="https://unpkg.com/juris@0.9.0/juris.js"><\/script>
+<\/head>
+<body>
+    <div id="app"><\/div>
+    <script>
+        const app = new Juris({
+            layout: {
+                div: {
+                    class: 'p-8 bg-blue-50 rounded-lg',
+                    text: 'Hello from CDN!'
+                }
+            }
+        });
+        app.render('#demo');
+    <\/script>
+<\/body>
+<\/html>`,
+    
+    technicalDetails: {
+        'Setup Time': 'Instant - no build process',
+        'File Size': '38kB, 12kB gzipped',
+        'Dependencies': 'None',
+        'Browser Support': 'All modern browsers'
+    },
+    
+    tags: ['installation', 'cdn', 'quick-start']
+});
+
+docFramework.addDoc('your-first-component', {
+    title: 'Your First Component',
+    category: 'Getting Started',
+    content: 'Learn how to create and use your first Juris component. Components are functions that return object representations of DOM elements.',
+    
+    codeSnippet: [
+        `// Simple component function
+const Greeting = () => ({
+    div: {
+        class: 'p-4 bg-green-100 rounded',
+        text: 'Hello, Juris!'
+    }
+});`,
+        
+        { text: "Components can accept props:" },
+        
+        `// Component with props
+const PersonalGreeting = (props) => ({
+    div: {
+        class: 'p-4 bg-blue-100 rounded',
+        text: \`Hello, \${props.name}!\`
+    }
+});`,
+        
+        { text: "Register and use components:" },
+        
+        `// Register component
+juris.registerComponent('Greeting', Greeting);
+juris.registerComponent('PersonalGreeting', PersonalGreeting);`
+    ],
+    
+    code: `// Complete first component example
+const WelcomeCard = (props) => ({
+    div: {
+        class: 'max-w-md mx-auto bg-white rounded-xl shadow-md p-6',
+        style: {
+            width: props.width || '100%'
+        },
+        children: [
+            {
+                h2: {
+                    class: 'text-2xl font-bold text-gray-800 mb-2',
+                    text: props.title || 'Welcome'
+                }
+            },
+            {
+                p: {
+                    class: 'text-gray-600',
+                    text: props.message || 'Getting started with Juris'
+                }
+            },
+            {
+                button: {
+                    class: 'mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600',
+                    text: props.buttonText || 'Get Started',
+                    onclick: () => alert('Welcome to Juris!')
+                }
+            }
+        ]
+    }
+});
+
+const demo = new Juris({
+    components: { WelcomeCard },
+    layout: {
+        div: {
+            class: 'min-h-screen bg-gray-100 py-8 gap-4 flex flex-col',
+            children: [
+                {WelcomeCard: {
+                    title: 'Hello World',
+                    message: 'Your first Juris component is working!'
+                }},
+                {WelcomeCard: {
+                    title: 'Welcome Back',
+                    message: 'How have you been?',
+                    buttonText: 'Tell me more'
+                }}
+            ]
+        }
+    }
+});
+demo.render('#demo');
+`,
+    
+    technicalDetails: {
+        'Component Type': 'Pure functions',
+        'Return Value': 'Object VDOM representation',
+        'Props': 'First parameter of component function',
+        'Reactivity': 'Automatic when using reactive functions'
+    },
+    
+    tags: ['components', 'beginner', 'tutorial']
+});
+
+// =============================================================================
+// DOM FUNDAMENTALS
+// =============================================================================
+
+docFramework.addDoc('object-vdom-syntax', {
+    title: 'Object VDOM Syntax',
+    category: 'DOM Fundamentals',
+    content: 'Juris uses object notation to represent DOM elements. Each object key is the element tag, and the value contains the element properties and content.',
+    
+    codeSnippet: [
+        `// Basic element syntax
+ {div: {
+    class: 'container',
+    text: 'Content'
+}}`,
+        
+        { text: "Multiple attributes:" },
+        
+        `// Element with multiple attributes
+{input: {
+    type: 'text',
+    class: 'border rounded px-2 py-1',
+    placeholder: 'Enter text',
+    value: 'default'
+}};`,
+        
+        { text: "Nested elements using children:[]" },
+        
+        `// Nested structure
+{div: {
+    class: 'bg-white shadow rounded p-4',
+    children: [
+        {h2: {text: 'Title' }},
+        {p: {text: 'Description' }}
+    ]
+}};`
+    ],
+    
+    code: `// Complex VDOM structure example
+
+const blogPost = {
+    article: {
+        class: 'max-w-2xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden',
+        children: [
+            {header: {
+                class: 'bg-blue-500 text-white p-6',
+                children: [
+                    {h1: {class: 'text-3xl font-bold mb-2',
+                        text: 'Object VDOM in Juris'
+                    }},
+                    {p: {class: 'text-blue-100',
+                        text: 'Learn the elegant syntax'
+                    }}
+                ]
+            }},
+            {div: {class: 'p-6',
+                children: [
+                    {p: {class: 'text-gray-700 leading-relaxed mb-4',
+                        text: 'Object VDOM provides a clean, readable way to define UI structures.'
+                    }},
+                    {div: {class: 'flex space-x-2',
+                        children: [
+                            {button: {class: 'px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600',
+                                text: 'Like'
+                            }},
+                            {button: {class: 'px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600',
+                                text: 'Share'
+                            }}
+                        ]
+                    }}
+                ]
+            }}
+        ]
+    }};
+    
+    const demo = new Juris({
+    layout: blogPost
+    });
+    demo.render('#demo');
+    `,
+    
+    technicalDetails: {
+        'Syntax': 'JavaScript object notation',
+        'Attributes': 'Object properties',
+        'Nesting': 'children array property',
+        'Text Content': 'text property'
+    },
+    
+    tags: ['vdom', 'syntax', 'fundamentals']
+});
+
+docFramework.addDoc('basic-elements', {
+    title: 'Basic Element Creation',
+    category: 'DOM Fundamentals',
+    content: 'Create common HTML elements using Juris object syntax. All standard HTML elements are supported.',
+    
+    codeSnippet: [
+        `// Text elements
+const heading = { h1: { text: 'Main Title' } };
+const paragraph = { p: { text: 'Some content' } };`,
+        
+        `// Form elements
+const textInput = {
+    input: {
+        type: 'text',
+        class: 'border rounded px-3 py-2',
+        placeholder: 'Enter text'
+    }
+};`,
+        
+        `// Interactive elements
+const button = {
+    button: {class: 'bg-blue-500 text-white px-4 py-2 rounded',
+        text: 'Click Me'
+    }
+};`
+    ],
+    
+    code: `// Basic Element Creation - Complete Working Example
+
+// Text Elements
+const TextElements = () => ({
+  div: {
+    class: 'space-y-4 p-6 bg-white rounded-lg shadow',
+    children: [
+      {h1: {
+        class: 'text-3xl font-bold text-gray-900',
+        text: 'Main Heading'
+      }},//h1
+      {h2: {
+        class: 'text-2xl font-semibold text-gray-800',
+        text: 'Subheading'
+      }},//h2
+      {p: {
+        class: 'text-gray-600 leading-relaxed',
+        text: 'This is a paragraph with some descriptive text content.'
+      }},//paragraph
+      {span: {
+        class: 'text-sm text-blue-600 font-medium',
+        text: 'Highlighted text span'
+      }}//span
+    ]
+  }//text-container
+});
+
+// Form Elements
+const FormElements = () => ({
+  form: {
+    class: 'space-y-4 p-6 bg-gray-50 rounded-lg',
+    children: [
+      {div: {
+        class: 'flex flex-col',
+        children: [
+          {label: {
+            class: 'text-sm font-medium text-gray-700 mb-1',
+            text: 'Text Input'
+          }},//label
+          {input: {
+            type: 'text',
+            class: 'border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+            placeholder: 'Enter your name'
+          }}//text-input
+        ]
+      }},//text-field
+      {div: {
+        class: 'flex flex-col',
+        children: [
+          {label: {
+            class: 'text-sm font-medium text-gray-700 mb-1',
+            text: 'Email Input'
+          }},//label
+          {input: {
+            type: 'email',
+            class: 'border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+            placeholder: 'your.email@example.com'
+          }}//email-input
+        ]
+      }},//email-field
+      {div: {
+        class: 'flex flex-col',
+        children: [
+          {label: {
+            class: 'text-sm font-medium text-gray-700 mb-1',
+            text: 'Password'
+          }},//label
+          {input: {
+            type: 'password',
+            class: 'border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+            placeholder: '••••••••'
+          }}//password-input
+        ]
+      }},//password-field
+      {div: {
+        class: 'flex flex-col',
+        children: [
+          {label: {
+            class: 'text-sm font-medium text-gray-700 mb-1',
+            text: 'Message'
+          }},//label
+          {textarea: {
+            class: 'border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
+            rows: '4',
+            placeholder: 'Enter your message here...'
+          }}//textarea
+        ]
+      }}//message-field
+    ]
+  }//form-container
+});
+
+// Interactive Elements
+const InteractiveElements = () => ({
+  div: {
+    class: 'space-y-4 p-6 bg-blue-50 rounded-lg',
+    children: [
+      {button: {
+        type: 'button',
+        class: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors',
+        text: 'Primary Button',
+        onclick: () => alert('Primary button clicked!')
+      }},//primary-btn
+      {button: {
+        type: 'button',
+        class: 'px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors',
+        text: 'Secondary Button',
+        onclick: () => alert('Secondary button clicked!')
+      }},//secondary-btn
+      {a: {
+        href: 'https://jurisjs.com',
+        target: '_blank',
+        class: 'inline-block text-blue-600 underline hover:text-blue-800',
+        text: 'External Link'
+      }},//link
+      {div: {
+        class: 'flex items-center space-x-2',
+        children: [
+          {input: {
+            type: 'checkbox',
+            id: 'demo-checkbox',
+            class: 'rounded'
+          }},//checkbox
+          {label: {
+            for: 'demo-checkbox',
+            class: 'text-sm text-gray-700',
+            text: 'Checkbox option'
+          }}//checkbox-label
+        ]
+      }},//checkbox-group
+      {div: {
+        class: 'flex items-center space-x-2',
+        children: [
+          {input: {
+            type: 'radio',
+            id: 'radio1',
+            name: 'demo-radio',
+            value: 'option1'
+          }},//radio1
+          {label: {
+            for: 'radio1',
+            class: 'text-sm text-gray-700',
+            text: 'Radio Option 1'
+          }},//radio1-label
+          {input: {
+            type: 'radio',
+            id: 'radio2',
+            name: 'demo-radio',
+            value: 'option2'
+          }},//radio2
+          {label: {
+            for: 'radio2',
+            class: 'text-sm text-gray-700',
+            text: 'Radio Option 2'
+          }}//radio2-label
+        ]
+      }}//radio-group
+    ]
+  }//interactive-container
+});
+
+// Media Elements
+const MediaElements = () => ({
+  div: {
+    class: 'space-y-4 p-6 bg-green-50 rounded-lg',
+    children: [
+      {img: {
+        src: 'https://picsum.photos/300/200',
+        alt: 'Sample image',
+        class: 'rounded-lg shadow-md w-full max-w-xs'
+      }},//image
+      {div: {
+        class: 'aspect-video bg-gray-200 rounded-lg flex items-center justify-center',
+        children: [{
+          p: {
+            class: 'text-gray-500',
+            text: 'Video placeholder'
+          }
+        }]
+      }},//video-placeholder
+      {audio: {
+        controls: true,
+        class: 'w-full',
+        children: [{
+          source: {
+            src: 'sample-audio.mp3',
+            type: 'audio/mpeg'
+          }
+        }]
+      }}//audio
+    ]
+  }//media-container
+});
+
+// List Elements
+const ListElements = () => ({
+  div: {
+    class: 'space-y-4 p-6 bg-yellow-50 rounded-lg',
+    children: [
+      {h3: {
+        class: 'text-lg font-semibold text-gray-800 mb-2',
+        text: 'Unordered List'
+      }},//ul-title
+      {ul: {
+        class: 'list-disc list-inside space-y-1 text-gray-700',
+        children: [
+          {li: { text: 'First list item' }},
+          {li: { text: 'Second list item' }},
+          {li: { text: 'Third list item with more content' }}
+        ]
+      }},//ul
+      {h3: {
+        class: 'text-lg font-semibold text-gray-800 mb-2 mt-4',
+        text: 'Ordered List'
+      }},//ol-title
+      {ol: {
+        class: 'list-decimal list-inside space-y-1 text-gray-700',
+        children: [
+          {li: { text: 'Step one: Initialize' }},
+          {li: { text: 'Step two: Configure' }},
+          {li: { text: 'Step three: Execute' }}
+        ]
+      }}//ol
+    ]
+  }//list-container
+});
+
+// Table Elements
+const TableElements = () => ({
+  div: {
+    class: 'p-6 bg-purple-50 rounded-lg overflow-x-auto',
+    children: [{
+      table: {
+        class: 'min-w-full bg-white border border-gray-300 rounded-lg',
+        children: [
+          {thead: {
+            class: 'bg-gray-50',
+            children: [{
+              tr: {
+                children: [
+                  {th: {
+                    class: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b',
+                    text: 'Name'
+                  }},//th-name
+                  {th: {
+                    class: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b',
+                    text: 'Type'
+                  }},//th-type
+                  {th: {
+                    class: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b',
+                    text: 'Description'
+                  }}//th-desc
+                ]
+              }//tr-header
+            }]
+          }},//thead
+          {tbody: {
+            class: 'divide-y divide-gray-200',
+            children: [
+              {tr: {
+                class: 'hover:bg-gray-50',
+                children: [
+                  {td: {
+                    class: 'px-4 py-2 text-sm text-gray-900',
+                    text: 'div'
+                  }},//td1
+                  {td: {
+                    class: 'px-4 py-2 text-sm text-gray-500',
+                    text: 'Container'
+                  }},//td2
+                  {td: {
+                    class: 'px-4 py-2 text-sm text-gray-500',
+                    text: 'Generic container element'
+                  }}//td3
+                ]
+              }},//tr1
+              {tr: {
+                class: 'hover:bg-gray-50',
+                children: [
+                  {td: {
+                    class: 'px-4 py-2 text-sm text-gray-900',
+                    text: 'span'
+                  }},//td1
+                  {td: {
+                    class: 'px-4 py-2 text-sm text-gray-500',
+                    text: 'Inline'
+                  }},//td2
+                  {td: {
+                    class: 'px-4 py-2 text-sm text-gray-500',
+                    text: 'Inline text element'
+                  }}//td3
+                ]
+              }}//tr2
+            ]
+          }}//tbody
+        ]
+      }//table
+    }]
+  }//table-container
+});
+
+// Main demonstration component
+const ElementShowcase = () => ({
+  div: {
+    class: 'min-h-screen bg-gray-100 py-8',
+    children: [
+      {div: {
+        class: 'max-w-4xl mx-auto px-4',
+        children: [
+          {header: {
+            class: 'text-center mb-8',
+            children: [{
+              h1: {
+                class: 'text-4xl font-bold text-gray-900 mb-2',
+                text: 'Basic Element Creation in Juris'
+              }
+            }]
+          }},//header
+          {div: {
+            class: 'grid grid-cols-1 lg:grid-cols-2 gap-6',
+            children: [
+              { TextElements: {} },
+              { FormElements: {} },
+              { InteractiveElements: {} },
+              { MediaElements: {} },
+              { ListElements: {} },
+              {div: {
+                class: 'lg:col-span-2',
+                children: [{ TableElements: {} }]
+              }}//table-wrapper
+            ]
+          }}//grid
+        ]
+      }}//container
+    ]
+  }//main
+});
+
+// Create demo with proper structure
+const demo = new Juris({
+  components: {
+    TextElements,
+    FormElements,
+    InteractiveElements,
+    MediaElements,
+    ListElements,
+    TableElements,
+    ElementShowcase
+  },
+  layout: { ElementShowcase: {} }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+    
+    technicalDetails: {
+        'Elements': 'All HTML5 elements supported',
+        'Attributes': 'Standard HTML attributes',
+        'Styling': 'CSS classes and inline styles',
+        'Accessibility': 'Full ARIA support'
+    },
+    
+    tags: ['elements', 'html', 'forms', 'basics']
+});
+
+// =============================================================================
+// ATTRIBUTES & PROPERTIES
+// =============================================================================
+
+docFramework.addDoc('static-attributes', {
+    title: 'Static Attributes',
+    category: 'Attributes & Properties',
+    content: 'Set static HTML attributes and properties on elements. Juris handles both attributes and DOM properties intelligently.',
+    
+    codeSnippet: [
+        `// Basic attributes
+const link = {
+    a: {
+        class: 'text-blue-500 underline',
+        href: 'https://example.com',
+        target: '_blank',
+        text: 'Visit Site'
+    }};`,
+        
+        `// Form attributes
+const input = {
+    input: {
+        type: 'email',
+        required: true,
+        disabled: false,
+        placeholder: 'Enter email'
+    }
+};`,
+        
+        `// Data attributes
+const element = {
+    div: {
+        'data-id': '123',
+        'data-category': 'product',
+        'aria-label': 'Product card'
+    }
+};`
+    ],
+    
+    code: `// Comprehensive attributes example
+const ProductCard = (props) => ({
+    div: {
+        class: 'bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow',
+        'data-product-id': props.id,
+        'aria-labelledby': \`product-title-\${props.id}\`,
+        children: [
+            {img: {
+                src: "https://random-image-pepebigotes.vercel.app/api/random-image",
+                alt: props.alt,
+                class: 'w-full h-48 object-cover',
+                loading: 'lazy'
+            }},
+            {div: {
+                class: 'p-4',
+                children: [
+                    {h3: {
+                        id: \`product-title-\${props.id}\`,
+                        class: 'text-lg font-semibold text-gray-800 mb-2',
+                        text: props.title
+                    }},
+                    {p: {
+                        class: 'text-gray-600 text-sm mb-3',
+                        text: props.description
+                    }},
+                    {div: {
+                        class: 'flex justify-between items-center',
+                        children: [
+                            {span: {
+                                class: 'text-xl font-bold text-green-600',
+                                text: \`$\${props.price}\`
+                             }},
+                            {button: {
+                                type: 'button',
+                                class: 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600',
+                                'data-action': 'add-to-cart',
+                                'aria-label': \`Add \${props.title} to cart\`,
+                                text: 'Add to Cart'
+                            }}
+                        ]
+                    }}
+                ]
+            }}
+        ]
+    }
+});
+const demo = new Juris({
+    components:{
+        ProductCard
+    },
+    layout:{
+        ProductCard:{
+            id:1, 
+            title:'Stylish Chair', 
+            description:'A comfortable and stylish chair for your living room.', 
+            price:129.99, 
+            image:'https://via.placeholder.com/400x300', 
+            alt:'Stylish Chair'
+       }}
+});
+demo.render('#demo');
+`,
+    
+    technicalDetails: {
+        'Boolean Attributes': 'Use true/false values',
+        'Data Attributes': 'data-* prefix supported',
+        'ARIA Attributes': 'Full accessibility support',
+        'Custom Attributes': 'Any valid HTML attribute'
+    },
+    
+    tags: ['attributes', 'properties', 'static', 'html']
+});
+
+
+
+
+        // localStorage utilities
+        function saveCurrentDoc(docId) {
+            try {
+                localStorage.setItem('juris-docs-current-doc', docId);
+            } catch (e) {
+                console.warn('Could not save to localStorage:', e);
+            }
+        }
+
+        function loadCurrentDoc() {
+            try {
+                return localStorage.getItem('juris-docs-current-doc') || 'basic-components';
+            } catch (e) {
+                console.warn('Could not read from localStorage:', e);
+                return 'basic-components';
+            }
+        }
+
+        function saveBookmarks(bookmarks) {
+            try {
+                localStorage.setItem('juris-docs-bookmarks', JSON.stringify(bookmarks));
+            } catch (e) {
+                console.warn('Could not save bookmarks to localStorage:', e);
+            }
+        }
+
+        function loadBookmarks() {
+            try {
+                const saved = localStorage.getItem('juris-docs-bookmarks');
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                console.warn('Could not load bookmarks from localStorage:', e);
+                return [];
+            }
+        }
+
+        function saveCollapsedCategories(collapsed) {
+            try {
+                localStorage.setItem('juris-docs-collapsed', JSON.stringify(collapsed));
+            } catch (e) {
+                console.warn('Could not save collapsed state:', e);
+            }
+        }
+
+        function loadCollapsedCategories() {
+            try {
+                const saved = localStorage.getItem('juris-docs-collapsed');
+                return saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                console.warn('Could not load collapsed state:', e);
+                return {};
+            }
+        }
+
+        // Initialize Juris with component system
+        const juris = new Juris({
+            states: {
+                currentDoc: loadCurrentDoc(),
+                searchQuery: '',
+                activeTab: 'documentation',
+                consoleOutput: [],
+                collapsedCategories: loadCollapsedCategories(),
+                bookmarks: loadBookmarks(),
+                mobileMenuOpen: false
+            },
+            components: {
+                // Mobile Menu Toggle
+                MobileMenuToggle: (props, context) => ({
+                    button: {
+                        class: 'mobile-menu-toggle',
+                        onclick: () => {
+                            const isOpen = context.getState('mobileMenuOpen');
+                            context.setState('mobileMenuOpen', !isOpen);
+                        },
+                        text: '☰'
+                    }
+                }),
+
+                // Mobile Overlay
+                MobileOverlay: (props, context) => ({
+                    div: {
+                        class: () => {
+                            const isOpen = context.getState('mobileMenuOpen');
+                            return 'mobile-overlay' + (isOpen ? ' active' : '');
+                        },
+                        onclick: () => context.setState('mobileMenuOpen', false)
+                    }
+                }),
+
+                // Header Component
+                AppHeader: () => ({
+                    div: {
+                        class: 'sidebar-header',
+                        children: [
+                            { h1: { text: 'Juris', class:'text-2xl font-bold' } },
+                            { div: { class: 'version', text: 'v0.91.0 Documentation' } }
+                        ]
+                    }
+                }),
+
+                // Search Component  
+                SearchBox: (props, context) => ({
+                    div: {
+                        class: 'search-container',
+                        children: [
+                            {
+                                input: {
+                                    type: 'text',
+                                    class: 'search-input',
+                                    placeholder: 'Search documentation...',
+                                    value: () => context.getState('searchQuery'),
+                                    oninput: (e) => context.setState('searchQuery', e.target.value)
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                // Bookmarks Section
+                BookmarksSection: (props, context) => ({
+                    div: {
+                        class: 'bookmarks-section',
+                        children: [
+                            {
+                                div: {
+                                    class: 'bookmarks-header',
+                                    children: [
+                                        { span: { text: 'Bookmarks' } },
+                                        {
+                                            button: {
+                                                class: () => {
+                                                    const currentDocId = context.getState('currentDoc');
+                                                    const bookmarks = context.getState('bookmarks');
+                                                    const bookmarked = bookmarks.includes(currentDocId);
+                                                    return 'bookmark-button' + (bookmarked ? ' bookmarked' : '');
+                                                },
+                                                onclick: () => {
+                                                    const currentDocId = context.getState('currentDoc');
+                                                    const bookmarks = context.getState('bookmarks');
+                                                    const isBookmarked = bookmarks.includes(currentDocId);
+                                                    let newBookmarks;
+                                                    
+                                                    if (isBookmarked) {
+                                                        newBookmarks = bookmarks.filter(id => id !== currentDocId);
+                                                    } else {
+                                                        newBookmarks = [...bookmarks, currentDocId];
+                                                    }
+                                                    
+                                                    context.setState('bookmarks', newBookmarks);
+                                                    saveBookmarks(newBookmarks);
+                                                },
+                                                children: [
+                                                    { 
+                                                        span: { 
+                                                            text: () => {
+                                                                const currentDocId = context.getState('currentDoc');
+                                                                const bookmarks = context.getState('bookmarks');
+                                                                return bookmarks.includes(currentDocId) ? '★' : '☆';
+                                                            }
+                                                        } 
+                                                    },
+                                                    { 
+                                                        span: { 
+                                                            text: () => {
+                                                                const currentDocId = context.getState('currentDoc');
+                                                                const bookmarks = context.getState('bookmarks');
+                                                                return bookmarks.includes(currentDocId) ? 'Remove' : 'Add';
+                                                            }
+                                                        } 
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'bookmarks-list',
+                                    children: () => {
+                                        const bookmarks = context.getState('bookmarks');
+                                        const currentDoc = context.getState('currentDoc');
+                                        
+                                        if (bookmarks.length === 0) {
+                                            return [{
+                                                div: {
+                                                    class: 'empty-bookmarks',
+                                                    text: 'No bookmarks yet'
+                                                }
+                                            }];
+                                        }
+                                        
+                                        return bookmarks.map(docId => {
+                                            const doc = docFramework.getDoc(docId);
+                                            if (!doc) return null;
+                                            
+                                            return {
+                                                div: {
+                                                    class: 'bookmark-item',
+                                                    children: [
+                                                        {
+                                                            span: {
+                                                                class: 'bookmark-link' + (currentDoc === docId ? ' active' : ''),
+                                                                text: doc.title,
+                                                                onclick: () => {
+                                                                    context.setState('currentDoc', docId);
+                                                                    saveCurrentDoc(docId);
+                                                                    window.history.pushState(null, '', '#' + docId);
+                                                                    createMonacoEditor();
+                                                                    setTimeout(() => runCode(doc.code), 0);
+                                                                    context.setState('mobileMenuOpen', false);
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            button: {
+                                                                class: 'bookmark-remove',
+                                                                text: '×',
+                                                                onclick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    const bookmarks = context.getState('bookmarks');
+                                                                    const newBookmarks = bookmarks.filter(id => id !== docId);
+                                                                    context.setState('bookmarks', newBookmarks);
+                                                                    saveBookmarks(newBookmarks);
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            };
+                                        }).filter(Boolean);
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                // Category List Component
+                CategoryList: (props, context) => ({
+                    div: {
+                        class: 'navigation',
+                        children: () => {
+                            const query = context.getState('searchQuery');
+                            const filteredCategories = docFramework.getFilteredCategories(query);
+                            
+                            if (query.trim() && filteredCategories.length === 0) {
+                                return [{
+                                    div: {
+                                        class: 'no-results',
+                                        text: `No results found for "${query}"`
+                                    }
+                                }];
+                            }
+
+                            return filteredCategories.map(category => ({
+                                CategoryItem: {
+                                    category: category,
+                                    searchQuery: query
+                                }
+                            }));
+                        }
+                    }
+                }),
+
+                // Individual Category Component
+                CategoryItem: (props, context) => {
+                    const category = props.category;
+                    const searchQuery = props.searchQuery || '';
+                    
+                    // Filter docs based on search query
+                    const filteredDocs = searchQuery.trim() 
+                        ? category.docs.filter(docId => {
+                            const doc = docFramework.getDoc(docId);
+                            if (!doc) return false;
+                            
+                            const searchTerm = searchQuery.toLowerCase();
+                            return (
+                                doc.title.toLowerCase().includes(searchTerm) ||
+                                doc.description.toLowerCase().includes(searchTerm) ||
+                                category.name.toLowerCase().includes(searchTerm) ||
+                                (doc.tags && doc.tags.some(tag => 
+                                    tag.toLowerCase().includes(searchTerm)
+                                ))
+                            );
+                        })
+                        : category.docs;
+
+                    return {
+                        div: {
+                            class: () => {
+                                const collapsed = context.getState('collapsedCategories');
+                                return 'category' + (collapsed[category.name] ? ' collapsed' : '');
+                            },
+                            children: [
+                                {
+                                    div: {
+                                        class: 'category-header',
+                                        onclick: () => {
+                                            const collapsed = context.getState('collapsedCategories');
+                                            const newCollapsed = { ...collapsed };
+                                            if (newCollapsed[category.name]) {
+                                                delete newCollapsed[category.name];
+                                            } else {
+                                                newCollapsed[category.name] = true;
+                                            }
+                                            context.setState('collapsedCategories', newCollapsed);
+                                            saveCollapsedCategories(newCollapsed);
+                                        },
+                                        children: [
+                                            { 
+                                                span: { 
+                                                    class: 'category-icon', 
+                                                    text: () => {
+                                                        const collapsed = context.getState('collapsedCategories');
+                                                        return collapsed[category.name] ? '▶' : '▼';
+                                                    }
+                                                } 
+                                            },
+                                            { span: { text: `${category.name} (${filteredDocs.length})` } }
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        class: 'category-docs',
+                                        children: filteredDocs.map(docId => {
+                                            const doc = docFramework.getDoc(docId);
+                                            if (!doc) return null;
+                                            
+                                            return {
+                                                a: {
+                                                    href: '#',
+                                                    class: () => {
+                                                        const current = context.getState('currentDoc');
+                                                        return 'doc-link' + (current === docId ? ' active' : '');
+                                                    },
+                                                    text: doc.title,
+                                                    onclick: (e) => {
+                                                        e.preventDefault();
+                                                        context.setState('currentDoc', docId);
+                                                        saveCurrentDoc(docId);
+                                                        window.history.pushState(null, '', '#' + docId);
+                                                        createMonacoEditor();
+                                                        setTimeout(() => {
+                                                            if (doc.code) {
+                                                                runCode(doc.code);
+                                                            }
+                                                        }, 0);
+                                                        context.setState('mobileMenuOpen', false);
+                                                    }
+                                                }
+                                            };
+                                        }).filter(Boolean)
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                },
+
+                // Content Header Component
+                ContentHeader: (props, context) => ({
+                    div: {
+                        class: 'content-header',
+                        children: () => {
+                            const currentDocId = context.getState('currentDoc');
+                            const doc = docFramework.getDoc(currentDocId);
+                            
+                            if (!doc) return [{ div: { text: 'Loading...' } }];
+
+                            return [
+                                { h1: { class: 'content-title', text: doc.title } },
+                                { p: { class: 'content-description', text: doc.description } }
+                            ];
+                        }
+                    }
+                }),
+
+                // Tab Navigation Component
+                TabNavigation: (props, context) => ({
+                    div: {
+                        class: 'panel-tabs',
+                        children: [
+                            {
+                                div: {
+                                    class: () => {
+                                        const activeTab = context.getState('activeTab');
+                                        return 'panel-tab' + (activeTab === 'documentation' ? ' active' : '');
+                                    },
+                                    text: 'Documentation',
+                                    onclick: () => {
+                                        context.setState('activeTab', 'documentation');
+                                        disposeMonacoEditor();
+                                    }
+                                }
+                            },
+                            {
+                                div: {
+                                    class: () => {
+                                        const activeTab = context.getState('activeTab');
+                                        return 'panel-tab' + (activeTab === 'editor' ? ' active' : '');
+                                    },
+                                    text: 'Code Editor',
+                                    onclick: () => {
+                                        context.setState('activeTab', 'editor');
+                                        setTimeout(() => {
+                                            createMonacoEditor();
+                                        }, 0);
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                // Documentation Content Component
+                DocumentationContent: (props, context) => ({
+                    div: {
+                        class: 'doc-content',
+                        children: () => {
+                            const currentDocId = context.getState('currentDoc');
+                            const doc = docFramework.getDoc(currentDocId);
+                            
+                            if (!doc) return [{ div: { text: 'Loading...' } }];
+
+                            const elements = [
+                                { p: { text: doc.content } }
+                            ];
+                            
+                            // Add interactive example if it exists
+                            if (doc.interactiveExample) {
+                                elements.push({
+                                    div: {
+                                        class: 'my-6 p-4 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50',
+                                        children: [
+                                            {
+                                                h4: {
+                                                    class: 'text-lg font-semibold mb-3 text-blue-700',
+                                                    text: 'Interactive Example:'
+                                                }
+                                            },
+                                            doc.interactiveExample(context)
+                                        ]
+                                    }
+                                });
+                            }
+                            
+                            // Add static example if it exists
+                            if (doc.liveExample) {
+                                elements.push({
+                                    div: {
+                                        class: 'my-6 p-4 border-2 border-dashed border-green-300 rounded-lg bg-green-50',
+                                        children: [
+                                            {
+                                                h4: {
+                                                    class: 'text-lg font-semibold mb-3 text-green-700',
+                                                    text: 'Live Example:'
+                                                }
+                                            },
+                                            doc.liveExample
+                                        ]
+                                    }
+                                });
+                            }
+                            
+                            // Add code snippet display with array support
+                            if (doc.codeSnippet) {
+                                const snippets = Array.isArray(doc.codeSnippet) ? doc.codeSnippet : [doc.codeSnippet];
+                                
+                                snippets.forEach((snippet, index) => {
+                                    if (typeof snippet === 'string') {
+                                        // Handle string snippet (traditional way)
+                                        elements.push(createCodeSnippetBlock(snippet, index));
+                                    } else if (typeof snippet === 'object' && snippet !== null) {
+                                        // Handle VDOM object snippet
+                                        if (snippet.title && snippet.code) {
+                                            // Object with title and code
+                                            elements.push(createCodeSnippetBlock(snippet.code, index, snippet.title, snippet.language || 'javascript'));
+                                        } else if (snippet.text) {
+                                            // Text explanation between code blocks
+                                            elements.push({
+                                                div: {
+                                                    class: 'my-4 p-3 bg-gray-50 border-l-4 border-blue-500 rounded-r',
+                                                    children: [
+                                                        {
+                                                            p: {
+                                                                class: 'text-gray-700 text-sm font-medium',
+                                                                text: snippet.text
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            });
+                                        } else if (snippet.separator) {
+                                            // Visual separator
+                                            elements.push({
+                                                div: {
+                                                    class: 'my-6 flex items-center',
+                                                    children: [
+                                                        { div: { class: 'flex-1 h-px bg-gray-300' } },
+                                                        {
+                                                            span: {
+                                                                class: 'px-3 text-sm text-gray-500 bg-white',
+                                                                text: snippet.separator
+                                                            }
+                                                        },
+                                                        { div: { class: 'flex-1 h-px bg-gray-300' } }
+                                                    ]
+                                                }
+                                            });
+                                        } else {
+                                            // Direct VDOM object - render as is
+                                            elements.push(snippet);
+                                        }
+                                    }
+                                });
+                            }
+                            
+                            // Technical details section
+                            if (doc.technicalDetails && Object.keys(doc.technicalDetails).length > 0) {
+                                elements.push({
+                                    div: {
+                                        class: 'technical-details',
+                                        children: [
+                                            { h4: { text: 'Technical Details' } },
+                                            {
+                                                dl: {
+                                                    children: Object.entries(doc.technicalDetails).flatMap(([key, value]) => [
+                                                        { dt: { text: key } },
+                                                        { dd: { text: value } }
+                                                    ])
+                                                }
+                                            }
+                                        ]
+                                    }
+                                });
+                            }
+                            
+                            // Tags section
+                            if (doc.tags && doc.tags.length > 0) {
+                                elements.push({
+                                    div: {
+                                        class: 'tags',
+                                        children: doc.tags.map(tag => ({
+                                            span: { class: 'tag', text: tag }
+                                        }))
+                                    }
+                                });
+                            }
+
+                            return elements;
+                        }
+                    }
+                }),
+
+                // Editor Component
+                EditorContent: (props, context) => ({
+                    div: {
+                        class: 'editor-container',
+                        children: [
+                            {
+                                div: {
+                                    class: 'editor-header',
+                                    children: [
+                                        { span: { class: 'editor-title', text: 'JavaScript Editor' } },
+                                        {
+                                            div: {
+                                                class: 'editor-actions',
+                                                children: [
+                                                    {
+                                                        button: {
+                                                            class: 'btn',
+                                                            text: 'Reset',
+                                                            onclick: () => {
+                                                                const currentDocId = context.getState('currentDoc');
+                                                                const doc = docFramework.getDoc(currentDocId);
+                                                                if (doc && doc.code) {
+                                                                    loadCodeIntoEditor(doc.code);
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            class: 'btn btn-primary',
+                                                            text: 'Run Code',
+                                                            onclick: () => {
+                                                                if (monacoEditor && isEditorReady) {
+                                                                    runCode(monacoEditor.getValue());
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            { div: { id: 'monaco-editor-base', class: 'monaco-editor-container' } }
+                        ]
+                    }
+                }),
+
+                // Content Panel Component
+                ContentPanel: (props, context) => ({
+                    div: {
+                        class: 'panel-content',
+                        children: () => {
+                            const activeTab = context.getState('activeTab');
+                            
+                            if (activeTab === 'documentation') {
+                                return [{ DocumentationContent: {} }];
+                            } else {
+                                return [{ EditorContent: {} }];
+                            }
+                        }
+                    }
+                }),
+
+                // Console Output Component
+                ConsoleOutput: (props, context) => ({
+                    div: {
+                        class: 'console-container',
+                        children: [
+                            {
+                                div: {
+                                    class: 'console-resizer'
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'console-header',
+                                    children: [
+                                        {
+                                            span: {
+                                                text: 'Console Output'
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                class: 'console-clear',
+                                                text: 'Clear',
+                                                onclick: () => {
+                                                    context.setState('consoleOutput', []);
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'preview-console',
+                                    children: () => {
+                                        const logs = context.getState('consoleOutput', []);
+                                        if (logs.length === 0) {
+                                            return [{
+                                                div: {
+                                                    class: 'console-log',
+                                                    style: 'color: #9ca3af; font-style: italic;',
+                                                    text: 'Console output will appear here...'
+                                                }
+                                            }];
+                                        }
+                                        return logs.map((log, index) => ({
+                                            div: {
+                                                class: 'console-log' + (log.type === 'error' ? ' console-error' : ''),
+                                                text: `${log.type === 'error' ? '❌' : 'ℹ️'} ${log.message}`
+                                            }
+                                        }));
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                // Preview Panel Component
+                PreviewPanel: (props, context) => ({
+                    div: {
+                        class: 'preview-panel',
+                        children: [
+                            { 
+                                div: { 
+                                    class: 'preview-header', 
+                                    text: 'Live Preview' 
+                                } 
+                            },
+                            {
+                                div: {
+                                    class: 'preview-content',
+                                    children: [
+                                        { 
+                                            div: { 
+                                                id: 'demo', 
+                                                class: 'preview-demo' 
+                                            } 
+                                        },
+                                        { ConsoleOutput: {} }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+
+                // Navigation Footer Component
+                NavigationFooter: (props, context) => ({
+                    div: {
+                        class: 'navigation-footer',
+                        children: [
+                            {
+                                div: {
+                                    class: 'navigation-content',
+                                    children: () => {
+                                        const currentDocId = context.getState('currentDoc');
+                                        const navigation = docFramework.getNavigation(currentDocId);
+                                        
+                                        return [
+                                            {
+                                                a: {
+                                                    href: navigation.previous ? '#' : undefined,
+                                                    class: 'nav-link' + (navigation.previous ? '' : ' disabled'),
+                                                    onclick: navigation.previous ? (e) => {
+                                                        e.preventDefault();
+                                                        context.setState('currentDoc', navigation.previous.id);
+                                                        saveCurrentDoc(navigation.previous.id);
+                                                        window.history.pushState(null, '', '#' + navigation.previous.id);
+                                                    } : (e) => e.preventDefault(),
+                                                    children: [
+                                                        { span: { text: '← Previous' } },
+                                                        { span: { text: navigation.previous ? navigation.previous.title : 'No previous page' } }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                button: {
+                                                    class: 'btn share-button',
+                                                    text: 'Share',
+                                                    onclick: () => {
+                                                        const url = window.location.origin + window.location.pathname + '#' + currentDocId;
+                                                        navigator.clipboard.writeText(url).then(() => {
+                                                            alert('Link copied to clipboard!');
+                                                        });
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                a: {
+                                                    href: navigation.next ? '#' : undefined,
+                                                    class: 'nav-link' + (navigation.next ? '' : ' disabled'),
+                                                    onclick: navigation.next ? (e) => {
+                                                        e.preventDefault();
+                                                        context.setState('currentDoc', navigation.next.id);
+                                                        saveCurrentDoc(navigation.next.id);
+                                                        window.history.pushState(null, '', '#' + navigation.next.id);
+                                                    } : (e) => e.preventDefault(),
+                                                    children: [
+                                                        { span: { text: 'Next →' } },
+                                                        { span: { text: navigation.next ? navigation.next.title : 'No next page' } }
+                                                    ]
+                                                }
+                                            }
+                                        ];
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                // Main App Component
+                DocsApp: (props, context) => ({
+                    div: {
+                        class: 'docs-container',
+                        children: [
+                            { MobileMenuToggle: {} },
+                            { MobileOverlay: {} },
+                            {
+                                div: {
+                                    class: () => {
+                                        const isOpen = context.getState('mobileMenuOpen');
+                                        return 'sidebar' + (isOpen ? ' mobile-open' : '');
+                                    },
+                                    children: [
+                                        { AppHeader: {} },
+                                        { SearchBox: {} },
+                                        { BookmarksSection: {} },
+                                        { CategoryList: {} }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'main-content',
+                                    children: [
+                                        { ContentHeader: {} },
+                                        {
+                                            div: {
+                                                class: 'content-body',
+                                                children: [
+                                                    // Content panels wrapper
+                                                    {
+                                                        div: {
+                                                            class: 'content-panels-wrapper',
+                                                            children: [
+                                                                {
+                                                                    div: {
+                                                                        class: 'content-panel',
+                                                                        children: [
+                                                                            { TabNavigation: {} },
+                                                                            { ContentPanel: {} },                                                                            
+                                                                            // Navigation footer (now centered between panels)
+                                                                            { NavigationFooter: {} }
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                { PreviewPanel: {} }
+                                                            ]
+                                                        }
+                                                    },
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            },
+            layout: { DocsApp: {} }
+        });
+
+        // Helper function to create code snippet blocks
+        function createCodeSnippetBlock(codeContent, index, customTitle = null, language = 'javascript') {
+            const blockId = `code-block-${index}`;
+            const title = customTitle || (language.charAt(0).toUpperCase() + language.slice(1));
+            
+            return {
+                div: {
+                    class: "my-6 bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm",
+                    children: [
+                        {
+                            div: {
+                                class: "flex items-center justify-between px-4 py-3 bg-gray-100 border-b border-gray-200",
+                                children: [
+                                    {
+                                        div: {
+                                            class: "flex items-center space-x-2",
+                                            children: [
+                                                {
+                                                    div: {
+                                                        class: "flex space-x-1",
+                                                        children: [
+                                                            { div: { class: "w-3 h-3 bg-red-400 rounded-full" } },
+                                                            { div: { class: "w-3 h-3 bg-yellow-400 rounded-full" } },
+                                                            { div: { class: "w-3 h-3 bg-green-400 rounded-full" } }
+                                                        ]
+                                                    }
+                                                },
+                                                {
+                                                    span: {
+                                                        class: "text-sm text-gray-600 font-mono ml-3",
+                                                        text: title
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            class: "px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors font-medium",
+                                            text: "Copy Code",
+                                            onclick: () => {
+                                                navigator.clipboard.writeText(codeContent).then(() => {
+                                                    console.log('Code copied to clipboard');
+                                                    // Optional: Add visual feedback here
+                                                });
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                class: "p-4 overflow-x-auto bg-gray-50",
+                                children: [
+                                    {
+                                        pre: {
+                                            class: "text-sm font-mono leading-relaxed text-gray-800",
+                                            children: [
+                                                {
+                                                    code: {
+                                                        class: `hljs language-${language}`,
+                                                        innerHTML: () => {
+                                                            if (window.hljs) {
+                                                                return hljs.highlight(codeContent, { language }).value;
+                                                            }
+                                                            return codeContent;
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        }
+        // Demo runner function
+        function runCode(code) {
+            const demoContainer = document.getElementById('demo');
+            demoContainer.innerHTML = '';
+            
+            juris.setState('consoleOutput', []);
+            
+            try {
+                const mockConsole = {
+                    log: (...args) => {
+                        const logs = juris.getState('consoleOutput', []);
+                        juris.setState('consoleOutput', [...logs, {
+                            type: 'log',
+                            message: args.join(' ')
+                        }]);
+                    },
+                    error: (...args) => {
+                        const logs = juris.getState('consoleOutput', []);
+                        juris.setState('consoleOutput', [...logs, {
+                            type: 'error',
+                            message: args.join(' ')
+                        }]);
+                    }
+                };
+                
+                const func = new Function('console', 'Juris', code);
+                func(mockConsole, Juris);
+                
+            } catch (error) {
+                const logs = juris.getState('consoleOutput', []);
+                juris.setState('consoleOutput', [...logs, {
+                    type: 'error',
+                    message: 'Error: ' + error.message
+                }]);
+            }
+        }
+
+        // Hash change handling
+        function handleHashChange() {
+            const hash = window.location.hash.substring(1);
+            if (hash && docFramework.getDoc(hash)) {
+                const currentDoc = juris.getState('currentDoc');
+                if (currentDoc !== hash) {
+                    juris.setState('currentDoc', hash);
+                    saveCurrentDoc(hash);
+                }
+            }
+        }
+
+        window.addEventListener('hashchange', handleHashChange);
+        window.addEventListener('load', handleHashChange);
+
+        // Subscribe to currentDoc changes for Monaco synchronization
+        juris.subscribe('currentDoc', (newDocId) => {
+            if (juris.getState('activeTab') === 'editor') {
+                const doc = docFramework.getDoc(newDocId);
+                if (doc && doc.code) {
+                    if (monacoEditor && isEditorReady) {
+                        setTimeout(() => {
+                            loadCodeIntoEditor(doc.code);
+                        }, 0);
+                    } else {
+                        pendingCodeLoad = doc.code;
+                        createMonacoEditor();
+                    }
+                }
+            }
+        });
+
+        // Render the app
+        juris.render('#app');
+        // Console resize functionality
+        let isResizing = false;
+        let consoleContainer = null;
+        let startY = 0;
+        let startHeight = 0;
+
+        // Initialize resize listeners after DOM is ready
+        setTimeout(() => {
+            const resizers = document.querySelectorAll('.console-resizer');
+            
+            resizers.forEach(resizer => {
+                resizer.addEventListener('mousedown', initResize);
+            });
+            
+            // Auto-scroll console to bottom when new logs are added
+            juris.subscribe('consoleOutput', () => {
+                setTimeout(() => {
+                    const consoleEl = document.querySelector('.preview-console');
+                    if (consoleEl) {
+                        consoleEl.scrollTop = consoleEl.scrollHeight;
+                    }
+                }, 0);
+            });
+        }, 100);
+
+        function initResize(e) {
+            isResizing = true;
+            consoleContainer = e.target.closest('.console-container');
+            startY = e.clientY;
+            startHeight = parseInt(document.defaultView.getComputedStyle(consoleContainer).height, 10);
+            
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
+            document.body.style.cursor = 'ns-resize';
+            document.body.style.userSelect = 'none';
+        }
+
+        function doResize(e) {
+            if (!isResizing) return;
+            
+            const diff = startY - e.clientY;
+            const newHeight = startHeight + diff;
+            const minHeight = 80;
+            const maxHeight = window.innerHeight * 0.6;
+            
+            if (newHeight >= minHeight && newHeight <= maxHeight) {
+                consoleContainer.style.height = newHeight + 'px';
+            }
+        }
+
+        function stopResize() {
+            isResizing = false;
+            consoleContainer = null;
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', stopResize);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+        // Run initial demo
+        const initialDoc = docFramework.getDoc(juris.getState('currentDoc'));
+        if (initialDoc && initialDoc.code) {
+            setTimeout(() => runCode(initialDoc.code), 0);
+        }
+        
+    </script>
+</body>
+</html>

@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Framework Documentation</title>
+    <script src="https://unpkg.com/monaco-editor@0.34.1/min/vs/loader.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .docs-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header .version {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .search-container {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .navigation {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 0;
+        }
+
+        .category {
+            margin-bottom: 0.5rem;
+        }
+
+        .category-header {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            user-select: none;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .category-header:hover {
+            background: #f1f5f9;
+        }
+
+        .category-icon {
+            font-size: 0.75rem;
+            transition: transform 0.2s;
+        }
+
+        .category.collapsed .category-icon {
+            transform: rotate(-90deg);
+        }
+
+        .category-docs {
+            margin-left: 1rem;
+            border-left: 2px solid #f1f5f9;
+        }
+
+        .category.collapsed .category-docs {
+            display: none;
+        }
+
+        .doc-link {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .doc-link:hover {
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .doc-link.active {
+            background: #eff6ff;
+            color: #2563eb;
+            border-left-color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .content-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .content-description {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .content-body {
+            flex: 1;
+            display: flex;
+        }
+
+        .content-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .panel-tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .panel-tab:hover {
+            color: #1e293b;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .panel-tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            background: white;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .doc-content {
+            padding: 2rem;
+            overflow-y: auto;
+            height: 100%;
+            line-height: 1.7;
+        }
+
+        .doc-content h1, .doc-content h2, .doc-content h3 {
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .doc-content h1 { font-size: 2.25rem; margin-bottom: 2rem; }
+        .doc-content h2 { font-size: 1.5rem; margin-top: 2rem; }
+        .doc-content h3 { font-size: 1.25rem; margin-top: 1.5rem; }
+
+        .doc-content p {
+            margin-bottom: 1.25rem;
+            color: #475569;
+        }
+
+        .technical-details {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .technical-details h4 {
+            color: #374151;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .technical-details dl {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 0.75rem;
+        }
+
+        .technical-details dt {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .technical-details dd {
+            color: #64748b;
+        }
+
+        .tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .tag {
+            background: #eff6ff;
+            color: #2563eb;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .editor-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-header {
+            padding: 1rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background: white;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .monaco-editor-container {
+            flex: 1;
+        }
+
+        .preview-panel {
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .preview-header {
+            padding: 1rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+
+        .preview-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .preview-demo {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .preview-console {
+            padding: 1rem;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.75rem;
+            overflow-y: auto;
+            max-height: 200px;
+        }
+
+        .console-log {
+            margin-bottom: 0.25rem;
+            padding: 0.25rem 0;
+        }
+
+        .console-error {
+            color: #ef4444;
+        }
+
+        .navigation-footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid #e2e8f0;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background: white;
+            color: #374151;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover:not(.disabled) {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .nav-link.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .share-button {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .share-button:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="../src/juris.js"></script>    
+    <script src="../docs/juris-document.js"></script>    
+
+    <script>
+        // Monaco Editor Management - FIXED VERSION
+        let monacoEditor = null;
+        let monacoLoaded = false;
+        let editorContainerCounter = 0;
+        let pendingCodeLoad = null;
+        let isEditorReady = false;
+
+        function createUniqueEditorContainer() {
+            const baseContainer = document.getElementById('monaco-editor-base');
+            if (!baseContainer) return null;
+
+            // Don't recreate if container already exists and Monaco is ready
+            if (monacoEditor && isEditorReady && baseContainer.children.length > 0) {
+                console.log('Reusing existing Monaco container');
+                return baseContainer.children[0];
+            }
+
+            baseContainer.innerHTML = '';
+            
+            const uniqueContainer = document.createElement('div');
+            uniqueContainer.id = 'monaco-' + (++editorContainerCounter);
+            uniqueContainer.style.cssText = 'width: 100%; height: 100%;';
+            baseContainer.appendChild(uniqueContainer);
+            
+            return uniqueContainer;
+        }
+
+        function disposeMonacoEditor() {
+            if (monacoEditor) {
+                try {
+                    monacoEditor.dispose();
+                } catch (e) {
+                    console.warn('Monaco dispose error:', e);
+                }
+                monacoEditor = null;
+                isEditorReady = false;
+            }
+        }
+
+        function createMonacoEditor() {
+            disposeMonacoEditor();
+            
+            const container = createUniqueEditorContainer();
+            if (!container) return;
+
+            if (!monacoLoaded) {
+                require.config({ 
+                    paths: { vs: 'https://unpkg.com/monaco-editor@0.34.1/min/vs' },
+                    'vs/nls': {
+                        availableLanguages: {
+                            '*': 'en'
+                        }
+                    }
+                });
+                require(['vs/editor/editor.main'], function () {
+                    monacoLoaded = true;
+                    initEditor(container);
+                });
+            } else {
+                initEditor(container);
+            }
+        }
+
+        function initEditor(container) {
+            setTimeout(() => {
+                try {
+                    monacoEditor = monaco.editor.create(container, {
+                        value: '',
+                        language: 'javascript',
+                        theme: 'vs-light',
+                        automaticLayout: true,
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        wordWrap: 'on',
+                        scrollBeyondLastLine: false
+                    });
+
+                    isEditorReady = true;
+                    
+                    // Load any pending code
+                    if (pendingCodeLoad) {
+                        monacoEditor.setValue(pendingCodeLoad);
+                        pendingCodeLoad = null;
+                    } else {
+                        loadCodeIntoEditor();
+                    }
+                    
+                    console.log('Monaco editor initialized successfully');
+                } catch (error) {
+                    console.error('Monaco creation error:', error);
+                }
+            }, 200);
+        }
+
+        function loadCodeIntoEditor(forceCode = null) {
+            const currentDocId = juris.getState('currentDoc');
+            const doc = docFramework.getDoc(currentDocId);
+            const codeToLoad = forceCode || (doc && doc.code) || '';
+            
+            if (monacoEditor && isEditorReady) {
+                console.log('Loading code into Monaco:', currentDocId);
+                try {
+                    monacoEditor.setValue(codeToLoad);
+                    console.log('Code loaded successfully');
+                } catch (error) {
+                    console.error('Failed to load code:', error);
+                }
+            } else if (codeToLoad) {
+                console.log('Monaco not ready, storing pending code for:', currentDocId);
+                pendingCodeLoad = codeToLoad;
+            }
+        }
+
+        // FIXED: Document switching handler
+        function handleDocumentSwitch(newDocId, oldDocId) {
+            console.log('Document switch:', oldDocId, '->', newDocId);
+            
+            // If editor tab is active, update the code immediately
+            if (juris.getState('activeTab') === 'editor') {
+                const doc = docFramework.getDoc(newDocId);
+                if (doc && doc.code) {
+                    loadCodeIntoEditor(doc.code);
+                }
+            }
+        }
+
+        const docFramework = new DocumentFramework();
+
+        docFramework.addDoc('basic-components', {
+            title: 'Basic Component Creation',
+            category: 'Components',
+            description: 'Learn how to create and register basic Juris components using the component system.',
+            content: 'Juris components are the building blocks of your application. They can be simple functions that return VDOM objects or more complex components with lifecycle methods and state management.',
+            code: `const GreetingComponent = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                style: {
+                    border: "2px solid #ff6600",
+                    padding: "20px",
+                    borderRadius: "8px",
+                    textAlign: "center",
+                    backgroundColor: "#f0f0f0",
+                    marginBottom: "15px"
+                },
+                children: [
+                    {
+                        h2: {
+                            style: { fontSize: "24px", color: "#ff6600", marginBottom: "10px" },
+                            text: "Hello, Juris!"
+                        }
+                    },
+                    {
+                        p: {
+                            style: { fontSize: "16px", color: "#333", margin: "0" },
+                            text: "This is a complete Juris component rendered properly."
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+const demo = new Juris({
+    components: { GreetingComponent },
+    layout: { GreetingComponent: {} }
+});
+
+demo.render("#demo");`,
+            technicalDetails: {
+                'Component Types': 'Functional, Class-based, Hooks-based',
+                'Props System': 'Automatic prop injection and validation',
+                'Registration': 'Global component registry with name collision detection',
+                'Rendering': 'Efficient VDOM-based rendering system'
+            },
+            tags: ['components', 'basics', 'vdom', 'props'],
+            order: 1
+        });
+
+        docFramework.addDoc('state-reactive', {
+            title: 'State Management & Reactivity',
+            category: 'Core Concepts',
+            description: 'Understanding Juris reactive state system with automatic dependency tracking.',
+            content: 'Juris provides automatic reactivity through its state management system. When you use getState() in reactive contexts, components automatically re-render when dependencies change.',
+            code: `const CounterApp = (props, context) => {
+    const [getCount, setCount] = context.newState("count", 0);
+    const [getMessage, setMessage] = context.newState("message", "Click to increment!");
+    
+    return {
+        render: () => ({
+            div: {
+                style: {
+                    padding: "30px",
+                    textAlign: "center",
+                    border: "2px solid #3b82f6",
+                    borderRadius: "12px",
+                    backgroundColor: "#f8fafc",
+                    fontFamily: "Arial, sans-serif"
+                },
+                children: [
+                    {
+                        h1: {
+                            style: { color: "#1e293b", marginBottom: "20px" },
+                            text: "Reactive Counter"
+                        }
+                    },
+                    {
+                        div: {
+                            style: { 
+                                fontSize: "32px", 
+                                fontWeight: "bold",
+                                color: "#3b82f6",
+                                margin: "20px 0"
+                            },
+                            text: () => getCount()
+                        }
+                    },
+                    {
+                        p: {
+                            style: { color: "#64748b", marginBottom: "20px" },
+                            text: () => getMessage()
+                        }
+                    },
+                    {
+                        button: {
+                            text: "Increment",
+                            onclick: () => {
+                                const newCount = getCount() + 1;
+                                setCount(newCount);
+                                setMessage("Count is now " + newCount + "!");
+                            },
+                            style: {
+                                padding: "12px 24px",
+                                fontSize: "16px",
+                                backgroundColor: "#3b82f6",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                margin: "5px"
+                            }
+                        }
+                    },
+                    {
+                        button: {
+                            text: "Reset",
+                            onclick: () => {
+                                setCount(0);
+                                setMessage("Counter reset!");
+                            },
+                            style: {
+                                padding: "12px 24px",
+                                fontSize: "16px",
+                                backgroundColor: "#ef4444",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                margin: "5px"
+                            }
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+const stateDemo = new Juris({
+    components: { CounterApp },
+    layout: { CounterApp: {} }
+});
+
+stateDemo.render("#demo");`,
+            technicalDetails: {
+                'State Tracking': 'Automatic dependency detection and updates',
+                'Local State': 'Component-scoped state with newState() helper',
+                'Global State': 'Application-wide state with getState/setState',
+                'Batching': 'Automatic batching of state updates for performance'
+            },
+            tags: ['state', 'reactivity', 'components', 'hooks'],
+            order: 2
+        });
+
+        const juris = new Juris({
+            states: {
+                currentDoc: 'basic-components',
+                searchQuery: '',
+                activeTab: 'documentation',
+                consoleOutput: []
+            }
+        });
+
+        // Subscribe to currentDoc changes to handle Monaco synchronization
+        juris.subscribe('currentDoc', (newDocId) => {
+            console.log('Document changed to:', newDocId);
+            
+            // If editor tab is active, ensure Monaco exists and update it
+            if (juris.getState('activeTab') === 'editor') {
+                const doc = docFramework.getDoc(newDocId);
+                if (doc && doc.code) {
+                    if (monacoEditor && isEditorReady) {
+                        console.log('Updating existing Monaco editor with new code');
+                        setTimeout(() => {
+                            loadCodeIntoEditor(doc.code);
+                        }, 50);
+                    } else {
+                        console.log('Monaco not ready, creating editor and loading code');
+                        pendingCodeLoad = doc.code;
+                        createMonacoEditor();
+                    }
+                }
+            }
+        });
+
+        // FIXED: Enhanced document switching with proper Monaco synchronization
+        function switchToDocument(docId) {
+            const oldDocId = juris.getState('currentDoc');
+            if (oldDocId === docId) return; // No change needed
+            
+            console.log('Switching document from', oldDocId, 'to', docId);
+            juris.setState('currentDoc', docId);
+            window.history.pushState(null, '', '#' + docId);
+        }
+
+        const DocsApp = {
+            div: {
+                class: 'docs-container',
+                children: [
+                    {
+                        div: {
+                            class: 'sidebar',
+                            children: [
+                                {
+                                    div: {
+                                        class: 'sidebar-header',
+                                        children: [
+                                            { h1: { text: 'Juris' } },
+                                            { div: { class: 'version', text: 'v0.91.0 Documentation' } }
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        class: 'search-container',
+                                        children: [
+                                            {
+                                                input: {
+                                                    type: 'text',
+                                                    class: 'search-input',
+                                                    placeholder: 'Search documentation...',
+                                                    value: () => juris.getState('searchQuery', ''),
+                                                    oninput: (e) => juris.setState('searchQuery', e.target.value)
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        class: 'navigation',
+                                        children: () => {
+                                            const searchQuery = juris.getState('searchQuery', '');
+                                            const categories = docFramework.getFilteredCategories(searchQuery);
+                                            const currentDoc = juris.getState('currentDoc');
+
+                                            return categories.map(category => ({
+                                                div: {
+                                                    class: 'category',
+                                                    key: category.name,
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                class: 'category-header',
+                                                                children: [
+                                                                    { span: { class: 'category-icon', text: '▼' } },
+                                                                    { span: { text: category.name } }
+                                                                ]
+                                                            }
+                                                        },
+                                                        {
+                                                            div: {
+                                                                class: 'category-docs',
+                                                                children: () => {
+                                                                    let docs = docFramework.getCategoryDocs(category.name);
+                                                                    
+                                                                    if (searchQuery.trim()) {
+                                                                        const searchResults = docFramework.search(searchQuery);
+                                                                        docs = docs.filter(doc => searchResults.includes(doc.id));
+                                                                    }
+                                                                    
+                                                                    return docs.map(doc => ({
+                                                                        a: {
+                                                                            href: '#',
+                                                                            class: () => {
+                                                                                const current = juris.getState('currentDoc');
+                                                                                return 'doc-link' + (current === doc.id ? ' active' : '');
+                                                                            },
+                                                                            text: doc.title,
+                                                                            onclick: (e) => {
+                                                                                e.preventDefault();
+                                                                                switchToDocument(doc.id);
+                                                                                createMonacoEditor();
+                                                                                setTimeout(() => runCode(doc.code), 0);
+                                                                            }
+                                                                        }
+                                                                    }));
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }));
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        div: {
+                            class: 'main-content',
+                            children: [
+                                {
+                                    div: {
+                                        class: 'content-header',
+                                        children: () => {
+                                            const currentDocId = juris.getState('currentDoc');
+                                            const doc = docFramework.getDoc(currentDocId);
+                                            
+                                            if (!doc) return [{ div: { text: 'Loading...' } }];
+
+                                            return [
+                                                { h1: { class: 'content-title', text: doc.title } },
+                                                { p: { class: 'content-description', text: doc.description } }
+                                            ];
+                                        }
+                                    }
+                                },
+                                {
+                                    div: {
+                                        class: 'content-body',
+                                        children: [
+                                            {
+                                                div: {
+                                                    class: 'content-panel',
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                class: 'panel-tabs',
+                                                                children: [
+                                                                    {
+                                                                        div: {
+                                                                            class: () => {
+                                                                                const activeTab = juris.getState('activeTab');
+                                                                                return 'panel-tab' + (activeTab === 'documentation' ? ' active' : '');
+                                                                            },
+                                                                            text: 'Documentation',
+                                                                            onclick: () => {
+                                                                                juris.setState('activeTab', 'documentation');
+                                                                                disposeMonacoEditor();
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        div: {
+                                                                            class: () => {
+                                                                                const activeTab = juris.getState('activeTab');
+                                                                                return 'panel-tab' + (activeTab === 'editor' ? ' active' : '');
+                                                                            },
+                                                                            text: 'Code Editor',
+                                                                            onclick: () => {
+                                                                                juris.setState('activeTab', 'editor');
+                                                                                setTimeout(() => {
+                                                                                    createMonacoEditor();
+                                                                                }, 0);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        },
+                                                        {
+                                                            div: {
+                                                                class: 'panel-content',
+                                                                children: () => {
+                                                                    const activeTab = juris.getState('activeTab');
+                                                                    
+                                                                    if (activeTab === 'documentation') {
+                                                                        return renderDocumentation();
+                                                                    } else {
+                                                                        return renderEditor();
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    class: 'preview-panel',
+                                                    children: [
+                                                        { div: { class: 'preview-header', text: 'Live Preview' } },
+                                                        { div: { id: 'demo', class: 'preview-demo' } },
+                                                        {
+                                                            div: {
+                                                                class: 'preview-console',
+                                                                children: () => {
+                                                                    const logs = juris.getState('consoleOutput', []);
+                                                                    return logs.map((log, index) => ({
+                                                                        div: {
+                                                                            key: index,
+                                                                            class: 'console-log' + (log.type === 'error' ? ' console-error' : ''),
+                                                                            text: log.message
+                                                                        }
+                                                                    }));
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        class: 'navigation-footer',
+                                        children: () => {
+                                            const currentDocId = juris.getState('currentDoc');
+                                            const navigation = docFramework.getNavigation(currentDocId);
+                                            
+                                            return [
+                                                navigation.previous ? {
+                                                    a: {
+                                                        href: '#',
+                                                        class: 'nav-link',
+                                                        onclick: (e) => {
+                                                            e.preventDefault();
+                                                            switchToDocument(navigation.previous.id);
+                                                        },
+                                                        children: [
+                                                            { span: { text: '← Previous' } },
+                                                            { span: { text: navigation.previous.title } }
+                                                        ]
+                                                    }
+                                                } : { div: {} },
+                                                
+                                                {
+                                                    button: {
+                                                        class: 'btn share-button',
+                                                        text: 'Share',
+                                                        onclick: () => {
+                                                            const url = window.location.origin + window.location.pathname + '#' + currentDocId;
+                                                            navigator.clipboard.writeText(url).then(() => {
+                                                                alert('Link copied to clipboard!');
+                                                            });
+                                                        }
+                                                    }
+                                                },
+                                                
+                                                navigation.next ? {
+                                                    a: {
+                                                        href: '#',
+                                                        class: 'nav-link',
+                                                        onclick: (e) => {
+                                                            e.preventDefault();
+                                                            switchToDocument(navigation.next.id);
+                                                        },
+                                                        children: [
+                                                            { span: { text: 'Next →' } },
+                                                            { span: { text: navigation.next.title } }
+                                                        ]
+                                                    }
+                                                } : { div: {} }
+                                            ];
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        };
+
+        function renderDocumentation() {
+            const currentDocId = juris.getState('currentDoc');
+            const doc = docFramework.getDoc(currentDocId);
+            
+            if (!doc) {
+                return [{ div: { class: 'loading', text: 'Loading documentation...' } }];
+            }
+
+            return [{
+                div: {
+                    class: 'doc-content',
+                    children: [
+                        { p: { text: doc.content } },
+                        
+                        doc.technicalDetails ? {
+                            div: {
+                                class: 'technical-details',
+                                children: [
+                                    { h4: { text: 'Technical Details' } },
+                                    {
+                                        dl: {
+                                            children: Object.entries(doc.technicalDetails).flatMap(([key, value]) => [
+                                                { dt: { text: key } },
+                                                { dd: { text: value } }
+                                            ])
+                                        }
+                                    }
+                                ]
+                            }
+                        } : null,
+                        
+                        doc.tags && doc.tags.length > 0 ? {
+                            div: {
+                                class: 'tags',
+                                children: doc.tags.map(tag => ({
+                                    span: { class: 'tag', text: tag }
+                                }))
+                            }
+                        } : null
+                    ].filter(Boolean)
+                }
+            }];
+        }
+
+        function renderEditor() {
+            return [{
+                div: {
+                    class: 'editor-container',
+                    children: [
+                        {
+                            div: {
+                                class: 'editor-header',
+                                children: [
+                                    { span: { class: 'editor-title', text: 'JavaScript Editor' } },
+                                    {
+                                        div: {
+                                            class: 'editor-actions',
+                                            children: [
+                                                {
+                                                    button: {
+                                                        class: 'btn',
+                                                        text: 'Reset',
+                                                        onclick: () => {
+                                                            const currentDocId = juris.getState('currentDoc');
+                                                            const doc = docFramework.getDoc(currentDocId);
+                                                            if (doc && doc.code) {
+                                                                loadCodeIntoEditor(doc.code);
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    button: {
+                                                        class: 'btn btn-primary',
+                                                        text: 'Run Code',
+                                                        onclick: () => {
+                                                            if (monacoEditor && isEditorReady) {
+                                                                runCode(monacoEditor.getValue());
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        { div: { id: 'monaco-editor-base', class: 'monaco-editor-container' } }
+                    ]
+                }
+            }];
+        }
+
+        function runCode(code) {
+            const demoContainer = document.getElementById('demo');
+            demoContainer.innerHTML = '';
+            
+            juris.setState('consoleOutput', []);
+            
+            try {
+                const mockConsole = {
+                    log: (...args) => {
+                        const logs = juris.getState('consoleOutput', []);
+                        juris.setState('consoleOutput', [...logs, {
+                            type: 'log',
+                            message: args.join(' ')
+                        }]);
+                    },
+                    error: (...args) => {
+                        const logs = juris.getState('consoleOutput', []);
+                        juris.setState('consoleOutput', [...logs, {
+                            type: 'error',
+                            message: args.join(' ')
+                        }]);
+                    }
+                };
+                
+                const func = new Function('console', 'Juris', code);
+                func(mockConsole, Juris);
+                
+            } catch (error) {
+                const logs = juris.getState('consoleOutput', []);
+                juris.setState('consoleOutput', [...logs, {
+                    type: 'error',
+                    message: 'Error: ' + error.message
+                }]);
+            }
+        }
+
+        function handleHashChange() {
+            const hash = window.location.hash.substring(1);
+            if (hash && docFramework.getDoc(hash)) {
+                switchToDocument(hash);
+            }
+        }
+
+        window.addEventListener('hashchange', handleHashChange);
+        window.addEventListener('load', handleHashChange);
+
+        juris.layout = DocsApp;
+        juris.render('#app');
+
+        // Run initial demo
+        const initialDoc = docFramework.getDoc(juris.getState('currentDoc'));
+        if (initialDoc && initialDoc.code) {
+            setTimeout(() => runCode(initialDoc.code), 500);
+        }
+    </script>
+</body>
+</html>

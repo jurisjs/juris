@@ -1,0 +1,2322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Framework Documentation</title>
+    <script src="https://unpkg.com/monaco-editor@0.34.1/min/vs/loader.js"></script>
+     <link href="https://unpkg.com/tailwindcss@1.9.6/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box;
+            transition: none !important;
+            animation: none !important;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .docs-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: right;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header .version {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .search-container {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .navigation {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 0;
+        }
+
+        .bookmarks-section {
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 1rem;
+        }
+
+        .bookmarks-header {
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .bookmark-button {
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .bookmark-button:hover {
+            background: #e2e8f0;
+            color: #374151;
+        }
+
+        .bookmark-button.bookmarked {
+            color: #3b82f6;
+        }
+
+        .bookmarks-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .bookmark-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-left: 3px solid transparent;
+            font-size: 0.875rem;
+        }
+
+        .bookmark-link {
+            flex: 1;
+            color: #64748b;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .bookmark-link:hover {
+            color: #1e293b;
+        }
+
+        .bookmark-link.active {
+            color: #2563eb;
+            font-weight: 500;
+        }
+
+        .bookmark-remove {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0.125rem;
+            border-radius: 0.25rem;
+            font-size: 0.625rem;
+            opacity: 0;
+        }
+
+        .bookmark-item:hover .bookmark-remove {
+            opacity: 1;
+        }
+
+        .bookmark-remove:hover {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .empty-bookmarks {
+            padding: 1rem;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-style: italic;
+        }
+
+        .category {
+            margin-bottom: 0.5rem;
+        }
+
+        .category-header {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            user-select: none;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .category-header:hover {
+            background: #f1f5f9;
+        }
+
+        .category-icon {
+            font-size: 0.75rem;
+        }
+
+        .category.collapsed .category-icon {
+            transform: rotate(-90deg);
+        }
+
+        .category-docs {
+            margin-left: 1rem;
+            border-left: 2px solid #f1f5f9;
+        }
+
+        .category.collapsed .category-docs {
+            display: none;
+        }
+
+        .doc-link {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.875rem;
+            border-left: 3px solid transparent;
+        }
+
+        .doc-link:hover {
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .doc-link.active {
+            background: #eff6ff;
+            color: #2563eb;
+            border-left-color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .content-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .content-description {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .content-body {
+            flex: 1;
+            display: flex;
+        }
+
+        .content-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .panel-tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+        }
+
+        .panel-tab:hover {
+            color: #1e293b;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .panel-tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            background: white;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .doc-content {
+            padding: 2rem;
+            overflow-y: auto;
+            height: 100%;
+            line-height: 1.7;
+        }
+
+        .doc-content h1, .doc-content h2, .doc-content h3 {
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .doc-content h1 { font-size: 2.25rem; margin-bottom: 2rem; }
+        .doc-content h2 { font-size: 1.5rem; margin-top: 2rem; }
+        .doc-content h3 { font-size: 1.25rem; margin-top: 1.5rem; }
+
+        .doc-content p {
+            margin-bottom: 1.25rem;
+            color: #475569;
+        }
+
+        .technical-details {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .technical-details h4 {
+            color: #374151;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .technical-details dl {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 0.75rem;
+        }
+
+        .technical-details dt {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .technical-details dd {
+            color: #64748b;
+        }
+
+        .tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .tag {
+            background: #eff6ff;
+            color: #2563eb;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .editor-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-header {
+            padding: 1rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background: white;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .monaco-editor-container {
+            flex: 1;
+        }
+
+        .preview-panel {
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .preview-header {
+            padding: 1rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+
+        .preview-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .preview-demo {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .preview-console {
+            padding: 1rem;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.75rem;
+            overflow-y: auto;
+            max-height: 200px;
+        }
+
+        .console-log {
+            margin-bottom: 0.25rem;
+            padding: 0.25rem 0;
+        }
+
+        .console-error {
+            color: #ef4444;
+        }
+
+        .navigation-footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid #e2e8f0;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background: white;
+            color: #374151;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .nav-link:hover:not(.disabled) {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .nav-link.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .share-button {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .share-button:hover {
+            background: #059669;
+        }
+
+        .no-results {
+            padding: 2rem;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.875rem;
+            font-style: italic;
+        }
+
+        /* Mobile menu toggle */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1000;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            cursor: pointer;
+            font-size: 1.25rem;
+        }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .preview-panel {
+                width: 300px;
+            }
+            
+            .sidebar {
+                width: 280px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            .docs-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -320px;
+                width: 320px;
+                height: 100vh;
+                z-index: 999;
+                transform: translateX(0);
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.mobile-open {
+                left: 0;
+            }
+
+            .mobile-overlay.active {
+                display: block;
+            }
+
+            .main-content {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .content-body {
+                flex-direction: column;
+            }
+
+            .preview-panel {
+                width: 100%;
+                order: -1;
+                max-height: 300px;
+            }
+
+            .content-panel {
+                order: 1;
+            }
+
+            .content-header {
+                padding: 1rem;
+                margin-top: 3.5rem;
+            }
+
+            .content-title {
+                font-size: 1.5rem;
+            }
+
+            .panel-tabs {
+                flex-wrap: wrap;
+            }
+
+            .panel-tab {
+                flex: 1;
+                text-align: center;
+            }
+
+            .navigation-footer {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-link {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar-header {
+                padding: 1rem;
+            }
+
+            .sidebar-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .content-header {
+                padding: 0.75rem;
+            }
+
+            .content-title {
+                font-size: 1.25rem;
+            }
+
+            .doc-content {
+                padding: 1rem;
+            }
+
+            .panel-tab {
+                padding: 0.75rem 1rem;
+                font-size: 0.75rem;
+            }
+
+            .editor-header {
+                padding: 0.75rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .editor-actions {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            .preview-panel {
+                max-height: 250px;
+            }
+
+            .preview-console {
+                max-height: 120px;
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="../src/juris.js"></script>    
+    <script src="../docs/juris-document.js"></script>    
+
+    <script>
+        // Monaco Editor Management
+        let monacoEditor = null;
+        let monacoLoaded = false;
+        let editorContainerCounter = 0;
+        let pendingCodeLoad = null;
+        let isEditorReady = false;
+
+        function createUniqueEditorContainer() {
+            const baseContainer = document.getElementById('monaco-editor-base');
+            if (!baseContainer) return null;
+
+            if (monacoEditor && isEditorReady && baseContainer.children.length > 0) {
+                return baseContainer.children[0];
+            }
+
+            baseContainer.innerHTML = '';
+            
+            const uniqueContainer = document.createElement('div');
+            uniqueContainer.id = 'monaco-' + (++editorContainerCounter);
+            uniqueContainer.style.cssText = 'width: 100%; height: 100%;';
+            baseContainer.appendChild(uniqueContainer);
+            
+            return uniqueContainer;
+        }
+
+        function disposeMonacoEditor() {
+            if (monacoEditor) {
+                try {
+                    monacoEditor.dispose();
+                } catch (e) {
+                    console.warn('Monaco dispose error:', e);
+                }
+                monacoEditor = null;
+                isEditorReady = false;
+            }
+        }
+
+        function createMonacoEditor() {
+            disposeMonacoEditor();
+            
+            const container = createUniqueEditorContainer();
+            if (!container) return;
+
+            if (!monacoLoaded) {
+                require.config({ 
+                    paths: { vs: 'https://unpkg.com/monaco-editor@0.34.1/min/vs' },
+                    'vs/nls': {
+                        availableLanguages: {
+                            '*': 'en'
+                        }
+                    }
+                });
+                require(['vs/editor/editor.main'], function () {
+                    monacoLoaded = true;
+                    initEditor(container);
+                });
+            } else {
+                initEditor(container);
+            }
+        }
+
+        function initEditor(container) {
+            setTimeout(() => {
+                try {
+                    monacoEditor = monaco.editor.create(container, {
+                        value: '',
+                        language: 'javascript',
+                        theme: 'vs-light',
+                        automaticLayout: true,
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        wordWrap: 'on',
+                        scrollBeyondLastLine: false
+                    });
+
+                    isEditorReady = true;
+                    
+                    if (pendingCodeLoad) {
+                        monacoEditor.setValue(pendingCodeLoad);
+                        pendingCodeLoad = null;
+                    } else {
+                        loadCodeIntoEditor();
+                    }
+                } catch (error) {
+                    console.error('Monaco creation error:', error);
+                }
+            }, 200);
+        }
+
+        function loadCodeIntoEditor(forceCode = null) {
+            const currentDocId = juris.getState('currentDoc');
+            const doc = docFramework.getDoc(currentDocId);
+            const codeToLoad = forceCode || (doc && doc.code) || '';
+            
+            if (monacoEditor && isEditorReady) {
+                try {
+                    monacoEditor.setValue(codeToLoad);
+                } catch (error) {
+                    console.error('Failed to load code:', error);
+                }
+            } else if (codeToLoad) {
+                pendingCodeLoad = codeToLoad;
+            }
+        }
+
+        const docFramework = new DocumentFramework();
+
+        // Beginner-Friendly Juris Documentation with Tailwind CSS
+
+// 1. Your First Juris Component
+docFramework.addDoc('first-component', {
+    title: 'Your First Juris Component',
+    category: 'Getting Started',
+    description: 'Create your very first Juris component in 5 minutes.',
+    content: 'A Juris component is just a function that returns an object describing what you want to show on the page. Think of it like writing HTML, but with JavaScript objects instead of tags.',
+    code: `// Step 1: Create a simple component
+const HelloWorld = () => {
+    return {
+        div: {
+            class: "p-4 bg-blue-100 rounded-lg text-center",
+            text: "Hello, World!"
+        }
+    };
+};
+
+// Step 2: Create a Juris app and tell it about your component
+const app = new Juris({
+    components: { HelloWorld },
+    layout: { HelloWorld: {} }
+});
+
+// Step 3: Show it on the page
+app.render("#demo");`,
+    technicalDetails: {
+        'Component Function': 'A component is just a JavaScript function that returns an object. The object describes what HTML elements you want to create.',
+        'Object Structure': 'Use the HTML tag name as the key (like "div", "p", "button"). The value is another object with properties like "class", "text", and "children".',
+        'Registration': 'Add your component to the "components" object when creating your Juris app. Use the same name you gave your function.',
+        'Layout': 'The "layout" tells Juris which components to show when the app starts. Use {} for components that don\'t need any special data.',
+        'Rendering': 'Call app.render() with a CSS selector (like "#demo") to tell Juris where to put your component on the page.'
+    },
+    tags: ['beginner', 'first-steps', 'components'],
+    order: 1
+});
+
+// 2. Adding Buttons and Click Events
+docFramework.addDoc('buttons-clicks', {
+    title: 'Buttons and Click Events',
+    category: 'Getting Started',
+    description: 'Learn how to add buttons that do something when clicked.',
+    content: 'Interactive elements like buttons are easy in Juris. Just add an "onclick" property to your button object.',
+    code: `const ClickDemo = () => {
+    return {
+        div: {
+            class: "p-6 bg-gray-50 rounded-lg text-center space-y-4",
+            children: [
+                {
+                    h2: {
+                        class: "text-2xl font-bold text-gray-800 mb-4",
+                        text: "Click the Buttons!"
+                    }
+                },
+                {
+                    button: {
+                        class: "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600",
+                        text: "Say Hello",
+                        onclick: () => {
+                            alert("Hello there!");
+                        }
+                    }
+                },
+                {
+                    button: {
+                        class: "px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 ml-2",
+                        text: "Show Time",
+                        onclick: () => {
+                            alert("The time is: " + new Date().toLocaleTimeString());
+                        }
+                    }
+                },
+                {
+                    button: {
+                        class: "px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 ml-2",
+                        text: "Random Number",
+                        onclick: () => {
+                            const randomNum = Math.floor(Math.random() * 100) + 1;
+                            alert("Your random number is: " + randomNum);
+                        }
+                    }
+                }
+            ]
+        }
+    };
+};
+
+const app = new Juris({
+    components: { ClickDemo },
+    layout: { ClickDemo: {} }
+});
+
+app.render("#demo");`,
+    technicalDetails: {
+        'Click Events': 'Add onclick: () => { /* your code */ } to any element to make it clickable. The code inside the function runs when clicked.',
+        'Arrow Functions': 'The () => syntax is a modern JavaScript way to write functions. It\'s shorter than writing function() {}.',
+        'Alert Boxes': 'alert() shows a popup message. It\'s great for testing, but real apps usually update the page content instead.',
+        'Children Array': 'When you want multiple elements inside a container, use "children" with an array of objects.',
+        'CSS Classes': 'Tailwind classes like "hover:bg-blue-600" automatically change the button color when you hover over it.'
+    },
+    tags: ['beginner', 'events', 'buttons', 'interactivity'],
+    order: 2
+});
+
+// 3. Working with Text Input
+docFramework.addDoc('text-input', {
+    title: 'Text Input and Forms',
+    category: 'Getting Started',
+    description: 'Get text from users with input fields and forms.',
+    content: 'Input fields let users type text into your app. You can read what they typed and use it in your code.',
+    code: `const GreetingForm = () => {
+    return {
+        div: {
+            class: "p-6 bg-white rounded-lg shadow-md max-w-md mx-auto",
+            children: [
+                {
+                    h2: {
+                        class: "text-xl font-bold text-gray-800 mb-4",
+                        text: "What's Your Name?"
+                    }
+                },
+                {
+                    input: {
+                        type: "text",
+                        placeholder: "Enter your name here...",
+                        class: "w-full p-2 border border-gray-300 rounded mb-4 focus:border-blue-500 focus:outline-none",
+                        id: "nameInput"
+                    }
+                },
+                {
+                    button: {
+                        class: "w-full py-2 bg-blue-500 text-white rounded hover:bg-blue-600",
+                        text: "Greet Me!",
+                        onclick: () => {
+                            // Get the text from the input field
+                            const nameInput = document.getElementById('nameInput');
+                            const userName = nameInput.value;
+                            
+                            if (userName.trim() === '') {
+                                alert('Please enter your name first!');
+                            } else {
+                                alert('Hello, ' + userName + '! Nice to meet you!');
+                            }
+                        }
+                    }
+                },
+                {
+                    div: {
+                        class: "mt-4 p-3 bg-gray-100 rounded text-sm text-gray-600",
+                        children: [
+                            {
+                                p: {
+                                    text: "💡 Tip: Try typing your name and clicking the button!"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    };
+};
+
+const app = new Juris({
+    components: { GreetingForm },
+    layout: { GreetingForm: {} }
+});
+
+app.render("#demo");`,
+    technicalDetails: {
+        'Input Elements': 'Use type: "text" for text input, type: "email" for email, type: "number" for numbers, etc.',
+        'Placeholder Text': 'The placeholder shows gray text inside the input to hint what users should type.',
+        'Getting Input Values': 'Use document.getElementById() to find your input, then .value to get what the user typed.',
+        'ID Attribute': 'Give your input an id so you can find it later with JavaScript.',
+        'Input Validation': 'Always check if the input is empty with .trim() === \'\' before using it.'
+    },
+    tags: ['beginner', 'forms', 'input', 'user-data'],
+    order: 3
+});
+
+// 4. Making Things Change (Basic State)
+docFramework.addDoc('basic-state', {
+    title: 'Making Things Change on the Page',
+    category: 'Getting Started',
+    description: 'Learn how to make your page update when things happen.',
+    content: 'Sometimes you want text or other content to change when users interact with your app. Juris makes this easy with "state" - think of it as the app\'s memory.',
+    code: `const CounterApp = (props, context) => {
+    // Create a piece of memory to store a number
+    const [getCount, setCount] = context.newState('count', 0);
+    
+    return {
+        div: {
+            class: "p-6 bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg text-center max-w-sm mx-auto",
+            children: [
+                {
+                    h2: {
+                        class: "text-2xl font-bold text-blue-800 mb-4",
+                        text: "Simple Counter"
+                    }
+                },
+                {
+                    div: {
+                        class: "text-6xl font-bold text-blue-600 mb-6",
+                        // This text changes automatically when count changes!
+                        text: () => getCount()
+                    }
+                },
+                {
+                    div: {
+                        class: "space-x-2",
+                        children: [
+                            {
+                                button: {
+                                    class: "px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600",
+                                    text: "Add 1",
+                                    onclick: () => {
+                                        const currentCount = getCount();
+                                        setCount(currentCount + 1);
+                                    }
+                                }
+                            },
+                            {
+                                button: {
+                                    class: "px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600",
+                                    text: "Subtract 1",
+                                    onclick: () => {
+                                        const currentCount = getCount();
+                                        setCount(currentCount - 1);
+                                    }
+                                }
+                            },
+                            {
+                                button: {
+                                    class: "px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600",
+                                    text: "Reset",
+                                    onclick: () => {
+                                        setCount(0);
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    p: {
+                        class: "mt-4 text-sm text-gray-600",
+                        text: () => {
+                            const count = getCount();
+                            if (count === 0) return "Starting fresh!";
+                            if (count > 0) return \`You're up by \${count}!\`;
+                            return \`You're down by \${Math.abs(count)}!\`;
+                        }
+                    }
+                }
+            ]
+        }
+    };
+};
+
+const app = new Juris({
+    components: { CounterApp },
+    layout: { CounterApp: {} }
+});
+
+app.render("#demo");`,
+    technicalDetails: {
+        'State Creation': 'context.newState("name", startingValue) creates a piece of memory. It returns two functions: one to read the value, one to change it.',
+        'Getter Function': 'The first returned function (getCount) reads the current value. Call it like getCount() to get the number.',
+        'Setter Function': 'The second returned function (setCount) changes the value. Call it like setCount(newValue) to update.',
+        'Reactive Text': 'When you use text: () => getCount(), the text automatically updates when the state changes. The () => makes it "reactive".',
+        'Context Parameter': 'Your component function needs (props, context) parameters to access newState. This is how Juris gives you state powers.'
+    },
+    tags: ['beginner', 'state', 'reactivity', 'counter'],
+    order: 4
+});
+
+// 5. Showing and Hiding Things
+docFramework.addDoc('show-hide', {
+    title: 'Showing and Hiding Things',
+    category: 'Getting Started',  
+    description: 'Learn how to show or hide parts of your page based on conditions.',
+    content: 'Sometimes you only want to show certain content when something is true. Like showing a "Welcome back!" message only when someone is logged in.',
+    code: `const ShowHideDemo = (props, context) => {
+    const [getIsVisible, setIsVisible] = context.newState('isVisible', false);
+    const [getName, setName] = context.newState('name', '');
+    
+    return {
+        div: {
+            class: "p-6 bg-white rounded-lg shadow-md max-w-md mx-auto space-y-4",
+            children: [
+                {
+                    h2: {
+                        class: "text-xl font-bold text-gray-800",
+                        text: "Show/Hide Demo"
+                    }
+                },
+                
+                // Toggle button
+                {
+                    button: {
+                        class: () => \`px-4 py-2 rounded text-white \${
+                            getIsVisible() 
+                                ? 'bg-red-500 hover:bg-red-600' 
+                                : 'bg-green-500 hover:bg-green-600'
+                        }\`,
+                        text: () => getIsVisible() ? 'Hide Message' : 'Show Message',
+                        onclick: () => setIsVisible(!getIsVisible())
+                    }
+                },
+                
+                // Conditional content - only shows when isVisible is true
+                () => {
+                    if (getIsVisible()) {
+                        return {
+                            div: {
+                                class: "p-4 bg-blue-100 border-l-4 border-blue-500 rounded",
+                                children: [
+                                    {
+                                        p: {
+                                            class: "text-blue-800 font-medium",
+                                            text: "🎉 Surprise! You can see this message now!"
+                                        }
+                                    },
+                                    {
+                                        p: {
+                                            class: "text-blue-600 text-sm mt-1",
+                                            text: "This content appears and disappears based on the button above."
+                                        }
+                                    }
+                                ]
+                            }
+                        };
+                    }
+                    return null; // Return null to show nothing
+                },
+                
+                // Name input section
+                {
+                    div: {
+                        class: "border-t pt-4",
+                        children: [
+                            {
+                                label: {
+                                    class: "block text-sm font-medium text-gray-700 mb-1",
+                                    text: "Enter your name:"
+                                }
+                            },
+                            {
+                                input: {
+                                    type: "text",
+                                    class: "w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:outline-none",
+                                    value: () => getName(),
+                                    oninput: (e) => setName(e.target.value),
+                                    placeholder: "Type your name..."
+                                }
+                            }
+                        ]
+                    }
+                },
+                
+                // Conditional greeting - only shows when name is not empty
+                () => {
+                    const name = getName().trim();
+                    if (name) {
+                        return {
+                            div: {
+                                class: "p-3 bg-green-100 border border-green-300 rounded",
+                                children: [
+                                    {
+                                        p: {
+                                            class: "text-green-800 font-medium",
+                                            text: \`Hello, \${name}! 👋\`
+                                        }
+                                    }
+                                ]
+                            }
+                        };
+                    }
+                    return null;
+                }
+            ]
+        }
+    };
+};
+
+const app = new Juris({
+    components: { ShowHideDemo },
+    layout: { ShowHideDemo: {} }
+});
+
+app.render("#demo");`,
+    technicalDetails: {
+        'Conditional Rendering': 'Use () => { if (condition) return element; return null; } to show things conditionally. Return null to show nothing.',
+        'Boolean State': 'Store true/false values in state to control visibility. Use !getIsVisible() to flip between true and false.',
+        'Dynamic Classes': 'Use template strings with \${} to change CSS classes based on state. This lets you style things differently based on conditions.',
+        'Input Binding': 'Use value: () => getName() and oninput: (e) => setName(e.target.value) to connect input fields to state.',
+        'String Methods': 'Use .trim() to remove spaces from the beginning and end of text. Check if text exists with if (name) before showing it.'
+    },
+    tags: ['beginner', 'conditional', 'visibility', 'dynamic-content'],
+    order: 5
+});
+
+// 6. Making Lists of Things
+docFramework.addDoc('simple-lists', {
+    title: 'Making Lists of Things',
+    category: 'Getting Started',
+    description: 'Learn how to show lists of items like shopping lists or todo lists.',
+    content: 'Most apps need to show lists of things - like a list of friends, products to buy, or tasks to complete. Juris makes this easy with JavaScript arrays.',
+    code: `const SimpleList = (props, context) => {
+    // Start with some example items
+    const [getItems, setItems] = context.newState('items', [
+        'Buy groceries',
+        'Walk the dog', 
+        'Learn Juris',
+        'Make dinner'
+    ]);
+    
+    const [getNewItem, setNewItem] = context.newState('newItem', '');
+    
+    const addItem = () => {
+        const item = getNewItem().trim();
+        if (item) {
+            const currentItems = getItems();
+            setItems([...currentItems, item]); // Add new item to the end
+            setNewItem(''); // Clear the input
+        }
+    };
+    
+    const removeItem = (indexToRemove) => {
+        const currentItems = getItems();
+        const newItems = currentItems.filter((item, index) => index !== indexToRemove);
+        setItems(newItems);
+    };
+    
+    return {
+        div: {
+            class: "p-6 bg-white rounded-lg shadow-md max-w-md mx-auto",
+            children: [
+                {
+                    h2: {
+                        class: "text-xl font-bold text-gray-800 mb-4",
+                        text: "My Todo List"
+                    }
+                },
+                
+                // Add new item section
+                {
+                    div: {
+                        class: "flex space-x-2 mb-4",
+                        children: [
+                            {
+                                input: {
+                                    type: "text",
+                                    class: "flex-1 p-2 border border-gray-300 rounded focus:border-blue-500 focus:outline-none",
+                                    placeholder: "Add new task...",
+                                    value: () => getNewItem(),
+                                    oninput: (e) => setNewItem(e.target.value),
+                                    onkeypress: (e) => {
+                                        if (e.key === 'Enter') {
+                                            addItem();
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                button: {
+                                    class: "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600",
+                                    text: "Add",
+                                    onclick: addItem
+                                }
+                            }
+                        ]
+                    }
+                },
+                
+                // The list of items
+                {
+                    div: {
+                        class: "space-y-2",
+                        children: () => {
+                            const items = getItems();
+                            
+                            if (items.length === 0) {
+                                return [{
+                                    div: {
+                                        class: "text-center text-gray-500 py-8",
+                                        text: "No tasks yet! Add one above. 📝"
+                                    }
+                                }];
+                            }
+                            
+                            return items.map((item, index) => ({
+                                div: {
+                                    class: "flex justify-between items-center p-3 bg-gray-50 rounded border",
+                                    children: [
+                                        {
+                                            span: {
+                                                class: "flex-1 text-gray-800",
+                                                text: item
+                                            }
+                                        },
+                                        {
+                                            button: {
+                                                class: "px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600",
+                                                text: "Done",
+                                                onclick: () => removeItem(index)
+                                            }
+                                        }
+                                    ]
+                                }
+                            }));
+                        }
+                    }
+                },
+                
+                // Show count
+                {
+                    div: {
+                        class: "mt-4 pt-4 border-t text-center text-sm text-gray-600",
+                        children: [
+                            {
+                                p: {
+                                    text: () => {
+                                        const count = getItems().length;
+                                        return count === 0 ? "No tasks" :
+                                               count === 1 ? "1 task remaining" :
+                                               \`\${count} tasks remaining\`;
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    };
+};
+
+const app = new Juris({
+    components: { SimpleList },
+    layout: { SimpleList: {} }
+});
+
+app.render("#demo");`,
+    technicalDetails: {
+        'Array State': 'Store lists in state using arrays like ["item1", "item2"]. Use getItems() to read the array and setItems() to change it.',
+        'Adding Items': 'Use [...currentItems, newItem] to add items. The ... spreads the old items and adds the new one at the end.',
+        'Removing Items': 'Use .filter((item, index) => index !== indexToRemove) to remove items by their position in the array.',
+        'Mapping Arrays': 'Use .map() to turn each item in your array into a component. The index parameter tells you which item number it is.',
+        'Enter Key Detection': 'Use onkeypress: (e) => { if (e.key === "Enter") { /* do something */ } } to detect when users press Enter.'
+    },
+    tags: ['beginner', 'lists', 'arrays', 'todo', 'crud'],
+    order: 6
+});
+
+docFramework.addDoc('dynamic-styling', {
+    title: 'Dynamic Styling with Tailwind',
+    category: 'UI Patterns',
+    description: 'Learn how to create dynamic, interactive styling that responds to user actions and state changes.',
+    content: 'Dynamic styling allows your components to change appearance based on user interactions, state, or conditions. This creates engaging, responsive interfaces that feel alive and interactive. You can combine Tailwind utility classes with reactive functions to achieve powerful styling effects.',
+    
+    // Copy-able code snippet for display in documentation
+    codeSnippet: `const DynamicButton = (props, context) => {
+    const [getTheme, setTheme] = context.newState('theme', 'blue');
+    const [getIsActive, setIsActive] = context.newState('isActive', false);
+    
+    const themes = {
+        blue: 'bg-blue-500 hover:bg-blue-600',
+        green: 'bg-green-500 hover:bg-green-600',
+        red: 'bg-red-500 hover:bg-red-600'
+    };
+    
+    return {
+        div: {
+            class: "p-4 space-y-4",
+            children: [
+                // Theme selector
+                {
+                    select: {
+                        class: "p-2 border border-gray-300 rounded",
+                        value: () => getTheme(),
+                        onchange: (e) => setTheme(e.target.value),
+                        children: Object.keys(themes).map(theme => ({
+                            option: { 
+                                value: theme, 
+                                text: theme.charAt(0).toUpperCase() + theme.slice(1)
+                            }
+                        }))
+                    }
+                },
+                
+                // Dynamic button with state-based styling
+                {
+                    button: {
+                        class: () => \`\${themes[getTheme()]} px-6 py-3 text-white rounded-lg font-medium transition-all duration-200 transform \${
+                            getIsActive() ? 'scale-95 shadow-lg' : 'hover:scale-105 shadow-md'
+                        }\`,
+                        text: () => getIsActive() ? 'Active!' : 'Click Me',
+                        onclick: () => setIsActive(!getIsActive())
+                    }
+                },
+                
+                // Status display
+                {
+                    div: {
+                        class: () => \`mt-4 p-3 rounded border-l-4 \${
+                            getIsActive() 
+                                ? 'bg-green-50 border-green-400 text-green-800' 
+                                : 'bg-gray-50 border-gray-400 text-gray-600'
+                        }\`,
+                        children: [
+                            {
+                                p: {
+                                    text: () => \`Status: \${getIsActive() ? 'Active' : 'Inactive'}\`
+                                }
+                            },
+                            {
+                                p: {
+                                    class: "text-sm mt-1",
+                                    text: () => \`Current theme: \${getTheme()}\`
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    };
+};
+
+const app = new Juris({
+    components: { DynamicButton },
+    layout: { DynamicButton: {} }
+});
+
+app.render("#demo");`,
+
+    technicalDetails: {
+        'Dynamic Classes': 'Use template literals with ${} to insert state values into class strings. This allows classes to change based on component state.',
+        'Tailwind Utilities': 'Combine multiple utility classes like hover:, focus:, and responsive prefixes for complex styling behaviors.',
+        'State-Driven Styling': 'Store style-related state (theme, size, active state) and use it to conditionally apply different class combinations.',
+        'Transition Classes': 'Use transition-* utilities for smooth animations between state changes. duration-* controls animation speed.',
+        'Conditional Logic': 'Use ternary operators or object lookups to select different class combinations based on state values.'
+    },
+    
+    tags: ['styling', 'tailwind', 'dynamic', 'interactive', 'state'],
+    order: 7
+});
+
+
+
+        // localStorage utilities
+        function saveCurrentDoc(docId) {
+            try {
+                localStorage.setItem('juris-docs-current-doc', docId);
+            } catch (e) {
+                console.warn('Could not save to localStorage:', e);
+            }
+        }
+
+        function loadCurrentDoc() {
+            try {
+                return localStorage.getItem('juris-docs-current-doc') || 'basic-components';
+            } catch (e) {
+                console.warn('Could not read from localStorage:', e);
+                return 'basic-components';
+            }
+        }
+
+        function saveBookmarks(bookmarks) {
+            try {
+                localStorage.setItem('juris-docs-bookmarks', JSON.stringify(bookmarks));
+            } catch (e) {
+                console.warn('Could not save bookmarks to localStorage:', e);
+            }
+        }
+
+        function loadBookmarks() {
+            try {
+                const saved = localStorage.getItem('juris-docs-bookmarks');
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                console.warn('Could not load bookmarks from localStorage:', e);
+                return [];
+            }
+        }
+
+        function saveCollapsedCategories(collapsed) {
+            try {
+                localStorage.setItem('juris-docs-collapsed', JSON.stringify(collapsed));
+            } catch (e) {
+                console.warn('Could not save collapsed state:', e);
+            }
+        }
+
+        function loadCollapsedCategories() {
+            try {
+                const saved = localStorage.getItem('juris-docs-collapsed');
+                return saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                console.warn('Could not load collapsed state:', e);
+                return {};
+            }
+        }
+
+        // Initialize Juris with component system
+        const juris = new Juris({
+            states: {
+                currentDoc: loadCurrentDoc(),
+                searchQuery: '',
+                activeTab: 'documentation',
+                consoleOutput: [],
+                collapsedCategories: loadCollapsedCategories(),
+                bookmarks: loadBookmarks(),
+                mobileMenuOpen: false
+            },
+            components: {
+                // Mobile Menu Toggle
+                MobileMenuToggle: (props, context) => ({
+                    button: {
+                        class: 'mobile-menu-toggle',
+                        onclick: () => {
+                            const isOpen = context.getState('mobileMenuOpen');
+                            context.setState('mobileMenuOpen', !isOpen);
+                        },
+                        text: '☰'
+                    }
+                }),
+
+                // Mobile Overlay
+                MobileOverlay: (props, context) => ({
+                    div: {
+                        class: () => {
+                            const isOpen = context.getState('mobileMenuOpen');
+                            return 'mobile-overlay' + (isOpen ? ' active' : '');
+                        },
+                        onclick: () => context.setState('mobileMenuOpen', false)
+                    }
+                }),
+
+                // Header Component
+                AppHeader: () => ({
+                    div: {
+                        class: 'sidebar-header',
+                        children: [
+                            { h1: { text: 'Juris' } },
+                            { div: { class: 'version', text: 'v0.91.0 Documentation' } }
+                        ]
+                    }
+                }),
+
+                // Search Component  
+                SearchBox: (props, context) => ({
+                    div: {
+                        class: 'search-container',
+                        children: [
+                            {
+                                input: {
+                                    type: 'text',
+                                    class: 'search-input',
+                                    placeholder: 'Search documentation...',
+                                    value: () => context.getState('searchQuery'),
+                                    oninput: (e) => context.setState('searchQuery', e.target.value)
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                // Bookmarks Section
+                BookmarksSection: (props, context) => ({
+                    div: {
+                        class: 'bookmarks-section',
+                        children: [
+                            {
+                                div: {
+                                    class: 'bookmarks-header',
+                                    children: [
+                                        { span: { text: 'Bookmarks' } },
+                                        {
+                                            button: {
+                                                class: () => {
+                                                    const currentDocId = context.getState('currentDoc');
+                                                    const bookmarks = context.getState('bookmarks');
+                                                    const bookmarked = bookmarks.includes(currentDocId);
+                                                    return 'bookmark-button' + (bookmarked ? ' bookmarked' : '');
+                                                },
+                                                onclick: () => {
+                                                    const currentDocId = context.getState('currentDoc');
+                                                    const bookmarks = context.getState('bookmarks');
+                                                    const isBookmarked = bookmarks.includes(currentDocId);
+                                                    let newBookmarks;
+                                                    
+                                                    if (isBookmarked) {
+                                                        newBookmarks = bookmarks.filter(id => id !== currentDocId);
+                                                    } else {
+                                                        newBookmarks = [...bookmarks, currentDocId];
+                                                    }
+                                                    
+                                                    context.setState('bookmarks', newBookmarks);
+                                                    saveBookmarks(newBookmarks);
+                                                },
+                                                children: [
+                                                    { 
+                                                        span: { 
+                                                            text: () => {
+                                                                const currentDocId = context.getState('currentDoc');
+                                                                const bookmarks = context.getState('bookmarks');
+                                                                return bookmarks.includes(currentDocId) ? '★' : '☆';
+                                                            }
+                                                        } 
+                                                    },
+                                                    { 
+                                                        span: { 
+                                                            text: () => {
+                                                                const currentDocId = context.getState('currentDoc');
+                                                                const bookmarks = context.getState('bookmarks');
+                                                                return bookmarks.includes(currentDocId) ? 'Remove' : 'Add';
+                                                            }
+                                                        } 
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'bookmarks-list',
+                                    children: () => {
+                                        const bookmarks = context.getState('bookmarks');
+                                        const currentDoc = context.getState('currentDoc');
+                                        
+                                        if (bookmarks.length === 0) {
+                                            return [{
+                                                div: {
+                                                    class: 'empty-bookmarks',
+                                                    text: 'No bookmarks yet'
+                                                }
+                                            }];
+                                        }
+                                        
+                                        return bookmarks.map(docId => {
+                                            const doc = docFramework.getDoc(docId);
+                                            if (!doc) return null;
+                                            
+                                            return {
+                                                div: {
+                                                    class: 'bookmark-item',
+                                                    children: [
+                                                        {
+                                                            span: {
+                                                                class: 'bookmark-link' + (currentDoc === docId ? ' active' : ''),
+                                                                text: doc.title,
+                                                                onclick: () => {
+                                                                    context.setState('currentDoc', docId);
+                                                                    saveCurrentDoc(docId);
+                                                                    window.history.pushState(null, '', '#' + docId);
+                                                                    createMonacoEditor();
+                                                                    setTimeout(() => runCode(doc.code), 0);
+                                                                    context.setState('mobileMenuOpen', false);
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            button: {
+                                                                class: 'bookmark-remove',
+                                                                text: '×',
+                                                                onclick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    const bookmarks = context.getState('bookmarks');
+                                                                    const newBookmarks = bookmarks.filter(id => id !== docId);
+                                                                    context.setState('bookmarks', newBookmarks);
+                                                                    saveBookmarks(newBookmarks);
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            };
+                                        }).filter(Boolean);
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                // Category List Component
+                CategoryList: (props, context) => ({
+                    div: {
+                        class: 'navigation',
+                        children: () => {
+                            const query = context.getState('searchQuery');
+                            const filteredCategories = docFramework.getFilteredCategories(query);
+                            
+                            if (query.trim() && filteredCategories.length === 0) {
+                                return [{
+                                    div: {
+                                        class: 'no-results',
+                                        text: `No results found for "${query}"`
+                                    }
+                                }];
+                            }
+
+                            return filteredCategories.map(category => ({
+                                CategoryItem: {
+                                    category: category,
+                                    searchQuery: query
+                                }
+                            }));
+                        }
+                    }
+                }),
+
+                // Individual Category Component
+                CategoryItem: (props, context) => {
+                    const category = props.category;
+                    const searchQuery = props.searchQuery || '';
+                    
+                    // Filter docs based on search query
+                    const filteredDocs = searchQuery.trim() 
+                        ? category.docs.filter(docId => {
+                            const doc = docFramework.getDoc(docId);
+                            if (!doc) return false;
+                            
+                            const searchTerm = searchQuery.toLowerCase();
+                            return (
+                                doc.title.toLowerCase().includes(searchTerm) ||
+                                doc.description.toLowerCase().includes(searchTerm) ||
+                                category.name.toLowerCase().includes(searchTerm) ||
+                                (doc.tags && doc.tags.some(tag => 
+                                    tag.toLowerCase().includes(searchTerm)
+                                ))
+                            );
+                        })
+                        : category.docs;
+
+                    return {
+                        div: {
+                            class: () => {
+                                const collapsed = context.getState('collapsedCategories');
+                                return 'category' + (collapsed[category.name] ? ' collapsed' : '');
+                            },
+                            children: [
+                                {
+                                    div: {
+                                        class: 'category-header',
+                                        onclick: () => {
+                                            const collapsed = context.getState('collapsedCategories');
+                                            const newCollapsed = { ...collapsed };
+                                            if (newCollapsed[category.name]) {
+                                                delete newCollapsed[category.name];
+                                            } else {
+                                                newCollapsed[category.name] = true;
+                                            }
+                                            context.setState('collapsedCategories', newCollapsed);
+                                            saveCollapsedCategories(newCollapsed);
+                                        },
+                                        children: [
+                                            { 
+                                                span: { 
+                                                    class: 'category-icon', 
+                                                    text: () => {
+                                                        const collapsed = context.getState('collapsedCategories');
+                                                        return collapsed[category.name] ? '▶' : '▼';
+                                                    }
+                                                } 
+                                            },
+                                            { span: { text: `${category.name} (${filteredDocs.length})` } }
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        class: 'category-docs',
+                                        children: filteredDocs.map(docId => {
+                                            const doc = docFramework.getDoc(docId);
+                                            if (!doc) return null;
+                                            
+                                            return {
+                                                a: {
+                                                    href: '#',
+                                                    class: () => {
+                                                        const current = context.getState('currentDoc');
+                                                        return 'doc-link' + (current === docId ? ' active' : '');
+                                                    },
+                                                    text: doc.title,
+                                                    onclick: (e) => {
+                                                        e.preventDefault();
+                                                        context.setState('currentDoc', docId);
+                                                        saveCurrentDoc(docId);
+                                                        window.history.pushState(null, '', '#' + docId);
+                                                        createMonacoEditor();
+                                                        setTimeout(() => {
+                                                            if (doc.code) {
+                                                                runCode(doc.code);
+                                                            }
+                                                        }, 0);
+                                                        context.setState('mobileMenuOpen', false);
+                                                    }
+                                                }
+                                            };
+                                        }).filter(Boolean)
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                },
+
+                // Content Header Component
+                ContentHeader: (props, context) => ({
+                    div: {
+                        class: 'content-header',
+                        children: () => {
+                            const currentDocId = context.getState('currentDoc');
+                            const doc = docFramework.getDoc(currentDocId);
+                            
+                            if (!doc) return [{ div: { text: 'Loading...' } }];
+
+                            return [
+                                { h1: { class: 'content-title', text: doc.title } },
+                                { p: { class: 'content-description', text: doc.description } }
+                            ];
+                        }
+                    }
+                }),
+
+                // Tab Navigation Component
+                TabNavigation: (props, context) => ({
+                    div: {
+                        class: 'panel-tabs',
+                        children: [
+                            {
+                                div: {
+                                    class: () => {
+                                        const activeTab = context.getState('activeTab');
+                                        return 'panel-tab' + (activeTab === 'documentation' ? ' active' : '');
+                                    },
+                                    text: 'Documentation',
+                                    onclick: () => {
+                                        context.setState('activeTab', 'documentation');
+                                        disposeMonacoEditor();
+                                    }
+                                }
+                            },
+                            {
+                                div: {
+                                    class: () => {
+                                        const activeTab = context.getState('activeTab');
+                                        return 'panel-tab' + (activeTab === 'editor' ? ' active' : '');
+                                    },
+                                    text: 'Code Editor',
+                                    onclick: () => {
+                                        context.setState('activeTab', 'editor');
+                                        setTimeout(() => {
+                                            createMonacoEditor();
+                                        }, 0);
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                // Documentation Content Component
+                DocumentationContent: (props, context) => ({
+                    div: {
+                        class: 'doc-content',
+                        children: () => {
+                            const currentDocId = context.getState('currentDoc');
+                            const doc = docFramework.getDoc(currentDocId);
+                            
+                            if (!doc) return [{ div: { text: 'Loading...' } }];
+
+                            const elements = [
+                                { p: { text: doc.content } }
+                            ];
+                            
+                            // Add interactive example if it exists
+                            if (doc.interactiveExample) {
+                                elements.push({
+                                    div: {
+                                        class: 'my-6 p-4 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50',
+                                        children: [
+                                            {
+                                                h4: {
+                                                    class: 'text-lg font-semibold mb-3 text-blue-700',
+                                                    text: 'Interactive Example:'
+                                                }
+                                            },
+                                            doc.interactiveExample(context)
+                                        ]
+                                    }
+                                });
+                            }
+                            
+                            // Add static example if it exists
+                            if (doc.liveExample) {
+                                elements.push({
+                                    div: {
+                                        class: 'my-6 p-4 border-2 border-dashed border-green-300 rounded-lg bg-green-50',
+                                        children: [
+                                            {
+                                                h4: {
+                                                    class: 'text-lg font-semibold mb-3 text-green-700',
+                                                    text: 'Live Example:'
+                                                }
+                                            },
+                                            doc.liveExample
+                                        ]
+                                    }
+                                });
+                            }
+                            
+                            // Add code snippet display (separate from editor)
+                            if (doc.codeSnippet) {
+                                elements.push({
+                                    div: {
+                                        class: "my-6 bg-gray-900 text-gray-100 rounded-lg overflow-hidden shadow-lg",
+                                        children: [
+                                            {
+                                                div: {
+                                                    class: "flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700",
+                                                    children: [
+                                                        {
+                                                            div: {
+                                                                class: "flex items-center space-x-2",
+                                                                children: [
+                                                                    {
+                                                                        div: {
+                                                                            class: "flex space-x-1",
+                                                                            children: [
+                                                                                { div: { class: "w-3 h-3 bg-red-500 rounded-full" } },
+                                                                                { div: { class: "w-3 h-3 bg-yellow-500 rounded-full" } },
+                                                                                { div: { class: "w-3 h-3 bg-green-500 rounded-full" } }
+                                                                            ]
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        span: {
+                                                                            class: "text-sm text-gray-300 font-mono ml-3",
+                                                                            text: "JavaScript"
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        },
+                                                        {
+                                                            button: {
+                                                                class: "px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors font-medium",
+                                                                text: "Copy Code",
+                                                                onclick: () => {
+                                                                    navigator.clipboard.writeText(doc.codeSnippet).then(() => {
+                                                                        // Could add visual feedback here
+                                                                        console.log('Code copied to clipboard');
+                                                                    });
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    class: "p-4 overflow-x-auto",
+                                                    children: [
+                                                        {
+                                                            pre: {
+                                                                class: "text-sm font-mono leading-relaxed",
+                                                                children: [
+                                                                    {
+                                                                        code: {
+                                                                            class: "language-javascript",
+                                                                            text: doc.codeSnippet
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                });
+                            }
+                            
+                            // Technical details section
+                            if (doc.technicalDetails && Object.keys(doc.technicalDetails).length > 0) {
+                                elements.push({
+                                    div: {
+                                        class: 'technical-details',
+                                        children: [
+                                            { h4: { text: 'Technical Details' } },
+                                            {
+                                                dl: {
+                                                    children: Object.entries(doc.technicalDetails).flatMap(([key, value]) => [
+                                                        { dt: { text: key } },
+                                                        { dd: { text: value } }
+                                                    ])
+                                                }
+                                            }
+                                        ]
+                                    }
+                                });
+                            }
+                            
+                            // Tags section
+                            if (doc.tags && doc.tags.length > 0) {
+                                elements.push({
+                                    div: {
+                                        class: 'tags',
+                                        children: doc.tags.map(tag => ({
+                                            span: { class: 'tag', text: tag }
+                                        }))
+                                    }
+                                });
+                            }
+
+                            return elements;
+                        }
+                    }
+                }),
+
+                // Editor Component
+                EditorContent: (props, context) => ({
+                    div: {
+                        class: 'editor-container',
+                        children: [
+                            {
+                                div: {
+                                    class: 'editor-header',
+                                    children: [
+                                        { span: { class: 'editor-title', text: 'JavaScript Editor' } },
+                                        {
+                                            div: {
+                                                class: 'editor-actions',
+                                                children: [
+                                                    {
+                                                        button: {
+                                                            class: 'btn',
+                                                            text: 'Reset',
+                                                            onclick: () => {
+                                                                const currentDocId = context.getState('currentDoc');
+                                                                const doc = docFramework.getDoc(currentDocId);
+                                                                if (doc && doc.code) {
+                                                                    loadCodeIntoEditor(doc.code);
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    {
+                                                        button: {
+                                                            class: 'btn btn-primary',
+                                                            text: 'Run Code',
+                                                            onclick: () => {
+                                                                if (monacoEditor && isEditorReady) {
+                                                                    runCode(monacoEditor.getValue());
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            { div: { id: 'monaco-editor-base', class: 'monaco-editor-container' } }
+                        ]
+                    }
+                }),
+
+                // Content Panel Component
+                ContentPanel: (props, context) => ({
+                    div: {
+                        class: 'panel-content',
+                        children: () => {
+                            const activeTab = context.getState('activeTab');
+                            
+                            if (activeTab === 'documentation') {
+                                return [{ DocumentationContent: {} }];
+                            } else {
+                                return [{ EditorContent: {} }];
+                            }
+                        }
+                    }
+                }),
+
+                // Console Output Component
+                ConsoleOutput: (props, context) => ({
+                    div: {
+                        class: 'preview-console',
+                        children: () => {
+                            const logs = context.getState('consoleOutput', []);
+                            return logs.map((log, index) => ({
+                                div: {
+                                    class: 'console-log' + (log.type === 'error' ? ' console-error' : ''),
+                                    text: log.message
+                                }
+                            }));
+                        }
+                    }
+                }),
+
+                // Preview Panel Component
+                PreviewPanel: (props, context) => ({
+                    div: {
+                        class: 'preview-panel',
+                        children: [
+                            { div: { class: 'preview-header', text: 'Live Preview' } },
+                            { div: { id: 'demo', class: 'preview-demo' } },
+                            { ConsoleOutput: {} }
+                        ]
+                    }
+                }),
+
+                // Navigation Footer Component
+                NavigationFooter: (props, context) => ({
+                    div: {
+                        class: 'navigation-footer',
+                        children: () => {
+                            const currentDocId = context.getState('currentDoc');
+                            const navigation = docFramework.getNavigation(currentDocId);
+                            
+                            return [
+                                {
+                                    a: {
+                                        href: navigation.previous ? '#' : undefined,
+                                        class: 'nav-link' + (navigation.previous ? '' : ' disabled'),
+                                        onclick: navigation.previous ? (e) => {
+                                            e.preventDefault();
+                                            context.setState('currentDoc', navigation.previous.id);
+                                            saveCurrentDoc(navigation.previous.id);
+                                            window.history.pushState(null, '', '#' + navigation.previous.id);
+                                        } : (e) => e.preventDefault(),
+                                        children: [
+                                            { span: { text: '← Previous' } },
+                                            { span: { text: navigation.previous ? navigation.previous.title : 'No previous page' } }
+                                        ]
+                                    }
+                                },
+                                {
+                                    button: {
+                                        class: 'btn share-button',
+                                        text: 'Share',
+                                        onclick: () => {
+                                            const url = window.location.origin + window.location.pathname + '#' + currentDocId;
+                                            navigator.clipboard.writeText(url).then(() => {
+                                                alert('Link copied to clipboard!');
+                                            });
+                                        }
+                                    }
+                                },
+                                {
+                                    a: {
+                                        href: navigation.next ? '#' : undefined,
+                                        class: 'nav-link' + (navigation.next ? '' : ' disabled'),
+                                        onclick: navigation.next ? (e) => {
+                                            e.preventDefault();
+                                            context.setState('currentDoc', navigation.next.id);
+                                            saveCurrentDoc(navigation.next.id);
+                                            window.history.pushState(null, '', '#' + navigation.next.id);
+                                        } : (e) => e.preventDefault(),
+                                        children: [
+                                            { span: { text: 'Next →' } },
+                                            { span: { text: navigation.next ? navigation.next.title : 'No next page' } }
+                                        ]
+                                    }
+                                }
+                            ];
+                        }
+                    }
+                }),
+
+                // Main App Component
+                DocsApp: (props, context) => ({
+                    div: {
+                        class: 'docs-container',
+                        children: [
+                            { MobileMenuToggle: {} },
+                            { MobileOverlay: {} },
+                            {
+                                div: {
+                                    class: () => {
+                                        const isOpen = context.getState('mobileMenuOpen');
+                                        return 'sidebar' + (isOpen ? ' mobile-open' : '');
+                                    },
+                                    children: [
+                                        { AppHeader: {} },
+                                        { SearchBox: {} },
+                                        { BookmarksSection: {} },
+                                        { CategoryList: {} }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'main-content',
+                                    children: [
+                                        { ContentHeader: {} },
+                                        {
+                                            div: {
+                                                class: 'content-body',
+                                                children: [
+                                                    {
+                                                        div: {
+                                                            class: 'content-panel',
+                                                            children: [
+                                                                { TabNavigation: {} },
+                                                                { ContentPanel: {} }
+                                                            ]
+                                                        }
+                                                    },
+                                                    { PreviewPanel: {} }
+                                                ]
+                                            }
+                                        },
+                                        { NavigationFooter: {} }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            },
+            layout: { DocsApp: {} }
+        });
+
+        // Demo runner function
+        function runCode(code) {
+            const demoContainer = document.getElementById('demo');
+            demoContainer.innerHTML = '';
+            
+            juris.setState('consoleOutput', []);
+            
+            try {
+                const mockConsole = {
+                    log: (...args) => {
+                        const logs = juris.getState('consoleOutput', []);
+                        juris.setState('consoleOutput', [...logs, {
+                            type: 'log',
+                            message: args.join(' ')
+                        }]);
+                    },
+                    error: (...args) => {
+                        const logs = juris.getState('consoleOutput', []);
+                        juris.setState('consoleOutput', [...logs, {
+                            type: 'error',
+                            message: args.join(' ')
+                        }]);
+                    }
+                };
+                
+                const func = new Function('console', 'Juris', code);
+                func(mockConsole, Juris);
+                
+            } catch (error) {
+                const logs = juris.getState('consoleOutput', []);
+                juris.setState('consoleOutput', [...logs, {
+                    type: 'error',
+                    message: 'Error: ' + error.message
+                }]);
+            }
+        }
+
+        // Hash change handling
+        function handleHashChange() {
+            const hash = window.location.hash.substring(1);
+            if (hash && docFramework.getDoc(hash)) {
+                const currentDoc = juris.getState('currentDoc');
+                if (currentDoc !== hash) {
+                    juris.setState('currentDoc', hash);
+                    saveCurrentDoc(hash);
+                }
+            }
+        }
+
+        window.addEventListener('hashchange', handleHashChange);
+        window.addEventListener('load', handleHashChange);
+
+        // Subscribe to currentDoc changes for Monaco synchronization
+        juris.subscribe('currentDoc', (newDocId) => {
+            if (juris.getState('activeTab') === 'editor') {
+                const doc = docFramework.getDoc(newDocId);
+                if (doc && doc.code) {
+                    if (monacoEditor && isEditorReady) {
+                        setTimeout(() => {
+                            loadCodeIntoEditor(doc.code);
+                        }, 50);
+                    } else {
+                        pendingCodeLoad = doc.code;
+                        createMonacoEditor();
+                    }
+                }
+            }
+        });
+
+        // Render the app
+        juris.render('#app');
+
+        // Run initial demo
+        const initialDoc = docFramework.getDoc(juris.getState('currentDoc'));
+        if (initialDoc && initialDoc.code) {
+            setTimeout(() => runCode(initialDoc.code), 0);
+        }
+    </script>
+</body>
+</html>
