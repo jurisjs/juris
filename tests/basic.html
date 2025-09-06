@@ -23,21 +23,21 @@ function examplePromise() {
   });
 }
 
-const SwitchRenderer = (props, context) => ({
-  render: () => {
-        const value = typeof props.value === 'function'
-            ? props.value()
-            : props.value;
-        // Look for exact match first
-        if (props[value]) {
-            const match = props[value];
-            return Array.isArray(match) ? match : [match];
-        }else if (props.default) {
-            return Array.isArray(props.default) ? props.default : [props.default];
-        }
-        return [];
-    }      
-  })
+const SwitchRenderer = (props, context) => {
+    return {
+      render: () => {
+            const value = context.getState('count', 0)
+            // Look for exact match first
+            if (props[value]) {
+                const match = props[value];
+                return Array.isArray(match) ? match : [match];
+            }else if (props.default) {
+                return Array.isArray(props.default) ? props.default : [props.default];
+            }
+            return [];
+        }      
+    }
+}
 
 
 //usage
@@ -52,6 +52,7 @@ const Increment = (props, {getState,setState}) => (
   }});
 	const Counter = (props, {getState,setState}) => ({
       div: {
+        class:'test-class',
           children:[
             2,
             {h1: {
@@ -72,37 +73,17 @@ const Increment = (props, {getState,setState}) => (
 
                 return {Increment:{lable:()=>'Increment:'+ getState('count', 0)}}
 
+            },            
+            ()=>{
+            return {
+              div:{
+               children:{div:{text:'hello'}}
+              }
+            }
             },
             ()=>examplePromise()
             .then(result => console.log(result))
             .catch(error => console.error(error)),
-            
-            {
-              div:{
-                children:[
-                  {
-                  div:{
-                    style:{
-                      color:'red',
-                    },
-                    children:()=>{
-                      return {
-                          div:{
-                            children:[
-                              {div:{
-                                children:[
-                                  "child"
-                                  ]
-                              }}
-                            ]
-                          }
-                        }
-                      }
-                    }
-                  }
-                ]
-              }
-            }
           ]
       }
   });
@@ -126,10 +107,25 @@ const Increment = (props, {getState,setState}) => (
                 3: 'Three',
                 default:'Higher'
             }},
-            ()=> juris.getState('count', 0)
-            
+            ()=> juris.getState('count', 0),
+            {Home:{}}
+
     ]
 });
+
+juris.registerComponent('Home', (props, { setState, logger }) => ({
+  render: () => {
+    console.log('Version: ', jurisVersion);
+    console.log(
+      Object.keys(logger)
+        .map((k) => `${k}: ${typeof logger[k]}`)
+        .join('\n')
+    );
+
+    debugger;
+    setState('title', 'Bienvenido');
+  },
+}));
 juris.render();
 </script>
 </html>

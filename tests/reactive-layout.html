@@ -1,0 +1,23 @@
+<html>
+
+<head>
+  <script src="../src/juris.js"></script>
+</head>
+
+<body>
+  <div id="app">1</div>
+</body>
+<script>
+	const juris = new Juris({
+  	states: {
+        count: 0  // Initialize the state
+    },
+		layout:[()=>juris.getState('count',0),
+		{button:{text:'increment',onclick:()=>{
+			const count = juris.getState('count',0);
+			juris.setState('count',count+1)
+		}}}]
+	});
+juris.render();
+</script>
+</html>

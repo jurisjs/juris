@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Table - Simple Fix</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .controls-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .control-group {
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 16px;
+        }
+        
+        .control-group h3 {
+            margin-bottom: 12px;
+            color: #495057;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .form-row label {
+            min-width: 80px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .form-row input, .form-row select {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #545b62; }
+        
+        .virtual-table {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            display: flex;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-cell {
+            border-right: 1px solid #dee2e6;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding: 12px 8px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #495057;
+            text-transform: uppercase;
+            overflow: hidden;
+            background: #f8f9fa;
+        }
+        
+        .filter-header {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .filter-input {
+            width: 100%;
+            padding: 2px 4px;
+            font-size: 11px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .filter-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: -2px;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            z-index: 10;
+        }
+        
+        .resizer:hover {
+            background: #007bff;
+        }
+        
+        .table-body {
+            position: relative;
+            overflow-y: auto;
+        }
+        
+        .table-row {
+            position: absolute;
+            left: 0;
+            right: 0;
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background 0.1s;
+            user-select: none;
+        }
+        
+        .table-row:hover {
+            background: #f8f9fa;
+        }
+        
+        .table-row.selected {
+            background: #e3f2fd;
+        }
+        
+        .table-row.new-row {
+            background: #e8f5e8;
+            animation: highlightNew 2s ease-out;
+        }
+        
+        @keyframes highlightNew {
+            0% { background: #c8e6c9; }
+            100% { background: white; }
+        }
+        
+        .table-cell {
+            border-right: 1px solid #e9ecef;
+            padding: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            user-select: none;
+            pointer-events: none;
+        }
+        
+        .editable-cell {
+            cursor: text;
+            pointer-events: auto;
+        }
+        
+        .editable-cell:hover {
+            background: rgba(0,123,255,0.1);
+        }
+        
+        .cell-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            outline: none;
+            font: inherit;
+        }
+        
+        .email-cell {
+            color: #007bff;
+            text-decoration: none;
+            pointer-events: auto;
+        }
+        
+        .email-cell:hover {
+            text-decoration: underline;
+        }
+        
+        .stats-bar {
+            padding: 8px 16px;
+            background: #e9ecef;
+            font-size: 12px;
+            color: #6c757d;
+            display: flex;
+            gap: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-active { background: #d4edda; color: #155724; }
+        .status-inactive { background: #f8d7da; color: #721c24; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #007bff;
+            transition: width 0.3s ease;
+        }
+        
+        .simulation-status {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+        
+        .ctrl-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .ctrl-indicator.active {
+            display: block;
+        }
+
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-family: monospace;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="ctrl-indicator" id="ctrlIndicator">CTRL - Batching Selection</div>
+    
+    <h1>Virtual Table - Simple Event Delegation</h1>
+    
+    <div class="controls-panel">
+        <!-- Quick Insert -->
+        <div class="control-group">
+            <h3>Quick Insert</h3>
+            <div class="button-group">
+                <button class="btn btn-primary" id="addSingle">Add Single Row</button>
+                <button class="btn btn-success" id="addMultiple">Add 10 Rows</button>
+                <button class="btn btn-warning" id="addHundred">Add 100 Rows</button>
+            </div>
+        </div>
+        
+        <!-- Bulk Insert Simulator -->
+        <div class="control-group">
+            <h3>Bulk Insert Simulator</h3>
+            <div class="form-row">
+                <label>Count:</label>
+                <input type="number" id="bulkCount" value="50" min="1" max="10000">
+                <button class="btn btn-primary" id="bulkInsert">Insert Bulk</button>
+            </div>
+            <div class="form-row">
+                <label>Batch Size:</label>
+                <input type="number" id="batchSize" value="25" min="1" max="1000">
+                <button class="btn btn-secondary" id="batchInsert">Batch Insert</button>
+            </div>
+        </div>
+        
+        <!-- Manual Entry Simulator -->
+        <div class="control-group">
+            <h3>Manual Entry</h3>
+            <div class="form-row">
+                <label>Name:</label>
+                <input type="text" id="manualName" placeholder="Enter name">
+            </div>
+            <div class="form-row">
+                <label>Email:</label>
+                <input type="email" id="manualEmail" placeholder="Enter email">
+            </div>
+            <div class="form-row">
+                <label>Dept:</label>
+                <select id="manualDept">
+                    <option value="Engineering">Engineering</option>
+                    <option value="Sales">Sales</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="HR">HR</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Support">Support</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>Salary:</label>
+                <input type="number" id="manualSalary" placeholder="Enter salary" min="30000" max="200000">
+            </div>
+            <div class="button-group">
+                <button class="btn btn-success" id="addManual">Add Entry</button>
+                <button class="btn btn-secondary" id="clearForm">Clear Form</button>
+            </div>
+        </div>
+        
+        <!-- Data Pattern Simulator -->
+        <div class="control-group">
+            <h3>Data Patterns</h3>
+            <div class="form-row">
+                <label>Pattern:</label>
+                <select id="dataPattern">
+                    <option value="realistic">Realistic Data</option>
+                    <option value="highSalary">High Salary Focus</option>
+                    <option value="techHeavy">Tech Heavy</option>
+                    <option value="salesTeam">Sales Team</option>
+                    <option value="startup">Startup Style</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>Amount:</label>
+                <input type="number" id="patternCount" value="25" min="1" max="500">
+                <button class="btn btn-primary" id="generatePattern">Generate</button>
+            </div>
+        </div>
+        
+        <!-- Continuous Simulator -->
+        <div class="control-group">
+            <h3>Continuous Simulator</h3>
+            <div class="form-row">
+                <label>Interval:</label>
+                <select id="simInterval">
+                    <option value="1000">1 second</option>
+                    <option value="2000">2 seconds</option>
+                    <option value="5000">5 seconds</option>
+                    <option value="10000">10 seconds</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>Per Interval:</label>
+                <input type="number" id="simPerInterval" value="1" min="1" max="10">
+            </div>
+            <div class="button-group">
+                <button class="btn btn-success" id="startSim">Start Simulation</button>
+                <button class="btn btn-danger" id="stopSim">Stop</button>
+            </div>
+            <div class="progress-bar" style="display: none;">
+                <div class="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="simulation-status" id="simStatus"></div>
+        </div>
+        
+        <!-- Data Management -->
+        <div class="control-group">
+            <h3>Data Management</h3>
+            <div class="form-row">
+                <label>Current:</label>
+                <span id="currentCount">0</span> records
+            </div>
+            <div class="button-group">
+                <button class="btn btn-warning" id="clearSelected">Clear Selected</button>
+                <button class="btn btn-danger" id="clearAll">Clear All Data</button>
+                <button class="btn btn-secondary" id="resetData">Reset to Original</button>
+                <button class="btn btn-secondary" id="debugSubs">Show Debug Info</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app"></div>
+    <div id="debugInfo" class="debug-info" style="display: none;"></div>
+    
+    <script src="../src/juris.js"></script>
+    <script>
+        // Simple global state for selection management
+        const GlobalSelectionState = {
+            ctrlPressed: false,
+            lastClickTime: 0,
+            debounceMs: 100,
+            pendingCallback: null,
+            
+            init() {
+                // Keyboard listeners
+                document.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && !this.ctrlPressed) {
+                        this.ctrlPressed = true;
+                        document.getElementById('ctrlIndicator').classList.add('active');
+                        console.log('[Selection] Ctrl ON - batching mode');
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    if (!e.ctrlKey && !e.metaKey && this.ctrlPressed) {
+                        this.ctrlPressed = false;
+                        document.getElementById('ctrlIndicator').classList.remove('active');
+                        console.log('[Selection] Ctrl OFF - executing callback');
+                        this.executeCallback();
+                    }
+                });
+                
+                window.addEventListener('blur', () => {
+                    if (this.ctrlPressed) {
+                        this.ctrlPressed = false;
+                        document.getElementById('ctrlIndicator').classList.remove('active');
+                        this.executeCallback();
+                    }
+                });
+                
+                // Single global click handler for all tables
+                document.addEventListener('click', (e) => {
+                    const tableRow = e.target.closest('.table-row');
+                    if (tableRow) {
+                        this.handleRowClick(e, tableRow);
+                    }
+                });
+            },
+            
+            handleRowClick(e, tableRow) {
+                // Global debounce
+                const now = Date.now();
+                if (now - this.lastClickTime < this.debounceMs) {
+                    console.log('[Selection] Ignoring rapid click');
+                    return;
+                }
+                this.lastClickTime = now;
+                
+                const tableId = tableRow.dataset.tableId;
+                const rowIndex = parseInt(tableRow.dataset.rowIndex);
+                
+                if (!tableId || isNaN(rowIndex)) {
+                    console.warn('[Selection] Missing table ID or row index');
+                    return;
+                }
+                
+                console.log('[Selection] Processing click - Table:', tableId, 'Row:', rowIndex, 'Ctrl:', this.ctrlPressed);
+                
+                // Get current selection from Juris state
+                const currentSelected = juris.getState(`${tableId}.selected`, []);
+                let newSelected;
+                
+                if (this.ctrlPressed || e.ctrlKey || e.metaKey) {
+                    newSelected = currentSelected.includes(rowIndex)
+                        ? currentSelected.filter(i => i !== rowIndex)
+                        : [...currentSelected, rowIndex].sort((a, b) => a - b);
+                } else {
+                    newSelected = [rowIndex];
+                }
+                
+                // Check if selection changed
+                const selectionChanged = JSON.stringify(currentSelected.sort()) !== JSON.stringify(newSelected.sort());
+                
+                if (selectionChanged) {
+                    console.log('[Selection] Selection changing:', currentSelected.length, '→', newSelected.length);
+                    
+                    // Update state immediately for visual feedback
+                    juris.setState(`${tableId}.selected`, newSelected);
+                    
+                    // Schedule callback
+                    this.scheduleCallback(() => {
+                        const finalSelection = juris.getState(`${tableId}.selected`, []);
+                        
+                        // Trigger the app's selection callback
+                        if (window.onTableSelectionChanged) {
+                            const filteredData = getFilteredData();
+                            const selectedData = finalSelection.map(i => filteredData[i]).filter(Boolean);
+                            const stats = {
+                                total: filteredData.length,
+                                selected: finalSelection.length
+                            };
+                            console.log('[Selection] Executing callback:', finalSelection.length, 'selected');
+                            window.onTableSelectionChanged(selectedData, finalSelection, stats);
+                        }
+                    });
+                } else {
+                    console.log('[Selection] Selection unchanged');
+                }
+            },
+            
+            scheduleCallback(callback) {
+                // Cancel any existing callback
+                if (this.pendingCallback) {
+                    console.log('[Selection] Replacing pending callback');
+                }
+                
+                if (this.ctrlPressed) {
+                    // Store for later
+                    this.pendingCallback = callback;
+                } else {
+                    // Execute with small delay
+                    this.pendingCallback = callback;
+                    setTimeout(() => {
+                        if (this.pendingCallback === callback) {
+                            this.executeCallback();
+                        }
+                    }, 10);
+                }
+            },
+            
+            executeCallback() {
+                if (this.pendingCallback) {
+                    console.log('[Selection] Executing pending callback');
+                    const callback = this.pendingCallback;
+                    this.pendingCallback = null;
+                    try {
+                        callback();
+                    } catch (error) {
+                        console.error('[Selection] Callback error:', error);
+                    }
+                }
+            }
+        };
+        
+        // Initialize global selection state
+        GlobalSelectionState.init();
+        
+        // Sample data
+        const originalSampleData = Array.from({ length: 100 }, (_, i) => ({
+            name: `Person ${i + 1}`,
+            email: `person${i + 1}@example.com`,
+            department: ['Engineering', 'Sales', 'Marketing', 'HR'][i % 4],
+            salary: 50000 + (i * 1000) % 100000,
+            status: ['active', 'inactive', 'pending'][i % 3]
+        }));
+        
+        // Data generators
+        const dataGenerators = {
+            realistic: () => {
+                const firstNames = ['Alex', 'Sarah', 'Mike', 'Emma', 'John', 'Lisa', 'David', 'Anna'];
+                const lastNames = ['Smith', 'Johnson', 'Brown', 'Davis', 'Miller', 'Wilson', 'Taylor'];
+                const departments = ['Engineering', 'Sales', 'Marketing', 'HR', 'Finance', 'Support'];
+                const domains = ['company.com', 'tech.com', 'startup.io', 'business.net'];
+                
+                const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+                const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+                const department = departments[Math.floor(Math.random() * departments.length)];
+                const domain = domains[Math.floor(Math.random() * domains.length)];
+                
+                return {
+                    name: `${firstName} ${lastName}`,
+                    email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
+                    department,
+                    salary: Math.floor(Math.random() * 100000) + 40000,
+                    status: ['active', 'inactive', 'pending'][Math.floor(Math.random() * 3)]
+                };
+            },
+            
+            highSalary: () => {
+                const result = dataGenerators.realistic();
+                result.salary = Math.floor(Math.random() * 80000) + 120000;
+                return result;
+            },
+            
+            techHeavy: () => {
+                const result = dataGenerators.realistic();
+                result.department = ['Engineering', 'IT', 'DevOps', 'QA'][Math.floor(Math.random() * 4)];
+                result.salary = Math.floor(Math.random() * 70000) + 70000;
+                return result;
+            },
+            
+            salesTeam: () => {
+                const result = dataGenerators.realistic();
+                result.department = 'Sales';
+                result.salary = Math.floor(Math.random() * 60000) + 50000;
+                return result;
+            },
+            
+            startup: () => {
+                const result = dataGenerators.realistic();
+                result.department = ['Frontend Dev', 'Backend Dev', 'Full Stack'][Math.floor(Math.random() * 3)];
+                result.salary = Math.floor(Math.random() * 50000) + 45000;
+                return result;
+            }
+        };
+
+        // Components using Juris Object VDOM Convention with two-space indentation
+        const HeaderCell = (props) => {
+          const { column, label } = props;
+          return {
+            div: {
+              class: 'header-cell',
+              children: [
+                { span: { text: label || column } }
+              ]
+            }
+          };
+        };
+        
+        const FilterCell = (props, context) => {
+          const { getState, setState } = context;
+          const { column, label } = props;
+          const filterValue = getState(`filters.${column}`, '');
+          
+          return {
+            div: {
+              class: 'header-cell filter-header',
+              children: [
+                { span: { text: label || column, style: { fontSize: '11px' } } },
+                {
+                  input: {
+                    class: 'filter-input',
+                    type: 'text',
+                    placeholder: 'Filter...',
+                    value: filterValue,
+                    oninput: (e) => {
+                      setState(`filters.${column}`, e.target.value);
+                    },
+                    onclick: (e) => e.stopPropagation()
+                  }
+                }
+              ]
+            }
+          };
+        };
+
+        const TextComponent = (props, context) => {
+          const { getState, setState } = context;
+          const { value, editable = false, column, rowIndex, class: className = {}, style = {} } = props;
+          const isEditing = getState(`editing.${rowIndex}.${column}`, false);
+          
+          if (editable && isEditing) {
+            return {
+              div: {
+                class: 'table-cell editable-cell',
+                style,
+                children: [
+                  {
+                    input: {
+                      class: 'cell-input',
+                      type: 'text',
+                      value,
+                      onblur: () => setState(`editing.${rowIndex}.${column}`, false),
+                      onkeydown: (e) => {
+                        if (e.key === 'Enter') {
+                          setState(`editing.${rowIndex}.${column}`, false);
+                        }
+                      },
+                      style: { ...className }
+                    }
+                  }
+                ]
+              }
+            };
+          }
+          
+          return {
+            div: {
+              class: `table-cell ${editable ? 'editable-cell' : ''}`,
+              style,
+              ondblclick: editable ? () => setState(`editing.${rowIndex}.${column}`, true) : null,
+              children: [
+                { span: { text: String(value || ''), style: { ...className } } }
+              ]
+            }
+          };
+        };
+        
+        const EmailComponent = (props) => {
+          const { value, class: className = {}, style = {} } = props;
+          return {
+            div: {
+              class: 'table-cell',
+              style,
+              children: [
+                {
+                  a: {
+                    class: 'email-cell',
+                    href: `mailto:${value}`,
+                    text: String(value || ''),
+                    style: { ...className },
+                    onclick: (e) => e.stopPropagation()
+                  }
+                }
+              ]
+            }
+          };
+        };
+
+        const StatusComponent = (props) => {
+          const { value, style = {} } = props;
+          return {
+            div: {
+              class: 'table-cell',
+              style,
+              children: [
+                {
+                  span: {
+                    class: `status-indicator status-${value}`,
+                    text: String(value || '')
+                  }
+                }
+              ]
+            }
+          };
+        };
+
+        // SIMPLIFIED VirtualTable - uses data attributes only, no complex registration
+        const VirtualTable = (props, context) => {
+          const { getState, setState } = context;
+          const {
+            columns = [],
+            widths = {},
+            resizable = false,
+            headerComponents = {},
+            cellComponents = {},
+            height = 400,
+            rowHeight = 40,
+            tableId = 'table'
+          } = props;
+          
+          // Initialize widths only once
+          const initialized = getState(`${tableId}.initialized`, false);
+          if (!initialized) {
+            columns.forEach(col => {
+              setState(`${tableId}.widths.${col}`, widths[col] || 120);
+            });
+            setState(`${tableId}.initialized`, true);
+          }
+          
+          // Simple data access
+          const getCurrentData = () => getState('sampleData', []);
+          const getFilteredData = () => {
+            const currentData = getCurrentData();
+            const filters = getState('filters', {});
+            
+            if (Object.keys(filters).length === 0) return currentData;
+            
+            return currentData.filter(row => {
+              return Object.entries(filters).every(([column, filterValue]) => {
+                if (!filterValue) return true;
+                const cellValue = String(row[column] || '').toLowerCase();
+                return cellValue.includes(filterValue.toLowerCase());
+              });
+            });
+          };
+          
+          const handleScroll = (e) => {
+            setState(`${tableId}.scroll`, e.target.scrollTop);
+          };
+          
+          const startResize = (column, e) => {
+            if (!resizable) return;
+            e.preventDefault();
+            const startX = e.clientX;
+            const currentWidth = getState(`${tableId}.widths.${column}`, widths[column] || 120);
+            
+            const onMouseMove = (e) => {
+              const diff = e.clientX - startX;
+              const newWidth = Math.max(50, currentWidth + diff);
+              setState(`${tableId}.widths.${column}`, newWidth);
+            };
+            
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          };
+          
+          const currentData = getCurrentData();
+          const filteredData = getFilteredData();
+          
+          return {
+            div: {
+              class: 'virtual-table',
+              children: [
+                {
+                  div: {
+                    class: 'stats-bar',
+                    children: [
+                      { span: { text: `Total: ${currentData.length}` } },
+                      { span: { text: `Filtered: ${filteredData.length}` } },
+                      { span: { text: () => `Selected: ${getState(`${tableId}.selected`, []).length}` } },
+                      { span: { text: () => `New rows: ${getState('newRowCount', 0)}` } }
+                    ]
+                  }
+                },
+                {
+                  div: {
+                    class: 'table-header',
+                    children: columns.map(column => {
+                      const headerComponent = headerComponents[column];
+                      const colWidth = getState(`${tableId}.widths.${column}`, widths[column] || 120);
+                      
+                      return {
+                        div: {
+                          key: `header-${column}`,
+                          style: {
+                            width: `${colWidth}px`,
+                            position: 'relative'
+                          },
+                          children: [
+                            headerComponent ? headerComponent : {
+                              HeaderCell: { column, label: column }
+                            },
+                            resizable ? {
+                              div: {
+                                class: 'resizer',
+                                onmousedown: (e) => startResize(column, e)
+                              }
+                            } : null
+                          ]
+                        }
+                      };
+                    })
+                  }
+                },
+                {
+                  div: {
+                    class: 'table-body',
+                    style: { height: `${height}px` },
+                    onscroll: handleScroll,
+                    children: [
+                      {
+                        div: {
+                          style: {
+                            height: `${filteredData.length * rowHeight}px`,
+                            position: 'relative'
+                          },
+                          children: () => {
+                            const scrollTop = getState(`${tableId}.scroll`, 0);
+                            const selected = getState(`${tableId}.selected`, []);
+                            const newRowIds = getState('newRowIds', new Set());
+                            
+                            const startIdx = Math.max(0, Math.floor(scrollTop / rowHeight) - 10);
+                            const endIdx = Math.min(filteredData.length, startIdx + Math.ceil(height / rowHeight) + 20);
+                            
+                            const visibleRows = [];
+                            
+                            for (let i = startIdx; i < endIdx; i++) {
+                              const row = filteredData[i];
+                              if (!row) continue;
+                              
+                              const isNewRow = newRowIds.has(row._id);
+                              
+                              visibleRows.push({
+                                div: {
+                                  key: `row-${i}`,
+                                  class: `table-row ${selected.includes(i) ? 'selected' : ''} ${isNewRow ? 'new-row' : ''}`,
+                                  'data-table-id': tableId,
+                                  'data-row-index': i,
+                                  style: {
+                                    top: `${i * rowHeight}px`,
+                                    height: `${rowHeight}px`
+                                  },
+                                  children: columns.map(column => {
+                                    const cellComponent = cellComponents[column];
+                                    const colWidth = getState(`${tableId}.widths.${column}`, widths[column] || 120);
+                                    
+                                    return {
+                                      div: {
+                                        key: `${i}-${column}`,
+                                        style: {
+                                          width: `${colWidth}px`
+                                        },
+                                        children: [
+                                          cellComponent ? (() => {
+                                            const componentName = Object.keys(cellComponent)[0];
+                                            const componentProps = cellComponent[componentName];
+                                            const comp = {};
+                                            comp[componentName] = {
+                                              ...componentProps,
+                                              value: row[column],
+                                              column,
+                                              rowIndex: i,
+                                              row
+                                            };
+                                            return comp;
+                                          })() : {
+                                            TextComponent: {
+                                              value: row[column],
+                                              column,
+                                              rowIndex: i
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    };
+                                  })
+                                }
+                              });
+                            }
+                            
+                            return visibleRows;
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          };
+        };
+        
+        // Global selection callback function
+        window.onTableSelectionChanged = (selectedData, indices, stats) => {
+          console.log('[App] Selection callback executed:', {
+            selectedCount: selectedData.length,
+            firstFewIndices: indices.slice(0, 5),
+            stats
+          });
+        };
+        
+        const App = () => {
+          return {
+            div: {
+              children: [
+                {
+                  VirtualTable: {
+                    columns: ['name', 'email', 'department', 'salary', 'status'],
+                    widths: {
+                      name: 150,
+                      email: 200,
+                      department: 120,
+                      salary: 100,
+                      status: 80
+                    },
+                    resizable: true,
+                    headerComponents: {
+                      name: { HeaderCell: { label: 'Full Name' } },
+                      email: { FilterCell: { column: 'email', label: 'Email Address' } },
+                      department: { FilterCell: { column: 'department', label: 'Dept' } },
+                      salary: { HeaderCell: { label: 'Salary' } },
+                      status: { FilterCell: { column: 'status', label: 'Status' } }
+                    },
+                    cellComponents: {
+                      name: { 
+                        TextComponent: { 
+                          editable: true,
+                          class: { fontWeight: 'bold' },
+                          style: { color: '#2c3e50' }
+                        } 
+                      },
+                      email: { 
+                        EmailComponent: {} 
+                      },
+                      department: { 
+                        TextComponent: { 
+                          editable: false 
+                        } 
+                      },
+                      salary: { 
+                        TextComponent: { 
+                          editable: true,
+                          style: { textAlign: 'right', fontVariantNumeric: 'tabular-nums' }
+                        } 
+                      },
+                      status: {
+                        StatusComponent: {}
+                      }
+                    },
+                    height: 500,
+                    rowHeight: 42,
+                    tableId: 'mainTable'
+                  }
+                }
+              ]
+            }
+          };
+        };
+        
+        // Initialize Juris
+        const juris = new Juris({
+          states: {
+            sampleData: [...originalSampleData].map((item, index) => ({...item, _id: `original-${index}`})),
+            mainTable: {
+              scroll: 0,
+              selected: [],
+              widths: {},
+              initialized: false
+            },
+            filters: {},
+            editing: {},
+            newRowCount: 0,
+            newRowIds: new Set(),
+            nextId: originalSampleData.length + 1,
+            dataVersion: 0,
+            filterVersion: 0
+          },
+          components: {
+            App,
+            VirtualTable,
+            HeaderCell,
+            FilterCell,
+            TextComponent,
+            EmailComponent,
+            StatusComponent
+          },
+          layout: { App: {} }
+        });
+        
+        // Utility functions
+        let simulationInterval = null;
+        let simulationRunning = false;
+        
+        function updateCurrentCount() {
+            const count = juris.getState('sampleData', []).length;
+            document.getElementById('currentCount').textContent = count;
+        }
+        
+        function showDebugInfo() {
+            const debugDiv = document.getElementById('debugInfo');
+            let info = `Ctrl Pressed: ${GlobalSelectionState.ctrlPressed}\n`;
+            info += `Pending Callback: ${!!GlobalSelectionState.pendingCallback}\n`;
+            info += `Last Click: ${Date.now() - GlobalSelectionState.lastClickTime}ms ago\n\n`;
+            
+            const subscribers = juris.getSM().subscribers;
+            info += `Subscriptions: ${subscribers.size}\n`;
+            
+            debugDiv.textContent = info;
+            debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function addSingleRow() {
+            const currentData = juris.getState('sampleData', []);
+            const nextId = juris.getState('nextId', 1);
+            const newRow = { ...dataGenerators.realistic(), _id: `new-${nextId}` };
+            
+            juris.setState('sampleData', [...currentData, newRow]);
+            juris.setState('nextId', nextId + 1);
+            juris.setState('dataVersion', juris.getState('dataVersion', 0) + 1);
+            juris.setState('newRowCount', juris.getState('newRowCount', 0) + 1);
+            
+            const newRowIds = juris.getState('newRowIds', new Set());
+            newRowIds.add(newRow._id);
+            juris.setState('newRowIds', newRowIds);
+            
+            setTimeout(() => {
+                const currentNewRowIds = juris.getState('newRowIds', new Set());
+                currentNewRowIds.delete(newRow._id);
+                juris.setState('newRowIds', currentNewRowIds);
+            }, 2000);
+            
+            updateCurrentCount();
+        }
+        
+        function addMultipleRows(count = 10) {
+            const currentData = juris.getState('sampleData', []);
+            const nextId = juris.getState('nextId', 1);
+            const newRows = [];
+            
+            for (let i = 0; i < count; i++) {
+                newRows.push({ ...dataGenerators.realistic(), _id: `new-${nextId + i}` });
+            }
+            
+            juris.setState('sampleData', [...currentData, ...newRows]);
+            juris.setState('nextId', nextId + count);
+            juris.setState('dataVersion', juris.getState('dataVersion', 0) + 1);
+            juris.setState('newRowCount', juris.getState('newRowCount', 0) + count);
+            updateCurrentCount();
+        }
+        
+        function clearSelectedRows() {
+            const selected = juris.getState('mainTable.selected', []);
+            if (selected.length === 0) {
+                alert('No rows selected');
+                return;
+            }
+            
+            const currentData = juris.getState('sampleData', []);
+            const filteredData = getFilteredData();
+            const selectedRows = selected.map(i => filteredData[i]).filter(Boolean);
+            const selectedIds = new Set(selectedRows.map(row => row._id));
+            
+            const newData = currentData.filter(row => !selectedIds.has(row._id));
+            
+            juris.setState('sampleData', newData);
+            juris.setState('dataVersion', juris.getState('dataVersion', 0) + 1);
+            juris.setState('mainTable.selected', []);
+            updateCurrentCount();
+        }
+        
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                juris.setState('sampleData', []);
+                juris.setState('dataVersion', juris.getState('dataVersion', 0) + 1);
+                juris.setState('newRowCount', 0);
+                juris.setState('newRowIds', new Set());
+                juris.setState('nextId', 1);
+                updateCurrentCount();
+            }
+        }
+        
+        function resetToOriginal() {
+            if (confirm('Reset to original data?')) {
+                juris.setState('sampleData', [...originalSampleData].map((item, index) => ({...item, _id: `original-${index}`})));
+                juris.setState('dataVersion', juris.getState('dataVersion', 0) + 1);
+                juris.setState('newRowCount', 0);
+                juris.setState('newRowIds', new Set());
+                juris.setState('nextId', originalSampleData.length + 1);
+                updateCurrentCount();
+            }
+        }
+        
+        function getFilteredData() {
+            const currentData = juris.getState('sampleData', []);
+            const filters = juris.getState('filters', {});
+            
+            if (Object.keys(filters).length === 0) return currentData;
+            
+            return currentData.filter(row => {
+                return Object.entries(filters).every(([column, filterValue]) => {
+                    if (!filterValue) return true;
+                    const cellValue = String(row[column] || '').toLowerCase();
+                    return cellValue.includes(filterValue.toLowerCase());
+                });
+            });
+        }
+        
+        // Event listeners
+        document.getElementById('addSingle').addEventListener('click', addSingleRow);
+        document.getElementById('addMultiple').addEventListener('click', () => addMultipleRows(10));
+        document.getElementById('addHundred').addEventListener('click', () => addMultipleRows(100));
+        document.getElementById('clearSelected').addEventListener('click', clearSelectedRows);
+        document.getElementById('clearAll').addEventListener('click', clearAllData);
+        document.getElementById('resetData').addEventListener('click', resetToOriginal);
+        document.getElementById('debugSubs').addEventListener('click', showDebugInfo);
+        
+        // Filter change handler
+        juris.subscribe('filters', () => {
+            juris.setState('filterVersion', juris.getState('filterVersion', 0) + 1);
+        });
+        
+        // Initialize
+        juris.render('#app');
+        updateCurrentCount();
+        
+        window.juris = juris;
+        window.GlobalSelectionState = GlobalSelectionState;
+    </script>
+</body>
+</html>

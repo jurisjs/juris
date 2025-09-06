@@ -1,321 +1,613 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fixed Interactive Particle System</title>
-    <script src="../src/juris.0.9.0.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a1a;
-            color: white;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Particle System with Performance Metrics</title>
+  <script src="../src/juris.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: white;
+    }
 
-        .demo-section {
-            margin-bottom: 40px;
-            padding: 20px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
-        }
+    .juris-logo {
+      display: inline-block;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
 
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
+    .demo-section {
+      margin-bottom: 40px;
+      padding: 20px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+    }
 
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
 
-        .control-group label {
-            font-size: 12px;
-            opacity: 0.7;
-            text-transform: uppercase;
-        }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
 
-        button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            background: #4a9eff;
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+    .control-group label {
+      font-size: 12px;
+      opacity: 0.7;
+      text-transform: uppercase;
+    }
 
-        button:hover {
-            background: #357abd;
-        }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #4a9eff;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
 
-        button.active {
-            background: #ff6b6b;
-        }
+    button:hover {
+      background: #357abd;
+    }
 
-        input[type="range"] {
-            width: 150px;
-        }
+    button.active {
+      background: #ff6b6b;
+    }
 
-        .demo-container {
-            position: relative;
-            height: 300px;
-            border: 1px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            overflow: hidden;
-            background: rgba(0, 0, 0, 0.3);
-        }
+    input[type="range"] {
+      width: 150px;
+    }
 
-        .debug-info {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-family: monospace;
-        }
-    </style>
+    .demo-container {
+      position: relative;
+      height: 300px;
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .performance-panel {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      min-width: 180px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      align-items: center;
+    }
+
+    .metric-label {
+      color: #888;
+      font-weight: 500;
+    }
+
+    .metric-value {
+      color: #4a9eff;
+      font-weight: 600;
+    }
+
+    .metric-value.warning {
+      color: #ffa500;
+    }
+
+    .metric-value.danger {
+      color: #ff4444;
+    }
+
+    .fps-graph {
+      height: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      margin: 8px 0;
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fps-bar {
+      position: absolute;
+      bottom: 0;
+      width: 2px;
+      background: #4a9eff;
+      transition: height 0.1s ease;
+    }
+
+    .debug-info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+  </style>
 </head>
 <body>
-    <h1>Fixed Interactive Particle System</h1>
+  <div class="juris-logo">⚡ Juris.js</div>
+  
+  <h1>Interactive Particle System with Performance Metrics</h1>
 
-    <div class="demo-section">
-        <h2>Interactive Particle System - FIXED</h2>
-        <div class="controls">
-            <div class="control-group">
-                <label>Particles</label>
-                <input type="range" id="particle-count" min="3" max="15" step="1" value="8">
-                <span id="count-display">8</span>
-            </div>
-            <div class="control-group">
-                <label>Mouse Force</label>
-                <input type="range" id="mouse-force" min="0" max="200" step="10" value="80">
-                <span id="force-display">80</span>
-            </div>
-            <div class="control-group">
-                <label>Orbit Speed</label>
-                <input type="range" id="orbit-speed" min="0.1" max="3" step="0.1" value="1">
-                <span id="speed-display">1</span>
-            </div>
-            <div class="control-group">
-                <label>Mode</label>
-                <button id="particle-mode">Attract</button>
-            </div>
-            <div class="control-group">
-                <label>Debug</label>
-                <button id="debug-toggle">Show Debug</button>
-            </div>
-        </div>
-        <div class="demo-container" id="particle-container">
-            <div class="debug-info" id="debug-info" style="display: none;">
-                <div>Mouse: <span id="mouse-pos">0, 0</span></div>
-                <div>Particles: <span id="particle-count-debug">0</span></div>
-                <div>Time: <span id="time-debug">0</span></div>
-                <div>Mode: <span id="mode-debug">attract</span></div>
-            </div>
-        </div>
+  <div class="demo-section">
+    <h2>Interactive Particle System - Enhanced with CPU & FPS Monitoring</h2>
+    <div class="controls">
+      <div class="control-group">
+        <label>Particles</label>
+        <input type="range" id="particle-count" min="3" max="300" step="1" value="8">
+        <span id="count-display">8</span>
+      </div>
+      <div class="control-group">
+        <label>Mouse Force</label>
+        <input type="range" id="mouse-force" min="0" max="200" step="10" value="80">
+        <span id="force-display">80</span>
+      </div>
+      <div class="control-group">
+        <label>Orbit Speed</label>
+        <input type="range" id="orbit-speed" min="0.1" max="3" step="0.1" value="1">
+        <span id="speed-display">1</span>
+      </div>
+      <div class="control-group">
+        <label>Mode</label>
+        <button id="particle-mode">Attract</button>
+      </div>
+      <div class="control-group">
+        <label>Debug</label>
+        <button id="debug-toggle">Show Debug</button>
+      </div>
+      <div class="control-group">
+        <label>Performance</label>
+        <button id="perf-toggle" class="active">Hide Metrics</button>
+      </div>
     </div>
+    <div class="demo-container" id="particle-container">
+      <div class="performance-panel" id="performance-panel">
+        <div class="metric-row">
+          <span class="metric-label">FPS:</span>
+          <span class="metric-value" id="fps-value">0</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Frame Time:</span>
+          <span class="metric-value" id="frame-time">0ms</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">CPU Load:</span>
+          <span class="metric-value" id="cpu-load">0%</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Render Time:</span>
+          <span class="metric-value" id="render-time">0ms</span>
+        </div>
+        <div class="fps-graph" id="fps-graph"></div>
+        <div class="metric-row">
+          <span class="metric-label">Memory:</span>
+          <span class="metric-value" id="memory-usage">0MB</span>
+        </div>
+      </div>
+      
+      <div class="debug-info" id="debug-info" style="display: none;">
+        <div>Mouse: <span id="mouse-pos">0, 0</span></div>
+        <div>Particles: <span id="particle-count-debug">0</span></div>
+        <div>Time: <span id="time-debug">0</span></div>
+        <div>Mode: <span id="mode-debug">attract</span></div>
+      </div>
+    </div>
+  </div>
 
-    <script>
-        // Initialize Juris
-        const juris = new Juris({
-            renderMode: 'fine-grained',
-            logLevel: 'error'
-        });
+  <script>
+    // Initialize Juris
+    const juris = new Juris({
+      logLevel: 'error'
+    });
 
-        // Animation state
-        let animationFrame;
-        let startTime = Date.now();
+    // Animation state
+    let animationFrame;
+    let startTime = Date.now();
 
-        // Initialize state
-        juris.setState('time', 0);
-        juris.setState('mouse.x', 0);
-        juris.setState('mouse.y', 0);
-        juris.setState('mouse.containerX', 0);
-        juris.setState('mouse.containerY', 0);
-        juris.setState('particles.count', 8);
-        juris.setState('particles.mouseForce', 80);
-        juris.setState('particles.orbitSpeed', 1);
-        juris.setState('particles.mode', 'attract');
-        juris.setState('debug.enabled', false);
+    // Performance tracking variables
+    let frameTimestamps = [];
+    let cpuLoadValues = [];
+    let fpsHistory = [];
+    let lastCpuTest = 0;
 
-        // Get container reference
-        const container = document.getElementById('particle-container');
+    // Particle system variables
+    let particleElements = [];
+    let particleContainer = null;
+
+    // Initialize state
+    juris.setState('time', 0);
+    juris.setState('mouse.x', 0);
+    juris.setState('mouse.y', 0);
+    juris.setState('mouse.containerX', 0);
+    juris.setState('mouse.containerY', 0);
+    juris.setState('particles.count', 8);
+    juris.setState('particles.mouseForce', 80);
+    juris.setState('particles.orbitSpeed', 1);
+    juris.setState('particles.mode', 'attract');
+    juris.setState('debug.enabled', false);
+    juris.setState('performance.enabled', true);
+
+    // Get container reference
+    const container = document.getElementById('particle-container');
+
+    function createParticleElement(index) {
+      const particle = document.createElement('div');
+      particle.style.cssText = `
+        position: absolute;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: none;
+        pointer-events: none;
+      `;
+      return particle;
+    }
+
+    function initializeParticles() {
+      const count = juris.getState('particles.count', 8);
+      
+      // Clear existing particles
+      if (particleContainer) {
+        container.removeChild(particleContainer);
+      }
+      
+      // Create new container
+      particleContainer = document.createElement('div');
+      particleContainer.className = 'particle-system';
+      particleContainer.style.cssText = `
+        position: relative;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      `;
+      
+      // Create particle elements
+      particleElements = [];
+      for (let i = 0; i < count; i++) {
+        const particle = createParticleElement(i);
+        particleElements.push(particle);
+        particleContainer.appendChild(particle);
+      }
+      
+      container.appendChild(particleContainer);
+    }
+
+    function updateParticlePositions() {
+      const time = juris.getState('time', 0);
+      const mouseX = juris.getState('mouse.containerX', 0);
+      const mouseY = juris.getState('mouse.containerY', 0);
+      const mouseForce = juris.getState('particles.mouseForce', 80);
+      const orbitSpeed = juris.getState('particles.orbitSpeed', 1);
+      const mode = juris.getState('particles.mode', 'attract');
+      const totalParticles = juris.getState('particles.count', 8);
+
+      const containerWidth = 300;
+      const containerHeight = 300;
+      const centerX = containerWidth / 2;
+      const centerY = containerHeight / 2;
+
+      for (let i = 0; i < Math.min(particleElements.length, totalParticles); i++) {
+        const element = particleElements[i];
         
-        // Mouse tracking - FIXED with proper container bounds
-        document.addEventListener('mousemove', (e) => {
-            const rect = container.getBoundingClientRect();
-            const containerX = e.clientX - rect.left;
-            const containerY = e.clientY - rect.top;
-            
-            juris.setState('mouse.x', e.clientX);
-            juris.setState('mouse.y', e.clientY);
-            juris.setState('mouse.containerX', containerX);
-            juris.setState('mouse.containerY', containerY);
-        });
+        const angle = (time * orbitSpeed) + (i * (Math.PI * 2 / totalParticles));
+        const orbitRadius = 60 + Math.sin(time + i) * 20;
+        
+        let baseX = centerX + Math.cos(angle) * orbitRadius;
+        let baseY = centerY + Math.sin(angle) * orbitRadius * 0.7;
 
-        // Animation loop
-        function animate() {
-            const currentTime = (Date.now() - startTime) / 1000;
-            juris.setState('time', currentTime);
-            
-            // Update debug info
-            if (juris.getState('debug.enabled', false)) {
-                document.getElementById('mouse-pos').textContent = 
-                    `${juris.getState('mouse.containerX', 0).toFixed(0)}, ${juris.getState('mouse.containerY', 0).toFixed(0)}`;
-                document.getElementById('time-debug').textContent = currentTime.toFixed(1);
-                document.getElementById('mode-debug').textContent = juris.getState('particles.mode', 'attract');
-                document.getElementById('particle-count-debug').textContent = juris.getState('particles.count', 8);
-            }
-            
-            animationFrame = requestAnimationFrame(animate);
+        const dx = mouseX - baseX;
+        const dy = mouseY - baseY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        const safeDistance = Math.max(distance, 1);
+        const normalizedDx = dx / safeDistance;
+        const normalizedDy = dy / safeDistance;
+        
+        const maxDistance = 150;
+        const forceMultiplier = Math.max(0, 1 - (distance / maxDistance));
+        const force = mouseForce * forceMultiplier;
+        
+        const attractMultiplier = mode === 'attract' ? 1 : -1;
+        const finalX = baseX + (normalizedDx * force * attractMultiplier);
+        const finalY = baseY + (normalizedDy * force * attractMultiplier);
+
+        const hue = (time * 30 + i * 40 + distance * 0.5) % 360;
+        const intensity = 0.5 + forceMultiplier * 0.5;
+        const size = 8 + forceMultiplier * 6;
+
+        // Direct style updates for maximum performance
+        element.style.left = `${finalX}px`;
+        element.style.top = `${finalY}px`;
+        element.style.width = `${size}px`;
+        element.style.height = `${size}px`;
+        element.style.background = `hsl(${hue}, 80%, ${50 + intensity * 30}%)`;
+        element.style.boxShadow = `0 0 ${5 + intensity * 10}px hsl(${hue}, 80%, 60%)`;
+        element.style.zIndex = Math.floor(intensity * 10);
+      }
+    }
+
+    function measureCPULoad() {
+      const start = performance.now();
+      let result = 0;
+      for (let i = 0; i < 10000; i++) {
+        result += Math.sin(i) * Math.cos(i) + Math.sqrt(i);
+      }
+      const duration = performance.now() - start;
+      return Math.min(100, (duration / 2) * 100);
+    }
+
+    function measureGPUPerformance() {
+      // Indirect GPU performance measurement
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl');
+      
+      if (!gl) return { supported: false };
+      
+      // Get GPU info
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      const gpuInfo = debugInfo ? {
+        vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+        renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+      } : { vendor: 'Unknown', renderer: 'Unknown' };
+      
+      // Test GPU performance with a simple shader
+      const start = performance.now();
+      
+      // Create simple test shader
+      const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+      gl.shaderSource(vertexShader, `
+        attribute vec2 position;
+        void main() {
+          gl_Position = vec4(position, 0.0, 1.0);
         }
-
-        // FIXED: Particle creation with better physics
-        const createParticle = (index) => ({
-            div: {
-                style: (element) => {
-                    const time = juris.getState('time', 0);
-                    const mouseX = juris.getState('mouse.containerX', 0);
-                    const mouseY = juris.getState('mouse.containerY', 0);
-                    const mouseForce = juris.getState('particles.mouseForce', 80);
-                    const orbitSpeed = juris.getState('particles.orbitSpeed', 1);
-                    const mode = juris.getState('particles.mode', 'attract');
-                    const totalParticles = juris.getState('particles.count', 8);
-
-                    // Container dimensions
-                    const containerWidth = 300; // Fixed container width
-                    const containerHeight = 300; // Fixed container height
-                    const centerX = containerWidth / 2;
-                    const centerY = containerHeight / 2;
-
-                    // Base orbital motion
-                    const angle = (time * orbitSpeed) + (index * (Math.PI * 2 / totalParticles));
-                    const orbitRadius = 60 + Math.sin(time + index) * 20;
-                    
-                    let baseX = centerX + Math.cos(angle) * orbitRadius;
-                    let baseY = centerY + Math.sin(angle) * orbitRadius * 0.7; // Elliptical orbit
-
-                    // Mouse influence calculation
-                    const dx = mouseX - baseX;
-                    const dy = mouseY - baseY;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    // Avoid division by zero
-                    const safeDistance = Math.max(distance, 1);
-                    const normalizedDx = dx / safeDistance;
-                    const normalizedDy = dy / safeDistance;
-                    
-                    // Force calculation with smooth falloff
-                    const maxDistance = 150;
-                    const forceMultiplier = Math.max(0, 1 - (distance / maxDistance));
-                    const force = mouseForce * forceMultiplier;
-                    
-                    // Apply mouse influence
-                    const attractMultiplier = mode === 'attract' ? 1 : -1;
-                    const finalX = baseX + (normalizedDx * force * attractMultiplier);
-                    const finalY = baseY + (normalizedDy * force * attractMultiplier);
-
-                    // Color based on movement and index
-                    const hue = (time * 30 + index * 40 + distance * 0.5) % 360;
-                    const intensity = 0.5 + forceMultiplier * 0.5;
-                    const size = 8 + forceMultiplier * 6;
-
-                    return {
-                        position: 'absolute',
-                        width: `${size}px`,
-                        height: `${size}px`,
-                        background: `hsl(${hue}, 80%, ${50 + intensity * 30}%)`,
-                        borderRadius: '50%',
-                        left: `${finalX}px`,
-                        top: `${finalY}px`,
-                        transform: 'translate(-50%, -50%)',
-                        boxShadow: `0 0 ${5 + intensity * 10}px hsl(${hue}, 80%, 60%)`,
-                        transition: 'none',
-                        zIndex: Math.floor(intensity * 10)
-                    };
-                }
-            }
-        });
-
-        // Render particles function
-        function renderParticles() {
-            const count = juris.getState('particles.count', 8);
-            const particles = [];
-            
-            for (let i = 0; i < count; i++) {
-                particles.push(createParticle(i));
-            }
-            
-            const particleSystem = {
-                div: {
-                    style: {
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%'
-                    },
-                    children: particles
-                }
-            };
-            
-            const element = juris.domRenderer.render(particleSystem);
-            container.innerHTML = '';
-            container.appendChild(element);
-            
-            console.log(`Rendered ${count} particles`);
+      `);
+      gl.compileShader(vertexShader);
+      
+      const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+      gl.shaderSource(fragmentShader, `
+        precision mediump float;
+        uniform float time;
+        void main() {
+          vec2 uv = gl_FragCoord.xy / vec2(100.0, 100.0);
+          float color = sin(uv.x * 10.0 + time) * sin(uv.y * 10.0 + time);
+          gl_FragColor = vec4(color, color, color, 1.0);
         }
+      `);
+      gl.compileShader(fragmentShader);
+      
+      const program = gl.createProgram();
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      gl.linkProgram(program);
+      
+      const duration = performance.now() - start;
+      
+      // Clean up
+      gl.deleteShader(vertexShader);
+      gl.deleteShader(fragmentShader);
+      gl.deleteProgram(program);
+      
+      return {
+        supported: true,
+        vendor: gpuInfo.vendor,
+        renderer: gpuInfo.renderer,
+        shaderCompileTime: duration,
+        // Estimate GPU load based on frame drops
+        estimatedLoad: Math.min(100, duration * 10)
+      };
+    }
 
-        // Event listeners
-        document.getElementById('particle-count').addEventListener('input', (e) => {
-            const count = parseInt(e.target.value);
-            juris.setState('particles.count', count);
-            document.getElementById('count-display').textContent = count;
-            renderParticles(); // Re-render when count changes
-        });
+    function getMemoryUsage() {
+      if (performance.memory) {
+        return (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+      }
+      return 'N/A';
+    }
 
-        document.getElementById('mouse-force').addEventListener('input', (e) => {
-            const force = parseFloat(e.target.value);
-            juris.setState('particles.mouseForce', force);
-            document.getElementById('force-display').textContent = force;
-        });
+    function updateFpsGraph() {
+      const graph = document.getElementById('fps-graph');
+      graph.innerHTML = '';
+      
+      fpsHistory.forEach((fps, index) => {
+        const bar = document.createElement('div');
+        bar.className = 'fps-bar';
+        bar.style.left = `${(index / 60) * 100}%`;
+        bar.style.height = `${Math.min(fps / 60, 1) * 100}%`;
+        
+        if (fps < 30) bar.style.background = '#ff4444';
+        else if (fps < 50) bar.style.background = '#ffa500';
+        else bar.style.background = '#4a9eff';
+        
+        graph.appendChild(bar);
+      });
+    }
 
-        document.getElementById('orbit-speed').addEventListener('input', (e) => {
-            const speed = parseFloat(e.target.value);
-            juris.setState('particles.orbitSpeed', speed);
-            document.getElementById('speed-display').textContent = speed;
-        });
+    function updatePerformanceDisplay(fps, frameTime, cpuLoad, renderTime, memoryUsage) {
+      if (!juris.getState('performance.enabled', true)) return;
 
-        document.getElementById('particle-mode').addEventListener('click', (e) => {
-            const currentMode = juris.getState('particles.mode', 'attract');
-            const newMode = currentMode === 'attract' ? 'repel' : 'attract';
-            juris.setState('particles.mode', newMode);
-            e.target.textContent = newMode === 'attract' ? 'Repel' : 'Attract';
-            e.target.classList.toggle('active', newMode === 'repel');
-        });
+      const fpsElement = document.getElementById('fps-value');
+      fpsElement.textContent = fps;
+      fpsElement.className = 'metric-value';
+      if (fps < 30) fpsElement.classList.add('danger');
+      else if (fps < 50) fpsElement.classList.add('warning');
 
-        document.getElementById('debug-toggle').addEventListener('click', (e) => {
-            const enabled = juris.getState('debug.enabled', false);
-            juris.setState('debug.enabled', !enabled);
-            e.target.textContent = enabled ? 'Show Debug' : 'Hide Debug';
-            e.target.classList.toggle('active', !enabled);
-            document.getElementById('debug-info').style.display = enabled ? 'none' : 'block';
-        });
+      const frameTimeElement = document.getElementById('frame-time');
+      frameTimeElement.textContent = `${frameTime.toFixed(1)}ms`;
+      frameTimeElement.className = 'metric-value';
+      if (frameTime > 33) frameTimeElement.classList.add('danger');
+      else if (frameTime > 20) frameTimeElement.classList.add('warning');
 
-        // Initial render
-        renderParticles();
+      const cpuElement = document.getElementById('cpu-load');
+      cpuElement.textContent = `${cpuLoad.toFixed(0)}%`;
+      cpuElement.className = 'metric-value';
+      if (cpuLoad > 80) cpuElement.classList.add('danger');
+      else if (cpuLoad > 60) cpuElement.classList.add('warning');
 
-        // Start animation
-        animate();
+      const renderElement = document.getElementById('render-time');
+      renderElement.textContent = `${renderTime.toFixed(1)}ms`;
+      renderElement.className = 'metric-value';
+      if (renderTime > 10) renderElement.classList.add('danger');
+      else if (renderTime > 5) renderElement.classList.add('warning');
 
-        console.log('🎨 Fixed Interactive Particle System loaded!');
-        console.log('Move your mouse around to see particles react.');
-    </script>
+      document.getElementById('memory-usage').textContent = `${memoryUsage}MB`;
+      updateFpsGraph();
+    }
+
+    // Mouse tracking using juris.arm() API
+    juris.arm(document, (context) => ({
+      onmousemove: (e) => {
+        const rect = container.getBoundingClientRect();
+        const containerX = e.clientX - rect.left;
+        const containerY = e.clientY - rect.top;
+        
+        context.setState('mouse.x', e.clientX);
+        context.setState('mouse.y', e.clientY);
+        context.setState('mouse.containerX', containerX);
+        context.setState('mouse.containerY', containerY);
+      }
+    }));
+
+    function animate(timestamp) {
+      // Track frame timestamps for accurate FPS calculation
+      frameTimestamps.push(timestamp);
+      if (frameTimestamps.length > 60) frameTimestamps.shift();
+
+      // Calculate FPS from recent frame intervals
+      let fps = 0;
+      if (frameTimestamps.length >= 2) {
+        const timeSpan = frameTimestamps[frameTimestamps.length - 1] - frameTimestamps[0];
+        const frameCount = frameTimestamps.length - 1;
+        fps = Math.round((frameCount * 1000) / timeSpan);
+      }
+
+      // Calculate current frame time
+      const frameTime = frameTimestamps.length >= 2 ? 
+        frameTimestamps[frameTimestamps.length - 1] - frameTimestamps[frameTimestamps.length - 2] : 
+        16.67;
+
+      fpsHistory.push(fps);
+      if (fpsHistory.length > 60) fpsHistory.shift();
+
+      // Update time state and render particles
+      const renderStart = performance.now();
+      const currentTime = (Date.now() - startTime) / 1000;
+      juris.setState('time', currentTime);
+      updateParticlePositions();
+      const renderTime = performance.now() - renderStart;
+
+      // Measure CPU load periodically
+      let cpuLoad = 0;
+      if (timestamp - lastCpuTest > 500) {
+        cpuLoad = measureCPULoad();
+        cpuLoadValues.push(cpuLoad);
+        if (cpuLoadValues.length > 20) cpuLoadValues.shift();
+        lastCpuTest = timestamp;
+      } else if (cpuLoadValues.length > 0) {
+        cpuLoad = cpuLoadValues[cpuLoadValues.length - 1];
+      }
+
+      const memoryUsage = getMemoryUsage();
+
+      // Update performance display
+      updatePerformanceDisplay(fps, frameTime, cpuLoad, renderTime, memoryUsage);
+
+      // Update debug info
+      if (juris.getState('debug.enabled', false)) {
+        document.getElementById('mouse-pos').textContent = 
+          `${juris.getState('mouse.containerX', 0).toFixed(0)}, ${juris.getState('mouse.containerY', 0).toFixed(0)}`;
+        document.getElementById('time-debug').textContent = currentTime.toFixed(1);
+        document.getElementById('mode-debug').textContent = juris.getState('particles.mode', 'attract');
+        document.getElementById('particle-count-debug').textContent = juris.getState('particles.count', 8);
+      }
+
+      animationFrame = requestAnimationFrame(animate);
+    }
+
+    // Event listeners using juris.arm() API
+    juris.arm(document.getElementById('particle-count'), (context) => ({
+      oninput: (e) => {
+        const count = parseInt(e.target.value);
+        context.setState('particles.count', count);
+        document.getElementById('count-display').textContent = count;
+        initializeParticles();
+      }
+    }));
+
+    juris.arm(document.getElementById('mouse-force'), (context) => ({
+      oninput: (e) => {
+        const force = parseFloat(e.target.value);
+        context.setState('particles.mouseForce', force);
+        document.getElementById('force-display').textContent = force;
+      }
+    }));
+
+    juris.arm(document.getElementById('orbit-speed'), (context) => ({
+      oninput: (e) => {
+        const speed = parseFloat(e.target.value);
+        context.setState('particles.orbitSpeed', speed);
+        document.getElementById('speed-display').textContent = speed;
+      }
+    }));
+
+    juris.arm(document.getElementById('particle-mode'), (context) => ({
+      onclick: (e) => {
+        const currentMode = context.getState('particles.mode', 'attract');
+        const newMode = currentMode === 'attract' ? 'repel' : 'attract';
+        context.setState('particles.mode', newMode);
+        e.target.textContent = newMode === 'attract' ? 'Repel' : 'Attract';
+        e.target.classList.toggle('active', newMode === 'repel');
+      }
+    }));
+
+    juris.arm(document.getElementById('debug-toggle'), (context) => ({
+      onclick: (e) => {
+        const enabled = context.getState('debug.enabled', false);
+        context.setState('debug.enabled', !enabled);
+        e.target.textContent = enabled ? 'Show Debug' : 'Hide Debug';
+        e.target.classList.toggle('active', !enabled);
+        document.getElementById('debug-info').style.display = enabled ? 'none' : 'block';
+      }
+    }));
+
+    juris.arm(document.getElementById('perf-toggle'), (context) => ({
+      onclick: (e) => {
+        const enabled = context.getState('performance.enabled', true);
+        context.setState('performance.enabled', !enabled);
+        e.target.textContent = enabled ? 'Show Metrics' : 'Hide Metrics';
+        e.target.classList.toggle('active', enabled);
+        document.getElementById('performance-panel').style.display = enabled ? 'none' : 'block';
+      }
+    }));
+
+    // Initialize and start
+    initializeParticles();
+    animationFrame = requestAnimationFrame(animate);
+
+    console.log('🎨 Enhanced Interactive Particle System with Optimized Performance loaded!');
+  </script>
 </body>
 </html>

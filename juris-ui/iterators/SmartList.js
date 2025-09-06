@@ -20,34 +20,24 @@
 
 // Core SmartList Configuration
 const SmartListDefaults = {
-  // Visual
   showDiffBadge: false,
   diffBadgeText: 'Smart Diff',
   diffBadgeClass: 'smartlist-diff-badge',
-  
-  // Behavior
   trackChanges: true,
   batchUpdates: true,
-  
-  // Styling
   containerClass: 'smartlist',
   itemClass: 'smartlist-item',
-  
-  // States
   loadingClass: 'smartlist-loading',
   errorClass: 'smartlist-error',
   emptyClass: 'smartlist-empty'
 };
 
-// Utility functions for SmartList
 const SmartListUtils = {
-  // Generate hash for change detection
   generateHash(obj) {
     if (obj === null || typeof obj !== 'object') return String(obj);
     return JSON.stringify(obj, Object.keys(obj).sort());
   },
 
-  // Deep clone utility
   deepClone(obj) {
     if (obj === null || typeof obj !== 'object') return obj;
     if (obj instanceof Date) return new Date(obj);
@@ -62,7 +52,6 @@ const SmartListUtils = {
     return cloned;
   },
 
-  // Deep equality check
   deepEquals(a, b) {
     if (a === b) return true;
     if (a == null || b == null || typeof a !== typeof b) return false;
@@ -75,7 +64,6 @@ const SmartListUtils = {
     return false;
   },
 
-  // Normalize key function
   normalizeKeyFn(keyFn) {
     if (typeof keyFn === 'string') {
       return (item) => item[keyFn];
@@ -86,7 +74,6 @@ const SmartListUtils = {
     return (item, index) => index;
   },
 
-  // Create item metadata
   createItemData(item, index, hash) {
     return {
       item: this.deepClone(item),
@@ -97,27 +84,15 @@ const SmartListUtils = {
   }
 };
 
-// Smart Diffing Engine
 const SmartDiffer = {
-  // Main diffing algorithm
   performDiff(parentElement, newItems, renderItem, keyFn, context, config = {}) {
     const existingNodes = Array.from(parentElement.children);
-    
-    // Handle initial render
     if (existingNodes.length === 0) {
       return this.initialRender(parentElement, newItems, renderItem, keyFn, context, config);
     }
-
-    // Build existing node maps
     const { existingNodeMap, existingDataMap } = this.buildExistingMaps(existingNodes);
-    
-    // Plan operations
     const operations = this.planOperations(newItems, keyFn, existingNodeMap, existingDataMap, config);
-    
-    // Execute operations
     this.executeOperations(parentElement, operations, renderItem, context, config);
-    
-    // Clean up unused nodes
     this.cleanupUnusedNodes(existingNodes, operations, context);
     
     return {
@@ -130,8 +105,7 @@ const SmartDiffer = {
 
   initialRender(parentElement, items, renderItem, keyFn, context, config) {
     const fragment = document.createDocumentFragment();
-    const stats = { added: 0, updated: 0, removed: 0, reused: 0 };
-    
+    const stats = { added: 0, updated: 0, removed: 0, reused: 0 };    
     items.forEach((item, index) => {
       const key = String(keyFn(item, index));
       const element = this.createItemElement(item, index, renderItem, key, context, config);
@@ -139,16 +113,14 @@ const SmartDiffer = {
         fragment.appendChild(element);
         stats.added++;
       }
-    });
-    
+    });    
     parentElement.appendChild(fragment);
     return stats;
   },
 
   buildExistingMaps(existingNodes) {
     const existingNodeMap = new Map();
-    const existingDataMap = new Map();
-    
+    const existingDataMap = new Map();    
     existingNodes.forEach(node => {
       const key = node.dataset.smartlistKey;
       if (key) {
@@ -157,23 +129,19 @@ const SmartDiffer = {
           existingDataMap.set(key, node._smartlistData);
         }
       }
-    });
-    
+    });    
     return { existingNodeMap, existingDataMap };
   },
 
   planOperations(newItems, keyFn, existingNodeMap, existingDataMap, config) {
     const operations = [];
-    const usedNodes = new Set();
-    
+    const usedNodes = new Set();    
     newItems.forEach((item, index) => {
       const key = String(keyFn(item, index));
-      const existingNode = existingNodeMap.get(key);
-      
+      const existingNode = existingNodeMap.get(key);      
       if (existingNode) {
         const oldData = existingDataMap.get(key);
-        const needsUpdate = this.shouldUpdateItem(oldData, { item, index }, config);
-        
+        const needsUpdate = this.shouldUpdateItem(oldData, { item, index }, config);        
         operations.push({
           type: 'reuse',
           key,
@@ -191,15 +159,13 @@ const SmartDiffer = {
           index
         });
       }
-    });
-    
+    });    
     operations.usedNodes = usedNodes;
     return operations;
   },
 
   executeOperations(parentElement, operations, renderItem, context, config) {
-    const finalNodes = [];
-    
+    const finalNodes = [];    
     operations.forEach(op => {
       if (op.type === 'reuse') {
         if (op.needsUpdate) {
@@ -210,7 +176,6 @@ const SmartDiffer = {
         const newNode = this.createItemElement(op.item, op.index, renderItem, op.key, context, config);
         if (newNode) {
           finalNodes.push(newNode);
-          // Fire onItemAdd callback
           if (config.onItemAdd) {
             try {
               config.onItemAdd(op.item, op.index);
@@ -221,11 +186,7 @@ const SmartDiffer = {
         }
       }
     });
-    
-    // CRITICAL: Clean up unused nodes BEFORE reordering to prevent flicker
     this.cleanupUnusedNodes(Array.from(parentElement.children), operations, context);
-    
-    // Apply the new order efficiently
     this.applyNodeOrder(parentElement, finalNodes);
   },
 
@@ -233,8 +194,6 @@ const SmartDiffer = {
     existingNodes.forEach(node => {
       if (!operations.usedNodes.has(node)) {
         const itemData = node._smartlistData;
-        
-        // Fire onItemRemove callback
         if (context.config?.onItemRemove && itemData) {
           try {
             context.config.onItemRemove(itemData.item, itemData.index);
@@ -244,7 +203,6 @@ const SmartDiffer = {
         }
         
         this.cleanupNode(node, context);
-        // CRITICAL: Remove the node immediately without waiting for re-render
         if (node.parentNode) {
           node.parentNode.removeChild(node);
         }
@@ -254,35 +212,27 @@ const SmartDiffer = {
 
   shouldUpdateItem(oldData, newData, config) {
     if (!oldData) return true;
-    
-    // Quick hash comparison if enabled
     if (config.trackChanges) {
       const newHash = SmartListUtils.generateHash(newData.item);
       if (oldData.hash === newHash && oldData.index === newData.index) {
         return false;
       }
     }
-    
-    // Fallback to deep comparison
     return oldData.index !== newData.index || !SmartListUtils.deepEquals(oldData.item, newData.item);
   },
 
   createItemElement(item, index, renderItem, key, context, config) {
     try {
-      // Render the item
       const vnode = renderItem(item, index, context);
       const element = context.juris.domRenderer.render(vnode);
       
       if (element) {
-        // Store metadata
         element.dataset.smartlistKey = key;
         element._smartlistData = SmartListUtils.createItemData(
           item, 
           index, 
           SmartListUtils.generateHash(item)
         );
-        
-        // Add item class if specified
         if (config.itemClass) {
           element.classList.add(config.itemClass);
         }
@@ -296,17 +246,12 @@ const SmartDiffer = {
   },
 
   updateItemElement(element, newItem, newIndex, renderItem, context, config) {
-    // Update stored metadata
     element._smartlistData = SmartListUtils.createItemData(
       newItem,
       newIndex,
       SmartListUtils.generateHash(newItem)
     );
-    
-    // Update key attribute
     element.dataset.smartlistKey = String(context.keyFn(newItem, newIndex));
-    
-    // Perform granular updates if possible, otherwise re-render
     if (config.granularUpdates !== false) {
       this.performGranularUpdate(element, newItem, newIndex, context, config);
     } else {
@@ -315,29 +260,21 @@ const SmartDiffer = {
   },
 
   performGranularUpdate(element, newItem, newIndex, context, config) {
-    // Basic granular updates - can be extended
-    
-    // Update text content if element has direct text
     const textNodes = Array.from(element.childNodes).filter(node => node.nodeType === 3);
     if (textNodes.length === 1 && typeof newItem === 'string') {
       textNodes[0].textContent = newItem;
       return;
     }
-    
-    // Update specific attributes that commonly change
     const commonUpdates = {
       'data-id': newItem.id,
       'data-status': newItem.status,
       'data-index': newIndex
-    };
-    
+    };    
     Object.entries(commonUpdates).forEach(([attr, value]) => {
       if (value !== undefined && element.getAttribute(attr) !== String(value)) {
         element.setAttribute(attr, String(value));
       }
     });
-    
-    // Update classes based on item properties
     if (newItem.completed !== undefined) {
       element.classList.toggle('completed', newItem.completed);
     }
@@ -352,17 +289,11 @@ const SmartDiffer = {
   replaceItemElement(element, newItem, newIndex, renderItem, context, config) {
     try {
       const vnode = renderItem(newItem, newIndex, context);
-      const newElement = context.juris.domRenderer.render(vnode);
-      
+      const newElement = context.juris.domRenderer.render(vnode);      
       if (newElement) {
-        // Transfer metadata
         newElement.dataset.smartlistKey = element.dataset.smartlistKey;
         newElement._smartlistData = element._smartlistData;
-        
-        // Replace in DOM
         element.parentNode.replaceChild(newElement, element);
-        
-        // Clean up old element
         this.cleanupNode(element, context);
       }
     } catch (error) {
@@ -371,10 +302,7 @@ const SmartDiffer = {
   },
 
   applyNodeOrder(parentElement, finalNodes) {
-    // Efficient DOM reordering with immediate updates
     const currentNodes = Array.from(parentElement.children);
-    
-    // Check if order is already correct
     let orderCorrect = currentNodes.length === finalNodes.length;
     if (orderCorrect) {
       for (let i = 0; i < currentNodes.length; i++) {
@@ -383,29 +311,20 @@ const SmartDiffer = {
           break;
         }
       }
-    }
-    
+    }    
     if (orderCorrect) {
-      return; // No DOM manipulation needed
+      return; 
     }
-    
-    // Apply minimal DOM changes to achieve correct order
     finalNodes.forEach((node, targetIndex) => {
       const currentParent = node.parentNode;
-      
-      // Ensure node is in the correct parent
       if (currentParent !== parentElement) {
         parentElement.appendChild(node);
-      }
-      
-      const currentIndex = Array.from(parentElement.children).indexOf(node);
-      
+      }      
+      const currentIndex = Array.from(parentElement.children).indexOf(node);      
       if (currentIndex !== targetIndex) {
         if (targetIndex >= parentElement.children.length) {
-          // Append to end
           parentElement.appendChild(node);
         } else {
-          // Insert before target position
           const referenceNode = parentElement.children[targetIndex];
           if (referenceNode && referenceNode !== node) {
             parentElement.insertBefore(node, referenceNode);
@@ -417,7 +336,6 @@ const SmartDiffer = {
 
   cleanupNode(element, context) {
     try {
-      // Use Juris cleanup if available
       if (context.juris.domRenderer.cleanup) {
         context.juris.domRenderer.cleanup(element);
       }
@@ -435,35 +353,23 @@ const SmartDiffer = {
   }
 };
 
-// Main SmartList Component
 function SmartList(props, context) {
-  // Merge configuration
   const config = { ...SmartListDefaults, ...props };
   const { items, renderItem, keyFn, placeholder, loading, error } = props;
-  
-  // Validate required props
   if (!renderItem || typeof renderItem !== 'function') {
     throw new Error('SmartList: renderItem is required and must be a function');
   }
-  
-  // Normalize key function
   const normalizedKeyFn = SmartListUtils.normalizeKeyFn(keyFn || ((item, index) => index));
-  
-  // Enhanced context for item rendering
-  const itemContext = {
+    const itemContext = {
     ...context,
     keyFn: normalizedKeyFn,
     config
   };
-
-  // Create container element structure
   const containerProps = {
     class: [config.containerClass, props.class].filter(Boolean).join(' '),
     style: { position: 'relative', ...props.style },
     ...props.attributes
   };
-
-  // Main list container function that preserves DOM nodes
   return {
     div: {
       ...containerProps,
@@ -487,22 +393,14 @@ function SmartList(props, context) {
             }
           }
         } : null,
-        
-        // List container with direct DOM manipulation
         (parentElement) => {
           const currentItems = typeof items === 'function' ? items() : items;
-          
-          // Handle different states
           if (!currentItems || currentItems.length === 0) {
             return SmartList.handleEmptyState(parentElement, placeholder, config, context);
           }
-          
           if (currentItems.then) {
             return SmartList.handleAsyncItems(parentElement, currentItems, renderItem, normalizedKeyFn, itemContext, config, loading, error);
           }
-          
-          // This is the key fix: perform smart diff directly on the parentElement
-          // without returning a new VDOM structure that would cause re-render
           try {
             const stats = SmartDiffer.performDiff(
               parentElement, 
@@ -512,14 +410,9 @@ function SmartList(props, context) {
               itemContext, 
               config
             );
-            
-            // Fire performance callback if provided
             if (config.onPerformance) {
               config.onPerformance(stats);
             }
-            
-            // Return null to indicate we handled DOM manipulation directly
-            // This prevents Juris from trying to reconcile VDOM
             return null;
           } catch (err) {
             console.error('SmartList diffing error:', err);
@@ -533,12 +426,8 @@ function SmartList(props, context) {
     }
   };
 }
-
-// Static methods for SmartList
 SmartList.handleEmptyState = function(parentElement, placeholder, config, context) {
-  // Clear existing content only if not already empty
   if (parentElement.children.length > 0) {
-    // Clean up existing nodes properly
     Array.from(parentElement.children).forEach(node => {
       SmartDiffer.cleanupNode(node, context);
     });
@@ -554,8 +443,6 @@ SmartList.handleEmptyState = function(parentElement, placeholder, config, contex
       parentElement.appendChild(placeholderElement);
     }
   }
-  
-  // Return null to prevent VDOM reconciliation
   return null;
 };
 
@@ -645,16 +532,3 @@ SmartList.renderError = function(parentElement, err, config, customError = null,
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { SmartList, SmartListDefaults, SmartListUtils, SmartDiffer };
 }
-
-// Global registration helper
-SmartList.register = function(juris) {
-  juris.registerComponent('SmartList', SmartList);
-  return SmartList;
-};
-
-// Version and metadata
-SmartList.version = '1.0.0';
-SmartList.jurisVersion = '0.91.0';
-SmartList.description = 'Reusable smart diffing list component for Juris applications';
-
-console.info(`🚀 SmartList v${SmartList.version} loaded (compatible with Juris ${SmartList.jurisVersion})`);

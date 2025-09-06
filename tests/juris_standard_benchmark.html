@@ -338,12 +338,12 @@
                     jurisInstance.setState('rows', rows);
                     
                     // Use requestAnimationFrame to ensure DOM is updated
-                    return new Promise(resolve => {
-                        requestAnimationFrame(() => {
-                            const endTime = performance.now();
-                            resolve(endTime - startTime);
-                        });
-                    });
+                    //return new Promise(resolve => {
+                        //requestAnimationFrame(() => {
+                    const endTime = performance.now();
+                    return endTime - startTime;
+                        //});
+                    //});
                 }
             },
             

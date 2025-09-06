@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juris DOM Subscription Inspector</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(90deg, #4a90e2, #357abd);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      padding: 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .inspector-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .panel {
+      background: #fff;
+      border: 1px solid #e1e5e9;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: #f1f3f4;
+      padding: 15px;
+      font-weight: 600;
+      border-bottom: 1px solid #e1e5e9;
+    }
+
+    .panel-content {
+      padding: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .element-item {
+      margin-bottom: 15px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #4a90e2;
+    }
+
+    .element-tag {
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+
+    .subscription-list {
+      margin-left: 15px;
+    }
+
+    .subscription-item {
+      padding: 6px 10px;
+      margin: 4px 0;
+      background: white;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .state-path {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+
+    .event-listener {
+      color: #27ae60;
+      font-weight: bold;
+    }
+
+    .count-badge {
+      background: #4a90e2;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-left: 10px;
+    }
+
+    .demo-section {
+      padding: 20px;
+      border-top: 1px solid #dee2e6;
+      background: #f8f9fa;
+    }
+
+    .demo-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #4a90e2;
+      color: white;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #357abd;
+    }
+
+    .demo-element {
+      padding: 15px;
+      margin: 10px 0;
+      border: 2px solid #4a90e2;
+      border-radius: 6px;
+      background: white;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #e1e5e9;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #4a90e2;
+    }
+
+    .stat-label {
+      color: #6c757d;
+      font-size: 14px;
+    }
+
+    .error-message {
+      padding: 20px;
+      color: red;
+      background: #ffe6e6;
+      border: 2px solid red;
+      margin: 20px;
+      border-radius: 8px;
+    }
+
+    .loading-message {
+      padding: 20px;
+      color: #4a90e2;
+      background: #e3f2fd;
+      border: 2px solid #4a90e2;
+      margin: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .refresh-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+
+    .refresh-btn:hover {
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <button class="refresh-btn" onclick="refreshInspector()" title="Refresh Inspector">🔄</button>
+
+  <script src="../src/juris.js"></script>
+  <script>
+    // Global variables
+    window.jurisInspector = {
+      juris: null,
+      elementCounter: 0,
+      initialized: false
+    };
+
+    // Initialize application
+    function initializeApp() {
+      // Check if Juris is available
+      if (typeof Juris === 'undefined') {
+        showError('Juris.js not found', 'Could not load Juris.js from ../src/juris.js. Please check the file path.');
+        return;
+      }
+
+      try {
+        // Create Juris instance
+        window.jurisInspector.juris = new Juris({
+          states: {
+            counter: 0,
+            message: 'Hello from Juris!'
+          }
+        });
+
+        window.jurisInspector.initialized = true;
+        renderApp();
+        inspectSubscriptions();
+        
+        console.log('Juris Inspector initialized successfully');
+      } catch (error) {
+        showError('Initialization Error', error.message);
+      }
+    }
+
+    function showError(title, message) {
+      document.getElementById('app').innerHTML = `
+        <div class="error-message">
+          <h2>${title}</h2>
+          <p><strong>Error:</strong> ${message}</p>
+          <p><strong>Solutions:</strong></p>
+          <ul>
+            <li>Verify juris.js file exists at ../src/juris.js</li>
+            <li>Check the file path is correct relative to this HTML file</li>
+            <li>Try different paths like ./juris.js or ./src/juris.js</li>
+            <li>Open browser console for more details</li>
+          </ul>
+        </div>
+      `;
+    }
+
+    function renderApp() {
+      const appHtml = {
+        div: {
+          class: 'container',
+          children: [
+            {div: {
+              class: 'header',
+              children: [
+                {div: {class: 'logo', text: '{..} Juris.js'}},
+                {div: {text: 'DOM Subscription Inspector'}}
+              ]
+            }},
+            {div: {
+              class: 'controls',
+              children: [
+                {div: {
+                  class: 'stats',
+                  children: [
+                    {div: {
+                      class: 'stat-card',
+                      children: [
+                        {div: {class: 'stat-number', id: 'totalElements', text: '0'}},
+                        {div: {class: 'stat-label', text: 'Elements with Subscriptions'}}
+                      ]
+                    }},
+                    {div: {
+                      class: 'stat-card',
+                      children: [
+                        {div: {class: 'stat-number', id: 'totalSubscriptions', text: '0'}},
+                        {div: {class: 'stat-label', text: 'Total Reactive Subscriptions'}}
+                      ]
+                    }},
+                    {div: {
+                      class: 'stat-card',
+                      children: [
+                        {div: {class: 'stat-number', id: 'totalEventListeners', text: '0'}},
+                        {div: {class: 'stat-label', text: 'Total Event Listeners'}}
+                      ]
+                    }},
+                    {div: {
+                      class: 'stat-card',
+                      children: [
+                        {div: {class: 'stat-number', id: 'stateSubscriptions', text: '0'}},
+                        {div: {class: 'stat-label', text: 'State Manager Subscriptions'}}
+                      ]
+                    }}
+                  ]
+                }}
+              ]
+            }},
+            {div: {
+              class: 'inspector-grid',
+              children: [
+                {div: {
+                  class: 'panel',
+                  children: [
+                    {div: {
+                      class: 'panel-header',
+                      children: [
+                        {span: {text: 'DOM Element Subscriptions'}},
+                        {span: {class: 'count-badge', id: 'domCount', text: '0'}}
+                      ]
+                    }},
+                    {div: {class: 'panel-content', id: 'domSubscriptions', text: 'No DOM subscriptions found. Use the demo below to create some reactive elements.'}}
+                  ]
+                }},
+                {div: {
+                  class: 'panel',
+                  children: [
+                    {div: {
+                      class: 'panel-header',
+                      children: [
+                        {span: {text: 'State Manager Subscriptions'}},
+                        {span: {class: 'count-badge', id: 'stateCount', text: '0'}}
+                      ]
+                    }},
+                    {div: {class: 'panel-content', id: 'stateSubscriptionsPanel', text: 'No state subscriptions found.'}}
+                  ]
+                }}
+              ]
+            }},
+            {div: {
+              class: 'demo-section',
+              children: [
+                {h3: {text: 'Interactive Demo'}},
+                {div: {
+                  class: 'demo-controls',
+                  children: [
+                    {button: {text: 'Add Reactive Element', onclick: createReactiveElement}},
+                    {button: {text: 'Add Event Element', onclick: createEventElement}},
+                    {button: {text: 'Update Counter', onclick: updateCounter}},
+                    {button: {text: 'Clear Demo', onclick: clearDemo}},
+                    {button: {text: 'Refresh Inspector', onclick: refreshInspector}}
+                  ]
+                }},
+                {div: {id: 'demoArea'}}
+              ]
+            }}
+          ]
+        }
+      };
+
+      const appElement = window.jurisInspector.juris.objectToHtml(appHtml);
+      document.getElementById('app').innerHTML = '';
+      document.getElementById('app').appendChild(appElement);
+    }
+
+    function getElementDescription(element) {
+      let desc = element.tagName.toLowerCase();
+      if (element.id) desc += `#${element.id}`;
+      if (element.className) desc += `.${element.className.split(' ').join('.')}`;
+      return desc;
+    }
+
+    function inspectSubscriptions() {
+      if (!window.jurisInspector.initialized) return;
+
+      const juris = window.jurisInspector.juris;
+      const domSubs = juris.domRenderer.subscriptions;
+      const stateSubs = juris.stateManager.subscribers;
+      const extSubs = juris.stateManager.extSubs;
+
+      // Calculate statistics
+      let totalDomElements = domSubs.size;
+      let totalReactiveSubscriptions = 0;
+      let totalEventListeners = 0;
+
+      domSubs.forEach(data => {
+        totalReactiveSubscriptions += data.subscriptions?.length || 0;
+        totalEventListeners += data.eventListeners?.length || 0;
+      });
+
+      let totalStateSubscriptions = stateSubs.size + extSubs.size;
+
+      // Update statistics display
+      document.getElementById('totalElements').textContent = totalDomElements;
+      document.getElementById('totalSubscriptions').textContent = totalReactiveSubscriptions;
+      document.getElementById('totalEventListeners').textContent = totalEventListeners;
+      document.getElementById('stateSubscriptions').textContent = totalStateSubscriptions;
+      document.getElementById('domCount').textContent = totalDomElements;
+      document.getElementById('stateCount').textContent = totalStateSubscriptions;
+
+      // Display DOM subscriptions
+      displayDomSubscriptions(domSubs);
+      
+      // Display state subscriptions
+      displayStateSubscriptions(stateSubs, extSubs);
+    }
+
+    function displayDomSubscriptions(domSubs) {
+      const container = document.getElementById('domSubscriptions');
+      if (!container) return;
+
+      if (domSubs.size === 0) {
+        container.innerHTML = '<p>No DOM subscriptions found. Use the demo below to create some reactive elements.</p>';
+        return;
+      }
+
+      let html = '';
+      domSubs.forEach((data, element) => {
+        html += `
+          <div class="element-item">
+            <div class="element-tag">${getElementDescription(element)}</div>
+            <div class="subscription-list">
+        `;
+        
+        if (data.subscriptions && data.subscriptions.length > 0) {
+          html += `<div style="font-weight: bold; margin-bottom: 5px;">Reactive Subscriptions (${data.subscriptions.length}):</div>`;
+          data.subscriptions.forEach((sub, i) => {
+            html += `<div class="subscription-item"><span class="state-path">Subscription ${i + 1}</span> → DOM Update Function</div>`;
+          });
+        }
+        
+        if (data.eventListeners && data.eventListeners.length > 0) {
+          html += `<div style="font-weight: bold; margin: 10px 0 5px 0;">Event Listeners (${data.eventListeners.length}):</div>`;
+          data.eventListeners.forEach(listener => {
+            html += `<div class="subscription-item"><span class="event-listener">${listener.eventName}</span> → Handler Function</div>`;
+          });
+        }
+        
+        html += `
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+
+    function displayStateSubscriptions(stateSubs, extSubs) {
+      const container = document.getElementById('stateSubscriptionsPanel');
+      if (!container) return;
+
+      let html = '';
+      
+      if (stateSubs.size > 0) {
+        html += '<div style="font-weight: bold; margin-bottom: 10px;">Internal State Subscriptions:</div>';
+        stateSubs.forEach((subscribers, path) => {
+          html += `
+            <div class="element-item">
+              <div class="element-tag">State Path: ${path}</div>
+              <div class="subscription-list">
+                <div class="subscription-item">
+                  <span class="state-path">${subscribers.size} subscriber(s)</span>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+      
+      if (extSubs.size > 0) {
+        html += '<div style="font-weight: bold; margin: 20px 0 10px 0;">External State Subscriptions:</div>';
+        extSubs.forEach((subscribers, path) => {
+          html += `
+            <div class="element-item">
+              <div class="element-tag">State Path: ${path}</div>
+              <div class="subscription-list">
+                <div class="subscription-item">
+                  <span class="state-path">${subscribers.size} external subscriber(s)</span>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+      
+      if (html === '') {
+        container.innerHTML = '<p>No state subscriptions found.</p>';
+      } else {
+        container.innerHTML = html;
+      }
+    }
+
+    // Demo functions
+    function createReactiveElement() {
+      if (!window.jurisInspector.initialized) return;
+
+      window.jurisInspector.elementCounter++;
+      const juris = window.jurisInspector.juris;
+      const demoArea = document.getElementById('demoArea');
+      
+      const reactiveDiv = juris.objectToHtml({
+        div: {
+          class: 'demo-element',
+          id: `reactive-${window.jurisInspector.elementCounter}`,
+          text: () => `Counter: ${juris.getState('counter', 0)} | ${juris.getState('message', 'Hello')}`,
+          style: {
+            background: () => juris.getState('counter', 0) % 2 === 0 ? '#e8f5e9' : '#fff3e0'
+          }
+        }
+      });
+      
+      demoArea.appendChild(reactiveDiv);
+      setTimeout(inspectSubscriptions, 100);
+    }
+
+    function createEventElement() {
+      if (!window.jurisInspector.initialized) return;
+
+      window.jurisInspector.elementCounter++;
+      const juris = window.jurisInspector.juris;
+      const demoArea = document.getElementById('demoArea');
+      
+      const eventDiv = juris.objectToHtml({
+        div: {
+          class: 'demo-element',
+          id: `event-${window.jurisInspector.elementCounter}`,
+          text: 'Click me to increment counter!',
+          onclick: () => {
+            const current = juris.getState('counter', 0);
+            juris.setState('counter', current + 1);
+          },
+          style: {
+            cursor: 'pointer',
+            background: '#e3f2fd'
+          }
+        }
+      });
+      
+      demoArea.appendChild(eventDiv);
+      setTimeout(inspectSubscriptions, 100);
+    }
+
+    function updateCounter() {
+      if (!window.jurisInspector.initialized) return;
+
+      const juris = window.jurisInspector.juris;
+      const current = juris.getState('counter', 0);
+      juris.setState('counter', current + 1);
+    }
+
+    function clearDemo() {
+      if (!window.jurisInspector.initialized) return;
+
+      const demoArea = document.getElementById('demoArea');
+      const juris = window.jurisInspector.juris;
+      
+      Array.from(demoArea.children).forEach(child => {
+        juris.domRenderer.cleanup(child);
+      });
+      
+      demoArea.innerHTML = '';
+      window.jurisInspector.elementCounter = 0;
+      setTimeout(inspectSubscriptions, 100);
+    }
+
+    function refreshInspector() {
+      inspectSubscriptions();
+    }
+
+    // Initialize when DOM loads
+    document.addEventListener('DOMContentLoaded', initializeApp);
+    
+    // Fallback initialization if DOMContentLoaded already fired
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+      initializeApp();
+    }
+    window.juris = juris;
+  </script>
+</body>
+</html>

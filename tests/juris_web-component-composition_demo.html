@@ -540,6 +540,7 @@ const conditionalApp = {
     </div>
 
     <!-- Load Juris Framework -->
+    <script src="../src/juris-webcomponent.js"></script>
     <script src="../src/juris.js"></script>
     
     <script>
@@ -564,6 +565,7 @@ const conditionalApp = {
                 
                 // Initialize Juris instance with composition-focused state
                 juris = new Juris({
+                    features:WebComponentFactory,
                     states: {
                         user: {
                             name: 'Alice Johnson',

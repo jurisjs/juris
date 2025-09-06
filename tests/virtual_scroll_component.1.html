@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Scroll with Column Resize - Juris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .virtual-table {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            max-width: 100%;
+        }
+        
+        .table-header {
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            display: flex;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-cell {
+            border-right: 1px solid #dee2e6;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding: 12px 8px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            background: #f8f9fa;
+        }
+        
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: -2px;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            z-index: 10;
+            border-right: 2px solid transparent;
+        }
+        
+        .resizer:hover {
+            border-right-color: #007bff;
+        }
+        
+        .table-body {
+            position: relative;
+            overflow-y: auto;
+            height: 400px;
+        }
+        
+        .table-row {
+            position: absolute;
+            left: 0;
+            right: 0;
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        
+        .table-row:hover {
+            background: #f8f9fa;
+        }
+        
+        .table-row.selected {
+            background: #e3f2fd;
+        }
+        
+        .table-cell {
+            border-right: 1px solid #e9ecef;
+            padding: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        }
+        
+        .cell-number {
+            justify-content: flex-end;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .cell-status {
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .status-active { background: #28a745; }
+        .status-inactive { background: #dc3545; }
+        .status-pending { background: #ffc107; }
+        
+        .cell-actions {
+            justify-content: center;
+            gap: 4px;
+        }
+        
+        .action-btn {
+            padding: 2px 6px;
+            font-size: 11px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .btn-edit { background: #e7f3ff; color: #0066cc; }
+        .btn-delete { background: #ffebee; color: #cc0000; }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Virtual Scroll Table with Resizable Columns</h1>
+    <div id="app"></div>
+    
+    <script src="../src/juris.js"></script>
+    <script>
+        // Sample data
+        const sampleData = Array.from({ length: 10000 }, (_, i) => ({
+            id: i + 1,
+            name: `Person ${i + 1}`,
+            email: `person${i + 1}@example.com`,
+            department: ['Engineering', 'Sales', 'Marketing', 'HR'][i % 4],
+            salary: 50000 + (i * 1000) % 100000,
+            status: ['active', 'inactive', 'pending'][i % 3]
+        }));
+        
+        // Resizable Header Cell
+        const ResizableHeaderCell = (props, context) => {
+            const { getState, setState } = context;
+            const { column, tableId } = props;
+            
+            const startResize = (e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const currentWidth = getState(`${tableId}.widths.${column.key}`, column.width || 120);
+                
+                const onMouseMove = (e) => {
+                    const diff = e.clientX - startX;
+                    const newWidth = Math.max(50, currentWidth + diff);
+                    setState(`${tableId}.widths.${column.key}`, newWidth);
+                };
+                
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            };
+            
+            return {
+                div: {
+                    class: 'header-cell',
+                    style: () => ({
+                        width: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`,
+                        minWidth: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`
+                    }),
+                    children: [
+                        { span: { text: column.label } },
+                        { div: { class: 'resizer', onmousedown: startResize } }
+                    ]
+                }
+            };
+        };
+        
+        // Table Cell Components
+        const TextCell = (props, context) => {
+            const { getState } = context;
+            const { column, value, tableId } = props;
+            
+            return {
+                div: {
+                    class: 'table-cell',
+                    style: () => ({
+                        width: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`,
+                        minWidth: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`
+                    }),
+                    text: String(value || '')
+                }
+            };
+        };
+        
+        const NumberCell = (props, context) => {
+            const { getState } = context;
+            const { column, value, tableId } = props;
+            
+            return {
+                div: {
+                    class: 'table-cell cell-number',
+                    style: () => ({
+                        width: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`,
+                        minWidth: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`
+                    }),
+                    text: typeof value === 'number' ? value.toLocaleString() : String(value || '')
+                }
+            };
+        };
+        
+        const StatusCell = (props, context) => {
+            const { getState } = context;
+            const { column, value, tableId } = props;
+            
+            return {
+                div: {
+                    class: 'table-cell cell-status',
+                    style: () => ({
+                        width: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`,
+                        minWidth: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`
+                    }),
+                    children: [
+                        { div: { class: `status-dot status-${value || 'inactive'}` } },
+                        { span: { text: String(value || 'unknown') } }
+                    ]
+                }
+            };
+        };
+        
+        const ActionCell = (props, context) => {
+            const { getState } = context;
+            const { column, row, rowIndex, tableId } = props;
+            
+            return {
+                div: {
+                    class: 'table-cell cell-actions',
+                    style: () => ({
+                        width: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`,
+                        minWidth: `${getState(`${tableId}.widths.${column.key}`, column.width || 120)}px`
+                    }),
+                    children: [
+                        {
+                            button: {
+                                class: 'action-btn btn-edit',
+                                text: 'Edit',
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    alert(`Edit ${row.name}`);
+                                }
+                            }
+                        },
+                        {
+                            button: {
+                                class: 'action-btn btn-delete',
+                                text: 'Del',
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    if (confirm(`Delete ${row.name}?`)) {
+                                        alert('Deleted!');
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // Cell Router
+        const CellRouter = (props, context) => {
+            const { column } = props;
+            
+            switch (column.type) {
+                case 'number':
+                    return { NumberCell: props };
+                case 'status':
+                    return { StatusCell: props };
+                case 'actions':
+                    return { ActionCell: props };
+                default:
+                    return { TextCell: props };
+            }
+        };
+        
+        // Main Virtual Table
+        const VirtualTable = (props, context) => {
+            const { getState, setState } = context;
+            const {
+                data = [],
+                columns = [],
+                height = 400,
+                rowHeight = 40,
+                tableId = 'table'
+            } = props;
+            
+            // Initialize column widths
+            columns.forEach(col => {
+                if (getState(`${tableId}.widths.${col.key}`) === null) {
+                    setState(`${tableId}.widths.${col.key}`, col.width || 120);
+                }
+            });
+            
+            const handleScroll = (e) => {
+                setState(`${tableId}.scroll`, e.target.scrollTop);
+            };
+            
+            const handleRowClick = (index, e) => {
+                const selected = getState(`${tableId}.selected`, []);
+                if (e.ctrlKey || e.metaKey) {
+                    const newSelected = selected.includes(index)
+                        ? selected.filter(i => i !== index)
+                        : [...selected, index];
+                    setState(`${tableId}.selected`, newSelected);
+                } else {
+                    setState(`${tableId}.selected`, [index]);
+                }
+            };
+            
+            return {
+                div: {
+                    class: 'virtual-table',
+                    children: [
+                        // Header
+                        {
+                            div: {
+                                class: 'table-header',
+                                children: columns.map(column => ({
+                                    ResizableHeaderCell: {
+                                        key: column.key,
+                                        column,
+                                        tableId
+                                    }
+                                }))
+                            }
+                        },
+                        
+                        // Body
+                        {
+                            div: {
+                                class: 'table-body',
+                                style: { height: `${height}px` },
+                                onscroll: handleScroll,
+                                children: [
+                                    // Virtual container
+                                    {
+                                        div: {
+                                            style: { 
+                                                height: `${data.length * rowHeight}px`,
+                                                position: 'relative'
+                                            },
+                                            children: () => {
+                                                const scrollTop = getState(`${tableId}.scroll`, 0);
+                                                const selected = getState(`${tableId}.selected`, []);
+                                                
+                                                const startIdx = Math.max(0, Math.floor(scrollTop / rowHeight) - 10);
+                                                const endIdx = Math.min(data.length, startIdx + Math.ceil(height / rowHeight) + 20);
+                                                
+                                                const visibleRows = [];
+                                                
+                                                for (let i = startIdx; i < endIdx; i++) {
+                                                    const row = data[i];
+                                                    if (!row) continue;
+                                                    
+                                                    visibleRows.push({
+                                                        div: {
+                                                            key: `row-${i}`,
+                                                            class: `table-row ${selected.includes(i) ? 'selected' : ''}`,
+                                                            style: {
+                                                                top: `${i * rowHeight}px`,
+                                                                height: `${rowHeight}px`
+                                                            },
+                                                            onclick: (e) => handleRowClick(i, e),
+                                                            children: columns.map(column => ({
+                                                                CellRouter: {
+                                                                    key: `${i}-${column.key}`,
+                                                                    column,
+                                                                    value: row[column.key],
+                                                                    row,
+                                                                    rowIndex: i,
+                                                                    tableId
+                                                                }
+                                                            }))
+                                                        }
+                                                    });
+                                                }
+                                                
+                                                return visibleRows;
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // App
+        const App = () => {
+            const columns = [
+                { key: 'id', label: 'ID', type: 'number', width: 80 },
+                { key: 'name', label: 'Name', width: 150 },
+                { key: 'email', label: 'Email', width: 200 },
+                { key: 'department', label: 'Department', width: 120 },
+                { key: 'salary', label: 'Salary', type: 'number', width: 120 },
+                { key: 'status', label: 'Status', type: 'status', width: 100 },
+                { key: 'actions', label: 'Actions', type: 'actions', width: 120 }
+            ];
+            
+            return {
+                div: {
+                    children: [
+                        {
+                            VirtualTable: {
+                                data: sampleData,
+                                columns,
+                                height: 500,
+                                rowHeight: 42,
+                                tableId: 'mainTable'
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // Initialize
+        const juris = new Juris({
+            states: {
+                mainTable: {
+                    scroll: 0,
+                    selected: [],
+                    widths: {}
+                }
+            },
+            components: {
+                App,
+                VirtualTable,
+                ResizableHeaderCell,
+                TextCell,
+                NumberCell,
+                StatusCell,
+                ActionCell,
+                CellRouter
+            },
+            layout: { App: {} }
+        });
+        
+        juris.render('#app');
+        window.juris = juris;
+    </script>
+</body>
+</html>

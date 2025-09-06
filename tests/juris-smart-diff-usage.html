@@ -517,9 +517,7 @@
                         }
                     }
                 });
-            }
-
-            
+            }            
 
             function initialRender(parentElement, newItems, renderItem, keyFn, context) {
                 const fragment = document.createDocumentFragment();
@@ -697,7 +695,7 @@
                 }
                 return cloned;
             }
-            
+
             return {
                 div: {
                     class: props.class || 'smart-list',
@@ -723,9 +721,7 @@
                     ]
                 }
             };
-        }
-
-        
+        }      
 
 
         // Juris already provides deepEquals globally, no need to redeclare

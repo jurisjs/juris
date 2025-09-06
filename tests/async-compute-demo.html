@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realistic Async Compute Demo</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .demo-section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .controls {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 6px;
+            margin: 16px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #0052a3; }
+        .toggle-btn { background: #28a745; }
+        .toggle-btn:hover { background: #218838; }
+        input, select {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .result-container {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 12px 0;
+        }
+        .result-data {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            background: white;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .deps-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .loading { color: #6c757d; font-style: italic; }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .status-loading { background: #ffeaa7; color: #856404; }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        h3 { margin-top: 0; color: #333; border-bottom: 2px solid #0066cc; padding-bottom: 8px; }
+        label { font-weight: 500; margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="../src/juris.js"></script>
+    <script>
+        // Realistic mock APIs
+        const mockSearchAPI = async (query, delay = 600) => {
+            await new Promise(resolve => setTimeout(resolve, delay));
+            const results = [
+                { id: 1, title: 'Advanced JavaScript Patterns', author: 'Smith', category: 'programming', publishedDate: '2023-08-15', price: 49.99, rating: 4.5 },
+                { id: 2, title: 'React Performance Optimization', author: 'Johnson', category: 'programming', publishedDate: '2023-07-20', price: 39.99, rating: 4.8 },
+                { id: 3, title: 'Database Design Principles', author: 'Williams', category: 'database', publishedDate: '2023-06-10', price: 59.99, rating: 4.2 },
+                { id: 4, title: 'Machine Learning Basics', author: 'Brown', category: 'ai', publishedDate: '2023-09-01', price: 69.99, rating: 4.7 },
+                { id: 5, title: 'Cloud Architecture Guide', author: 'Davis', category: 'cloud', publishedDate: '2023-05-30', price: 79.99, rating: 4.3 }
+            ];
+            return results.filter(item => 
+                item.title.toLowerCase().includes(query.toLowerCase()) || 
+                item.author.toLowerCase().includes(query.toLowerCase()) ||
+                item.category.toLowerCase().includes(query.toLowerCase())
+            );
+        };
+
+        const mockFetchUserData = async (userId, delay = 800) => {
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return {
+                id: userId,
+                name: `User ${userId}`,
+                email: `user${userId}@company.com`,
+                department: ['Engineering', 'Marketing', 'Sales', 'HR'][Math.floor(Math.random() * 4)],
+                joinDate: '2022-03-15',
+                projects: [
+                    { id: 'p1', name: 'Project Alpha', status: 'active', priority: 'high' },
+                    { id: 'p2', name: 'Project Beta', status: 'completed', priority: 'medium' },
+                    { id: 'p3', name: 'Project Gamma', status: 'pending', priority: 'low' }
+                ]
+            };
+        };
+
+        const mockFetchAnalytics = async (params, delay = 1000) => {
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return {
+                pageViews: Math.floor(Math.random() * 10000) + 5000,
+                uniqueUsers: Math.floor(Math.random() * 5000) + 2000,
+                bounceRate: (Math.random() * 0.3 + 0.2).toFixed(2),
+                avgSessionDuration: Math.floor(Math.random() * 300) + 120,
+                conversionRate: (Math.random() * 0.05 + 0.02).toFixed(3),
+                topPages: [
+                    { path: '/dashboard', views: 1250 },
+                    { path: '/reports', views: 980 },
+                    { path: '/settings', views: 750 }
+                ]
+            };
+        };
+
+        // Initialize Juris with realistic state
+        const juris = new Juris({
+            states: {
+                search: {
+                    query: 'javascript',
+                    category: 'all',
+                    sortBy: 'relevance',
+                    minRating: 0,
+                    maxPrice: 100
+                },
+                user: {
+                    currentId: 'emp-123',
+                    timezone: 'America/New_York',
+                    dateFormat: 'MM/dd/yyyy',
+                    showDetails: true,
+                    permissions: ['read', 'write']
+                },
+                analytics: {
+                    dateRange: '7d',
+                    includeWeekends: true,
+                    groupBy: 'day',
+                    currency: 'USD'
+                }
+            },
+            components: {
+                SearchDemo: () => ({
+                    div: {
+                        class: 'demo-section',
+                        children: [
+                            { h3: { text: 'Smart Search with Filtering' } },
+                            { p: { text: 'Search results are fetched, then filtered and sorted based on user preferences.' } },
+                            {
+                                div: {
+                                    class: 'controls',
+                                    children: [
+                                        { label: { text: 'Search:' } },
+                                        { input: { 
+                                            type: 'text', 
+                                            id: 'searchQuery',
+                                            value: () => juris.getState('search.query'),
+                                            oninput: (e) => juris.setState('search.query', e.target.value)
+                                        }},
+                                        { label: { text: 'Category:' } },
+                                        { select: {
+                                            value: () => juris.getState('search.category'),
+                                            onchange: (e) => juris.setState('search.category', e.target.value),
+                                            children: [
+                                                { option: { value: 'all', text: 'All Categories' } },
+                                                { option: { value: 'programming', text: 'Programming' } },
+                                                { option: { value: 'database', text: 'Database' } },
+                                                { option: { value: 'ai', text: 'AI/ML' } },
+                                                { option: { value: 'cloud', text: 'Cloud' } }
+                                            ]
+                                        }},
+                                        { label: { text: 'Sort:' } },
+                                        { select: {
+                                            value: () => juris.getState('search.sortBy'),
+                                            onchange: (e) => juris.setState('search.sortBy', e.target.value),
+                                            children: [
+                                                { option: { value: 'relevance', text: 'Relevance' } },
+                                                { option: { value: 'price', text: 'Price' } },
+                                                { option: { value: 'rating', text: 'Rating' } },
+                                                { option: { value: 'date', text: 'Date' } }
+                                            ]
+                                        }},
+                                        { label: { text: 'Min Rating:' } },
+                                        { input: {
+                                            type: 'number',
+                                            min: '0',
+                                            max: '5',
+                                            step: '0.1',
+                                            value: () => juris.getState('search.minRating'),
+                                            onchange: (e) => juris.setState('search.minRating', parseFloat(e.target.value))
+                                        }}
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'deps-info',
+                                    children: [
+                                        'Tracked Dependencies: ',
+                                        {
+                                            span: {
+                                                text: () => {
+                                                    const stats = juris.getSM().getComputeStats('searchResults');
+                                                    return stats?.details[0]?.depPaths.join(', ') || 'Computing...';
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'result-container',
+                                    children: [
+                                        {
+                                            div: {
+                                                text: () => {
+                                                    const result = juris.getSM().compute('searchResults', async () => {
+                                                        // Get search parameters
+                                                        const query = juris.getState('search.query');
+                                                        
+                                                        // Fetch raw results
+                                                        const rawResults = await mockSearchAPI(query);
+                                                        
+                                                        // Apply filters and sorting based on current user preferences
+                                                        const category = juris.getState('search.category');
+                                                        const sortBy = juris.getState('search.sortBy');
+                                                        const minRating = juris.getState('search.minRating');
+                                                        const maxPrice = juris.getState('search.maxPrice');
+                                                        
+                                                        let filtered = rawResults;
+                                                        
+                                                        // Category filter
+                                                        if (category !== 'all') {
+                                                            filtered = filtered.filter(item => item.category === category);
+                                                        }
+                                                        
+                                                        // Rating filter
+                                                        filtered = filtered.filter(item => item.rating >= minRating);
+                                                        
+                                                        // Price filter
+                                                        filtered = filtered.filter(item => item.price <= maxPrice);
+                                                        
+                                                        // Sorting
+                                                        filtered.sort((a, b) => {
+                                                            switch (sortBy) {
+                                                                case 'price': return a.price - b.price;
+                                                                case 'rating': return b.rating - a.rating;
+                                                                case 'date': return new Date(b.publishedDate) - new Date(a.publishedDate);
+                                                                default: return 0; // relevance (no change)
+                                                            }
+                                                        });
+                                                        
+                                                        return {
+                                                            query,
+                                                            totalFound: rawResults.length,
+                                                            filteredCount: filtered.length,
+                                                            results: filtered,
+                                                            appliedFilters: { category, sortBy, minRating, maxPrice }
+                                                        };
+                                                    });
+                                                    
+                                                    if (result?.then) {
+                                                        return 'Loading search results...';
+                                                    }
+                                                    
+                                                    return `Found ${result.filteredCount} of ${result.totalFound} results for "${result.query}"\n` +
+                                                           `Filters: ${JSON.stringify(result.appliedFilters, null, 2)}\n\n` +
+                                                           result.results.map(item => 
+                                                               `${item.title} by ${item.author}\n` +
+                                                               `Category: ${item.category} | Rating: ${item.rating}/5 | Price: $${item.price}`
+                                                           ).join('\n\n');
+                                                },
+                                                class: 'result-data'
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                UserDashboard: () => ({
+                    div: {
+                        class: 'demo-section',
+                        children: [
+                            { h3: { text: 'User Dashboard with Personalization' } },
+                            { p: { text: 'User data is fetched, then formatted based on timezone and preferences.' } },
+                            {
+                                div: {
+                                    class: 'controls',
+                                    children: [
+                                        { label: { text: 'User ID:' } },
+                                        { input: {
+                                            type: 'text',
+                                            value: () => juris.getState('user.currentId'),
+                                            onchange: (e) => juris.setState('user.currentId', e.target.value)
+                                        }},
+                                        { label: { text: 'Timezone:' } },
+                                        { select: {
+                                            value: () => juris.getState('user.timezone'),
+                                            onchange: (e) => juris.setState('user.timezone', e.target.value),
+                                            children: [
+                                                { option: { value: 'America/New_York', text: 'Eastern' } },
+                                                { option: { value: 'America/Chicago', text: 'Central' } },
+                                                { option: { value: 'America/Los_Angeles', text: 'Pacific' } },
+                                                { option: { value: 'UTC', text: 'UTC' } }
+                                            ]
+                                        }},
+                                        { button: {
+                                            text: () => juris.getState('user.showDetails') ? 'Hide Details' : 'Show Details',
+                                            class: 'toggle-btn',
+                                            onclick: () => juris.setState('user.showDetails', !juris.getState('user.showDetails'))
+                                        }}
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'deps-info',
+                                    children: [
+                                        'Tracked Dependencies: ',
+                                        {
+                                            span: {
+                                                text: () => {
+                                                    const stats = juris.getSM().getComputeStats('userDashboard');
+                                                    return stats?.details[0]?.depPaths.join(', ') || 'Computing...';
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'result-container',
+                                    children: [
+                                        {
+                                            div: {
+                                                text: () => {
+                                                    const result = juris.getSM().compute('userDashboard', async () => {
+                                                        // Fetch user data
+                                                        const userId = juris.getState('user.currentId');
+                                                        const userData = await mockFetchUserData(userId);
+                                                        
+                                                        // Apply personalization based on user preferences
+                                                        const timezone = juris.getState('user.timezone');
+                                                        const dateFormat = juris.getState('user.dateFormat');
+                                                        const showDetails = juris.getState('user.showDetails');
+                                                        const permissions = juris.getState('user.permissions');
+                                                        
+                                                        // Format dates according to user preferences
+                                                        const joinDate = new Date(userData.joinDate);
+                                                        const formattedJoinDate = joinDate.toLocaleDateString('en-US', {
+                                                            timeZone: timezone,
+                                                            year: 'numeric',
+                                                            month: '2-digit',
+                                                            day: '2-digit'
+                                                        });
+                                                        
+                                                        // Filter projects based on permissions
+                                                        let projects = userData.projects;
+                                                        if (!permissions.includes('write')) {
+                                                            projects = projects.filter(p => p.status !== 'active');
+                                                        }
+                                                        
+                                                        return {
+                                                            ...userData,
+                                                            joinDate: formattedJoinDate,
+                                                            timezone,
+                                                            projects: showDetails ? projects : projects.slice(0, 2),
+                                                            canEdit: permissions.includes('write'),
+                                                            personalizedAt: new Date().toLocaleString('en-US', { timeZone: timezone })
+                                                        };
+                                                    });
+                                                    
+                                                    if (result?.then) {
+                                                        return 'Loading user dashboard...';
+                                                    }
+                                                    
+                                                    return `User Dashboard (${result.timezone})\n` +
+                                                           `Name: ${result.name}\n` +
+                                                           `Email: ${result.email}\n` +
+                                                           `Department: ${result.department}\n` +
+                                                           `Join Date: ${result.joinDate}\n` +
+                                                           `Can Edit: ${result.canEdit ? 'Yes' : 'No'}\n\n` +
+                                                           `Projects (${result.projects.length}):\n` +
+                                                           result.projects.map(p => 
+                                                               `- ${p.name}: ${p.status} (${p.priority} priority)`
+                                                           ).join('\n') +
+                                                           `\n\nPersonalized at: ${result.personalizedAt}`;
+                                                },
+                                                class: 'result-data'
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }),
+
+                AnalyticsDashboard: () => ({
+                    div: {
+                        class: 'demo-section',
+                        children: [
+                            { h3: { text: 'Analytics with Dynamic Processing' } },
+                            { p: { text: 'Raw analytics are fetched, then processed based on display preferences.' } },
+                            {
+                                div: {
+                                    class: 'controls',
+                                    children: [
+                                        { label: { text: 'Date Range:' } },
+                                        { select: {
+                                            value: () => juris.getState('analytics.dateRange'),
+                                            onchange: (e) => juris.setState('analytics.dateRange', e.target.value),
+                                            children: [
+                                                { option: { value: '7d', text: 'Last 7 days' } },
+                                                { option: { value: '30d', text: 'Last 30 days' } },
+                                                { option: { value: '90d', text: 'Last 90 days' } }
+                                            ]
+                                        }},
+                                        { label: { text: 'Currency:' } },
+                                        { select: {
+                                            value: () => juris.getState('analytics.currency'),
+                                            onchange: (e) => juris.setState('analytics.currency', e.target.value),
+                                            children: [
+                                                { option: { value: 'USD', text: 'USD' } },
+                                                { option: { value: 'EUR', text: 'EUR' } },
+                                                { option: { value: 'GBP', text: 'GBP' } }
+                                            ]
+                                        }},
+                                        { button: {
+                                            text: () => juris.getState('analytics.includeWeekends') ? 'Exclude Weekends' : 'Include Weekends',
+                                            class: 'toggle-btn',
+                                            onclick: () => juris.setState('analytics.includeWeekends', !juris.getState('analytics.includeWeekends'))
+                                        }}
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'deps-info',
+                                    children: [
+                                        'Tracked Dependencies: ',
+                                        {
+                                            span: {
+                                                text: () => {
+                                                    const stats = juris.getSM().getComputeStats('analyticsReport');
+                                                    return stats?.details[0]?.depPaths.join(', ') || 'Computing...';
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'result-container',
+                                    children: [
+                                        {
+                                            div: {
+                                                text: () => {
+                                                    let analyticsReport = juris.getState('analyticsReport','');
+                                                    const result = juris.getSM().compute('analyticsReport', async () => {
+                                                        // Fetch raw analytics data
+                                                        const dateRange = juris.getState('analytics.dateRange');
+                                                        const rawData = await mockFetchAnalytics({ dateRange });
+                                                        
+                                                        // Process data based on user preferences
+                                                        const includeWeekends = juris.getState('analytics.includeWeekends');
+                                                        const groupBy = juris.getState('analytics.groupBy');
+                                                        const currency = juris.getState('analytics.currency');
+                                                        
+                                                        // Currency conversion (mock)
+                                                        const exchangeRates = { USD: 1, EUR: 0.85, GBP: 0.73 };
+                                                        const rate = exchangeRates[currency];
+                                                        
+                                                        // Adjust metrics based on weekend inclusion
+                                                        const weekendAdjustment = includeWeekends ? 1 : 0.71; // 71% = weekdays only
+                                                        
+                                                        return {
+                                                            period: dateRange,
+                                                            currency,
+                                                            includeWeekends,
+                                                            metrics: {
+                                                                pageViews: Math.floor(rawData.pageViews * weekendAdjustment),
+                                                                uniqueUsers: Math.floor(rawData.uniqueUsers * weekendAdjustment),
+                                                                bounceRate: rawData.bounceRate,
+                                                                avgSessionDuration: rawData.avgSessionDuration,
+                                                                conversionRate: rawData.conversionRate,
+                                                                revenue: (rawData.pageViews * 0.05 * rate).toFixed(2)
+                                                            },
+                                                            topPages: rawData.topPages.map(page => ({
+                                                                ...page,
+                                                                views: Math.floor(page.views * weekendAdjustment)
+                                                            })),
+                                                            generatedAt: new Date().toISOString()
+                                                        };
+                                                    });
+                                                    
+                                                    if (result instanceof Promise) {
+                                                        result.then(value => {
+                                                            const data = `Analytics Report (${result.period})\n` +
+                                                                `Currency: ${result.currency} | Weekends: ${result.includeWeekends ? 'Included' : 'Excluded'}\n\n` +
+                                                                `Page Views: ${result.metrics.pageViews.toLocaleString()}\n` +
+                                                                `Unique Users: ${result.metrics.uniqueUsers.toLocaleString()}\n` +
+                                                                `Bounce Rate: ${result.metrics.bounceRate}%\n` +
+                                                                `Avg Session: ${result.metrics.avgSessionDuration}s\n` +
+                                                                `Conversion Rate: ${result.metrics.conversionRate}%\n` +
+                                                                `Est. Revenue: ${result.metrics.revenue} ${result.currency}\n\n` +
+                                                                `Top Pages:\n` +
+                                                                result.topPages.map(page => 
+                                                               `${page.path}: ${page.views.toLocaleString()} views`
+                                                           ).join('\n') +
+                                                           `\n\nGenerated: ${result.generatedAt}`;
+
+                                                            setState('analyticsReport', data);
+                                                        });
+                                                        return 'Loading analytics report...';
+                                                    }
+                                                    
+                                                    
+                                                },
+                                                class: 'result-data'
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            },
+
+            layout: {
+                div: {
+                    children: [
+                        {
+                            div: {
+                                class: 'demo-section',
+                                children: [
+                                    { h1: { text: 'Realistic Async Compute Demo' } },
+                                    { p: { text: 'These examples show realistic scenarios where state is accessed after async operations for data processing, filtering, and personalization.' } }
+                                ]
+                            }
+                        },
+                        { SearchDemo: {} },
+                        { UserDashboard: {} },
+                        { AnalyticsDashboard: {} }
+                    ]
+                }
+            }
+        });
+
+        // Render the app
+        juris.render('#app');
+    </script>
+</body>
+</html>

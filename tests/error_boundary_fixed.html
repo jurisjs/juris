@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Error Boundary</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script src="https://unpkg.com/juris@0.9.0/juris.js"></script>
+    <script src="https://unpkg.com/juris@0.9.0/juris-headless.js"></script>
+    <script>
+      const juris = new Juris({
+        state: {
+          error: null,
+        },
+        features: {
+          headless: HeadlessManager,
+        },
+        layout: {
+          div: {
+            children: [{ ErrorBoundary: {} }, { TriggerError: {} }],
+          },
+        },
+      });
+
+      juris.registerHeadlessComponent(
+        'ErrorHandler',
+        (props, { setState, executeBatch }) => {
+          const handleGlobalError = (event) => {
+            event.preventDefault();
+            executeBatch(() => {
+              setState('error', event.error.message);
+            });
+          };
+
+          return {
+            hooks: {
+              onRegister: () => {
+                window.addEventListener('error', handleGlobalError);
+              },
+              onUnregister: () => {
+                window.removeEventListener('error', handleGlobalError);
+              },
+            },
+          };
+        },
+        { autoInit: true }
+      );
+
+      juris.registerComponent('ErrorBoundary', (props, { getState }) => ({
+        render: () =>
+          getState('error')
+            ? {
+                div: {
+                  style: { color: 'red' },
+                  text: () => getState('error'),
+                },
+              }
+            : 'no error',
+      }));
+
+      juris.registerComponent('TriggerError', () => ({
+        render: () => ({
+          p: {
+            text: 'trigger error',
+          },
+        }),
+        hooks: {
+          onMount: () => {
+            setTimeout(() => {
+              throw new Error('Big Mistake');
+            }, 1000);
+          },
+        },
+      }));
+
+      juris.headlessManager.initializeQueued();
+      juris.render('#app');
+    </script>
+  </body>
+</html>

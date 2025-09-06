@@ -1,6 +1,7 @@
 /**
  * Enhanced APIClient with implemented caching and retry logic
  * Based on the original APIClient but with missing features added
+ * Fixed abort signal handling for proper request cancellation
  */
 
 function APIClient(props, context) {
@@ -8,11 +9,11 @@ function APIClient(props, context) {
     baseURL = '', 
     defaultHeaders = {}, 
     timeout = 30000,
-    retries = 3,              // Increased default retries
+    retries = 3,
     retryDelay = 1000,
     cache = true,
     cacheTimeout = 300000,
-    retryOn = [408, 429, 500, 502, 503, 504], // Default retry status codes
+    retryOn = [408, 429, 502, 503, 504], 
     cacheStrategy = 'memory'   // 'memory' or 'session'
   } = props;
 
@@ -23,10 +24,12 @@ function APIClient(props, context) {
   const requestsPath = `apiClient.${componentId}.requests`;
   const cachePath = `apiClient.${componentId}.cache`;
   const groupsPath = `apiClient.${componentId}.groups`;
+  const controllersPath = `apiClient.${componentId}.controllers`;
 
   setState(requestsPath, {});
   setState(cachePath, {});
   setState(groupsPath, {});
+  setState(controllersPath, {});
 
   let requestIdCounter = 0;
   const generateRequestId = () => `req_${++requestIdCounter}_${Date.now()}`;
@@ -58,7 +61,6 @@ function APIClient(props, context) {
     return cached.data;
   };
 
-  // Store successful response in cache
   const setCachedResponse = (cacheKey, data) => {
     if (!cache) return;
     
@@ -68,16 +70,11 @@ function APIClient(props, context) {
     });
   };
 
-  // Enhanced retry logic with exponential backoff
   const shouldRetry = (error, attempt, statusCode = null) => {
     if (attempt >= retries) return false;
-    
-    // Network errors
     if (error.name === 'TypeError' || error.name === 'NetworkError') {
       return true;
-    }
-    
-    // HTTP status codes
+    }    
     if (statusCode && retryOn.includes(statusCode)) {
       return true;
     }
@@ -86,18 +83,16 @@ function APIClient(props, context) {
   };
 
   const calculateRetryDelay = (attempt) => {
-    // Exponential backoff with jitter
     const baseDelay = retryDelay * Math.pow(2, attempt);
     const jitter = Math.random() * 0.1 * baseDelay;
     return baseDelay + jitter;
   };
 
-  // Create request state with enhanced metadata
   const createRequestState = (requestId, url, options = {}) => {
     const requestState = {
       id: requestId,
       url,
-      options: { ...options }, // Store complete options for re-execution
+      options: { ...options },
       data: null,
       error: null,
       loading: true,
@@ -113,8 +108,6 @@ function APIClient(props, context) {
     };
 
     setState(`${requestsPath}.${requestId}`, requestState);
-    
-    // Add to group tracking
     const groups = getState(groupsPath, {});
     const currentGroup = groups[requestState.group] || [];
     setState(`${groupsPath}.${requestState.group}`, [...currentGroup, requestId]);
@@ -122,7 +115,6 @@ function APIClient(props, context) {
     return requestState;
   };
 
-  // Update request state with enhanced validation
   const updateRequestState = (requestId, updates) => {
     const currentState = getState(`${requestsPath}.${requestId}`, {});
     
@@ -152,9 +144,14 @@ function APIClient(props, context) {
     }, 0);
   };
 
-  // Enhanced cancel functionality
   const cancelRequest = (requestId) => {
     const currentState = getState(`${requestsPath}.${requestId}`, {});
+    
+    // Abort the controller if it exists
+    const controller = getState(`${controllersPath}.${requestId}`, null);
+    if (controller && !controller.signal.aborted) {
+      controller.abort();
+    }
     
     setState(`${requestsPath}.${requestId}`, { 
       ...currentState,
@@ -162,7 +159,9 @@ function APIClient(props, context) {
       loading: false 
     });
     
-    // Remove from group tracking
+    // Clean up controller reference
+    setState(`${controllersPath}.${requestId}`, null);
+    
     const group = currentState.group;
     if (group) {
       const groups = getState(groupsPath, {});
@@ -184,14 +183,11 @@ function APIClient(props, context) {
     Object.keys(groups).forEach(groupName => cancelGroup(groupName));
   };
 
-  // Enhanced core fetch with retry logic
   const performRequest = async (requestId, method, url, data = null, requestOptions = {}, attempt = 0) => {
     const fullUrl = baseURL + url;
     const currentState = getState(`${requestsPath}.${requestId}`);
     
     if (currentState?.cancelled) return;
-
-    // Check cache for GET requests
     if (method.toUpperCase() === 'GET' && cache && attempt === 0) {
       const cacheKey = generateCacheKey(method, url, data, requestOptions);
       const cachedData = getCachedResponse(cacheKey);
@@ -207,12 +203,13 @@ function APIClient(props, context) {
         });
         return;
       }
-      
-      // Store cache key for later use
       updateRequestState(requestId, { cacheKey });
     }
 
     const controller = new AbortController();
+    // Store controller reference for cancellation
+    setState(`${controllersPath}.${requestId}`, controller);
+    
     const config = {
       method: method.toUpperCase(),
       headers: {
@@ -229,13 +226,15 @@ function APIClient(props, context) {
     }
 
     const timeoutId = setTimeout(() => {
-      controller.abort();
-      updateRequestState(requestId, {
-        error: `Request timeout after ${timeout}ms`,
-        loading: false,
-        aborted: true,
-        completed: true
-      });
+      if (!controller.signal.aborted) {
+        controller.abort();
+        updateRequestState(requestId, {
+          error: `Request timeout after ${timeout}ms`,
+          loading: false,
+          aborted: true,
+          completed: true
+        });
+      }
     }, timeout);
 
     try {
@@ -250,7 +249,6 @@ function APIClient(props, context) {
       if (getState(`${requestsPath}.${requestId}`)?.cancelled) return;
 
       if (!response.ok) {
-        // Check if we should retry
         if (shouldRetry(null, attempt, response.status)) {
           updateRequestState(requestId, { retryCount: attempt + 1 });
           
@@ -277,10 +275,12 @@ function APIClient(props, context) {
           loading: false,
           completed: true
         });
+        
+        // Clean up controller reference
+        setState(`${controllersPath}.${requestId}`, null);
         return;
       }
 
-      // Parse response
       const contentType = response.headers.get('content-type');
       let responseData;
       
@@ -291,8 +291,6 @@ function APIClient(props, context) {
       }
 
       if (getState(`${requestsPath}.${requestId}`)?.cancelled) return;
-
-      // Cache successful GET responses
       if (method.toUpperCase() === 'GET' && cache) {
         const state = getState(`${requestsPath}.${requestId}`);
         if (state?.cacheKey) {
@@ -308,6 +306,9 @@ function APIClient(props, context) {
         retryCount: attempt
       });
 
+      // Clean up controller reference
+      setState(`${controllersPath}.${requestId}`, null);
+
     } catch (error) {
       clearTimeout(timeoutId);
 
@@ -320,10 +321,11 @@ function APIClient(props, context) {
             completed: true
           });
         }
+        // Clean up controller reference
+        setState(`${controllersPath}.${requestId}`, null);
         return;
       }
 
-      // Check if we should retry on network errors
       if (shouldRetry(error, attempt)) {
         updateRequestState(requestId, { retryCount: attempt + 1 });
         
@@ -342,10 +344,12 @@ function APIClient(props, context) {
         loading: false,
         completed: true
       });
+
+      // Clean up controller reference
+      setState(`${controllersPath}.${requestId}`, null);
     }
   };
 
-  // Enhanced request tracker with additional metadata
   const createRequestTracker = (requestId) => {
     return {
       data: () => getState(`${requestsPath}.${requestId}.data`, null),
@@ -359,7 +363,6 @@ function APIClient(props, context) {
       retry: () => {
         const state = getState(`${requestsPath}.${requestId}`, {});
         if (state.completed || state.cancelled) {
-          // Reset state for retry
           updateRequestState(requestId, {
             loading: true,
             completed: false,
@@ -380,8 +383,6 @@ function APIClient(props, context) {
           console.warn(`Cannot execute request ${requestId}: no URL found`);
           return;
         }
-        
-        // Reset state for fresh execution
         updateRequestState(requestId, {
           loading: true,
           completed: false,
@@ -393,8 +394,6 @@ function APIClient(props, context) {
           fromCache: false,
           timestamp: Date.now()
         });
-        
-        // Execute with original parameters
         const method = state.options?.method || 'GET';
         const data = state.options?.data || null;
         const options = { ...state.options };
@@ -403,8 +402,6 @@ function APIClient(props, context) {
       }
     };
   };
-
-  // Execute method - dynamic request execution
   const execute = (config) => {
     const {
       method = 'GET',
@@ -427,8 +424,6 @@ function APIClient(props, context) {
     if (cancelPrevious) cancelGroup(group);
     
     const requestId = generateRequestId();
-    
-    // Generate cache key for GET requests
     const cacheKey = normalizedMethod === 'GET' ? 
       generateCacheKey(normalizedMethod, url, data, options) : null;
     
@@ -443,8 +438,6 @@ function APIClient(props, context) {
     setTimeout(() => performRequest(requestId, normalizedMethod, url, data, options), 0);
     return createRequestTracker(requestId);
   };
-
-  // HTTP Methods with enhanced options
   const get = (url, options = {}) => {
     return execute({ method: 'GET', url, ...options });
   };
@@ -464,8 +457,6 @@ function APIClient(props, context) {
   const del = (url, options = {}) => {
     return execute({ method: 'DELETE', url, ...options });
   };
-
-  // Cache management utilities
   const clearCache = (pattern = null) => {
     const cache = getState(cachePath, {});
     if (pattern) {
@@ -496,36 +487,20 @@ function APIClient(props, context) {
       approximateSize: `${(totalSize / 1024).toFixed(2)} KB`
     };
   };
-
-  // Enhanced cleanup
   const cleanup = () => {
     cancelAll();
     setState(requestsPath, {});
     setState(cachePath, {});
     setState(groupsPath, {});
+    setState(controllersPath, {});
   };
-
-  // Public API with enhanced methods
   const api = {
-    // HTTP methods
     get, post, put, patch, delete: del,
-    
-    // Dynamic execution
     execute,
-    
-    // Group management
     cancelGroup, cancelAll,
-    
-    // Cache management
     clearCache, getCacheStats,
-    
-    // Utilities
     cleanup,
-    
-    // Access to state paths
     requestsPath, cachePath, groupsPath, componentId,
-    
-    // Enhanced utilities
     getRequestState: (requestId) => getState(`${requestsPath}.${requestId}`, null),
     getAllRequests: () => getState(requestsPath, {}),
     getGroupRequests: (group) => {
@@ -548,8 +523,6 @@ function APIClient(props, context) {
     }
   };
 }
-
-// Export for both browser and Node.js environments
 if (typeof window !== 'undefined') {
   window.APIClient = APIClient;
   Object.freeze(window.APIClient);

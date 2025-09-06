@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Error Boundary</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script src="../src/juris.js"></script>
+    <script>
+      const juris = new Juris({
+        state: {
+          error: null,
+        },
+        layout: {
+          div: {
+            children: [{ ErrorBoundary: {} }, { TriggerError: {} },{Something:{}}],
+          },
+        },
+      });
+
+      juris.registerComponent(
+        'ErrorBoundary',
+        (props, { getState, setState, executeBatch }) => {
+          const handleGlobalError = (event) => {
+            event.preventDefault();
+            executeBatch(() => {
+              setState('error', event.error.message);
+            });
+          };
+
+          return {
+            render: () => {
+              const error = getState('error', false); // Explicitly call getState to track dependency
+              return {
+                div: {
+                  style: { color: error ? 'red' : 'black' },
+                  text: error || 'no error'
+                }
+              };
+            },
+            hooks: {
+              onMount: () => {
+                window.addEventListener('error', handleGlobalError);
+              },
+              onUnmount: () => {
+                window.removeEventListener('error', handleGlobalError);
+              },
+            },
+          };
+        }
+      );
+  juris.registerComponent('Something', (props, { setState, getState, logger }) => ({
+    render: () => {
+      logger.subscribe((message, category) => {  //  TypeError: logger.subscribe is not a function at ...
+        // whatever
+      });
+    }
+  }));
+      juris.registerComponent('TriggerError', () => ({
+        render: () => ({
+          p: {
+            text: 'trigger error',
+          },
+        }),
+        hooks: {
+          onMount: () => {
+            setTimeout(() => {
+              throw new Error('Big Mistake');
+            }, 1000);
+          },
+        },
+      }));
+
+      juris.render('#app');
+    </script>
+  </body>
+</html>

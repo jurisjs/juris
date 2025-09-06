@@ -290,19 +290,14 @@
         
         // Reactive Juris benchmark
         function runReactiveBenchmark() {
-            console.log('Starting reactive Juris benchmark...');
             const container = document.getElementById('app');
             const rowCount = parseInt(document.getElementById('rowCount').value);
             const updateInterval = parseInt(document.getElementById('updateInterval').value);
             const updateType = document.getElementById('updateType').value;
-            
             stopUpdates();
             container.innerHTML = '<div>Preparing Juris reactive benchmark...</div>';
-            
             setTimeout(() => {
                 const startTime = performance.now();
-                
-                // Create Juris instance with reactive state
                 jurisInstance = new Juris({
                     renderMode: 'fine-grained',
                     logLevel: 'error',

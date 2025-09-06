@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Element Enhancement with Juris.js</title>
+  <script src="../src/juris-enhance.js"></script>
+  <script src="../src/juris.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      line-height: 1.6;
+    }
+
+    .juris-logo {
+      display: inline-block;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .demo-section {
+      margin-bottom: 40px;
+      padding: 20px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #4a9eff;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    button:hover {
+      background: #357abd;
+      transform: translateY(-1px);
+    }
+
+    button.danger {
+      background: #ff4757;
+    }
+
+    button.danger:hover {
+      background: #ff3742;
+    }
+
+    button.success {
+      background: #2ed573;
+    }
+
+    button.success:hover {
+      background: #26c56a;
+    }
+
+    .injection-zone {
+      min-height: 200px;
+      border: 2px dashed rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.2);
+      margin: 20px 0;
+    }
+
+    .stats-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      min-width: 200px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      color: #888;
+    }
+
+    .stat-value {
+      color: #4a9eff;
+      font-weight: bold;
+    }
+
+    .code-preview {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      border-left: 3px solid #4a9eff;
+      margin: 15px 0;
+      overflow-x: auto;
+    }
+
+    .enhanced-element {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .log-container {
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 6px;
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .log-time {
+      color: #888;
+      margin-right: 10px;
+    }
+
+    .log-action {
+      color: #4a9eff;
+      font-weight: bold;
+    }
+
+    .log-details {
+      color: #ccc;
+    }
+
+    h1, h2 {
+      color: #fff;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #4a9eff;
+    }
+  </style>
+</head>
+<body>
+  <div class="juris-logo">⚡ Juris.js</div>
+  
+  <h1>Dynamic Element Enhancement Demo</h1>
+  <p>This demo shows how Juris.js DOMEnhancer automatically handles elements that are injected into the DOM after enhancement rules are registered.</p>
+
+  <div class="stats-panel" id="stats-panel">
+    <div class="stat-row">
+      <span class="stat-label">Enhancement Rules:</span>
+      <span class="stat-value" id="rules-count">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Enhanced Elements:</span>
+      <span class="stat-value" id="enhanced-count">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Active Observers:</span>
+      <span class="stat-value" id="observers-count">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Pending:</span>
+      <span class="stat-value" id="pending-count">0</span>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>1. Pre-register Enhancement Rules</h2>
+    <p>First, let's register enhancement rules for elements that don't exist yet:</p>
+    
+    <div class="controls">
+      <button id="register-button-rule">Register .magic-button Rule</button>
+      <button id="register-card-rule">Register .dynamic-card Rule</button>
+      <button id="register-id-rule">Register #special-element Rule</button>
+      <button id="register-container-rule">Register .card-container Rule</button>
+    </div>
+
+    <div class="code-preview" id="code-preview">
+      <div>// Enhancement rules will appear here as you register them</div>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>2. Inject Dynamic Elements</h2>
+    <p>Now inject elements that match the pre-registered rules:</p>
+
+    <div class="controls">
+      <button id="inject-button">Inject Magic Button</button>
+      <button id="inject-card">Inject Dynamic Card</button>
+      <button id="inject-special">Inject Special Element</button>
+      <button id="inject-container">Inject Card Container</button>
+      <button id="inject-random" class="success">Inject Random Elements</button>
+      <button id="clear-all" class="danger">Clear All</button>
+    </div>
+
+    <div class="injection-zone" id="injection-zone">
+      <p style="text-align: center; color: #666;">Dynamic elements will appear here...</p>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>3. Enhancement Log</h2>
+    <div class="log-container" id="log-container">
+      <div class="log-entry">
+        <span class="log-time">Ready</span>
+        <span class="log-action">SYSTEM:</span>
+        <span class="log-details">Demo initialized, waiting for enhancement registrations...</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Juris with DOMEnhancer
+    const juris = new Juris({
+      features: {
+        enhance: DOMEnhancer
+      }
+    });
+
+    // State management for demo
+    juris.setState('demo.registered_rules', []);
+    juris.setState('demo.injected_count', 0);
+
+    let enhancementCount = 0;
+
+    // Logging system
+    function addLog(action, details) {
+      const logContainer = document.getElementById('log-container');
+      const time = new Date().toLocaleTimeString();
+      
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.innerHTML = `
+        <span class="log-time">${time}</span>
+        <span class="log-action">${action}:</span>
+        <span class="log-details">${details}</span>
+      `;
+      
+      logContainer.appendChild(logEntry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // Update stats panel
+    function updateStats() {
+      const stats = juris.domEnhancer.getStats();
+      document.getElementById('rules-count').textContent = stats.enhancementRules;
+      document.getElementById('enhanced-count').textContent = stats.totalEnhanced;
+      document.getElementById('observers-count').textContent = stats.activeObserver + stats.activeIntersectionObserver;
+      document.getElementById('pending-count').textContent = stats.pendingEnhancements;
+    }
+
+    // Update code preview
+    function updateCodePreview(code) {
+      const preview = document.getElementById('code-preview');
+      const existingCode = preview.innerHTML;
+      if (existingCode.includes('Enhancement rules will appear')) {
+        preview.innerHTML = code;
+      } else {
+        preview.innerHTML = existingCode + '<br><br>' + code;
+      }
+    }
+
+    // Enhancement rule registrations using juris.arm() API
+    juris.arm(document.getElementById('register-button-rule'), (context) => ({
+      onclick: () => {
+        juris.enhance('.magic-button', {
+          style: {
+            background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
+            color: 'white',
+            border: 'none',
+            padding: '12px 24px',
+            borderRadius: '25px',
+            cursor: 'pointer',
+            transform: 'scale(1)',
+            transition: 'all 0.3s ease'
+          },
+          onclick: (e) => {
+            e.target.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+              e.target.style.transform = 'scale(1)';
+            }, 150);
+            addLog('CLICK', `Magic button clicked: "${e.target.textContent}"`);
+          },
+          onmouseenter: (e) => {
+            e.target.style.transform = 'scale(1.05)';
+            e.target.style.boxShadow = '0 8px 25px rgba(255, 107, 107, 0.4)';
+          },
+          onmouseleave: (e) => {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.boxShadow = 'none';
+          }
+        });
+
+        updateCodePreview(`juris.enhance('.magic-button', {
+  style: { background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)', ... },
+  onclick: (e) => { /* click animation */ },
+  onmouseenter: (e) => { /* hover effects */ }
+});`);
+
+        addLog('REGISTER', 'Enhancement rule for .magic-button registered');
+        updateStats();
+      }
+    }));
+
+    juris.arm(document.getElementById('register-card-rule'), (context) => ({
+      onclick: () => {
+        juris.enhance('.dynamic-card', {
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '12px',
+            padding: '20px',
+            margin: '10px',
+            backdropFilter: 'blur(10px)',
+            transform: 'translateY(20px)',
+            opacity: '0',
+            transition: 'all 0.5s ease'
+          },
+          className: 'enhanced-element',
+          text: (element) => `Enhanced Card #${++enhancementCount}`,
+          onEnhanced: (element) => {
+            setTimeout(() => {
+              element.style.transform = 'translateY(0)';
+              element.style.opacity = '1';
+            }, 100);
+          }
+        });
+
+        updateCodePreview(`juris.enhance('.dynamic-card', {
+  style: { background: 'rgba(255, 255, 255, 0.1)', ... },
+  text: (element) => \`Enhanced Card #\${++enhancementCount}\`,
+  onEnhanced: (element) => { /* entry animation */ }
+});`);
+
+        addLog('REGISTER', 'Enhancement rule for .dynamic-card registered');
+        updateStats();
+      }
+    }));
+
+    juris.arm(document.getElementById('register-id-rule'), (context) => ({
+      onclick: () => {
+        juris.enhance('#special-element', {
+          style: {
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            textAlign: 'center',
+            fontWeight: 'bold',
+            fontSize: '18px',
+            boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+            border: '2px solid rgba(255, 255, 255, 0.2)'
+          },
+          text: 'I am the Special Element! 🌟',
+          onclick: () => {
+            addLog('SPECIAL', 'Special element activated!');
+            juris.setState('demo.special_clicks', juris.getState('demo.special_clicks', 0) + 1);
+          }
+        });
+
+        updateCodePreview(`juris.enhance('#special-element', {
+  style: { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', ... },
+  text: 'I am the Special Element! 🌟',
+  onclick: () => { /* special behavior */ }
+});`);
+
+        addLog('REGISTER', 'Enhancement rule for #special-element registered');
+        updateStats();
+      }
+    }));
+
+    juris.arm(document.getElementById('register-container-rule'), (context) => ({
+      onclick: () => {
+        juris.enhance('.card-container', {
+          style: {
+            border: '2px dashed #4a9eff',
+            borderRadius: '8px',
+            padding: '15px',
+            background: 'rgba(74, 158, 255, 0.1)'
+          },
+          selectors: {
+            '.nested-card': {
+              style: {
+                background: 'rgba(255, 255, 255, 0.15)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+                padding: '15px',
+                margin: '8px',
+                transition: 'all 0.3s ease'
+              },
+              onmouseenter: (e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.25)';
+                e.target.style.transform = 'translateX(10px)';
+              },
+              onmouseleave: (e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.15)';
+                e.target.style.transform = 'translateX(0)';
+              }
+            }
+          }
+        });
+
+        updateCodePreview(`juris.enhance('.card-container', {
+  style: { border: '2px dashed #4a9eff', ... },
+  selectors: {
+    '.nested-card': {
+      style: { background: 'rgba(255, 255, 255, 0.15)', ... },
+      onmouseenter: (e) => { /* nested hover effects */ }
+    }
+  }
+});`);
+
+        addLog('REGISTER', 'Enhancement rule for .card-container with nested selectors registered');
+        updateStats();
+      }
+    }));
+
+    // Element injection using juris.arm() API
+    juris.arm(document.getElementById('inject-button'), (context) => ({
+      onclick: () => {
+        const zone = document.getElementById('injection-zone');
+        const button = document.createElement('button');
+        button.className = 'magic-button';
+        button.textContent = 'Magic Button ' + (Date.now() % 1000);
+        zone.appendChild(button);
+        
+        addLog('INJECT', `Magic button injected: "${button.textContent}"`);
+        setTimeout(updateStats, 50);
+      }
+    }));
+
+    juris.arm(document.getElementById('inject-card'), (context) => ({
+      onclick: () => {
+        const zone = document.getElementById('injection-zone');
+        const card = document.createElement('div');
+        card.className = 'dynamic-card';
+        zone.appendChild(card);
+        
+        addLog('INJECT', 'Dynamic card injected');
+        setTimeout(updateStats, 50);
+      }
+    }));
+
+    juris.arm(document.getElementById('inject-special'), (context) => ({
+      onclick: () => {
+        const zone = document.getElementById('injection-zone');
+        const special = document.createElement('div');
+        special.id = 'special-element';
+        zone.appendChild(special);
+        
+        addLog('INJECT', 'Special element injected with ID #special-element');
+        setTimeout(updateStats, 50);
+      }
+    }));
+
+    juris.arm(document.getElementById('inject-container'), (context) => ({
+      onclick: () => {
+        const zone = document.getElementById('injection-zone');
+        const container = document.createElement('div');
+        container.className = 'card-container';
+        
+        // Add nested cards
+        for (let i = 1; i <= 3; i++) {
+          const nestedCard = document.createElement('div');
+          nestedCard.className = 'nested-card';
+          nestedCard.textContent = `Nested Card ${i}`;
+          container.appendChild(nestedCard);
+        }
+        
+        zone.appendChild(container);
+        
+        addLog('INJECT', 'Card container with 3 nested cards injected');
+        setTimeout(updateStats, 50);
+      }
+    }));
+
+    juris.arm(document.getElementById('inject-random'), (context) => ({
+      onclick: () => {
+        const zone = document.getElementById('injection-zone');
+        const types = ['magic-button', 'dynamic-card'];
+        const randomType = types[Math.floor(Math.random() * types.length)];
+        
+        const element = document.createElement(randomType === 'magic-button' ? 'button' : 'div');
+        element.className = randomType;
+        
+        if (randomType === 'magic-button') {
+          element.textContent = 'Random Magic ' + Math.floor(Math.random() * 100);
+        }
+        
+        zone.appendChild(element);
+        
+        addLog('INJECT', `Random ${randomType} injected`);
+        setTimeout(updateStats, 50);
+      }
+    }));
+
+    juris.arm(document.getElementById('clear-all'), (context) => ({
+      onclick: () => {
+        const zone = document.getElementById('injection-zone');
+        zone.innerHTML = '<p style="text-align: center; color: #666;">Dynamic elements will appear here...</p>';
+        
+        addLog('CLEAR', 'All injected elements cleared');
+        setTimeout(updateStats, 50);
+      }
+    }));
+
+    // Initialize stats
+    updateStats();
+
+    console.log('🎯 Dynamic Element Enhancement Demo loaded!');
+    console.log('This demo shows how Juris.js automatically enhances elements that are injected after enhancement rules are registered.');
+  </script>
+</body>
+</html>

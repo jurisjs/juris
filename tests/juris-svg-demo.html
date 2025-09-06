@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Reactive SVG Demo</title>
+    <script src="../src/juris.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .demo-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .demo-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .demo-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #4a5568;
+        }
+        
+        .controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #ed8936;
+        }
+        
+        .btn-secondary:hover {
+            background: #dd6b20;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+        }
+        
+        .btn-success:hover {
+            background: #38a169;
+        }
+        
+        .range-input {
+            margin: 0 10px;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        // Initialize Juris with demo data
+        const juris = new Juris({
+            states: {
+                // Bar Chart Data
+                barChart: {
+                    data: [
+                        { label: 'Q1', value: 65, color: '#4299e1' },
+                        { label: 'Q2', value: 80, color: '#48bb78' },
+                        { label: 'Q3', value: 45, color: '#ed8936' },
+                        { label: 'Q4', value: 90, color: '#9f7aea' }
+                    ],
+                    selectedIndex: -1,
+                    animating: false
+                },
+                
+                // Line Chart Data
+                lineChart: {
+                    points: [
+                        { x: 50, y: 150 },
+                        { x: 100, y: 100 },
+                        { x: 150, y: 120 },
+                        { x: 200, y: 80 },
+                        { x: 250, y: 90 },
+                        { x: 300, y: 60 }
+                    ],
+                    hoveredPoint: -1
+                },
+                
+                // Animated Buttons
+                buttons: {
+                    pulse: false,
+                    rotate: 0,
+                    scale: 1,
+                    morphProgress: 0
+                },
+                
+                // Interactive Drawing
+                drawing: {
+                    paths: [],
+                    currentPath: '',
+                    isDrawing: false,
+                    brushColor: '#4299e1',
+                    brushSize: 3
+                },
+                
+                // Gauge Chart
+                gauge: {
+                    value: 75,
+                    target: 75,
+                    animating: false
+                }
+            },
+            
+            layout: {
+                div: {
+                    className: 'container',
+                    children: [
+                        {
+                            div: {
+                                className: 'header',
+                                children: [
+                                    { h1: { text: '🎨 Juris Reactive SVG Demo' } },
+                                    { p: { text: 'Interactive charts, animations, and real-time graphics' } }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                className: 'demo-grid',
+                                children: [
+                                    // Animated Bar Chart
+                                    { 'BarChartDemo': {} },
+                                    
+                                    // Interactive Line Chart
+                                    { 'LineChartDemo': {} },
+                                    
+                                    // Animated Buttons
+                                    { 'AnimatedButtonsDemo': {} },
+                                    
+                                    // Gauge Chart
+                                    { 'GaugeDemo': {} },
+                                    
+                                    // Drawing Canvas
+                                    { 'DrawingDemo': {} },
+                                    
+                                    // Morphing Shapes
+                                    { 'MorphingDemo': {} }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        });
+
+        // Bar Chart Component
+        juris.registerComponent('BarChartDemo', (props, context) => {
+            const { getState, setState } = context;
+            
+            const addRandomData = () => {
+                const currentData = getState('barChart.data', []);
+                const newData = [...currentData, {
+                    label: `Q${currentData.length + 1}`,
+                    value: Math.floor(Math.random() * 100) + 10,
+                    color: `hsl(${Math.random() * 360}, 70%, 60%)`
+                }];
+                setState('barChart.data', newData);
+            };
+            
+            const animateChart = () => {
+                setState('barChart.animating', true);
+                const data = getState('barChart.data', []);
+                data.forEach((_, index) => {
+                    setTimeout(() => {
+                        setState(`barChart.data.${index}.value`, Math.floor(Math.random() * 100) + 10);
+                    }, index * 200);
+                });
+                setTimeout(() => setState('barChart.animating', false), data.length * 200);
+            };
+            
+            return {
+                div: {
+                    className: 'demo-card',
+                    children: [
+                        { div: { className: 'demo-title', text: '📊 Interactive Bar Chart' } },
+                        {
+                            div: {
+                                className: 'controls',
+                                children: [
+                                    { button: { className: 'btn', text: 'Add Data', onclick: addRandomData } },
+                                    { button: { className: 'btn btn-secondary', text: 'Animate', onclick: animateChart } },
+                                    { button: { 
+                                        className: 'btn btn-success', 
+                                        text: 'Reset', 
+                                        onclick: () => setState('barChart.data', [
+                                            { label: 'Q1', value: 65, color: '#4299e1' },
+                                            { label: 'Q2', value: 80, color: '#48bb78' },
+                                            { label: 'Q3', value: 45, color: '#ed8936' },
+                                            { label: 'Q4', value: 90, color: '#9f7aea' }
+                                        ])
+                                    }}
+                                ]
+                            }
+                        },
+                        {
+                            svg: {
+                                width: 360,
+                                height: 250,
+                                style: { border: '1px solid #e2e8f0', borderRadius: '8px' },
+                                children: () => {
+                                    const data = getState('barChart.data', []);
+                                    const selectedIndex = getState('barChart.selectedIndex', -1);
+                                    const maxValue = Math.max(...data.map(d => d.value));
+                                    const barWidth = 300 / data.length - 10;
+                                    
+                                    return [
+                                        // Background
+                                        { rect: { width: 360, height: 250, fill: '#f8f9fa' } },
+                                        
+                                        // Bars
+                                        ...data.map((item, index) => {
+                                            const barHeight = (item.value / maxValue) * 180;
+                                            const x = index * (300 / data.length) + 30;
+                                            
+                                            return {
+                                                g: {
+                                                    children: [
+                                                        // Bar
+                                                        {
+                                                            rect: {
+                                                                x: x,
+                                                                y: 200 - barHeight,
+                                                                width: barWidth,
+                                                                height: barHeight,
+                                                                fill: selectedIndex === index ? '#ff6b6b' : item.color,
+                                                                stroke: '#2c3e50',
+                                                                'stroke-width': 1,
+                                                                style: { 
+                                                                    cursor: 'pointer',
+                                                                    transition: 'all 0.3s ease'
+                                                                },
+                                                                onclick: () => setState('barChart.selectedIndex', selectedIndex === index ? -1 : index),
+                                                                onmouseover: (e) => e.target.style.opacity = '0.8',
+                                                                onmouseout: (e) => e.target.style.opacity = '1'
+                                                            }
+                                                        },
+                                                        // Value label
+                                                        {
+                                                            text: {
+                                                                x: x + barWidth/2,
+                                                                y: 195 - barHeight,
+                                                                'text-anchor': 'middle',
+                                                                'font-size': 12,
+                                                                'font-weight': 'bold',
+                                                                fill: '#2c3e50',
+                                                                text: item.value.toString()
+                                                            }
+                                                        },
+                                                        // X-axis label
+                                                        {
+                                                            text: {
+                                                                x: x + barWidth/2,
+                                                                y: 220,
+                                                                'text-anchor': 'middle',
+                                                                'font-size': 14,
+                                                                fill: '#4a5568',
+                                                                text: item.label
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            };
+                                        })
+                                    ];
+                                }
+                            }
+                        },
+                        {
+                            div: {
+                                className: 'status',
+                                text: () => {
+                                    const selected = getState('barChart.selectedIndex', -1);
+                                    const data = getState('barChart.data', []);
+                                    return selected >= 0 ? 
+                                        `Selected: ${data[selected]?.label} (${data[selected]?.value})` : 
+                                        'Click bars to select';
+                                }
+                            }
+                        }
+                    ]
+                }
+            };
+        });
+
+        // Line Chart Component
+        juris.registerComponent('LineChartDemo', (props, context) => {
+            const { getState, setState } = context;
+            
+            const addPoint = () => {
+                const points = getState('lineChart.points', []);
+                const lastX = points[points.length - 1]?.x || 0;
+                setState('lineChart.points', [...points, {
+                    x: lastX + 50,
+                    y: Math.random() * 120 + 40
+                }]);
+            };
+            
+            const animateLine = () => {
+                const points = getState('lineChart.points', []);
+                points.forEach((_, index) => {
+                    setTimeout(() => {
+                        setState(`lineChart.points.${index}.y`, Math.random() * 120 + 40);
+                    }, index * 100);
+                });
+            };
+            
+            return {
+                div: {
+                    className: 'demo-card',
+                    children: [
+                        { div: { className: 'demo-title', text: '📈 Interactive Line Chart' } },
+                        {
+                            div: {
+                                className: 'controls',
+                                children: [
+                                    { button: { className: 'btn', text: 'Add Point', onclick: addPoint } },
+                                    { button: { className: 'btn btn-secondary', text: 'Animate', onclick: animateLine } }
+                                ]
+                            }
+                        },
+                        {
+                            svg: {
+                                width: 360,
+                                height: 200,
+                                style: { border: '1px solid #e2e8f0', borderRadius: '8px' },
+                                children: () => {
+                                    const points = getState('lineChart.points', []);
+                                    const hoveredPoint = getState('lineChart.hoveredPoint', -1);
+                                    
+                                    const pathData = points.reduce((path, point, index) => {
+                                        return path + (index === 0 ? `M ${point.x} ${point.y}` : ` L ${point.x} ${point.y}`);
+                                    }, '');
+                                    
+                                    return [
+                                        // Background
+                                        { rect: { width: 360, height: 200, fill: '#f8f9fa' } },
+                                        
+                                        // Grid lines
+                                        ...Array.from({length: 6}, (_, i) => ({
+                                            line: {
+                                                x1: 30, y1: 30 + i * 25,
+                                                x2: 330, y2: 30 + i * 25,
+                                                stroke: '#e2e8f0',
+                                                'stroke-width': 1
+                                            }
+                                        })),
+                                        
+                                        // Line path
+                                        {
+                                            path: {
+                                                d: pathData,
+                                                stroke: '#4299e1',
+                                                'stroke-width': 3,
+                                                fill: 'none',
+                                                'stroke-linecap': 'round',
+                                                'stroke-linejoin': 'round'
+                                            }
+                                        },
+                                        
+                                        // Data points
+                                        ...points.map((point, index) => ({
+                                            circle: {
+                                                cx: point.x,
+                                                cy: point.y,
+                                                r: hoveredPoint === index ? 8 : 5,
+                                                fill: hoveredPoint === index ? '#ff6b6b' : '#ffffff',
+                                                stroke: '#4299e1',
+                                                'stroke-width': 3,
+                                                style: { cursor: 'pointer', transition: 'all 0.2s ease' },
+                                                onmouseover: () => setState('lineChart.hoveredPoint', index),
+                                                onmouseout: () => setState('lineChart.hoveredPoint', -1)
+                                            }
+                                        }))
+                                    ];
+                                }
+                            }
+                        }
+                    ]
+                }
+            };
+        });
+
+        // Animated Buttons Component
+        juris.registerComponent('AnimatedButtonsDemo', (props, context) => {
+            const { getState, setState } = context;
+            
+            const togglePulse = () => setState('buttons.pulse', !getState('buttons.pulse', false));
+            const rotateButton = () => setState('buttons.rotate', getState('buttons.rotate', 0) + 90);
+            const scaleButton = () => {
+                const scale = getState('buttons.scale', 1);
+                setState('buttons.scale', scale === 1 ? 1.5 : 1);
+            };
+            
+            return {
+                div: {
+                    className: 'demo-card',
+                    children: [
+                        { div: { className: 'demo-title', text: '🔘 Animated SVG Buttons' } },
+                        {
+                            svg: {
+                                width: 360,
+                                height: 200,
+                                style: { border: '1px solid #e2e8f0', borderRadius: '8px' },
+                                children: [
+                                    // Background
+                                    { rect: { width: 360, height: 200, fill: '#f8f9fa' } },
+                                    
+                                    // Pulsing Button
+                                    {
+                                        g: {
+                                            transform: 'translate(80, 50)',
+                                            children: [
+                                                {
+                                                    circle: {
+                                                        cx: 0, cy: 0, r: 25,
+                                                        fill: '#4299e1',
+                                                        stroke: '#3182ce',
+                                                        'stroke-width': 2,
+                                                        style: {
+                                                            cursor: 'pointer',
+                                                            animation: () => getState('buttons.pulse', false) ? 'pulse 1s infinite' : 'none'
+                                                        },
+                                                        onclick: togglePulse
+                                                    }
+                                                },
+                                                {
+                                                    text: {
+                                                        x: 0, y: 5,
+                                                        'text-anchor': 'middle',
+                                                        fill: 'white',
+                                                        'font-size': 12,
+                                                        'font-weight': 'bold',
+                                                        text: 'PULSE',
+                                                        style: { pointerEvents: 'none' }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    
+                                    // Rotating Button
+                                    {
+                                        g: {
+                                            transform: () => `translate(180, 50) rotate(${getState('buttons.rotate', 0)})`,
+                                            style: { transition: 'transform 0.5s ease' },
+                                            children: [
+                                                {
+                                                    rect: {
+                                                        x: -25, y: -25, width: 50, height: 50,
+                                                        fill: '#48bb78',
+                                                        stroke: '#38a169',
+                                                        'stroke-width': 2,
+                                                        rx: 5,
+                                                        style: { cursor: 'pointer' },
+                                                        onclick: rotateButton
+                                                    }
+                                                },
+                                                {
+                                                    text: {
+                                                        x: 0, y: 5,
+                                                        'text-anchor': 'middle',
+                                                        fill: 'white',
+                                                        'font-size': 10,
+                                                        'font-weight': 'bold',
+                                                        text: 'ROTATE',
+                                                        style: { pointerEvents: 'none' }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    
+                                    // Scaling Button
+                                    {
+                                        g: {
+                                            transform: () => `translate(280, 50) scale(${getState('buttons.scale', 1)})`,
+                                            style: { 
+                                                transition: 'transform 0.3s ease',
+                                                transformOrigin: '280px 50px'
+                                            },
+                                            children: [
+                                                {
+                                                    polygon: {
+                                                        points: '0,-25 22,12 -22,12',
+                                                        fill: '#ed8936',
+                                                        stroke: '#dd6b20',
+                                                        'stroke-width': 2,
+                                                        style: { cursor: 'pointer' },
+                                                        onclick: scaleButton
+                                                    }
+                                                },
+                                                {
+                                                    text: {
+                                                        x: 0, y: -5,
+                                                        'text-anchor': 'middle',
+                                                        fill: 'white',
+                                                        'font-size': 8,
+                                                        'font-weight': 'bold',
+                                                        text: 'SCALE',
+                                                        style: { pointerEvents: 'none' }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        });
+
+        // Gauge Component - COMPLETELY REWRITTEN
+        juris.registerComponent('GaugeDemo', (props, context) => {
+            const { getState, setState } = context;
+            
+            const updateGauge = (value) => {
+                setState('gauge.target', value);
+                setState('gauge.animating', true);
+                
+                const animate = () => {
+                    const current = getState('gauge.value', 0);
+                    const target = getState('gauge.target', 0);
+                    const diff = target - current;
+                    
+                    if (Math.abs(diff) > 1) {
+                        setState('gauge.value', current + diff * 0.1);
+                        requestAnimationFrame(animate);
+                    } else {
+                        setState('gauge.value', target);
+                        setState('gauge.animating', false);
+                    }
+                };
+                animate();
+            };
+            
+            return {
+                div: {
+                    className: 'demo-card',
+                    children: [
+                        { div: { className: 'demo-title', text: '⚡ Animated Gauge' } },
+                        {
+                            div: {
+                                className: 'controls',
+                                children: [
+                                    { button: { className: 'btn', text: '25%', onclick: () => updateGauge(25) } },
+                                    { button: { className: 'btn', text: '50%', onclick: () => updateGauge(50) } },
+                                    { button: { className: 'btn', text: '75%', onclick: () => updateGauge(75) } },
+                                    { button: { className: 'btn', text: '100%', onclick: () => updateGauge(100) } }
+                                ]
+                            }
+                        },
+                        {
+                            svg: {
+                                width: 360,
+                                height: 200,
+                                children: () => {
+                                    const value = Math.max(0, Math.min(100, getState('gauge.value', 75)));
+                                    
+                                    const centerX = 180;
+                                    const centerY = 108; // Moved up 2em (32px) from 140
+                                    const radius = 70;
+                                    
+                                    // Simple angle calculation: 0% = 180°, 100% = 0°
+                                    const valueAngle = Math.PI - (value / 100) * Math.PI; // in radians
+                                    const needleX = centerX + (radius - 10) * Math.cos(valueAngle);
+                                    const needleY = centerY + (radius - 10) * Math.sin(valueAngle);
+                                    
+                                    // Create progress arc using angle calculation
+                                    const createProgressPath = () => {
+                                        if (value <= 0) return '';
+                                        
+                                        const endX = centerX + radius * Math.cos(valueAngle);
+                                        const endY = centerY + radius * Math.sin(valueAngle);
+                                        
+                                        // For semicircle, if > 50%, use large arc flag
+                                        const largeArc = value > 50 ? 1 : 0;
+                                        
+                                        return `M ${centerX - radius} ${centerY} A ${radius} ${radius} 0 ${largeArc} 1 ${endX} ${endY}`;
+                                    };
+                                    
+                                    return [
+                                        // Background
+                                        { rect: { width: 360, height: 200, fill: '#f8f9fa' } },
+                                        
+                                        // Background semicircle
+                                        {
+                                            path: {
+                                                d: `M ${centerX - radius} ${centerY} A ${radius} ${radius} 0 0 1 ${centerX + radius} ${centerY}`,
+                                                stroke: '#e5e7eb',
+                                                'stroke-width': 12,
+                                                fill: 'none',
+                                                'stroke-linecap': 'round'
+                                            }
+                                        },
+                                        
+                                        // Progress arc
+                                        ...(value > 0 ? [{
+                                            path: {
+                                                d: createProgressPath(),
+                                                stroke: value < 30 ? '#ef4444' : value < 70 ? '#f59e0b' : '#10b981',
+                                                'stroke-width': 12,
+                                                fill: 'none',
+                                                'stroke-linecap': 'round'
+                                            }
+                                        }] : []),
+                                        
+                                        // Tick marks
+                                        ...[0, 25, 50, 75, 100].map(tickValue => {
+                                            const tickAngle = Math.PI - (tickValue / 100) * Math.PI;
+                                            const tickInnerX = centerX + (radius - 8) * Math.cos(tickAngle);
+                                            const tickInnerY = centerY + (radius - 8) * Math.sin(tickAngle);
+                                            const tickOuterX = centerX + (radius + 5) * Math.cos(tickAngle);
+                                            const tickOuterY = centerY + (radius + 5) * Math.sin(tickAngle);
+                                            const labelX = centerX + (radius + 18) * Math.cos(tickAngle);
+                                            const labelY = centerY + (radius + 18) * Math.sin(tickAngle) + 4;
+                                            
+                                            return {
+                                                g: {
+                                                    key: `tick-${tickValue}`,
+                                                    children: [
+                                                        {
+                                                            line: {
+                                                                x1: tickInnerX, y1: tickInnerY,
+                                                                x2: tickOuterX, y2: tickOuterY,
+                                                                stroke: '#6b7280',
+                                                                'stroke-width': 2
+                                                            }
+                                                        },
+                                                        {
+                                                            text: {
+                                                                x: labelX, y: labelY,
+                                                                'text-anchor': 'middle',
+                                                                'font-size': 11,
+                                                                fill: '#6b7280',
+                                                                text: tickValue.toString()
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            };
+                                        }),
+                                        
+                                        // Center circle
+                                        {
+                                            circle: {
+                                                cx: centerX, cy: centerY, r: 6,
+                                                fill: '#374151'
+                                            }
+                                        },
+                                        
+                                        // Needle
+                                        {
+                                            line: {
+                                                x1: centerX, y1: centerY,
+                                                x2: needleX, y2: needleY,
+                                                stroke: '#dc2626',
+                                                'stroke-width': 3,
+                                                'stroke-linecap': 'round'
+                                            }
+                                        },
+                                        
+                                        // Needle tip
+                                        {
+                                            circle: {
+                                                cx: needleX, cy: needleY, r: 3,
+                                                fill: '#dc2626'
+                                            }
+                                        },
+                                        
+                                        // Value display
+                                        {
+                                            text: {
+                                                x: centerX, y: centerY + 35,
+                                                'text-anchor': 'middle',
+                                                'font-size': 28,
+                                                'font-weight': 'bold',
+                                                fill: '#1f2937',
+                                                text: `${Math.round(value)}%`
+                                            }
+                                        }
+                                    ];
+                                }
+                            }
+                        }
+                    ]
+                }
+            };
+        });
+
+        // Drawing Component
+        juris.registerComponent('DrawingDemo', (props, context) => {
+            const { getState, setState } = context;
+            
+            // Store the SVG element reference for coordinate calculation
+            let svgElement = null;
+            
+            const getCoordinates = (e) => {
+                if (!svgElement) return { x: 0, y: 0 };
+                const rect = svgElement.getBoundingClientRect();
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            };
+            
+            const startDrawing = (e) => {
+                e.preventDefault();
+                svgElement = e.currentTarget;
+                const { x, y } = getCoordinates(e);
+                setState('drawing.currentPath', `M ${x} ${y}`);
+                setState('drawing.isDrawing', true);
+            };
+            
+            const draw = (e) => {
+                if (!getState('drawing.isDrawing', false)) return;
+                e.preventDefault();
+                const { x, y } = getCoordinates(e);
+                const currentPath = getState('drawing.currentPath', '');
+                setState('drawing.currentPath', currentPath + ` L ${x} ${y}`);
+            };
+            
+            const stopDrawing = (e) => {
+                const isDrawing = getState('drawing.isDrawing', false);
+                const currentPath = getState('drawing.currentPath', '');
+                if (isDrawing && currentPath) {
+                    const paths = getState('drawing.paths', []);
+                    const color = getState('drawing.brushColor', '#4299e1');
+                    const size = getState('drawing.brushSize', 3);
+                    setState('drawing.paths', [...paths, { path: currentPath, color, size }]);
+                    setState('drawing.currentPath', '');
+                }
+                setState('drawing.isDrawing', false);
+            };
+            
+            const addTestPath = () => {
+                const paths = getState('drawing.paths', []);
+                const testPath = 'M 50 50 Q 100 20 150 50 Q 200 80 250 50';
+                setState('drawing.paths', [...paths, { 
+                    path: testPath, 
+                    color: '#e53e3e', 
+                    size: 4 
+                }]);
+            };
+            
+            return {
+                div: {
+                    className: 'demo-card',
+                    children: [
+                        { div: { className: 'demo-title', text: '🎨 Interactive Drawing' } },
+                        {
+                            div: {
+                                className: 'controls',
+                                children: [
+                                    { button: { 
+                                        className: 'btn', 
+                                        text: 'Clear', 
+                                        onclick: () => setState('drawing.paths', [])
+                                    }},
+                                    { button: { 
+                                        className: 'btn btn-secondary', 
+                                        text: 'Add Test', 
+                                        onclick: addTestPath
+                                    }},
+                                    {
+                                        input: {
+                                            type: 'color',
+                                            value: () => getState('drawing.brushColor', '#4299e1'),
+                                            oninput: (e) => setState('drawing.brushColor', e.target.value)
+                                        }
+                                    },
+                                    {
+                                        input: {
+                                            type: 'range',
+                                            min: 1, max: 10,
+                                            value: () => getState('drawing.brushSize', 3),
+                                            oninput: (e) => setState('drawing.brushSize', parseInt(e.target.value)),
+                                            className: 'range-input'
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            text: () => `Size: ${getState('drawing.brushSize', 3)}px`,
+                                            style: { fontSize: '12px', color: '#666' }
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            svg: {
+                                width: 360,
+                                height: 200,
+                                viewBox: '0 0 360 200',
+                                style: { 
+                                    border: '2px solid #e2e8f0', 
+                                    borderRadius: '8px',
+                                    cursor: 'crosshair',
+                                    background: 'white',
+                                    userSelect: 'none'
+                                },
+                                onmousedown: startDrawing,
+                                onmousemove: draw,
+                                onmouseup: stopDrawing,
+                                onmouseleave: stopDrawing,
+                                // Add touch support
+                                ontouchstart: (e) => {
+                                    e.preventDefault();
+                                    const touch = e.touches[0];
+                                    const mouseEvent = new MouseEvent('mousedown', {
+                                        clientX: touch.clientX,
+                                        clientY: touch.clientY
+                                    });
+                                    startDrawing(mouseEvent);
+                                },
+                                ontouchmove: (e) => {
+                                    e.preventDefault();
+                                    const touch = e.touches[0];
+                                    const mouseEvent = new MouseEvent('mousemove', {
+                                        clientX: touch.clientX,
+                                        clientY: touch.clientY
+                                    });
+                                    draw(mouseEvent);
+                                },
+                                ontouchend: stopDrawing,
+                                children: () => {
+                                    const paths = getState('drawing.paths', []);
+                                    const currentPath = getState('drawing.currentPath', '');
+                                    const currentColor = getState('drawing.brushColor', '#4299e1');
+                                    const currentSize = getState('drawing.brushSize', 3);
+                                    
+                                    return [
+                                        // Background rect to catch all mouse events
+                                        {
+                                            rect: {
+                                                x: 0, y: 0,
+                                                width: 360, height: 200,
+                                                fill: 'transparent',
+                                                style: { pointerEvents: 'all' }
+                                            }
+                                        },
+                                        
+                                        // Completed paths
+                                        ...paths.map((pathData, index) => ({
+                                            path: {
+                                                key: `path-${index}`,
+                                                d: pathData.path,
+                                                stroke: pathData.color,
+                                                'stroke-width': pathData.size,
+                                                fill: 'none',
+                                                'stroke-linecap': 'round',
+                                                'stroke-linejoin': 'round',
+                                                style: { pointerEvents: 'none' }
+                                            }
+                                        })),
+                                        
+                                        // Current drawing path
+                                        ...(currentPath ? [{
+                                            path: {
+                                                key: 'current-path',
+                                                d: currentPath,
+                                                stroke: currentColor,
+                                                'stroke-width': currentSize,
+                                                fill: 'none',
+                                                'stroke-linecap': 'round',
+                                                'stroke-linejoin': 'round',
+                                                style: { pointerEvents: 'none' }
+                                            }
+                                        }] : [])
+                                    ];
+                                }
+                            }
+                        },
+                        {
+                            div: {
+                                className: 'status',
+                                text: () => {
+                                    const pathCount = getState('drawing.paths', []).length;
+                                    const isDrawing = getState('drawing.isDrawing', false);
+                                    return isDrawing ? 'Drawing...' : `Paths drawn: ${pathCount}`;
+                                }
+                            }
+                        }
+                    ]
+                }
+            };
+        });
+
+        // Morphing Demo Component
+        juris.registerComponent('MorphingDemo', (props, context) => {
+            const { getState, setState } = context;
+            
+            const shapes = [
+                'M 50 50 L 150 50 L 150 150 L 50 150 Z', // Square
+                'M 100 50 A 50 50 0 1 1 99 50 Z',        // Circle
+                'M 100 50 L 130 120 L 70 120 Z',         // Triangle
+                'M 50 100 Q 100 50 150 100 Q 100 150 50 100 Z' // Star-like
+            ];
+            
+            const morphNext = () => {
+                const current = getState('buttons.morphProgress', 0);
+                setState('buttons.morphProgress', (current + 1) % shapes.length);
+            };
+            
+            return {
+                div: {
+                    className: 'demo-card',
+                    children: [
+                        { div: { className: 'demo-title', text: '🔄 Morphing Shapes' } },
+                        {
+                            div: {
+                                className: 'controls',
+                                children: [
+                                    { button: { className: 'btn', text: 'Morph Next', onclick: morphNext } }
+                                ]
+                            }
+                        },
+                        {
+                            svg: {
+                                width: 360,
+                                height: 200,
+                                style: { border: '1px solid #e2e8f0', borderRadius: '8px' },
+                                children: [
+                                    // Background
+                                    { rect: { width: 360, height: 200, fill: '#f8f9fa' } },
+                                    
+                                    // Morphing shape
+                                    {
+                                        g: {
+                                            transform: 'translate(80, 25)',
+                                            children: [
+                                                {
+                                                    path: {
+                                                        d: () => shapes[getState('buttons.morphProgress', 0)],
+                                                        fill: '#9f7aea',
+                                                        stroke: '#805ad5',
+                                                        'stroke-width': 3,
+                                                        style: { 
+                                                            transition: 'd 0.8s ease',
+                                                            cursor: 'pointer'
+                                                        },
+                                                        onclick: morphNext
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        });
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { r: 25; }
+                50% { r: 30; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Render the application
+        juris.render('#app');
+    </script>
+</body>
+</html>

@@ -263,7 +263,7 @@
 <body>
     <div id="app"></div>
 
-    <script src="../src/juris.0.9.0.js"></script>
+    <script src="../src/juris.js"></script>
     <script>
         // Initialize Juris with global state
         const juris = new Juris({
@@ -479,6 +479,7 @@
                                         div: {
                                             children: todos.map(todo => ({
                                                 div: {
+                                                    key:todo.id,
                                                     className: `todo-item ${todo.completed ? 'completed' : ''}`,
                                                     children: [
                                                         { input: {

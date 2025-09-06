@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Juris FluentState App</title>
+    <script src="https://unpkg.com/juris@0.9.0/juris.js"></script>
+    <script src="https://unpkg.com/juris@0.9.0/juris-headless.js"></script>
+    <script src="https://unpkg.com/juris@0.9.0/headless/juris-fluentstate.js"></script>
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+        const Counter = (props, context) => {
+            const $ = context.fluentState.getFluentStates();
+            
+            // Initialize state - note: primitives must be object properties
+            $.count.val.val = $.count.val.val || 0;
+            user.name = user.name || 'Guest';
+            
+            return {
+                div: {
+                    children: [
+                        {
+                            h1: { text: () => `Hello, ${user.name}!` }
+                        },
+                        {
+                            div: {
+                                children: [
+                                    { span: { text: () => `Count: ${count.val.val||0}` } },
+                                    {
+                                        button: {
+                                            text: 'Increment',
+                                            onclick: () => count.val.val++
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            text: 'Reset',
+                                            onclick: () => count.val = 0
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+
+        const juris = new Juris({
+						states:{
+							count:{},
+							user:{},
+						},
+            features: { headless: HeadlessManager },
+            headlessComponents: {
+                fluentState: {
+                    fn: createFluentStateHeadless,
+                    options: { autoInit: true }
+                }
+            },
+            components: { Counter },
+            layout: { Counter: {} }
+        });
+
+        juris.render();
+    </script>
+</body>
+</html>

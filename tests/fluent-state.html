@@ -15,14 +15,13 @@
 	<script>
 			const Counter = (props, context)=>{
 				const {$, count} = context.fluentState.getFluentStates();
-				count.val = 0;
 				$.anotherCount = 0;
 				return {
 					div:{
 						children:[
-							{span:{text:()=>count.val}},
+							{span:{text:()=>$.count?$.count:0}},
 							{button:{text:'Increment',
-								onclick:()=>count.val++		
+								onclick:()=>$.count++
 							}},
 							{span:{text:()=>$.anotherCount}},
 							{button:{text:'Increment',

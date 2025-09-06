@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Deep Component Tree Benchmark</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group label {
+            font-weight: bold;
+            min-width: 120px;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .slider {
+            width: 200px;
+        }
+        
+        .value-display {
+            min-width: 60px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn.danger {
+            background: #dc3545;
+        }
+        
+        .btn.danger:hover {
+            background: #c82333;
+        }
+        
+        .btn.success {
+            background: #28a745;
+        }
+        
+        .btn.success:hover {
+            background: #218838;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .performance-log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .tree-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .tree-node {
+            border-left: 2px solid #e9ecef;
+            margin-left: 20px;
+            padding: 8px 12px;
+            position: relative;
+            transition: all 0.2s ease;
+            min-height: 30px;
+        }
+        
+        .tree-node:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .node-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 0;
+            min-height: 24px;
+            cursor: pointer;
+        }
+        
+        .node-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .node-label {
+            font-weight: 500;
+            color: #495057;
+            flex-grow: 1;
+        }
+        
+        .node-counter {
+            background: #6c757d;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .node-counters {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .node-children {
+            margin-left: 0;
+        }
+        
+        .node-reactive {
+            background: #28a745;
+        }
+        
+        .node-static {
+            background: #6c757d;
+        }
+        
+        .node-container {
+            background: #007bff;
+        }
+        
+        .node-leaf {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .expand-toggle {
+            width: 16px;
+            height: 16px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 2px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 5px;
+        }
+        
+        .expand-toggle:hover {
+            background: #495057;
+        }
+        
+        .depth-0 { border-left-color: #dc3545; }
+        .depth-1 { border-left-color: #fd7e14; }
+        .depth-2 { border-left-color: #ffc107; }
+        .depth-3 { border-left-color: #28a745; }
+        .depth-4 { border-left-color: #20c997; }
+        .depth-5 { border-left-color: #17a2b8; }
+        .depth-6 { border-left-color: #007bff; }
+        .depth-7 { border-left-color: #6610f2; }
+        .depth-8 { border-left-color: #e83e8c; }
+        .depth-9 { border-left-color: #6f42c1; }
+        
+        .update-flash {
+            animation: flash 0.3s ease-in-out;
+        }
+        
+        @keyframes flash {
+            0% { background-color: #fff3cd; }
+            100% { background-color: transparent; }
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    
+    <script src="../src/juris.js"></script>
+    <script>
+        // Performance monitoring utilities
+        const PerformanceMonitor = {
+            logs: [],
+            startTime: null,
+            
+            start(operation) {
+                this.startTime = performance.now();
+                this.log(`Starting ${operation}...`);
+            },
+            
+            end(operation) {
+                if (this.startTime) {
+                    const duration = performance.now() - this.startTime;
+                    this.log(`${operation} completed in ${duration.toFixed(2)}ms`);
+                    this.startTime = null;
+                    return duration;
+                }
+                return 0;
+            },
+            
+            log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                this.logs.push(`[${timestamp}] ${message}`);
+                if (this.logs.length > 100) {
+                    this.logs.shift();
+                }
+                console.log(message);
+            }
+        };
+        
+        // Generate tree data with configurable depth and branching
+        const generateTreeData = (depth, branchingFactor) => {
+            let nodeIdCounter = 0;
+            
+            const createNode = (currentDepth, parentId = null) => {
+                const nodeId = ++nodeIdCounter;
+                const nodeType = getNodeType(currentDepth, depth);
+                const node = {
+                    id: nodeId,
+                    parentId: parentId,
+                    depth: currentDepth,
+                    label: `Node ${nodeId}`,
+                    type: nodeType,
+                    counter: Math.floor(Math.random() * 100),
+                    isReactive: Math.random() > 0.3, // 70% chance of being reactive
+                    children: []
+                };
+                
+                // ONLY generate children if NOT a leaf node
+                if (nodeType !== 'leaf') {
+                    const childCount = branchingFactor;
+                    for (let i = 0; i < childCount; i++) {
+                        node.children.push(createNode(currentDepth + 1, nodeId));
+                    }
+                }
+                
+                return node;
+            };
+            
+            // Start with a single root node
+            const rootNode = createNode(0);
+            return { nodes: [rootNode], count: nodeIdCounter };
+        };
+        
+        const getNodeType = (currentDepth, maxDepth) => {
+            if (currentDepth === 0) return 'root';
+            if (currentDepth === maxDepth - 1) return 'leaf';
+            return 'container';
+        };
+        
+        // Leaf Node Component - Most basic component
+        const LeafNode = (props, context) => {
+            const { getState } = context;
+            const { node } = props;
+            
+            return {
+                div: {
+                    class: `tree-node depth-${node.depth}`,
+                    children: [
+                        {
+                            div: {
+                                class: 'node-content',
+                                children: [
+                                    { div: { class: 'expand-toggle', style: { opacity: 0 } } }, // Spacer
+                                    {
+                                        div: {
+                                            class: `node-icon node-leaf`,
+                                            text: '🍃'
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'node-label',
+                                            text: node.label
+                                        }
+                                    },
+                                    () => {
+                                        if (node.isReactive) {
+                                            const globalCounter = getState('performance.globalCounter', 0);
+                                            const nodeCounter = getState(`nodes.${node.id}.counter`, node.counter);
+                                            return {
+                                                span: {
+                                                    class: 'node-counter node-reactive',
+                                                    text: `${nodeCounter + globalCounter}`
+                                                }
+                                            };
+                                        } else {
+                                            return {
+                                                span: {
+                                                    class: 'node-counter node-static',
+                                                    text: node.counter
+                                                }
+                                            };
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // Container Node Component - Has children
+        const ContainerNode = (props, context) => {
+            const { getState, setState } = context;
+            const { node } = props;
+            
+            const toggleExpanded = () => {
+                const currentlyExpanded = getState(`ui.expandedNodes.${node.id}`, true);
+                setState(`ui.expandedNodes.${node.id}`, !currentlyExpanded);
+            };
+            
+            return {
+                div: {
+                    class: `tree-node depth-${node.depth}`,
+                    children: [
+                        {
+                            div: {
+                                class: 'node-content',
+                                onclick: toggleExpanded,
+                                children: [
+                                    () => {
+                                        if (node.children.length > 0) {
+                                            const isExpanded = getState(`ui.expandedNodes.${node.id}`, true);
+                                            return {
+                                                button: {
+                                                    class: 'expand-toggle',
+                                                    text: isExpanded ? '−' : '+',
+                                                    onclick: (e) => {
+                                                        e.stopPropagation();
+                                                        toggleExpanded();
+                                                    }
+                                                }
+                                            };
+                                        }
+                                        return { div: { class: 'expand-toggle', style: { opacity: 0 } } };
+                                    },
+                                    {
+                                        div: {
+                                            class: `node-icon node-${node.type}`,
+                                            text: node.type === 'root' ? '🌳' : '📁'
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'node-label',
+                                            text: `${node.label} (${node.children.length} children)`
+                                        }
+                                    },
+                                    () => {
+                                        if (node.isReactive) {
+                                            const globalCounter = getState('performance.globalCounter', 0);
+                                            const nodeCounter = getState(`nodes.${node.id}.counter`, node.counter);
+                                            const updateCount = getState(`nodes.${node.id}.updates`, 0);
+                                            return {
+                                                div: {
+                                                    class: 'node-counters',
+                                                    children: [
+                                                        {
+                                                            span: {
+                                                                class: 'node-counter node-reactive',
+                                                                text: `${nodeCounter + globalCounter}`
+                                                            }
+                                                        },
+                                                        {
+                                                            span: {
+                                                                class: 'node-counter',
+                                                                style: { background: '#17a2b8' },
+                                                                text: `U:${updateCount}`
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            };
+                                        } else {
+                                            return {
+                                                span: {
+                                                    class: 'node-counter node-static',
+                                                    text: node.counter
+                                                }
+                                            };
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        () => {
+                            const showChildren = getState(`ui.expandedNodes.${node.id}`, true);
+                            if (!showChildren || node.children.length === 0) return null;
+                            
+                            return {
+                                div: {
+                                    class: 'node-children',
+                                    children: node.children.map(child => {
+                                        // Use node.type instead of children.length to determine component
+                                        if (child.type === 'leaf') {
+                                            return { LeafNode: { node: child, key: `leaf-${child.id}` } };
+                                        } else {
+                                            return { ContainerNode: { node: child, key: `container-${child.id}` } };
+                                        }
+                                    })
+                                }
+                            };
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // Stats Component
+        const StatsPanel = (props, context) => {
+            const { getState } = context;
+            
+            return {
+                div: {
+                    class: 'stats',
+                    children: [
+                        {
+                            div: {
+                                class: 'stat-card',
+                                children: [
+                                    {
+                                        span: {
+                                            class: 'stat-value',
+                                            text: () => getState('tree.totalNodes', 0)
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'stat-label',
+                                            text: 'Total Nodes'
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                class: 'stat-card',
+                                children: [
+                                    {
+                                        span: {
+                                            class: 'stat-value',
+                                            text: () => getState('tree.maxDepth', 0)
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'stat-label',
+                                            text: 'Max Depth'
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                class: 'stat-card',
+                                children: [
+                                    {
+                                        span: {
+                                            class: 'stat-value',
+                                            text: () => getState('performance.globalCounter', 0)
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'stat-label',
+                                            text: 'Global Counter'
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                class: 'stat-card',
+                                children: [
+                                    {
+                                        span: {
+                                            class: 'stat-value',
+                                            text: () => {
+                                                const reactive = getState('tree.reactiveNodes', 0);
+                                                const total = getState('tree.totalNodes', 1);
+                                                return `${Math.round((reactive / total) * 100)}%`;
+                                            }
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'stat-label',
+                                            text: 'Reactive Nodes'
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                class: 'stat-card',
+                                children: [
+                                    {
+                                        span: {
+                                            class: 'stat-value',
+                                            text: () => `${getState('performance.lastRenderTime', 0).toFixed(1)}ms`
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'stat-label',
+                                            text: 'Last Render'
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                class: 'stat-card',
+                                children: [
+                                    {
+                                        span: {
+                                            class: 'stat-value',
+                                            text: () => getState('performance.totalUpdates', 0)
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'stat-label',
+                                            text: 'Total Updates'
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // Performance Log Component
+        const PerformanceLog = (props, context) => {
+            const { getState } = context;
+            
+            return {
+                div: {
+                    class: 'performance-log',
+                    children: () => {
+                        const logs = getState('performance.logs', []);
+                        return logs.slice(-20).map((log, index) => ({
+                            div: {
+                                key: `log-${index}`,
+                                text: log
+                            }
+                        }));
+                    }
+                }
+            };
+        };
+        
+        // Controls Component
+        const Controls = (props, context) => {
+            const { getState, setState, juris } = context;
+            
+            const generateTree = () => {
+                PerformanceMonitor.start('Tree Generation');
+                const depth = getState('config.depth', 5);
+                const branching = getState('config.branching', 3);
+                
+                // Clear existing expanded state to start fresh
+                setState('ui.expandedNodes', {});
+                
+                const result = generateTreeData(depth, branching);
+                const reactiveCount = countAllReactiveNodes(result.nodes);
+                
+                juris.executeBatch(() => {
+                    setState('tree.data', result.nodes);
+                    setState('tree.totalNodes', result.count);
+                    setState('tree.maxDepth', depth);
+                    setState('tree.reactiveNodes', reactiveCount);
+                    
+                    // Start with root expanded and first level for performance
+                    if (result.nodes.length > 0) {
+                        setState(`ui.expandedNodes.${result.nodes[0].id}`, true);
+                        
+                        // For smaller trees, expand more levels
+                        if (result.count < 1000) {
+                            result.nodes[0].children.forEach(child => {
+                                setState(`ui.expandedNodes.${child.id}`, true);
+                            });
+                        }
+                    }
+                });
+                
+                const duration = PerformanceMonitor.end('Tree Generation');
+                setState('performance.lastRenderTime', duration);
+                updatePerformanceLogs();
+            };
+            
+            const countAllReactiveNodes = (nodes) => {
+                let count = 0;
+                const traverse = (nodeList) => {
+                    nodeList.forEach(node => {
+                        if (node.isReactive) count++;
+                        if (node.children) traverse(node.children);
+                    });
+                };
+                traverse(nodes);
+                return count;
+            };
+            
+            const countReactiveNodes = (node) => {
+                let count = node.isReactive ? 1 : 0;
+                node.children.forEach(child => {
+                    count += countReactiveNodes(child);
+                });
+                return count;
+            };
+            
+            const updatePerformanceLogs = () => {
+                setState('performance.logs', [...PerformanceMonitor.logs]);
+            };
+            
+            const incrementGlobal = () => {
+                PerformanceMonitor.start('Global Update');
+                const current = getState('performance.globalCounter', 0);
+                const updates = getState('performance.totalUpdates', 0);
+                
+                juris.executeBatch(() => {
+                    setState('performance.globalCounter', current + 1);
+                    setState('performance.totalUpdates', updates + 1);
+                });
+                
+                const duration = PerformanceMonitor.end('Global Update');
+                setState('performance.lastRenderTime', duration);
+                updatePerformanceLogs();
+            };
+            
+            const randomUpdate = () => {
+                PerformanceMonitor.start('Random Node Update');
+                const totalNodes = getState('tree.totalNodes', 0);
+                if (totalNodes > 0) {
+                    const randomNodeId = Math.floor(Math.random() * totalNodes) + 1;
+                    const currentCounter = getState(`nodes.${randomNodeId}.counter`, 0);
+                    const currentUpdates = getState(`nodes.${randomNodeId}.updates`, 0);
+                    
+                    juris.executeBatch(() => {
+                        setState(`nodes.${randomNodeId}.counter`, Math.floor(Math.random() * 100));
+                        setState(`nodes.${randomNodeId}.updates`, currentUpdates + 1);
+                        setState('performance.totalUpdates', getState('performance.totalUpdates', 0) + 1);
+                    });
+                }
+                
+                const duration = PerformanceMonitor.end('Random Node Update');
+                setState('performance.lastRenderTime', duration);
+                updatePerformanceLogs();
+            };
+            
+            const stressTest = () => {
+                PerformanceMonitor.start('Stress Test - 50 Updates');
+                const updates = getState('performance.totalUpdates', 0);
+                
+                juris.executeBatch(() => {
+                    for (let i = 0; i < 50; i++) {
+                        const randomNodeId = Math.floor(Math.random() * getState('tree.totalNodes', 1)) + 1;
+                        setState(`nodes.${randomNodeId}.counter`, Math.floor(Math.random() * 100));
+                        setState(`nodes.${randomNodeId}.updates`, getState(`nodes.${randomNodeId}.updates`, 0) + 1);
+                    }
+                    setState('performance.globalCounter', getState('performance.globalCounter', 0) + 10);
+                    setState('performance.totalUpdates', updates + 51);
+                });
+                
+                const duration = PerformanceMonitor.end('Stress Test - 50 Updates');
+                setState('performance.lastRenderTime', duration);
+                updatePerformanceLogs();
+            };
+            
+            const clearLogs = () => {
+                PerformanceMonitor.logs = [];
+                setState('performance.logs', []);
+            };
+            
+            return {
+                div: {
+                    class: 'controls',
+                    children: [
+                        {
+                            div: {
+                                class: 'control-group',
+                                children: [
+                                    {
+                                        label: { text: 'Tree Depth:' }
+                                    },
+                                    {
+                                        div: {
+                                            class: 'slider-container',
+                                            children: [
+                                                {
+                                                    input: {
+                                                        type: 'range',
+                                                        class: 'slider',
+                                                        min: '2',
+                                                        max: '10',
+                                                        value: () => getState('config.depth', 5),
+                                                        oninput: (e) => setState('config.depth', parseInt(e.target.value))
+                                                    }
+                                                },
+                                                {
+                                                    span: {
+                                                        class: 'value-display',
+                                                        text: () => getState('config.depth', 5)
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                class: 'control-group',
+                                children: [
+                                    {
+                                        label: { text: 'Branching Factor:' }
+                                    },
+                                    {
+                                        div: {
+                                            class: 'slider-container',
+                                            children: [
+                                                {
+                                                    input: {
+                                                        type: 'range',
+                                                        class: 'slider',
+                                                        min: '2',
+                                                        max: '8',
+                                                        value: () => getState('config.branching', 3),
+                                                        oninput: (e) => setState('config.branching', parseInt(e.target.value))
+                                                    }
+                                                },
+                                                {
+                                                    span: {
+                                                        class: 'value-display',
+                                                        text: () => getState('config.branching', 3)
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                class: 'control-group',
+                                children: [
+                                    {
+                                        button: {
+                                            class: 'btn',
+                                            text: 'Generate Tree',
+                                            onclick: generateTree
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            class: 'btn',
+                                            text: 'Expand All',
+                                            onclick: () => {
+                                                const totalNodes = getState('tree.totalNodes', 0);
+                                                juris.executeBatch(() => {
+                                                    for (let i = 1; i <= totalNodes; i++) {
+                                                        setState(`ui.expandedNodes.${i}`, true);
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            class: 'btn',
+                                            text: 'Collapse All',
+                                            onclick: () => {
+                                                const totalNodes = getState('tree.totalNodes', 0);
+                                                juris.executeBatch(() => {
+                                                    for (let i = 1; i <= totalNodes; i++) {
+                                                        setState(`ui.expandedNodes.${i}`, false);
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            class: 'btn success',
+                                            text: 'Increment Global',
+                                            onclick: incrementGlobal
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            class: 'btn',
+                                            text: 'Random Update',
+                                            onclick: randomUpdate
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            class: 'btn danger',
+                                            text: 'Stress Test',
+                                            onclick: stressTest
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            class: 'btn',
+                                            text: 'Clear Logs',
+                                            onclick: clearLogs
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // Tree Renderer Component
+        const TreeRenderer = (props, context) => {
+            const { getState } = context;
+            
+            return {
+                div: {
+                    class: 'tree-container',
+                    children: () => {
+                        const treeData = getState('tree.data', []);
+                        
+                        if (treeData.length === 0) {
+                            return [{
+                                div: {
+                                    class: 'loading',
+                                    text: 'Click "Generate Tree" to create a component tree'
+                                }
+                            }];
+                        }
+                        
+                        return treeData.map(rootNode => ({
+                            ContainerNode: {
+                                node: rootNode,
+                                key: `root-${rootNode.id}`
+                            }
+                        }));
+                    }
+                }
+            };
+        };
+        
+        // Main App Component
+        const App = (props, context) => {
+            return {
+                div: {
+                    children: [
+                        {
+                            h1: {
+                                text: 'Juris Deep Component Tree Benchmark',
+                                style: { textAlign: 'center', marginBottom: '30px' }
+                            }
+                        },
+                        { Controls: {} },
+                        { StatsPanel: {} },
+                        { PerformanceLog: {} },
+                        { TreeRenderer: {} }
+                    ]
+                }
+            };
+        };
+        
+        // Initialize Juris
+        const juris = new Juris({
+            logLevel: 'error', // Reduce logging for performance
+            states: {
+                config: {
+                    depth: 5,
+                    branching: 3
+                },
+                tree: {
+                    data: [],
+                    totalNodes: 0,
+                    maxDepth: 0,
+                    reactiveNodes: 0
+                },
+                performance: {
+                    globalCounter: 0,
+                    totalUpdates: 0,
+                    lastRenderTime: 0,
+                    logs: []
+                },
+                ui: {
+                    expandedNodes: {}
+                },
+                nodes: {}
+            },
+            components: {
+                App,
+                Controls,
+                StatsPanel,
+                PerformanceLog,
+                TreeRenderer,
+                ContainerNode,
+                LeafNode
+            },
+            layout: { App: {} }
+        });
+        
+        // Auto-generate initial tree
+        setTimeout(() => {
+            const result = generateTreeData(5, 3);
+            const reactiveCount = countAllReactiveNodes(result.nodes);
+            
+            juris.executeBatch(() => {
+                juris.setState('tree.data', result.nodes);
+                juris.setState('tree.totalNodes', result.count);
+                juris.setState('tree.maxDepth', 5);
+                juris.setState('tree.reactiveNodes', reactiveCount);
+                juris.setState('performance.logs', ['Initial tree generated']);
+                
+                // Expand root and first level
+                if (result.nodes.length > 0) {
+                    juris.setState(`ui.expandedNodes.${result.nodes[0].id}`, true);
+                    result.nodes[0].children.forEach(child => {
+                        juris.setState(`ui.expandedNodes.${child.id}`, true);
+                    });
+                }
+            });
+        }, 100);
+        
+        const countAllReactiveNodes = (nodes) => {
+            let count = 0;
+            const traverse = (nodeList) => {
+                nodeList.forEach(node => {
+                    if (node.isReactive) count++;
+                    if (node.children) traverse(node.children);
+                });
+            };
+            traverse(nodes);
+            return count;
+        };
+        
+        juris.render('#app');
+        
+        // Global access for debugging
+        window.juris = juris;
+        window.PerformanceMonitor = PerformanceMonitor;
+        
+        console.log('Juris Deep Component Tree Benchmark initialized');
+        console.log('Available commands:');
+        console.log('- juris.getState() to inspect state');
+        console.log('- PerformanceMonitor.logs to see performance data');
+    </script>
+</body>
+</html>

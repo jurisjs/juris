@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Counter WebComponent Example</title>
+</head>
+<body>
+    <div id="app"></div>
+
+    <!-- Include Juris and WebComponentFactory -->
+    <script src="../src/juris.js"></script>
+    <script src="../src/juris-webcomponent.js"></script>
+
+    <script>
+					const Counter = (props, { getState, setState }) => {
+						// Props will be empty due to current architecture limitations
+						console.log('Counter props:', props);
+						
+						return {
+								// Remove attributes since layout system doesn't set them properly
+								attributes: [],
+								
+								// Initialize the state the component will actually use
+								initialState: {
+										count: 1,
+										count2: 4
+								},
+								
+								options: {
+										shadowMode: 'open'
+								},
+								
+								render: () => {
+										return [
+												{div: {
+														text:props.count2,
+														style: { 
+																padding: '5px', 
+																border: '1px solid #ccc',
+																marginBottom: '5px'
+														}
+												}},
+												
+												{div: {
+														text: () => `Count: ${props.count()}`,
+														style: { 
+																padding: '5px', 
+																border: '1px solid #ddd',
+																marginBottom: '10px'
+														}
+												}},
+												
+												{div: {
+														children: [
+																{button: {
+																		text: 'Increment Count',
+																		onclick: () => {
+																				const currentCount = getState('count', 1);
+																				setState('count', currentCount + 1);
+																		},
+																		style: {
+																				padding: '8px 16px',
+																				marginRight: '5px',
+																				backgroundColor: '#007cba',
+																				color: 'white',
+																				border: 'none',
+																				borderRadius: '4px',
+																				cursor: 'pointer'
+																		}
+																}},
+																
+																{button: {
+																		text: 'Increment Count2',
+																		onclick: () => {
+																				const currentCount2 = getState('count2', 4);
+																				setState('count2', currentCount2 + 1);
+																		},
+																		style: {
+																				padding: '8px 16px',
+																				marginRight: '5px',
+																				backgroundColor: '#28a745',
+																				color: 'white',
+																				border: 'none',
+																				borderRadius: '4px',
+																				cursor: 'pointer'
+																		}
+																}},
+																
+																{button: {
+																		text: 'Reset Both',
+																		onclick: () => {
+																				setState('count', 1);
+																				setState('count2', 4);
+																		},
+																		style: {
+																				padding: '8px 16px',
+																				backgroundColor: '#dc3545',
+																				color: 'white',
+																				border: 'none',
+																				borderRadius: '4px',
+																				cursor: 'pointer'
+																		}
+																}}
+														]
+												}}
+										];
+								}
+						};
+				};
+
+        const juris = new Juris({
+            features: {
+                webComponentFactory: WebComponentFactory
+            },
+            webComponents: {
+                'my-counter': Counter
+            },
+            states: {
+                count: 1,
+                count2: 4
+            },
+            layout: {
+                div: {
+                    children: [
+                        {
+                            'my-counter': {
+                                count: () => juris.getState('count', 1),
+                                count2: () => juris.getState('count2', 4)
+                            }
+                        }
+                    ]
+                }
+            }
+        });
+
+        juris.render();
+    </script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Render Types Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .demo-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .demo-title {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .result-box {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            min-height: 40px;
+        }
+        .juris-async-loading {
+            background: #e3f2fd;
+            border: 1px dashed #2196f3;
+            padding: 8px;
+            opacity: 0.7;
+            border-radius: 4px;
+        }
+        .juris-error {
+            background: #ffebee;
+            border: 1px solid #f44336;
+            padding: 8px;
+            color: #d32f2f;
+            border-radius: 4px;
+        }
+        .counter {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .status {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Juris Render Types Demo</h1>
+    <p>Testing different return types from component render() functions</p>
+
+    <div class="demo-section">
+        <h2 class="demo-title">1. String Return</h2>
+        <div class="result-box" id="string-demo"></div>
+        <p class="status">Returns plain string from render()</p>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">2. Number Return</h2>
+        <div class="result-box" id="number-demo"></div>
+        <p class="status">Returns number from render()</p>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">3. Object VDOM Return</h2>
+        <div class="result-box" id="object-demo"></div>
+        <p class="status">Returns object VDOM from render()</p>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">4. Promise Return (Success)</h2>
+        <div class="result-box" id="promise-success-demo"></div>
+        <p class="status">Returns promise that resolves to VDOM</p>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">5. Promise Return (Error)</h2>
+        <div class="result-box" id="promise-error-demo"></div>
+        <p class="status">Returns promise that rejects</p>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">6. Reactive Component with State</h2>
+        <div class="result-box" id="reactive-demo"></div>
+        <p class="status">Component with render() function and state management</p>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">7. Mixed Returns with Lifecycle</h2>
+        <div class="result-box" id="lifecycle-demo"></div>
+        <button onclick="changeMode()">Toggle Mode</button>
+        <p class="status">Component that returns different types based on state</p>
+    </div>
+
+    <script src="../src/juris.js"></script>
+    <script>
+        // Initialize Juris
+        const juris = new Juris();
+
+        // 1. String Return Component
+        juris.registerComponent('StringComponent', () => {
+            return "Hello from string return!";
+        });
+
+        // 2. Number Return Component  
+        juris.registerComponent('NumberComponent', () => {
+            return 42;
+        });
+
+        // 3. Object VDOM Return Component
+        juris.registerComponent('ObjectComponent', () => {
+            return {
+                div: {
+                    class: 'counter',
+                    children: [
+                        { h3: { text: 'Object VDOM Component' } },
+                        { p: { text: 'This was created from an object return', style: { color: '#666' } } },
+                        { 
+                            button: { 
+                                text: 'Click me!', 
+                                onclick: () => alert('Object component clicked!') 
+                            } 
+                        }
+                    ]
+                }
+            };
+        });
+
+        // 4. Promise Success Component
+        juris.registerComponent('PromiseSuccessComponent', async () => {
+            // Simulate async operation
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            return {
+                div: {
+                    class: 'counter',
+                    children: [
+                        { h3: { text: 'Promise Resolved!', style: { color: '#4CAF50' } } },
+                        { p: { text: 'This content loaded after 2 seconds' } }
+                    ]
+                }
+            };
+        });
+
+        // 5. Promise Error Component
+        juris.registerComponent('PromiseErrorComponent', async () => {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            throw new Error('Simulated async error');
+        });
+
+        // 6. Reactive Component with State
+        juris.registerComponent('ReactiveComponent', (props, { getState, setState }) => {
+            return {
+                render: () => {
+                    const count = getState('counter', 0);
+                    return {
+                        div: {
+                            class: 'counter',
+                            children: [
+                                { h3: { text: 'Reactive Counter' } },
+                                { p: { text: `Count: ${count}`, style: { fontSize: '20px', fontWeight: 'bold' } } },
+                                {
+                                    button: {
+                                        text: 'Increment',
+                                        onclick: () => setState('counter', count + 1)
+                                    }
+                                },
+                                {
+                                    button: {
+                                        text: 'Reset',
+                                        onclick: () => setState('counter', 0)
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+        });
+
+        // 7. Mixed Returns Component
+        juris.registerComponent('MixedComponent', (props, { getState, setState }) => {
+            return {
+                render: () => {
+                    const mode = getState('renderMode', 'string');
+                    
+                    switch(mode) {
+                        case 'string':
+                            return 'Currently returning a string';
+                        case 'number':
+                            return Math.floor(Math.random() * 100);
+                        case 'object':
+                            return {
+                                div: {
+                                    text: 'Currently returning an object VDOM',
+                                    style: { color: '#2196F3', fontWeight: 'bold' }
+                                }
+                            };
+                        case 'promise':
+                            return new Promise(resolve => {
+                                setTimeout(() => {
+                                    resolve({
+                                        div: {
+                                            text: 'Promise resolved! ✓',
+                                            style: { color: '#4CAF50', fontWeight: 'bold' }
+                                        }
+                                    });
+                                }, 1000);
+                            });
+                        default:
+                            return 'Unknown mode';
+                    }
+                }
+            };
+        });
+
+        // Function to change mode for mixed component
+        window.changeMode = function() {
+            const modes = ['string', 'number', 'object', 'promise'];
+            const currentMode = juris.getState('renderMode', 'string');
+            const currentIndex = modes.indexOf(currentMode);
+            const nextMode = modes[(currentIndex + 1) % modes.length];
+            juris.setState('renderMode', nextMode);
+        };
+
+        // Render components into their containers
+        document.addEventListener('DOMContentLoaded', () => {
+            // Render each component
+            const containers = [
+                { id: 'string-demo', component: 'StringComponent' },
+                { id: 'number-demo', component: 'NumberComponent' },
+                { id: 'object-demo', component: 'ObjectComponent' },
+                { id: 'promise-success-demo', component: 'PromiseSuccessComponent' },
+                { id: 'promise-error-demo', component: 'PromiseErrorComponent' },
+                { id: 'reactive-demo', component: 'ReactiveComponent' },
+                { id: 'lifecycle-demo', component: 'MixedComponent' }
+            ];
+
+            containers.forEach(({ id, component }) => {
+                const container = document.getElementById(id);
+                const element = juris.objectToHtml({ [component]: {} });
+                if (element) {
+                    container.appendChild(element);
+                }
+            });
+        });
+
+        // Add some debug logging
+        console.log('Juris Demo initialized');
+        console.log('Available components:', juris.componentManager.components.keys());
+    </script>
+</body>
+</html>

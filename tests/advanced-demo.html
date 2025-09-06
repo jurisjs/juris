@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Juris WebComponent Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .demo-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            background: #f8fafc;
+        }
+        .demo-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .control-btn {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .control-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .todo-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .todo-item.completed {
+            opacity: 0.6;
+            border-left-color: #6c757d;
+            text-decoration: line-through;
+        }
+        .section-title {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .api-demo {
+            background: #e6f3ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .chart-container {
+            height: 200px;
+            background: white;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            display: flex;
+            align-items: end;
+            justify-content: space-around;
+        }
+        .chart-bar {
+            background: #667eea;
+            border-radius: 2px 2px 0 0;
+            margin: 0 2px;
+            min-height: 5px;
+            transition: height 0.3s ease;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="../src/juris.js"></script>
+    <script src="../src/juris-webcomponent.js"></script>
+
+    <script>
+        // ===== COMPONENT DEFINITIONS =====
+        
+        const Counter = (props, { getState, setState }) => {
+            return {
+                attributes: ['label', 'color'],
+                initialState: {
+                    count: 0,
+                    history: []
+                },
+                api: {
+                    increment() {
+                        const current = getState('count', 0);
+                        const newCount = current + 1;
+                        setState('count', newCount);
+                        
+                        const history = getState('history', []);
+                        setState('history', [...history, { action: 'increment', value: newCount, timestamp: Date.now() }]);
+                    },
+                    decrement() {
+                        const current = getState('count', 0);
+                        const newCount = Math.max(0, current - 1);
+                        setState('count', newCount);
+                        
+                        const history = getState('history', []);
+                        setState('history', [...history, { action: 'decrement', value: newCount, timestamp: Date.now() }]);
+                    },
+                    reset() {
+                        setState('count', 0);
+                        setState('history', []);
+                    },
+                    getStats() {
+                        const history = getState('history', []);
+                        const increments = history.filter(h => h.action === 'increment').length;
+                        const decrements = history.filter(h => h.action === 'decrement').length;
+                        return { increments, decrements, total: history.length };
+                    }
+                },
+                render: () => ({
+                    div: {
+                        style: {
+                            background: props.color ? props.color() : '#f0f0f0',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            textAlign: 'center',
+                            margin: '10px 0'
+                        },
+                        children: [
+                            {h3: {text: props.label || 'Counter'}},
+                            {div: {
+                                text: () => `Count: ${getState('count', 0)}`,
+                                style: { fontSize: '24px', fontWeight: 'bold', margin: '15px 0' }
+                            }},
+                            {div: {
+                                style: { display: 'flex', gap: '10px', justifyContent: 'center' },
+                                children: [
+                                    {button: {
+                                        text: '−',
+                                        onclick: () => {
+                                            const current = getState('count', 0);
+                                            const newCount = Math.max(0, current - 1);
+                                            setState('count', newCount);
+                                        },
+                                        style: {
+                                            padding: '10px 15px',
+                                            fontSize: '18px',
+                                            background: '#dc3545',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer'
+                                        }
+                                    }},
+                                    {button: {
+                                        text: '+',
+                                        onclick: () => {
+                                            const current = getState('count', 0);
+                                            setState('count', current + 1);
+                                        },
+                                        style: {
+                                            padding: '10px 15px',
+                                            fontSize: '18px',
+                                            background: '#28a745',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer'
+                                        }
+                                    }}
+                                ]
+                            }}
+                        ]
+                    }
+                })
+            };
+        };
+
+        const TodoList = (props, { getState, setState }) => {
+            return {
+                initialState: {
+                    todos: [
+                        { id: 1, text: 'Learn Juris WebComponents', completed: false },
+                        { id: 2, text: 'Build awesome apps', completed: false }
+                    ],
+                    nextId: 3
+                },
+                api: {
+                    addTodo(text) {
+                        const todos = getState('todos', []);
+                        const nextId = getState('nextId', 1);
+                        setState('todos', [...todos, { id: nextId, text, completed: false }]);
+                        setState('nextId', nextId + 1);
+                    },
+                    toggleTodo(id) {
+                        const todos = getState('todos', []);
+                        setState('todos', todos.map(todo => 
+                            todo.id === id ? { ...todo, completed: !todo.completed } : todo
+                        ));
+                    },
+                    removeTodo(id) {
+                        const todos = getState('todos', []);
+                        setState('todos', todos.filter(todo => todo.id !== id));
+                    },
+                    getStats() {
+                        const todos = getState('todos', []);
+                        return {
+                            total: todos.length,
+                            completed: todos.filter(t => t.completed).length,
+                            pending: todos.filter(t => !t.completed).length
+                        };
+                    }
+                },
+                render: () => ({
+                    div: {
+                        style: {
+                            background: 'white',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        },
+                        children: [
+                            {h3: {text: 'Todo List'}},
+                            {div: {
+                                style: { marginBottom: '15px', display: 'flex', gap: '10px' },
+                                children: [
+                                    {input: {
+                                        type: 'text',
+                                        placeholder: 'Add new todo...',
+                                        style: {
+                                            flex: 1,
+                                            padding: '8px 12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px'
+                                        },
+                                        onkeypress: (e) => {
+                                            if (e.key === 'Enter' && e.target.value.trim()) {
+                                                const todos = getState('todos', []);
+                                                const nextId = getState('nextId', 1);
+                                                setState('todos', [...todos, { 
+                                                    id: nextId, 
+                                                    text: e.target.value.trim(), 
+                                                    completed: false 
+                                                }]);
+                                                setState('nextId', nextId + 1);
+                                                e.target.value = '';
+                                            }
+                                        }
+                                    }},
+                                    {button: {
+                                        text: 'Add',
+                                        onclick: (e) => {
+                                            // Find the input element within the same component
+                                            const input = e.target.parentElement.querySelector('input');
+                                            if (input && input.value.trim()) {
+                                                const todos = getState('todos', []);
+                                                const nextId = getState('nextId', 1);
+                                                setState('todos', [...todos, { 
+                                                    id: nextId, 
+                                                    text: input.value.trim(), 
+                                                    completed: false 
+                                                }]);
+                                                setState('nextId', nextId + 1);
+                                                input.value = '';
+                                            }
+                                        },
+                                        style: {
+                                            padding: '8px 16px',
+                                            background: '#007cba',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer'
+                                        }
+                                    }}
+                                ]
+                            }},
+                            {div: {
+                                children: () => {
+                                    const todos = getState('todos', []);
+                                    return todos.map(todo => ({
+                                        div: {
+                                            key: todo.id,
+                                            class: todo.completed ? 'todo-item completed' : 'todo-item',
+                                            children: [
+                                                {span: { 
+                                                    text: todo.text,
+                                                    onclick: () => {
+                                                        const currentTodos = getState('todos', []);
+                                                        setState('todos', currentTodos.map(t => 
+                                                            t.id === todo.id ? { ...t, completed: !t.completed } : t
+                                                        ));
+                                                    },
+                                                    style: { cursor: 'pointer', flex: 1 }
+                                                }},
+                                                {button: {
+                                                    text: '✕',
+                                                    onclick: () => {
+                                                        const currentTodos = getState('todos', []);
+                                                        setState('todos', currentTodos.filter(t => t.id !== todo.id));
+                                                    },
+                                                    style: {
+                                                        background: '#dc3545',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '3px',
+                                                        cursor: 'pointer',
+                                                        padding: '2px 6px'
+                                                    }
+                                                }}
+                                            ]
+                                        }
+                                    }));
+                                }
+                            }}
+                        ]
+                    }
+                })
+            };
+        };
+
+        const DataChart = (props, { getState, setState }) => {
+            return {
+                initialState: {
+                    data: [10, 25, 15, 40, 30, 55, 20]
+                },
+                api: {
+                    updateData(newData) {
+                        setState('data', newData);
+                    },
+                    addDataPoint(value) {
+                        const data = getState('data', []);
+                        setState('data', [...data, value]);
+                    },
+                    randomizeData() {
+                        const newData = Array.from({ length: 7 }, () => Math.floor(Math.random() * 60) + 5);
+                        setState('data', newData);
+                    }
+                },
+                render: () => ({
+                    div: {
+                        style: {
+                            background: 'white',
+                            padding: '20px',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        },
+                        children: [
+                            {h3: {text: 'Data Visualization'}},
+                            {div: {
+                                class: 'chart-container',
+                                children: () => {
+                                    const data = getState('data', []);
+                                    const max = Math.max(...data);
+                                    const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b'];
+                                    return data.map((value, index) => ({
+                                        div: {
+                                            key: index,
+                                            class: 'chart-bar',
+                                            style: {
+                                                height: `${(value / max) * 150}px`,
+                                                width: '30px',
+                                                background: colors[index % colors.length]
+                                            },
+                                            title: `Value: ${value}`
+                                        }
+                                    }));
+                                }
+                            }},
+                            {button: {
+                                text: 'Randomize Data',
+                                onclick: () => {
+                                    const newData = Array.from({ length: 7 }, () => Math.floor(Math.random() * 60) + 5);
+                                    setState('data', newData);
+                                },
+                                style: {
+                                    padding: '8px 16px',
+                                    background: '#28a745',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    marginTop: '10px'
+                                }
+                            }}
+                        ]
+                    }
+                })
+            };
+        };
+
+        // ===== JURIS INITIALIZATION =====
+        
+        const juris = new Juris({
+            features: {
+                webComponentFactory: WebComponentFactory
+            },
+            states: {
+                theme: 'light',
+                globalCounter: 0,
+                appStats: {
+                    totalClicks: 0,
+                    sessionStart: Date.now()
+                }
+            }
+        });
+
+        // Register WebComponents
+        juris.webComponentFactory.initializeFromConfig({
+            'counter-widget': Counter,
+            'todo-widget': TodoList,
+            'chart-widget': DataChart
+        }, () => juris.createContext());
+
+        // ===== REGULAR COMPONENTS (Non-WebComponents) =====
+        
+        juris.registerComponent('StatsPanel', (props, { getState, setState }) => {
+            return {
+                div: {
+                    class: 'stats-grid',
+                    children: [
+                        {div: {
+                            class: 'stat-card',
+                            children: [
+                                {h4: { text: 'Global Counter' }},
+                                {div: { 
+                                    text: () => getState('globalCounter', 0),
+                                    style: { fontSize: '24px', fontWeight: 'bold', color: '#667eea' }
+                                }}
+                            ]
+                        }},
+                        {div: {
+                            class: 'stat-card',
+                            children: [
+                                {h4: { text: 'Total Clicks' }},
+                                {div: { 
+                                    text: () => getState('appStats.totalClicks', 0),
+                                    style: { fontSize: '24px', fontWeight: 'bold', color: '#28a745' }
+                                }}
+                            ]
+                        }},
+                        {div: {
+                            class: 'stat-card',
+                            children: [
+                                {h4: { text: 'Session Time' }},
+                                {div: { 
+                                    text: () => {
+                                        const start = getState('appStats.sessionStart', Date.now());
+                                        const minutes = Math.floor((Date.now() - start) / 60000);
+                                        return `${minutes}m`;
+                                    },
+                                    style: { fontSize: '24px', fontWeight: 'bold', color: '#dc3545' }
+                                }}
+                            ]
+                        }},
+                        {div: {
+                            class: 'stat-card',
+                            children: [
+                                {h4: { text: 'Theme' }},
+                                {div: { 
+                                    text: () => getState('theme', 'light'),
+                                    style: { fontSize: '18px', fontWeight: 'bold', color: '#764ba2' }
+                                }}
+                            ]
+                        }}
+                    ]
+                }
+            };
+        });
+
+        // ===== MAIN LAYOUT =====
+        
+        juris.layout = {
+            div: {
+                class: 'demo-container',
+                children: [
+                    {h1: { 
+                        text: 'Advanced Juris WebComponent Demo',
+                        style: { textAlign: 'center', color: '#2d3748', marginBottom: '30px' }
+                    }},
+                    
+                    // Global Controls Section
+                    {div: {
+                        class: 'demo-section',
+                        children: [
+                            {div: { class: 'section-title', text: 'Global Controls & Stats' }},
+                            {div: {
+                                class: 'demo-controls',
+                                children: [
+                                    {button: {
+                                        class: 'control-btn',
+                                        text: 'Increment Global Counter',
+                                        onclick: () => {
+                                            const current = juris.getState('globalCounter', 0);
+                                            juris.setState('globalCounter', current + 1);
+                                            
+                                            const clicks = juris.getState('appStats.totalClicks', 0);
+                                            juris.setState('appStats.totalClicks', clicks + 1);
+                                        }
+                                    }},
+                                    {button: {
+                                        class: 'control-btn',
+                                        text: 'Toggle Theme',
+                                        onclick: () => {
+                                            const current = juris.getState('theme', 'light');
+                                            juris.setState('theme', current === 'light' ? 'dark' : 'light');
+                                        }
+                                    }},
+                                    {button: {
+                                        class: 'control-btn',
+                                        text: 'Reset All Stats',
+                                        onclick: () => {
+                                            juris.setState('globalCounter', 0);
+                                            juris.setState('appStats', {
+                                                totalClicks: 0,
+                                                sessionStart: Date.now()
+                                            });
+                                        }
+                                    }}
+                                ]
+                            }},
+                            {StatsPanel: {}}
+                        ]
+                    }},
+
+                    // WebComponents Section
+                    {div: {
+                        class: 'demo-section',
+                        children: [
+                            {div: { class: 'section-title', text: 'WebComponent Instances' }},
+                            
+                            // Multiple Counter instances with different props
+                            {'counter-widget': {
+                                label: () => `Primary Counter (Theme: ${juris.getState('theme', 'light')})`,
+                                color: () => juris.getState('theme', 'light') === 'light' ? '#e3f2fd' : '#424242'
+                            }},
+                            
+                            {'counter-widget': {
+                                label: () => 'Secondary Counter',
+                                color: () => '#f3e5f5'
+                            }},
+
+                            // Todo List
+                            {'todo-widget': {}},
+
+                            // Data Chart
+                            {'chart-widget': {}}
+                        ]
+                    }},
+
+                    // API Integration Demo
+                    {div: {
+                        class: 'demo-section',
+                        children: [
+                            {div: { class: 'section-title', text: 'API Integration Demo' }},
+                            {div: {
+                                class: 'api-demo',
+                                children: [
+                                    {p: { text: 'These buttons interact with WebComponent APIs directly:' }},
+                                    {div: {
+                                        class: 'demo-controls',
+                                        children: [
+                                            {button: {
+                                                class: 'control-btn',
+                                                text: 'Get Counter Stats',
+                                                onclick: () => {
+                                                    const counter = document.querySelector('counter-widget');
+                                                    if (counter && counter.getStats) {
+                                                        const stats = counter.getStats();
+                                                        alert(`Counter Stats: ${JSON.stringify(stats, null, 2)}`);
+                                                    } else {
+                                                        alert('Counter getStats method not available');
+                                                    }
+                                                }
+                                            }},
+                                            {button: {
+                                                class: 'control-btn',
+                                                text: 'Add Todo via API',
+                                                onclick: () => {
+                                                    const todo = document.querySelector('todo-widget');
+                                                    if (todo && todo.addTodo) {
+                                                        const randomTodos = [
+                                                            'Review code',
+                                                            'Write documentation',
+                                                            'Test components',
+                                                            'Deploy app',
+                                                            'Celebrate success'
+                                                        ];
+                                                        const randomTodo = randomTodos[Math.floor(Math.random() * randomTodos.length)];
+                                                        todo.addTodo(randomTodo);
+                                                    }
+                                                }
+                                            }},
+                                            {button: {
+                                                class: 'control-btn',
+                                                text: 'Randomize Chart',
+                                                onclick: () => {
+                                                    const chart = document.querySelector('chart-widget');
+                                                    if (chart && chart.randomizeData) {
+                                                        chart.randomizeData();
+                                                    }
+                                                }
+                                            }},
+                                            {button: {
+                                                class: 'control-btn',
+                                                text: 'Get All Component APIs',
+                                                onclick: () => {
+                                                    const counter = document.querySelector('counter-widget');
+                                                    const todo = document.querySelector('todo-widget');
+                                                    const chart = document.querySelector('chart-widget');
+                                                    
+                                                    const apis = {
+                                                        counter: counter ? ['increment', 'decrement', 'reset', 'getStats'] : [],
+                                                        todo: todo ? ['addTodo', 'toggleTodo', 'removeTodo', 'getStats'] : [],
+                                                        chart: chart ? ['updateData', 'addDataPoint', 'randomizeData'] : []
+                                                    };
+                                                    
+                                                    console.log('Available APIs:', apis);
+                                                    alert('Check console for available APIs');
+                                                }
+                                            }}
+                                        ]
+                                    }}
+                                ]
+                            }}
+                        ]
+                    }},
+
+                    // Mixed VDOM Demo
+                    {div: {
+                        class: 'demo-section',
+                        children: [
+                            {div: { class: 'section-title', text: 'Mixed HTML & Object VDOM' }},
+                            {div: {
+                                innerHTML: () => {
+                                    const counter = juris.getState('globalCounter', 0);
+                                    return `
+                                        <div style="background: linear-gradient(45deg, #ff6b6b, #feca57); 
+                                                    padding: 15px; border-radius: 8px; color: white;">
+                                            <h4>Raw HTML Integration</h4>
+                                            <p>Global counter from state: <strong>${counter}</strong></p>
+                                            <p>Current time: <strong>${new Date().toLocaleTimeString()}</strong></p>
+                                        </div>
+                                    `;
+                                }
+                            }},
+                            {div: {
+                                style: { 
+                                    background: '#f8f9fa', 
+                                    padding: '15px', 
+                                    borderRadius: '8px',
+                                    marginTop: '15px'
+                                },
+                                children: [
+                                    {h4: { text: 'Object VDOM Integration' }},
+                                    {p: { 
+                                        text: () => `This paragraph updates reactively: ${juris.getState('globalCounter', 0)} clicks!`
+                                    }},
+                                    {div: {
+                                        style: { display: 'flex', gap: '10px', alignItems: 'center' },
+                                        children: [
+                                            'Theme: ',
+                                            {strong: { 
+                                                text: () => juris.getState('theme', 'light'),
+                                                style: () => ({ 
+                                                    color: juris.getState('theme', 'light') === 'light' ? '#007cba' : '#dc3545' 
+                                                })
+                                            }}
+                                        ]
+                                    }}
+                                ]
+                            }}
+                        ]
+                    }}
+                ]
+            }
+        };
+
+        // ===== AUTO-UPDATE TIMER =====
+        setInterval(() => {
+            // Trigger re-render for time-based updates
+            juris.setState('appStats.sessionStart', juris.getState('appStats.sessionStart', Date.now()));
+        }, 30000);
+
+        // ===== RENDER THE APP =====
+        juris.render();
+
+        // ===== DEVELOPMENT HELPERS =====
+        window.juris = juris;  // For console debugging
+        console.log('Demo loaded! Available globals:', { juris });
+        console.log('Try: juris.getState(), document.querySelector("counter-widget").api.getStats()');
+    </script>
+</body>
+</html>

@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris WebComponent Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        .demo-section h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            display: inline-block;
+        }
+        
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .controls h3 {
+            margin-top: 0;
+            color: #34495e;
+        }
+        
+        .control-group {
+            margin: 15px 0;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .control-group button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+        
+        .control-group button:hover {
+            background: #2980b9;
+        }
+        
+        .events-log {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .events-log h4 {
+            margin-top: 0;
+            color: #3498db;
+        }
+        
+        .event-entry {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(52, 152, 219, 0.1);
+            border-left: 3px solid #3498db;
+            border-radius: 2px;
+        }
+        
+        .timestamp {
+            color: #95a5a6;
+            font-size: 11px;
+        }
+        
+        /* Custom styling for web components */
+        counter-component {
+            display: block;
+            margin: 10px 0;
+        }
+        
+        styled-component {
+            display: block;
+            margin: 10px 0;
+        }
+        
+        simple-component {
+            display: block;
+            margin: 10px 0;
+        }
+        
+        .footer {
+            background: #34495e;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .api-demo {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Juris WebComponent Demo</h1>
+            <p>Interactive demonstration of Juris framework web components with reactive styling and state management</p>
+        </div>
+        
+        <div class="content">
+            <!-- Counter Component Demo -->
+            <div class="demo-section">
+                <h2>Reactive Counter Components</h2>
+                <p>These counters demonstrate reactive state management, attribute observation, API methods, and dynamic styling based on state.</p>
+                
+                <div class="demo-grid">
+                    <div>
+                        <h3>Basic Counter</h3>
+                        <counter-component 
+                            id="counter1" 
+                            title="Basic Counter" 
+                            initial-value="0"
+                            step="1">
+                        </counter-component>
+                    </div>
+                    
+                    <div>
+                        <h3>Stepped Counter with Limits</h3>
+                        <counter-component 
+                            id="counter2" 
+                            title="Limited Counter" 
+                            initial-value="5"
+                            step="2"
+                            min="0"
+                            max="20">
+                        </counter-component>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <h3>Counter Controls & API Demo</h3>
+                    <div class="control-group">
+                        <label>Counter Selection:</label>
+                        <select id="counterSelect">
+                            <option value="counter1">Basic Counter</option>
+                            <option value="counter2">Limited Counter</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <button onclick="incrementSelected()">API Increment</button>
+                        <button onclick="decrementSelected()">API Decrement</button>
+                        <button onclick="resetSelected()">API Reset</button>
+                        <button onclick="getValueSelected()">Get Value</button>
+                    </div>
+                    <div class="api-demo">
+                        <strong>API Response:</strong> <span id="apiResponse">Click a button to test the API</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Styled Component Demo -->
+            <div class="demo-section">
+                <h2>Themed Components with Reactive Styling</h2>
+                <p>These components demonstrate reactive host styling, shadow DOM styles, and theme switching.</p>
+                
+                <div class="demo-grid">
+                    <div>
+                        <h3>Light Theme Primary</h3>
+                        <styled-component 
+                            id="styled1"
+                            theme="light" 
+                            variant="primary">
+                        </styled-component>
+                    </div>
+                    
+                    <div>
+                        <h3>Dark Theme Secondary</h3>
+                        <styled-component 
+                            id="styled2"
+                            theme="dark" 
+                            variant="secondary">
+                        </styled-component>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <h3>Theme Controls</h3>
+                    <div class="control-group">
+                        <label>Component:</label>
+                        <select id="styledSelect">
+                            <option value="styled1">Light Theme Component</option>
+                            <option value="styled2">Dark Theme Component</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Theme:</label>
+                        <select id="themeSelect">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Variant:</label>
+                        <select id="variantSelect">
+                            <option value="primary">Primary</option>
+                            <option value="secondary">Secondary</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <button onclick="updateTheme()">Update Theme</button>
+                        <button onclick="randomizeThemes()">Randomize All</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Simple Component Demo -->
+            <div class="demo-section">
+                <h2>Simple Components</h2>
+                <p>Basic components without shadow DOM, demonstrating backward compatibility.</p>
+                
+                <div class="demo-grid">
+                    <div>
+                        <simple-component name="Juris"></simple-component>
+                        <simple-component name="WebComponent"></simple-component>
+                    </div>
+                    
+                    <div class="controls">
+                        <h3>Simple Component Control</h3>
+                        <div class="control-group">
+                            <label>Name:</label>
+                            <input type="text" id="simpleName" value="Dynamic" placeholder="Enter name">
+                        </div>
+                        <div class="control-group">
+                            <button onclick="addSimpleComponent()">Add Component</button>
+                            <button onclick="clearSimpleComponents()">Clear All</button>
+                        </div>
+                        <div id="simpleContainer"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Events Log -->
+            <div class="demo-section">
+                <div class="events-log">
+                    <h4>Component Events Log</h4>
+                    <div id="eventsLog">
+                        <div class="event-entry">
+                            <span class="timestamp">[Demo Started]</span> Waiting for component interactions...
+                        </div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button onclick="clearLog()">Clear Log</button>
+                    <button onclick="testAllComponents()">Test All Components</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Juris WebComponent Demo - Showcasing reactive web components with full framework integration</p>
+        </div>
+    </div>
+
+    <!-- Juris Scripts -->
+    <script src="../src/juris.js"></script>
+    <script src="../src/juris-webcomponent.js"></script>
+
+    <script>
+        // Component definitions would normally be in separate files
+        
+        // Fixed Counter Component - replace your existing CounterComponent with this:
+const CounterComponent = (props, context) => {
+    const { getState, setState } = context;
+    
+    // FIX 1: Create unique instance ID for isolated state
+    const instanceId = Math.random().toString(36).substr(2, 9);
+    const counterStatePath = `counter.${instanceId}.value`;
+    
+    return {
+        attributes: ['title', 'initial-value', 'step', 'max', 'min'],
+        
+        options: {
+            shadow: true,
+            shadowMode: 'open',
+            hostStyles: (props) => {
+                // FIX 2: Use instance-specific state path
+                const count = getState(counterStatePath, 0);
+                return {
+                    '--counter-color': count > 5 ? '#e74c3c' : count < 0 ? '#f39c12' : '#2ecc71',
+                    '--counter-scale': count > 10 ? '1.05' : '1.0',
+                    transform: `scale(var(--counter-scale))`,
+                    borderColor: `var(--counter-color)`,
+                    transition: 'all 0.3s ease',
+                    display: 'block',
+                    padding: '16px',
+                    border: '3px solid var(--counter-color)',
+                    borderRadius: '12px',
+                    background: 'white',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                };
+            },
+            shadowStyles: `
+                :host {
+                    font-family: 'Segoe UI', sans-serif;
+                }
+                .counter-display {
+                    font-size: 28px;
+                    font-weight: bold;
+                    text-align: center;
+                    padding: 15px;
+                    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                    border-radius: 8px;
+                    margin: 12px 0;
+                    color: var(--counter-color);
+                    transition: color 0.3s ease;
+                }
+                .counter-controls {
+                    display: flex;
+                    gap: 8px;
+                    justify-content: center;
+                    align-items: center;
+                }
+                button {
+                    background: var(--counter-color);
+                    color: white;
+                    border: none;
+                    padding: 10px 15px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    font-weight: bold;
+                    transition: all 0.2s ease;
+                    min-width: 45px;
+                }
+                button:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                }
+                .reset-btn {
+                    background: #95a5a6 !important;
+                    min-width: 60px;
+                }
+                .title {
+                    text-align: center;
+                    margin: 0 0 12px 0;
+                    color: #2c3e50;
+                    font-size: 18px;
+                    font-weight: 600;
+                }
+            `
+        },
+        
+        api: {
+            increment() {
+                // FIX 3: Use instance-specific state path and proper fallback
+                const current = getState(counterStatePath, parseInt(props.initialValue) || 0);
+                const step = parseInt(props.step) || 1;
+                const max = parseInt(props.max);
+                const newValue = max !== undefined && !isNaN(max) ? Math.min(current + step, max) : current + step;
+                setState(counterStatePath, newValue);
+                context.webComponent.emit('counter-changed', { value: newValue, action: 'increment' });
+                return newValue;
+            },
+            
+            decrement() {
+                // FIX 4: Use instance-specific state path and proper fallback
+                const current = getState(counterStatePath, parseInt(props.initialValue) || 0);
+                const step = parseInt(props.step) || 1;
+                const min = parseInt(props.min);
+                const newValue = min !== undefined && !isNaN(min) ? Math.max(current - step, min) : current - step;
+                setState(counterStatePath, newValue);
+                context.webComponent.emit('counter-changed', { value: newValue, action: 'decrement' });
+                return newValue;
+            },
+            
+            reset() {
+                // FIX 5: Correct prop name and proper parsing
+                const initialValue = parseInt(props.initialValue) || 0;
+                setState(counterStatePath, initialValue);
+                context.webComponent.emit('counter-reset', { value: initialValue });
+                return initialValue;
+            },
+            
+            getValue() {
+                // FIX 6: Use instance-specific state path
+                return getState(counterStatePath, parseInt(props.initialValue) || 0);
+            }
+        },
+        
+        hooks: {
+            onMount(mountProps) {
+                logEvent('Counter mounted', { props: mountProps });
+                // FIX 7: Proper initial value parsing and setting
+                const initialValue = parseInt(mountProps.initialValue) || 0;
+                setState(counterStatePath, initialValue);
+            },
+            
+            onUpdate(newProps, oldProps) {
+                logEvent('Counter updated', { newProps, oldProps });
+                // FIX 8: Handle initial-value attribute changes
+                if (newProps.initialValue !== oldProps.initialValue) {
+                    const newInitialValue = parseInt(newProps.initialValue) || 0;
+                    setState(counterStatePath, newInitialValue);
+                }
+            },
+            
+            onUnmount() {
+                logEvent('Counter unmounted', {});
+                // FIX 9: Clean up instance-specific state (optional)
+                // setState(counterStatePath, undefined);
+            }
+        },
+        
+        render: (renderProps) => ({
+            div: {
+                children: [
+                    {
+                        h3: { 
+                            class: 'title',
+                            text: renderProps.title || 'Counter'
+                        }
+                    },
+                    {
+                        div: {
+                            class: 'counter-display',
+                            // FIX 10: Use instance-specific state path in render
+                            text: () => `${getState(counterStatePath, parseInt(renderProps.initialValue) || 0)}`
+                        }
+                    },
+                    {
+                        div: {
+                            class: 'counter-controls',
+                            children: [
+                                {
+                                    button: {
+                                        text: '−',
+                                        onclick: () => {
+                                            const element = context.webComponent.element;
+                                            if (element.decrement) element.decrement();
+                                        }
+                                    }
+                                },
+                                {
+                                    button: {
+                                        class: 'reset-btn',
+                                        text: 'Reset',
+                                        onclick: () => {
+                                            const element = context.webComponent.element;
+                                            if (element.reset) element.reset();
+                                        }
+                                    }
+                                },
+                                {
+                                    button: {
+                                        text: '+',
+                                        onclick: () => {
+                                            const element = context.webComponent.element;
+                                            if (element.increment) element.increment();
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+// The main issues that caused NaN:
+// 1. All counter instances shared the same state path 'counter.value'
+// 2. reset() method had a typo: props.initialValue instead of props.initialValue  
+// 3. No proper fallback values when parsing attributes
+// 4. State wasn't properly initialized with the initial-value attribute
+
+// Key changes made:
+// - Added unique instanceId for each counter component
+// - Fixed the typo in reset() method  
+// - Added proper parseInt() with fallbacks
+// - Used instance-specific state paths throughout
+// - Added proper initial value handling in onMount and onUpdate
+        
+        // Fixed Styled Component with proper event emission
+const StyledComponent = (props, context) => {
+    return {
+        attributes: ['theme', 'variant'],
+        
+        options: {
+            shadow: true,
+            shadowMode: 'open',
+            hostStyles: (props) => {
+                const theme = props.theme || 'light';
+                const variant = props.variant || 'primary';
+                
+                const themes = {
+                    light: { bg: '#ffffff', color: '#2c3e50', accent: '#ecf0f1' },
+                    dark: { bg: '#2c3e50', color: '#ecf0f1', accent: '#34495e' }
+                };
+                
+                const variants = {
+                    primary: '#3498db',
+                    secondary: '#e74c3c'
+                };
+                
+                return {
+                    '--theme-bg': themes[theme].bg,
+                    '--theme-color': themes[theme].color,
+                    '--theme-accent': themes[theme].accent,
+                    '--variant-color': variants[variant],
+                    backgroundColor: 'var(--theme-bg)',
+                    color: 'var(--theme-color)',
+                    border: '3px solid var(--variant-color)',
+                    borderRadius: '10px',
+                    padding: '20px',
+                    transition: 'all 0.4s ease',
+                    display: 'block',
+                    boxShadow: theme === 'dark' ? '0 8px 25px rgba(0,0,0,0.3)' : '0 8px 25px rgba(0,0,0,0.1)'
+                };
+            },
+            shadowStyles: `
+                :host {
+                    font-family: 'Segoe UI', sans-serif;
+                }
+                .content {
+                    padding: 15px;
+                    background: var(--theme-accent);
+                    border-radius: 8px;
+                    margin: 15px 0;
+                    text-align: center;
+                }
+                .dynamic-content {
+                    font-weight: bold;
+                    color: var(--variant-color);
+                    font-size: 18px;
+                    margin: 10px 0;
+                }
+                button {
+                    background: var(--variant-color);
+                    color: white;
+                    border: none;
+                    padding: 12px 20px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                button:hover {
+                    transform: translateY(-3px);
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+                    filter: brightness(1.1);
+                }
+                .theme-info {
+                    font-size: 14px;
+                    opacity: 0.8;
+                    margin: 8px 0;
+                }
+            `
+        },
+        
+        render: (props) => ({
+            div: {
+                children: [
+                    {
+                        div: {
+                            class: 'content',
+                            children: [
+                                {
+                                    div: {
+                                        class: 'theme-info',
+                                        text: `Theme: ${props.theme || 'light'} | Variant: ${props.variant || 'primary'}`
+                                    }
+                                },
+                                {
+                                    div: {
+                                        class: 'dynamic-content',
+                                        text: 'Reactive Styled Component'
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        button: {
+                            text: 'Trigger Event',
+                            onclick: (e) => {
+                                console.log('Button clicked, attempting to emit event'); // Debug log
+                                
+                                // FIX 1: Multiple ways to emit the event
+                                const eventData = { 
+                                    theme: props.theme || 'light', 
+                                    variant: props.variant || 'primary',
+                                    timestamp: new Date().toISOString()
+                                };
+
+                                // Method 1: Through context.webComponent.emit
+                                if (context.webComponent && context.webComponent.emit) {
+                                    console.log('Emitting via context.webComponent.emit');
+                                    context.webComponent.emit('styled-clicked', eventData);
+                                }
+
+                                // Method 2: Direct dispatch on the host element
+                                if (context.webComponent && context.webComponent.element) {
+                                    console.log('Emitting via direct dispatch');
+                                    const customEvent = new CustomEvent('styled-clicked', { 
+                                        detail: eventData,
+                                        bubbles: true,
+                                        composed: true 
+                                    });
+                                    context.webComponent.element.dispatchEvent(customEvent);
+                                }
+
+                                // Method 3: Fallback - dispatch on current target
+                                console.log('Emitting via fallback method');
+                                const fallbackEvent = new CustomEvent('styled-clicked', { 
+                                    detail: eventData,
+                                    bubbles: true,
+                                    composed: true 
+                                });
+                                e.target.dispatchEvent(fallbackEvent);
+
+                                // Method 4: Dispatch on document (for debugging)
+                                document.dispatchEvent(new CustomEvent('styled-clicked-debug', { 
+                                    detail: { ...eventData, source: 'styled-component-debug' }
+                                }));
+
+                                console.log('Event emission completed');
+                            }
+                        }
+                    }
+                ]
+            }
+        })
+    };
+};
+
+// Also add this debug listener to see if any events are being fired:
+document.addEventListener('styled-clicked-debug', (e) => {
+    console.log('Debug event received:', e.detail);
+    logEvent('Styled Component Debug Event', e.detail);
+});
+
+// And make sure your main event listener is set up correctly:
+document.addEventListener('styled-clicked', (e) => {
+    console.log('styled-clicked event received:', e.detail);
+    logEvent('Styled Component Clicked', e.detail);
+});
+
+// FIX 2: Also check that your web component factory properly sets up the emit function
+// In your JurisWebComponentFactory, make sure the context setup includes:
+/*
+context.webComponent = {
+    element: this,
+    shadowRoot: this._shadowRoot,
+    emit: (eventName, detail) => {
+        console.log(`Emitting ${eventName}:`, detail); // Debug log
+        const event = new CustomEvent(eventName, { 
+            detail, 
+            bubbles: true, 
+            composed: true 
+        });
+        this.dispatchEvent(event);
+    },
+    setAttribute: (name, value) => this.setAttribute(name, value),
+    getAttribute: (name) => this.getAttribute(name)
+};
+*/
+        
+        // Simple Component (no shadow DOM)
+        const SimpleComponent = (props, context) => {
+            return {
+                options: {
+                    shadow: false
+                },
+                
+                render: (props) => ({
+                    div: {
+                        text: `Hello, ${props.name || 'World'}!`,
+                        style: { 
+                            padding: '15px 20px',
+                            background: 'linear-gradient(45deg, #ff9a9e 0%, #fecfef 100%)',
+                            borderRadius: '25px',
+                            color: '#333',
+                            textAlign: 'center',
+                            fontSize: '16px',
+                            fontWeight: '500',
+                            boxShadow: '0 4px 15px rgba(255,154,158,0.3)',
+                            transition: 'transform 0.2s ease'
+                        },
+                        onclick: () => {
+                            context.webComponent.emit('simple-clicked', { name: props.name });
+                        },
+                        onmouseover: (e) => {
+                            e.target.style.transform = 'translateY(-2px) scale(1.02)';
+                        },
+                        onmouseout: (e) => {
+                            e.target.style.transform = 'translateY(0) scale(1)';
+                        }
+                    }
+                })
+            };
+        };
+        
+        // Initialize Juris with WebComponents
+        const juris = new Juris({
+            features: {
+                webComponentFactory: JurisWebComponentFactory
+            },
+            webComponents: {
+                'counter-component': CounterComponent,
+                'styled-component': StyledComponent,
+                'simple-component': SimpleComponent
+            }
+        });
+        
+        // Event logging system
+        function logEvent(event, data) {
+            const log = document.getElementById('eventsLog');
+            const entry = document.createElement('div');
+            entry.className = 'event-entry';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `
+                <span class="timestamp">[${timestamp}]</span> 
+                <strong>${event}</strong>: ${JSON.stringify(data, null, 2)}
+            `;
+            
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // API Demo Functions
+        function incrementSelected() {
+            const select = document.getElementById('counterSelect');
+            const counter = document.getElementById(select.value);
+            if (counter && counter.increment) {
+                const value = counter.increment();
+                document.getElementById('apiResponse').textContent = `Incremented to: ${value}`;
+            }
+        }
+        
+        function decrementSelected() {
+            const select = document.getElementById('counterSelect');
+            const counter = document.getElementById(select.value);
+            if (counter && counter.decrement) {
+                const value = counter.decrement();
+                document.getElementById('apiResponse').textContent = `Decremented to: ${value}`;
+            }
+        }
+        
+        function resetSelected() {
+            const select = document.getElementById('counterSelect');
+            const counter = document.getElementById(select.value);
+            if (counter && counter.reset) {
+                const value = counter.reset();
+                document.getElementById('apiResponse').textContent = `Reset to: ${value}`;
+            }
+        }
+        
+        function getValueSelected() {
+            const select = document.getElementById('counterSelect');
+            const counter = document.getElementById(select.value);
+            if (counter && counter.getValue) {
+                const value = counter.getValue();
+                document.getElementById('apiResponse').textContent = `Current value: ${value}`;
+            }
+        }
+        
+        function updateTheme() {
+            const styledSelect = document.getElementById('styledSelect');
+            const themeSelect = document.getElementById('themeSelect');
+            const variantSelect = document.getElementById('variantSelect');
+            
+            const component = document.getElementById(styledSelect.value);
+            if (component) {
+                component.setAttribute('theme', themeSelect.value);
+                component.setAttribute('variant', variantSelect.value);
+            }
+        }
+        
+        function randomizeThemes() {
+            const themes = ['light', 'dark'];
+            const variants = ['primary', 'secondary'];
+            
+            document.querySelectorAll('styled-component').forEach(component => {
+                const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+                const randomVariant = variants[Math.floor(Math.random() * variants.length)];
+                
+                component.setAttribute('theme', randomTheme);
+                component.setAttribute('variant', randomVariant);
+            });
+        }
+        
+        let simpleCounter = 0;
+        function addSimpleComponent() {
+            const name = document.getElementById('simpleName').value || 'Component';
+            const container = document.getElementById('simpleContainer');
+            
+            const component = document.createElement('simple-component');
+            component.setAttribute('name', name);
+            component.id = `simple-${++simpleCounter}`;
+            
+            container.appendChild(component);
+        }
+        
+        function clearSimpleComponents() {
+            document.getElementById('simpleContainer').innerHTML = '';
+        }
+        
+        function clearLog() {
+            const log = document.getElementById('eventsLog');
+            log.innerHTML = '<div class="event-entry"><span class="timestamp">[Log Cleared]</span> Event log cleared</div>';
+        }
+        
+        function testAllComponents() {
+            // Test counters
+            document.querySelectorAll('counter-component').forEach(counter => {
+                if (counter.increment) counter.increment();
+            });
+            
+            // Test styled components
+            document.querySelectorAll('styled-component').forEach(component => {
+                component.dispatchEvent(new Event('click'));
+            });
+            
+            logEvent('Batch test completed', { componentsFound: document.querySelectorAll('[id^="counter"], [id^="styled"]').length });
+        }
+        
+        // Event listeners for component events
+        document.addEventListener('counter-changed', (e) => {
+            logEvent('Counter Changed', e.detail);
+        });
+        
+        document.addEventListener('counter-reset', (e) => {
+            logEvent('Counter Reset', e.detail);
+        });
+        
+        document.addEventListener('styled-clicked', (e) => {
+            logEvent('Styled Component Clicked', e.detail);
+        });
+        
+        document.addEventListener('simple-clicked', (e) => {
+            logEvent('Simple Component Clicked', e.detail);
+        });
+        
+        // Initialize demo
+        logEvent('Demo initialized', { components: ['counter-component', 'styled-component', 'simple-component'] });
+    </script>
+</body>
+</html>

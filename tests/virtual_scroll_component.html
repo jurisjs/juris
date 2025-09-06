@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reusable Virtual Table - Juris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .virtual-table {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            display: flex;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-cell {
+            border-right: 1px solid #dee2e6;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding: 12px 8px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #495057;
+            text-transform: uppercase;
+            overflow: hidden;
+            background: #f8f9fa;
+        }
+        
+        .filter-header {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .filter-input {
+            width: 100%;
+            padding: 2px 4px;
+            font-size: 11px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .filter-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: -2px;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            z-index: 10;
+        }
+        
+        .resizer:hover {
+            background: #007bff;
+        }
+        
+        .table-body {
+            position: relative;
+            overflow-y: auto;
+        }
+        
+        .table-row {
+            position: absolute;
+            left: 0;
+            right: 0;
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        
+        .table-row:hover {
+            background: #f8f9fa;
+        }
+        
+        .table-row.selected {
+            background: #e3f2fd;
+        }
+        
+        .table-cell {
+            border-right: 1px solid #e9ecef;
+            padding: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        }
+        
+        .editable-cell {
+            cursor: text;
+        }
+        
+        .editable-cell:hover {
+            background: rgba(0,123,255,0.1);
+        }
+        
+        .cell-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            outline: none;
+            font: inherit;
+        }
+        
+        .email-cell {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .email-cell:hover {
+            text-decoration: underline;
+        }
+        
+        .stats-bar {
+            padding: 8px 16px;
+            background: #e9ecef;
+            font-size: 12px;
+            color: #6c757d;
+            display: flex;
+            gap: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reusable Virtual Table Configuration</h1>
+    <div id="app"></div>
+    
+    <script src="../src/juris.js"></script>
+    <script>
+        // Sample data
+        const sampleData = Array.from({ length: 5000 }, (_, i) => ({
+            name: `Person ${i + 1}`,
+            email: `person${i + 1}@example.com`,
+            department: ['Engineering', 'Sales', 'Marketing', 'HR'][i % 4],
+            salary: 50000 + (i * 1000) % 100000,
+            status: ['active', 'inactive', 'pending'][i % 3]
+        }));
+        
+        // Header Components
+        const HeaderCell = (props) => {
+            const { column, label } = props;
+            return {
+                div: {
+                    class: 'header-cell',
+                    children: [
+                        { span: { text: label || column } }
+                    ]
+                }
+            };
+        };
+        
+        const FilterCell = (props, context) => {
+            const { getState, setState } = context;
+            const { column, label } = props;
+            const filterValue = getState(`filters.${column}`, '');
+            
+            return {
+                div: {
+                    class: 'header-cell filter-header',
+                    children: [
+                        { span: { text: label || column, style: { fontSize: '11px' } } },
+                        {
+                            input: {
+                                class: 'filter-input',
+                                type: 'text',
+                                placeholder: 'Filter...',
+                                value: filterValue,
+                                oninput: (e) => {
+                                    setState(`filters.${column}`, e.target.value);
+                                },
+                                onclick: (e) => e.stopPropagation()
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // Cell Components
+        const TextComponent = (props, context) => {
+            const { getState, setState } = context;
+            const { value, editable = false, column, rowIndex, class: className = {}, style = {} } = props;
+            const isEditing = getState(`editing.${rowIndex}.${column}`, false);
+            
+            if (editable && isEditing) {
+                return {
+                    div: {
+                        class: 'table-cell editable-cell',
+                        style,
+                        children: [
+                            {
+                                input: {
+                                    class: 'cell-input',
+                                    type: 'text',
+                                    value,
+                                    onblur: () => setState(`editing.${rowIndex}.${column}`, false),
+                                    onkeydown: (e) => {
+                                        if (e.key === 'Enter') {
+                                            setState(`editing.${rowIndex}.${column}`, false);
+                                        }
+                                    },
+                                    style: { ...className }
+                                }
+                            }
+                        ]
+                    }
+                };
+            }
+            
+            return {
+                div: {
+                    class: `table-cell ${editable ? 'editable-cell' : ''}`,
+                    style,
+                    ondblclick: editable ? () => setState(`editing.${rowIndex}.${column}`, true) : null,
+                    children: [
+                        { span: { text: String(value || ''), style: { ...className } } }
+                    ]
+                }
+            };
+        };
+        
+        const EmailComponent = (props) => {
+            const { value, label, editable = false, class: className = {}, style = {} } = props;
+            
+            return {
+                div: {
+                    class: 'table-cell',
+                    style,
+                    children: [
+                        {
+                            a: {
+                                class: 'email-cell',
+                                href: `mailto:${value}`,
+                                text: String(value || ''),
+                                style: { ...className },
+                                onclick: (e) => e.stopPropagation()
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // Main VirtualTable Component
+        const VirtualTable = (props, context) => {
+            const { getState, setState } = context;
+            const {
+                data = [],
+                columns = [],
+                widths = {},
+                resizable = false,
+                headerComponents = {},
+                cellComponents = {},
+                height = 400,
+                rowHeight = 40,
+                tableId = 'table',
+                onSelectionChanged = null
+            } = props;
+            
+            // Initialize column widths
+            columns.forEach(col => {
+                if (getState(`${tableId}.widths.${col}`) === null) {
+                    setState(`${tableId}.widths.${col}`, widths[col] || 120);
+                }
+            });
+            
+            // Filter data
+            const filteredData = () => {
+                const filters = getState('filters', {});
+                if (Object.keys(filters).length === 0) return data;
+                
+                return data.filter(row => {
+                    return Object.entries(filters).every(([column, filterValue]) => {
+                        if (!filterValue) return true;
+                        const cellValue = String(row[column] || '').toLowerCase();
+                        return cellValue.includes(filterValue.toLowerCase());
+                    });
+                });
+            };
+            
+            const handleScroll = (e) => {
+                setState(`${tableId}.scroll`, e.target.scrollTop);
+            };
+            
+            const handleRowClick = (index, e) => {
+                const selected = getState(`${tableId}.selected`, []);
+                let newSelected;
+                
+                if (e.ctrlKey || e.metaKey) {
+                    newSelected = selected.includes(index)
+                        ? selected.filter(i => i !== index)
+                        : [...selected, index];
+                } else {
+                    newSelected = [index];
+                }
+                
+                setState(`${tableId}.selected`, newSelected);
+                
+                if (onSelectionChanged) {
+                    const currentData = filteredData();
+                    const selectedData = newSelected.map(i => currentData[i]);
+                    const stats = {
+                        total: currentData.length,
+                        selected: newSelected.length,
+                        visible: Math.ceil(height / rowHeight)
+                    };
+                    onSelectionChanged(selectedData, newSelected, stats);
+                }
+            };
+            
+            const startResize = (column, e) => {
+                if (!resizable) return;
+                
+                e.preventDefault();
+                const startX = e.clientX;
+                const currentWidth = getState(`${tableId}.widths.${column}`, widths[column] || 120);
+                
+                const onMouseMove = (e) => {
+                    const diff = e.clientX - startX;
+                    const newWidth = Math.max(50, currentWidth + diff);
+                    setState(`${tableId}.widths.${column}`, newWidth);
+                };
+                
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            };
+            
+            return {
+                div: {
+                    class: 'virtual-table',
+                    children: [
+                        // Stats bar
+                        {
+                            div: {
+                                class: 'stats-bar',
+                                children: [
+                                    { span: { text: () => `Total: ${filteredData().length}` } },
+                                    { span: { text: () => `Selected: ${getState(`${tableId}.selected`, []).length}` } }
+                                ]
+                            }
+                        },
+                        
+                        // Header
+                        {
+                            div: {
+                                class: 'table-header',
+                                children: columns.map(column => {
+                                    const headerComponent = headerComponents[column];
+                                    
+                                    return {
+                                        div: {
+                                            key: `header-${column}`,
+                                            style: () => ({
+                                                width: `${getState(`${tableId}.widths.${column}`, widths[column] || 120)}px`,
+                                                position: 'relative'
+                                            }),
+                                            children: [
+                                                headerComponent ? headerComponent : {
+                                                    HeaderCell: { column, label: column }
+                                                },
+                                                resizable ? {
+                                                    div: {
+                                                        class: 'resizer',
+                                                        onmousedown: (e) => startResize(column, e)
+                                                    }
+                                                } : null
+                                            ]
+                                        }
+                                    };
+                                })
+                            }
+                        },
+                        
+                        // Body
+                        {
+                            div: {
+                                class: 'table-body',
+                                style: { height: `${height}px` },
+                                onscroll: handleScroll,
+                                children: [
+                                    {
+                                        div: {
+                                            style: () => ({ 
+                                                height: `${filteredData().length * rowHeight}px`,
+                                                position: 'relative'
+                                            }),
+                                            children: () => {
+                                                const scrollTop = getState(`${tableId}.scroll`, 0);
+                                                const selected = getState(`${tableId}.selected`, []);
+                                                const currentData = filteredData();
+                                                
+                                                const startIdx = Math.max(0, Math.floor(scrollTop / rowHeight) - 10);
+                                                const endIdx = Math.min(currentData.length, startIdx + Math.ceil(height / rowHeight) + 20);
+                                                
+                                                const visibleRows = [];
+                                                
+                                                for (let i = startIdx; i < endIdx; i++) {
+                                                    const row = currentData[i];
+                                                    if (!row) continue;
+                                                    
+                                                    visibleRows.push({
+                                                        div: {
+                                                            //key: `row-${i}`,
+                                                            class: `table-row ${selected.includes(i) ? 'selected' : ''}`,
+                                                            style: {
+                                                                top: `${i * rowHeight}px`,
+                                                                height: `${rowHeight}px`
+                                                            },
+                                                            onclick: (e) => handleRowClick(i, e),
+                                                            children: columns.map(column => {
+                                                                const cellComponent = cellComponents[column];
+                                                                
+                                                                return {
+                                                                    div: {
+                                                                        //key: `${i}-${column}`,
+                                                                        style: () => ({
+                                                                            width: `${getState(`${tableId}.widths.${column}`, widths[column] || 120)}px`
+                                                                        }),
+                                                                        children: [
+                                                                            cellComponent ? (() => {
+                                                                                const componentName = Object.keys(cellComponent)[0];
+                                                                                const componentProps = cellComponent[componentName];
+                                                                                const comp = {};
+                                                                                comp[componentName] = {
+                                                                                    ...componentProps,
+                                                                                    value: row[column],
+                                                                                    column,
+                                                                                    rowIndex: i,
+                                                                                    row
+                                                                                };
+                                                                                return comp;
+                                                                            })() : {
+                                                                                TextComponent: {
+                                                                                    value: row[column],
+                                                                                    column,
+                                                                                    rowIndex: i
+                                                                                }
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                };
+                                                            })
+                                                        }
+                                                    });
+                                                }
+                                                
+                                                return visibleRows;
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // App
+        const App = () => {
+            return {
+                div: {
+                    children: [
+                        {
+                            VirtualTable: {
+                                data: sampleData,
+                                columns: ['name', 'email', 'department', 'salary'],
+                                widths: {
+                                    name: 150,
+                                    email: 200,
+                                    department: 120,
+                                    salary: 100
+                                },
+                                resizable: true,
+                                headerComponents: {
+                                    name: { HeaderCell: { label: 'Full Name' } },
+                                    email: { FilterCell: { column: 'email', label: 'Email Address' } },
+                                    department: { FilterCell: { column: 'department', label: 'Dept' } },
+                                    salary: { HeaderCell: { label: 'Salary' } }
+                                },
+                                cellComponents: {
+                                    name: { 
+                                        TextComponent: { 
+                                            editable: true,
+                                            class: { fontWeight: 'bold' },
+                                            style: { color: '#2c3e50' }
+                                        } 
+                                    },
+                                    email: { 
+                                        EmailComponent: { 
+                                            label: 'Email',
+                                            class: {},
+                                            style: {}
+                                        } 
+                                    },
+                                    department: { 
+                                        TextComponent: { 
+                                            editable: false 
+                                        } 
+                                    },
+                                    salary: { 
+                                        TextComponent: { 
+                                            editable: true,
+                                            style: { textAlign: 'right', fontVariantNumeric: 'tabular-nums' }
+                                        } 
+                                    }
+                                },
+                                height: 500,
+                                rowHeight: 42,
+                                tableId: 'mainTable',
+                                onSelectionChanged: (selectedData, indices, stats) => {
+                                    console.log('Selection changed:', {
+                                        selectedData,
+                                        indices,
+                                        stats
+                                    });
+                                }
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+        
+        // Initialize
+        const juris = new Juris({
+            states: {
+                sampleData: sampleData, // Move to state for reactivity
+                mainTable: {
+                    scroll: 0,
+                    selected: [],
+                    widths: {}
+                },
+                filters: {},
+                editing: {},
+                insertForm: {}
+            },
+            components: {
+                App,
+                VirtualTable,
+                HeaderCell,
+                FilterCell,
+                TextComponent,
+                EmailComponent
+            },
+            layout: { App: {} }
+        });
+        
+        juris.render('#app');
+        window.juris = juris;
+    </script>
+</body>
+</html>

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juris Infinite Scroll Table</title>
+  <script src="../src/juris.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f7fa;
+    }
+    
+    .app-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 12px 12px 0 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    .header .subtitle {
+      margin: 8px 0 0 0;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    
+    .controls {
+      background: white;
+      padding: 20px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #4338ca;
+      transform: translateY(-1px);
+    }
+    
+    .btn.secondary {
+      background: #6b7280;
+    }
+    
+    .btn.secondary:hover {
+      background: #4b5563;
+    }
+    
+    .stats {
+      margin-left: auto;
+      color: #64748b;
+      font-size: 14px;
+    }
+    
+    .table-container {
+      background: white;
+      border-radius: 0 0 12px 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .scroll-viewport {
+      height: 500px;
+      overflow-y: auto;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .table-header {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      z-index: 10;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .table-header th {
+      padding: 16px 20px;
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .table-row {
+      cursor: pointer;
+      transition: background-color 0.15s;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .table-row:hover {
+      background: #f8fafc;
+    }
+    
+    .table-row.selected {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+    }
+    
+    .table-cell {
+      padding: 16px 20px;
+      color: #374151;
+      font-size: 14px;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+    
+    .status-active {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .status-inactive {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .loading-row {
+      padding: 24px;
+      text-align: center;
+      background: #fafafa;
+    }
+    
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #e5e7eb;
+      border-top: 2px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .end-message {
+      padding: 24px;
+      text-align: center;
+      color: #6b7280;
+      background: #f9fafb;
+      font-style: italic;
+    }
+    
+    .selection-panel {
+      margin-top: 24px;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      border-left: 4px solid #10b981;
+    }
+    
+    .selection-panel h3 {
+      margin: 0 0 16px 0;
+      color: #111827;
+    }
+    
+    .user-detail {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .user-detail-item {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+    }
+    
+    .user-detail-label {
+      font-weight: 600;
+      color: #374151;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    
+    .user-detail-value {
+      color: #111827;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    // Data generator for infinite scroll
+    const USER_POOL = {
+      firstNames: ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn', 'Sage', 'River', 'Phoenix', 'Blake', 'Cameron', 'Dakota', 'Emery', 'Finley', 'Harper', 'Indigo', 'Justice', 'Kennedy'],
+      lastNames: ['Anderson', 'Brown', 'Davis', 'Garcia', 'Johnson', 'Jones', 'Martinez', 'Miller', 'Moore', 'Rodriguez', 'Smith', 'Taylor', 'Thomas', 'Williams', 'Wilson', 'Lopez', 'Lee', 'White', 'Clark', 'Lewis'],
+      domains: ['gmail.com', 'yahoo.com', 'outlook.com', 'company.com', 'enterprise.org', 'tech.io'],
+      statuses: ['active', 'inactive', 'pending'],
+      roles: ['Admin', 'User', 'Manager', 'Guest', 'Moderator', 'Developer', 'Analyst', 'Designer']
+    };
+
+    const generateUser = (id) => {
+      const firstName = USER_POOL.firstNames[Math.floor(Math.random() * USER_POOL.firstNames.length)];
+      const lastName = USER_POOL.lastNames[Math.floor(Math.random() * USER_POOL.lastNames.length)];
+      const domain = USER_POOL.domains[Math.floor(Math.random() * USER_POOL.domains.length)];
+      const status = USER_POOL.statuses[Math.floor(Math.random() * USER_POOL.statuses.length)];
+      const role = USER_POOL.roles[Math.floor(Math.random() * USER_POOL.roles.length)];
+      
+      return {
+        id: id,
+        name: `${firstName} ${lastName}`,
+        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
+        status: status,
+        role: role
+      };
+    };
+
+    const generateInitialData = () => {
+      return Array.from({ length: 25 }, (_, i) => generateUser(i + 1));
+    };
+
+    // Initialize Juris
+    const juris = new Juris({
+    logLevel:'debug',
+      states: {
+        users: generateInitialData(),
+        selectedUserId: null,
+        loading: false,
+        hasMore: true,
+        nextId: 26,
+        loadedCount: 25
+      }
+    });
+
+    // Register table component with infinite scroll
+    juris.registerComponent('InfiniteTable', (props, context) => {
+      const { getState, setState } = context;
+
+      // Simulate API call for loading more data
+      const loadMoreUsers = async () => {
+        const loading = getState('loading');
+        const hasMore = getState('hasMore');
+        
+        if (loading || !hasMore) return;
+
+        setState('loading', true);
+        
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        
+        const nextId = getState('nextId');
+        const currentUsers = getState('users', []);
+        const loadedCount = getState('loadedCount');
+        
+        // Generate 20 new users
+        const newUsers = Array.from({ length: 20 }, (_, i) => generateUser(nextId + i));
+        const updatedUsers = [...currentUsers, ...newUsers];
+        
+        setState('users', updatedUsers);
+        setState('nextId', nextId + 20);
+        setState('loadedCount', loadedCount + 20);
+        setState('loading', false);
+        
+        // Stop at 500 users for demo
+        if (loadedCount + 20 >= 500) {
+          setState('hasMore', false);
+        }
+      };
+
+      const handleScroll = (e) => {
+        const element = e.target;
+        const threshold = 100; // pixels from bottom
+        
+        if (element.scrollHeight - element.scrollTop - element.clientHeight < threshold) {
+          loadMoreUsers();
+        }
+      };
+
+      const selectUser = (userId) => {
+        return () => {
+          const currentSelected = getState('selectedUserId');
+          setState('selectedUserId', currentSelected === userId ? null : userId);
+        };
+      };
+
+      const addRandomUser = () => {
+        const users = getState('users', []);
+        const nextId = getState('nextId');
+        const newUser = generateUser(nextId);
+        
+        setState('users', [...users, newUser]);
+        setState('nextId', nextId + 1);
+        setState('loadedCount', getState('loadedCount') + 1);
+      };
+
+      const resetTable = () => {
+        setState('users', generateInitialData());
+        setState('selectedUserId', null);
+        setState('loading', false);
+        setState('hasMore', true);
+        setState('nextId', 26);
+        setState('loadedCount', 25);
+      };
+
+      const clearSelection = () => {
+        setState('selectedUserId', null);
+      };
+
+      return {
+        div: {
+          class: 'app-container',
+          children: [
+            {div: {
+              class: 'header',
+              children: [
+                {h1: { text: 'Infinite Scroll User Table' }},
+                {div: {
+                  class: 'subtitle',
+                  text: () => `${getState('loadedCount', 0)} users loaded • Scroll to load more`
+                }}
+              ]
+            }},
+            
+            {div: {
+              class: 'table-container',
+              children: [
+                {div: {
+                  class: 'controls',
+                  children: [
+                    {button: {
+                      class: 'btn',
+                      text: 'Add Random User',
+                      onclick: addRandomUser
+                    }},
+                    {button: {
+                      class: 'btn secondary',
+                      text: 'Clear Selection',
+                      onclick: clearSelection
+                    }},
+                    {button: {
+                      class: 'btn secondary',
+                      text: 'Reset Table',
+                      onclick: resetTable
+                    }},
+                    {div: {
+                      class: 'stats',
+                      text: () => {
+                        const selected = getState('selectedUserId');
+                        const hasMore = getState('hasMore');
+                        return `Selected: ${selected ? `#${selected}` : 'None'} • ${hasMore ? 'More available' : 'All loaded'}`;
+                      }
+                    }}
+                  ]
+                }},
+                
+                {div: {
+                  class: 'scroll-viewport',
+                  onscroll: handleScroll,
+                  children: [
+                    {table: {
+                      class: 'table',
+                      children: [
+                        {thead: {
+                          class: 'table-header',
+                          children: [
+                            {tr: {
+                              children: [
+                                {th: { text: 'ID' }},
+                                {th: { text: 'Name' }},
+                                {th: { text: 'Email' }},
+                                {th: { text: 'Status' }},
+                                {th: { text: 'Role' }}
+                              ]
+                            }}
+                          ]
+                        }},
+                        
+                        {tbody: {
+                          children: [
+                            // User rows
+                            () => {
+                              const users = getState('users', []);
+                              const selectedUserId = getState('selectedUserId');
+                              
+                              return users.map(user => ({
+                                tr: {
+                                  key: `user-${user.id}`,
+                                  class: () => {
+                                    const selected = getState('selectedUserId');
+                                    return `table-row ${selected === user.id ? 'selected' : ''}`;
+                                  },
+                                  onclick: selectUser(user.id),
+                                  children: [
+                                    {td: { class: 'table-cell', text: `#${user.id}` }},
+                                    {td: { class: 'table-cell', text: user.name }},
+                                    {td: { class: 'table-cell', text: user.email }},
+                                    {td: { 
+                                      class: 'table-cell',
+                                      children: [
+                                        {span: { 
+                                          class: `status-badge status-${user.status}`,
+                                          text: user.status
+                                        }}
+                                      ]
+                                    }},
+                                    {td: { class: 'table-cell', text: user.role }}
+                                  ]
+                                }
+                              }));
+                            },
+                            
+                            // Loading indicator
+                            () => {
+                              const loading = getState('loading');
+                              const hasMore = getState('hasMore');
+                              
+                              if (loading) {
+                                return {tr: {
+                                  children: [
+                                    {td: {
+                                      colspan: '5',
+                                      class: 'loading-row',
+                                      children: [
+                                        {div: { class: 'loading-spinner' }},
+                                        {span: { text: 'Loading more users...' }}
+                                      ]
+                                    }}
+                                  ]
+                                }};
+                              }
+                              
+                              if (!hasMore) {
+                                return {tr: {
+                                  children: [
+                                    {td: {
+                                      colspan: '5',
+                                      class: 'end-message',
+                                      text: '✅ All users loaded (500 limit reached for demo)'
+                                    }}
+                                  ]
+                                }};
+                              }
+                              
+                              return null;
+                            }
+                          ]
+                        }}
+                      ]
+                    }}
+                  ]
+                }}
+              ]
+            }},
+            
+            // Selection details
+            () => {
+              const selectedUserId = getState('selectedUserId');
+              const users = getState('users', []);
+              const selectedUser = users.find(u => u.id === selectedUserId);
+              
+              if (!selectedUser) {
+                return {div: {
+                  class: 'selection-panel',
+                  style: { borderLeft: '4px solid #6b7280', background: '#f9fafb' },
+                  children: [
+                    {h3: { text: '👆 Select a user to view details' }},
+                    {p: { 
+                      text: 'Click on any row above to select a user and see their information here. The table will automatically load more users as you scroll down.',
+                      style: { color: '#6b7280', margin: 0 }
+                    }}
+                  ]
+                }};
+              }
+              
+              return {div: {
+                class: 'selection-panel',
+                children: [
+                  {h3: { text: `👤 ${selectedUser.name}` }},
+                  {div: {
+                    class: 'user-detail',
+                    children: [
+                      {div: {
+                        class: 'user-detail-item',
+                        children: [
+                          {div: { class: 'user-detail-label', text: 'User ID' }},
+                          {div: { class: 'user-detail-value', text: `#${selectedUser.id}` }}
+                        ]
+                      }},
+                      {div: {
+                        class: 'user-detail-item',
+                        children: [
+                          {div: { class: 'user-detail-label', text: 'Full Name' }},
+                          {div: { class: 'user-detail-value', text: selectedUser.name }}
+                        ]
+                      }},
+                      {div: {
+                        class: 'user-detail-item',
+                        children: [
+                          {div: { class: 'user-detail-label', text: 'Email Address' }},
+                          {div: { class: 'user-detail-value', text: selectedUser.email }}
+                        ]
+                      }},
+                      {div: {
+                        class: 'user-detail-item',
+                        children: [
+                          {div: { class: 'user-detail-label', text: 'Account Status' }},
+                          {div: { 
+                            class: 'user-detail-value',
+                            children: [
+                              {span: {
+                                class: `status-badge status-${selectedUser.status}`,
+                                text: selectedUser.status
+                              }}
+                            ]
+                          }}
+                        ]
+                      }},
+                      {div: {
+                        class: 'user-detail-item',
+                        children: [
+                          {div: { class: 'user-detail-label', text: 'User Role' }},
+                          {div: { class: 'user-detail-value', text: selectedUser.role }}
+                        ]
+                      }}
+                    ]
+                  }}
+                ]
+              }};
+            }
+          ]
+        }
+      };
+    });
+
+    // Set layout and render
+    juris.layout = {InfiniteTable: {}};
+    juris.render('#app');
+  </script>
+</body>
+</html>

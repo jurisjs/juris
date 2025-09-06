@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sortable Todos - Juris Framework</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .todos-app {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .todos-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 300;
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .sort-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 0.5rem;
+            background: #f0f0f0;
+            border: 2px solid transparent;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+
+        .sort-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .sort-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .add-todo-form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .todo-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .todo-input:focus {
+            border-color: #667eea;
+        }
+
+        .add-btn {
+            padding: 0.75rem 1.5rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-btn:hover {
+            background: #5a67d8;
+        }
+
+        .todos-list {
+            min-height: 200px;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8f8f8;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .todo-item.moving {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background: #f0f4ff;
+        }
+
+        .todo-checkbox {
+            width: 1.2rem;
+            height: 1.2rem;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .todo-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .todo-text {
+            font-size: 1rem;
+            color: #333;
+            transition: all 0.2s;
+        }
+
+        .todo-text.completed {
+            text-decoration: line-through;
+            color: #999;
+            opacity: 0.7;
+        }
+
+        .todo-meta {
+            font-size: 0.75rem;
+            color: #999;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .priority {
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .priority.high {
+            background: #fee;
+            color: #c00;
+        }
+
+        .priority.medium {
+            background: #ffeaa7;
+            color: #d68910;
+        }
+
+        .priority.low {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            color: #e74c3c;
+            transform: scale(1.1);
+        }
+
+        .stats {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f8f8;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .shuffle-btn {
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 1rem;
+            background: #764ba2;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .shuffle-btn:hover {
+            background: #6a4292;
+            transform: translateY(-1px);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .todo-item {
+            animation: slideIn 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    
+    <script src="../src/juris.js"></script>
+    <script>
+        // Todo Item Component with priority display
+        const TodoItem = (props, context) => {
+            const { getState, setState } = context;
+            const { todoId } = props;
+            
+            // Add visual feedback when item moves
+            const [isMoving, setIsMoving] = context.newState('isMoving', false);
+            
+            return {
+                div: {
+                    className: () => {
+                        const moving = isMoving();
+                        return moving ? 'todo-item moving' : 'todo-item';
+                    },
+                    key: todoId, // Important for diffing!
+                    children: [
+                        {
+                            input: {
+                                type: 'checkbox',
+                                className: 'todo-checkbox',
+                                checked: () => getState(`todos.${todoId}.completed`, false),
+                                onchange: () => {
+                                    setState(`todos.${todoId}.completed`, !getState(`todos.${todoId}.completed`, false));
+                                }
+                            }
+                        },
+                        {
+                            div: {
+                                className: 'todo-content',
+                                children: [
+                                    {
+                                        span: {
+                                            className: () => getState(`todos.${todoId}.completed`, false) ? 'todo-text completed' : 'todo-text',
+                                            text: () => getState(`todos.${todoId}.text`, '')
+                                        }
+                                    },
+                                    {
+                                        div: {
+                                            className: 'todo-meta',
+                                            children: [
+                                                {
+                                                    span: {
+                                                        className: () => {
+                                                            const priority = getState(`todos.${todoId}.priority`, 'low');
+                                                            return `priority ${priority}`;
+                                                        },
+                                                        text: () => getState(`todos.${todoId}.priority`, 'low').toUpperCase()
+                                                    }
+                                                },
+                                                {
+                                                    span: {
+                                                        text: () => {
+                                                            const createdAt = getState(`todos.${todoId}.createdAt`, '');
+                                                            if (!createdAt) return '';
+                                                            const date = new Date(createdAt);
+                                                            return date.toLocaleTimeString();
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            button: {
+                                className: 'delete-btn',
+                                text: '×',
+                                onclick: () => {
+                                    const todos = getState('todos', {});
+                                    const { [todoId]: removed, ...remaining } = todos;
+                                    setState('todos', remaining);
+                                    
+                                    const todoList = getState('todoList', []);
+                                    setState('todoList', todoList.filter(id => id !== todoId));
+                                }
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+
+        // Main App Component
+        const TodosApp = (props, context) => {
+            const { getState, setState, executeBatch } = context;
+            
+            const sortTodos = (sortBy) => {
+                executeBatch(() => {
+                    setState('sortBy', sortBy);
+                    const todoList = getState('todoList', []);
+                    const todos = getState('todos', {});
+                    
+                    let sorted = [...todoList];
+                    
+                    switch(sortBy) {
+                        case 'newest':
+                            sorted.sort((a, b) => {
+                                const dateA = new Date(todos[a]?.createdAt || 0);
+                                const dateB = new Date(todos[b]?.createdAt || 0);
+                                return dateB - dateA;
+                            });
+                            break;
+                        case 'oldest':
+                            sorted.sort((a, b) => {
+                                const dateA = new Date(todos[a]?.createdAt || 0);
+                                const dateB = new Date(todos[b]?.createdAt || 0);
+                                return dateA - dateB;
+                            });
+                            break;
+                        case 'priority':
+                            const priorityOrder = { high: 0, medium: 1, low: 2 };
+                            sorted.sort((a, b) => {
+                                const priorityA = priorityOrder[todos[a]?.priority || 'low'];
+                                const priorityB = priorityOrder[todos[b]?.priority || 'low'];
+                                return priorityA - priorityB;
+                            });
+                            break;
+                        case 'alphabetical':
+                            sorted.sort((a, b) => {
+                                const textA = todos[a]?.text || '';
+                                const textB = todos[b]?.text || '';
+                                return textA.localeCompare(textB);
+                            });
+                            break;
+                        case 'completed':
+                            sorted.sort((a, b) => {
+                                const completedA = todos[a]?.completed ? 1 : 0;
+                                const completedB = todos[b]?.completed ? 1 : 0;
+                                return completedA - completedB;
+                            });
+                            break;
+                    }
+                    
+                    setState('todoList', sorted);
+                });
+            };
+            
+            const shuffleTodos = () => {
+                const todoList = getState('todoList', []);
+                const shuffled = [...todoList];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                setState('todoList', shuffled);
+                setState('sortBy', 'custom');
+            };
+            
+            return {
+                div: {
+                    className: 'todos-app',
+                    children: [
+                        {
+                            h1: {
+                                className: 'todos-title',
+                                text: '🔄 Sortable Todos'
+                            }
+                        },
+                        {
+                            div: {
+                                className: 'sort-controls',
+                                children: [
+                                    {
+                                        button: {
+                                            className: () => getState('sortBy', 'newest') === 'newest' ? 'sort-btn active' : 'sort-btn',
+                                            text: '🕐 Newest',
+                                            onclick: () => sortTodos('newest')
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            className: () => getState('sortBy', 'newest') === 'oldest' ? 'sort-btn active' : 'sort-btn',
+                                            text: '📅 Oldest',
+                                            onclick: () => sortTodos('oldest')
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            className: () => getState('sortBy', 'newest') === 'priority' ? 'sort-btn active' : 'sort-btn',
+                                            text: '⚡ Priority',
+                                            onclick: () => sortTodos('priority')
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            className: () => getState('sortBy', 'newest') === 'alphabetical' ? 'sort-btn active' : 'sort-btn',
+                                            text: '🔤 A-Z',
+                                            onclick: () => sortTodos('alphabetical')
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            className: () => getState('sortBy', 'newest') === 'completed' ? 'sort-btn active' : 'sort-btn',
+                                            text: '✅ Status',
+                                            onclick: () => sortTodos('completed')
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            form: {
+                                className: 'add-todo-form',
+                                onsubmit: (e) => {
+                                    e.preventDefault();
+                                    const text = getState('newTodo', '').trim();
+                                    const priority = getState('newPriority', 'medium');
+                                    
+                                    if (text) {
+                                        const id = Date.now().toString();
+                                        const newTodo = {
+                                            id,
+                                            text,
+                                            priority,
+                                            completed: false,
+                                            createdAt: new Date().toISOString()
+                                        };
+                                        
+                                        executeBatch(() => {
+                                            setState(`todos.${id}`, newTodo);
+                                            const todoList = getState('todoList', []);
+                                            setState('todoList', [id, ...todoList]);
+                                            setState('newTodo', '');
+                                        });
+                                    }
+                                },
+                                children: [
+                                    {
+                                        input: {
+                                            type: 'text',
+                                            className: 'todo-input',
+                                            placeholder: 'Add a new todo...',
+                                            value: () => getState('newTodo', ''),
+                                            oninput: (e) => setState('newTodo', e.target.value)
+                                        }
+                                    },
+                                    {
+                                        select: {
+                                            value: () => getState('newPriority', 'medium'),
+                                            onchange: (e) => setState('newPriority', e.target.value),
+                                            style: { padding: '0.75rem', borderRadius: '0.5rem', border: '2px solid #e0e0e0' },
+                                            children: [
+                                                { option: { value: 'high', text: '🔴 High' } },
+                                                { option: { value: 'medium', text: '🟡 Medium' } },
+                                                { option: { value: 'low', text: '🟢 Low' } }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        button: {
+                                            type: 'submit',
+                                            className: 'add-btn',
+                                            text: 'Add'
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            div: {
+                                className: 'todos-list',
+                                children: () => {
+                                    const todoList = getState('todoList', []);
+                                    
+                                    if (todoList.length === 0) {
+                                        return {
+                                            div: {
+                                                style: { textAlign: 'center', padding: '2rem', color: '#999' },
+                                                text: 'No todos yet. Add one above!'
+                                            }
+                                        };
+                                    }
+                                    
+                                    // Map with stable keys for efficient diffing
+                                    return todoList.map(todoId => ({
+                                        TodoItem: { 
+                                            todoId, 
+                                            key: todoId // Critical for sorting!
+                                        }
+                                    }));
+                                }
+                            }
+                        },
+                        {
+                            button: {
+                                className: 'shuffle-btn',
+                                text: '🎲 Shuffle Random',
+                                onclick: shuffleTodos
+                            }
+                        },
+                        {
+                            div: {
+                                className: 'stats',
+                                children: () => {
+                                    const todoList = getState('todoList', []);
+                                    const todos = getState('todos', {});
+                                    const completed = todoList.filter(id => todos[id]?.completed).length;
+                                    
+                                    return {
+                                        span: {
+                                            text: `${todoList.length} todos (${completed} completed) • Sort: ${getState('sortBy', 'newest')}`
+                                        }
+                                    };
+                                }
+                            }
+                        }
+                    ]
+                }
+            };
+        };
+
+        // Initialize app with sample data
+        const juris = new Juris({
+            components: {
+                TodosApp,
+                TodoItem
+            },
+            
+            layout: { TodosApp: {} },
+            
+            states: {
+                todos: {
+                    '1': { id: '1', text: 'Learn Juris Framework', priority: 'high', completed: false, createdAt: new Date(Date.now() - 3600000).toISOString() },
+                    '2': { id: '2', text: 'Build awesome apps', priority: 'medium', completed: false, createdAt: new Date(Date.now() - 7200000).toISOString() },
+                    '3': { id: '3', text: 'Test sorting feature', priority: 'low', completed: true, createdAt: new Date(Date.now() - 1800000).toISOString() }
+                },
+                todoList: ['1', '2', '3'],
+                newTodo: '',
+                newPriority: 'medium',
+                sortBy: 'newest'
+            }
+        });
+
+        // Render
+        juris.render('#app');
+
+        // Debug helpers
+        window.juris = juris;
+        console.log('🔄 Sortable Todos Ready!');
+        console.log('💡 Click the sort buttons to see keyed diffing in action');
+        console.log('🎯 Notice how items maintain their state (checkbox) when sorted');
+    </script>
+</body>
+</html>

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juris Correct API Benchmark</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .benchmark-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .benchmark-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        
+        .benchmark-button:hover {
+            background: #0056b3;
+        }
+        
+        .results {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        
+        .metric {
+            margin: 5px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .test-controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 5px;
+        }
+        
+        .test-control {
+            margin: 10px 0;
+        }
+        
+        .test-control label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+        
+        .test-control input, .test-control select {
+            margin-left: 10px;
+            padding: 5px;
+        }
+        
+        #app {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: white;
+            padding: 10px;
+        }
+        
+        .row-item {
+            padding: 8px 16px;
+            border-bottom: 1px solid #f1f3f4;
+            display: flex;
+            align-items: center;
+        }
+        
+        .row-item:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .row-number {
+            font-weight: bold;
+            margin-right: 15px;
+            min-width: 60px;
+        }
+        
+        .row-content {
+            flex: 1;
+            margin-right: 15px;
+        }
+        
+        .row-counter {
+            font-weight: bold;
+            min-width: 80px;
+            color: #007bff;
+        }
+        
+        .status-active { background: #d4edda; color: #155724; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="benchmark-container">
+        <h1>Juris Correct API Benchmark</h1>
+        <p>Testing Juris using the correct API patterns from the source code</p>
+        
+        <div class="test-controls">
+            <h3>Test Configuration</h3>
+            <div class="test-control">
+                <label>Item Count:</label>
+                <select id="itemCount">
+                    <option value="50">50 items</option>
+                    <option value="100" selected>100 items</option>
+                    <option value="200">200 items</option>
+                    <option value="500">500 items</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="benchmark-button" onclick="runListTest()">List Render Test</button>
+            <button class="benchmark-button" onclick="runUpdateTest()">Update Test</button>
+            <button class="benchmark-button" onclick="runVanillaTest()">Vanilla Comparison</button>
+            <button class="benchmark-button" onclick="clearResults()">Clear</button>
+        </div>
+        
+        <div id="results" class="results" style="display: none;"></div>
+        <div id="app"></div>
+    </div>
+
+    <script src="../src/juris.3.js"></script>
+    <script>
+        let benchmarkResults = {};
+        let jurisInstance = null;
+        
+        // Test data generator
+        function generateTestData(count) {
+            return Array.from({ length: count }, (_, i) => ({
+                id: i + 1,
+                content: `Item ${i + 1}`,
+                counter: Math.floor(Math.random() * 100),
+                status: ['active', 'pending', 'error'][Math.floor(Math.random() * 3)]
+            }));
+        }
+        
+        // List render test using correct Juris API
+        function runListTest() {
+            const itemCount = parseInt(document.getElementById('itemCount').value);
+            const testData = generateTestData(itemCount);
+            
+            console.log(`Running Juris list test with ${itemCount} items`);
+            
+            const startTime = performance.now();
+            
+            // Create Juris instance with correct API
+            jurisInstance = new Juris({
+                logLevel:'debug',
+                state: {
+                    items: testData,
+                    updateCount: 0
+                }
+            });
+            
+            // Define layout using correct VDOM syntax
+            jurisInstance.layout = {
+                div: {
+                    class: 'test-container',
+                    children: () => {
+                        const items = jurisInstance.getState('items', []);
+                        //console.log(`Rendering ${items.length} items`);
+                        
+                        return items.map(item => ({
+                            div: {
+                                class: 'row-item',
+                                key: item.id, // This key is ignored but shows intent
+                                children: [
+                                    {
+                                        span: {
+                                            class: 'row-number',
+                                            text: `#${item.id}`
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'row-content',
+                                            text: item.content
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: 'row-counter',
+                                            text: () => {
+                                                const items = jurisInstance.getState('items', []);
+                                                const currentItem = items.find(i => i.id === item.id);
+                                                return currentItem ? currentItem.counter : item.counter;
+                                            }
+                                        }
+                                    },
+                                    {
+                                        span: {
+                                            class: () => {
+                                                const items = jurisInstance.getState('items', []);
+                                                const currentItem = items.find(i => i.id === item.id);
+                                                const status = currentItem ? currentItem.status : item.status;
+                                                return `status-${status}`;
+                                            },
+                                            text: () => {
+                                                const items = jurisInstance.getState('items', []);
+                                                const currentItem = items.find(i => i.id === item.id);
+                                                return currentItem ? currentItem.status : item.status;
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }));
+                    }
+                }
+            };
+            
+            // Render using correct method
+            const renderStart = performance.now();
+            jurisInstance.render('#app');
+            const renderEnd = performance.now();
+            
+            const totalTime = renderEnd - startTime;
+            const renderTime = renderEnd - renderStart;
+            
+            benchmarkResults.jurisList = {
+                totalTime,
+                renderTime,
+                itemCount,
+                approach: 'Juris List Rendering'
+            };
+            
+            displayResults('Juris List Test', benchmarkResults.jurisList);
+            console.log(`Juris render completed in ${renderTime.toFixed(2)}ms`);
+        }
+        
+        // Update test - modify one item and measure re-render time
+        function runUpdateTest() {
+            if (!jurisInstance) {
+                alert('Please run List Render Test first');
+                return;
+            }
+            
+            console.log('Running update test...');
+            
+            const updateTimes = [];
+            const iterations = 20;
+            
+            for (let i = 0; i < iterations; i++) {
+                const updateStart = performance.now();
+                
+                // Update one random item
+                const items = jurisInstance.getState('items', []);
+                const randomIndex = Math.floor(Math.random() * items.length);
+                const updatedItems = [...items];
+                updatedItems[randomIndex] = {
+                    ...updatedItems[randomIndex],
+                    counter: Math.floor(Math.random() * 100),
+                    status: ['active', 'pending', 'error'][Math.floor(Math.random() * 3)]
+                };
+                
+                jurisInstance.setState('items', updatedItems);
+                
+                const updateEnd = performance.now();
+                updateTimes.push(updateEnd - updateStart);
+            }
+            
+            const avgUpdateTime = updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length;
+            const maxUpdateTime = Math.max(...updateTimes);
+            const minUpdateTime = Math.min(...updateTimes);
+            
+            benchmarkResults.jurisUpdate = {
+                avgUpdateTime,
+                maxUpdateTime,
+                minUpdateTime,
+                iterations,
+                approach: 'Juris Single Item Update'
+            };
+            
+            displayResults('Juris Update Test', benchmarkResults.jurisUpdate);
+            console.log(`Average update time: ${avgUpdateTime.toFixed(2)}ms`);
+        }
+        
+        // Vanilla DOM comparison
+        function runVanillaTest() {
+            const itemCount = parseInt(document.getElementById('itemCount').value);
+            const testData = generateTestData(itemCount);
+            
+            console.log(`Running vanilla DOM test with ${itemCount} items`);
+            
+            const container = document.getElementById('app');
+            
+            const startTime = performance.now();
+            
+            // Clear container
+            container.innerHTML = '';
+            
+            // Create elements
+            const renderStart = performance.now();
+            const fragment = document.createDocumentFragment();
+            const elements = [];
+            
+            testData.forEach(item => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'row-item';
+                
+                const numberSpan = document.createElement('span');
+                numberSpan.className = 'row-number';
+                numberSpan.textContent = `#${item.id}`;
+                
+                const contentSpan = document.createElement('span');
+                contentSpan.className = 'row-content';
+                contentSpan.textContent = item.content;
+                
+                const counterSpan = document.createElement('span');
+                counterSpan.className = 'row-counter';
+                counterSpan.textContent = item.counter;
+                
+                const statusSpan = document.createElement('span');
+                statusSpan.className = `status-${item.status}`;
+                statusSpan.textContent = item.status;
+                
+                rowDiv.appendChild(numberSpan);
+                rowDiv.appendChild(contentSpan);
+                rowDiv.appendChild(counterSpan);
+                rowDiv.appendChild(statusSpan);
+                fragment.appendChild(rowDiv);
+                
+                elements.push({
+                    data: item,
+                    counterElement: counterSpan,
+                    statusElement: statusSpan
+                });
+            });
+            
+            container.appendChild(fragment);
+            const renderEnd = performance.now();
+            
+            // Test updates
+            const updateTimes = [];
+            const iterations = 20;
+            
+            for (let i = 0; i < iterations; i++) {
+                const updateStart = performance.now();
+                
+                // Update one random element
+                const randomIndex = Math.floor(Math.random() * elements.length);
+                const element = elements[randomIndex];
+                
+                element.data.counter = Math.floor(Math.random() * 100);
+                element.data.status = ['active', 'pending', 'error'][Math.floor(Math.random() * 3)];
+                
+                // Direct DOM update - only the changed elements
+                element.counterElement.textContent = element.data.counter;
+                element.statusElement.textContent = element.data.status;
+                element.statusElement.className = `status-${element.data.status}`;
+                
+                const updateEnd = performance.now();
+                updateTimes.push(updateEnd - updateStart);
+            }
+            
+            const totalTime = renderEnd - startTime;
+            const renderTime = renderEnd - renderStart;
+            const avgUpdateTime = updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length;
+            const maxUpdateTime = Math.max(...updateTimes);
+            const minUpdateTime = Math.min(...updateTimes);
+            
+            benchmarkResults.vanilla = {
+                totalTime,
+                renderTime,
+                avgUpdateTime,
+                maxUpdateTime,
+                minUpdateTime,
+                itemCount,
+                iterations,
+                approach: 'Vanilla DOM'
+            };
+            
+            displayResults('Vanilla DOM Test', benchmarkResults.vanilla);
+            console.log(`Vanilla render: ${renderTime.toFixed(2)}ms, avg update: ${avgUpdateTime.toFixed(2)}ms`);
+        }
+        
+        // Display results
+        function displayResults(label, results) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.style.display = 'block';
+            
+            let resultHtml = `<h3>${label}</h3>`;
+            
+            Object.keys(results).forEach(key => {
+                const value = results[key];
+                const displayValue = typeof value === 'number' ? 
+                    (value < 1 ? `${value.toFixed(3)}ms` : value.toFixed(2)) : value;
+                
+                resultHtml += `
+                    <div class="metric">
+                        <strong>${key}:</strong> ${displayValue}
+                    </div>
+                `;
+            });
+            
+            resultHtml += '<hr>';
+            resultsDiv.innerHTML += resultHtml;
+        }
+        
+        // Clear results
+        function clearResults() {
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('app').innerHTML = '';
+            benchmarkResults = {};
+            jurisInstance = null;
+            console.log('Results cleared');
+        }
+        
+        // Log initial message
+        console.log('Juris benchmark loaded. Click buttons to run tests.');
+        console.log('This benchmark uses the correct Juris API from your source code.');
+    </script>
+</body>
+</html>

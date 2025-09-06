@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pure VDOM Todo App</title>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="../src/juris.js"></script>
+    <script src="../src/juris-webcomponent.js"></script>
+    
+    <script>
+        // Todo Item Component
+        const TodoItemComponent = (props, context) => {
+            const { getState, setState } = context;
+            
+            return {
+                attributes: ['todo-id', 'title', 'description', 'completed', 'priority', 'category', 'due-date'],
+                
+                initialState: {
+                    id: props.todoId || '',
+                    title: props.title || '',
+                    description: props.description || '',
+                    completed: props.completed === 'true' || false,
+                    priority: props.priority || 'medium',
+                    category: props.category || '',
+                    dueDate: props.dueDate || ''
+                },
+                
+                options: {
+                    shadow: true,
+                    shadowMode: 'open',
+                    hostStyles: (props) => {
+                        const isCompleted = getState('completed', false);
+                        const priority = getState('priority', 'medium');
+                        
+                        const priorityColors = {
+                            high: '#dc3545',
+                            medium: '#ffc107', 
+                            low: '#28a745'
+                        };
+                        
+                        return {
+                            '--priority-color': priorityColors[priority],
+                            '--completion-opacity': isCompleted ? '0.7' : '1.0',
+                            transform: isCompleted ? 'scale(0.98)' : 'scale(1.0)',
+                            opacity: 'var(--completion-opacity)',
+                            transition: 'all 0.3s ease',
+                            display: 'block',
+                            margin: '8px 0'
+                        };
+                    },
+                    shadowStyles: `
+                        :host {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        }
+                        .todo-card {
+                            background: white;
+                            border: 2px solid #e9ecef;
+                            border-left: 4px solid var(--priority-color);
+                            border-radius: 12px;
+                            padding: 16px;
+                            transition: all 0.3s ease;
+                            position: relative;
+                        }
+                        .todo-card:hover {
+                            border-color: var(--priority-color);
+                            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                            transform: translateY(-2px);
+                        }
+                        .todo-header {
+                            display: flex;
+                            align-items: flex-start;
+                            gap: 12px;
+                            margin-bottom: 8px;
+                        }
+                        .checkbox {
+                            width: 20px;
+                            height: 20px;
+                            border: 2px solid var(--priority-color);
+                            border-radius: 4px;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-shrink: 0;
+                            transition: all 0.2s ease;
+                            margin-top: 2px;
+                        }
+                        .checkbox.completed {
+                            background: var(--priority-color);
+                            color: white;
+                        }
+                        .todo-content {
+                            flex: 1;
+                        }
+                        .todo-title {
+                            font-size: 16px;
+                            font-weight: 600;
+                            margin: 0;
+                            color: #2d3748;
+                        }
+                        .todo-description {
+                            font-size: 14px;
+                            color: #718096;
+                            margin: 4px 0 8px 0;
+                            line-height: 1.4;
+                        }
+                        .todo-meta {
+                            display: flex;
+                            gap: 12px;
+                            font-size: 12px;
+                            color: #a0aec0;
+                            flex-wrap: wrap;
+                        }
+                        .priority-badge {
+                            background: var(--priority-color);
+                            color: white;
+                            padding: 2px 8px;
+                            border-radius: 12px;
+                            font-weight: 500;
+                            text-transform: uppercase;
+                            font-size: 10px;
+                        }
+                        .actions {
+                            position: absolute;
+                            top: 12px;
+                            right: 12px;
+                            display: flex;
+                            gap: 4px;
+                            opacity: 0;
+                            transition: opacity 0.2s ease;
+                        }
+                        .todo-card:hover .actions {
+                            opacity: 1;
+                        }
+                        .action-btn {
+                            width: 28px;
+                            height: 28px;
+                            border: none;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 12px;
+                            transition: all 0.2s ease;
+                        }
+                        .edit-btn {
+                            background: #667eea;
+                            color: white;
+                        }
+                        .delete-btn {
+                            background: #dc3545;
+                            color: white;
+                        }
+                    `
+                },
+                
+                api: {
+                    toggle() {
+                        const isCompleted = getState('completed', false);
+                        setState('completed', !isCompleted);
+                        this.dispatchEvent(new CustomEvent('todo-toggled', { 
+                            detail: {
+                                id: getState('id'), 
+                                completed: !isCompleted 
+                            },
+                            bubbles: true,
+                            composed: true
+                        }));
+                    },
+                    
+                    edit() {
+                        this.dispatchEvent(new CustomEvent('todo-edit', { 
+                            detail: { id: getState('id') },
+                            bubbles: true,
+                            composed: true
+                        }));
+                    },
+                    
+                    delete() {
+                        this.dispatchEvent(new CustomEvent('todo-delete', { 
+                            detail: { id: getState('id') },
+                            bubbles: true,
+                            composed: true
+                        }));
+                    }
+                },
+                
+                hooks: {
+                    onMount(props, context) {
+                        context.setState({
+                            id: props.todoId || '',
+                            title: props.title || '',
+                            description: props.description || '',
+                            completed: props.completed === 'true' || false,
+                            priority: props.priority || 'medium',
+                            category: props.category || '',
+                            dueDate: props.dueDate || ''
+                        });
+                    }
+                },
+                
+                render: (props) => {
+                    const isCompleted = getState('completed', false);
+                    const dueDate = getState('dueDate');
+                    const formattedDate = dueDate ? new Date(dueDate).toLocaleDateString() : null;
+                    
+                    return {
+                        div: {
+                            class: 'todo-card',
+                            children: [
+                                {
+                                    div: {
+                                        class: 'todo-header',
+                                        children: [
+                                            {
+                                                div: {
+                                                    class: `checkbox ${isCompleted ? 'completed' : ''}`,
+                                                    text: isCompleted ? '✓' : '',
+                                                    onclick: () => context.webComponent.element.toggle()
+                                                }
+                                            },
+                                            {
+                                                div: {
+                                                    class: 'todo-content',
+                                                    children: [
+                                                        {
+                                                            h3: {
+                                                                class: 'todo-title',
+                                                                text: () => getState('title', 'Untitled Task'),
+                                                                style: {
+                                                                    textDecoration: () => getState('completed', false) ? 'line-through' : 'none'
+                                                                }
+                                                            }
+                                                        },
+                                                        () => {
+                                                            const desc = getState('description');
+                                                            return desc ? {
+                                                                p: {
+                                                                    class: 'todo-description',
+                                                                    text: desc
+                                                                }
+                                                            } : null;
+                                                        },
+                                                        {
+                                                            div: {
+                                                                class: 'todo-meta',
+                                                                children: [
+                                                                    {
+                                                                        span: {
+                                                                            class: 'priority-badge',
+                                                                            text: () => getState('priority', 'medium')
+                                                                        }
+                                                                    },
+                                                                    () => {
+                                                                        const cat = getState('category');
+                                                                        return cat ? {
+                                                                            span: {
+                                                                                text: `📁 ${cat}`
+                                                                            }
+                                                                        } : null;
+                                                                    },
+                                                                    () => {
+                                                                        const date = getState('dueDate');
+                                                                        return date ? {
+                                                                            span: {
+                                                                                text: `📅 ${new Date(date).toLocaleDateString()}`
+                                                                            }
+                                                                        } : null;
+                                                                    }
+                                                                ].filter(Boolean)
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    div: {
+                                        class: 'actions',
+                                        children: [
+                                            {
+                                                button: {
+                                                    class: 'action-btn edit-btn',
+                                                    text: '✏️',
+                                                    title: 'Edit task',
+                                                    onclick: () => context.webComponent.element.edit()
+                                                }
+                                            },
+                                            {
+                                                button: {
+                                                    class: 'action-btn delete-btn',
+                                                    text: '🗑️',
+                                                    title: 'Delete task',
+                                                    onclick: () => context.webComponent.element.delete()
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    };
+                }
+            };
+        };
+        
+        // Statistics Component
+        const TodoStatsComponent = (props, context) => {
+            const { getState } = context;
+            
+            return {
+                attributes: ['label', 'icon', 'color', 'stat-type'],
+                
+                initialState: {
+                    label: props.label || 'Statistics',
+                    icon: props.icon || '📊',
+                    color: props.color || '#667eea',
+                    statType: props.statType || 'total'
+                },
+                
+                options: {
+                    shadow: true,
+                    shadowMode: 'open',
+                    hostStyles: (props) => ({
+                        '--stat-color': getState('color', '#667eea'),
+                        display: 'block'
+                    }),
+                    shadowStyles: `
+                        :host {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        }
+                        .stats-card {
+                            background: white;
+                            border: 2px solid #e9ecef;
+                            border-radius: 12px;
+                            padding: 20px;
+                            text-align: center;
+                            transition: all 0.3s ease;
+                            position: relative;
+                            overflow: hidden;
+                        }
+                        .stats-card:hover {
+                            border-color: var(--stat-color);
+                            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+                            transform: translateY(-3px);
+                        }
+                        .stats-icon {
+                            font-size: 2em;
+                            margin-bottom: 10px;
+                            display: block;
+                        }
+                        .stats-value {
+                            font-size: 2.5em;
+                            font-weight: 700;
+                            color: var(--stat-color);
+                            margin-bottom: 5px;
+                            line-height: 1;
+                        }
+                        .stats-label {
+                            font-size: 14px;
+                            color: #6c757d;
+                            font-weight: 500;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                    `
+                },
+                
+                hooks: {
+                    onMount(props, context) {
+                        context.setState({
+                            label: props.label || 'Statistics',
+                            icon: props.icon || '📊',
+                            color: props.color || '#667eea',
+                            statType: props.statType || 'total'
+                        });
+                    }
+                },
+                
+                render: (props) => ({
+                    div: {
+                        class: 'stats-card',
+                        children: [
+                            {
+                                span: {
+                                    class: 'stats-icon',
+                                    text: () => getState('icon', '📊')
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'stats-value',
+                                    text: () => {
+                                        const todos = context.getState('todos', []);
+                                        const statType = getState('statType', 'total');
+                                        let value = 0;
+                                        
+                                        switch (statType) {
+                                            case 'total':
+                                                value = todos.length;
+                                                break;
+                                            case 'completed':
+                                                value = todos.filter(todo => todo.completed).length;
+                                                break;
+                                            case 'pending':
+                                                value = todos.filter(todo => !todo.completed).length;
+                                                break;
+                                            case 'high':
+                                                value = todos.filter(todo => todo.priority === 'high' && !todo.completed).length;
+                                                break;
+                                        }
+                                        
+                                        return value.toString();
+                                    }
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'stats-label',
+                                    text: () => getState('label', 'Statistics')
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+        
+        // Todo Form Component
+        const TodoFormComponent = (props, context) => {
+            const { getState, setState } = context;
+            
+            return {
+                options: {
+                    shadow: true,
+                    shadowMode: 'open',
+                    shadowStyles: `
+                        :host {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        }
+                        .form-container {
+                            display: grid;
+                            gap: 15px;
+                        }
+                        .form-row {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 15px;
+                        }
+                        .form-group {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 5px;
+                        }
+                        .form-group.full-width {
+                            grid-column: 1 / -1;
+                        }
+                        label {
+                            font-weight: 600;
+                            color: #4a5568;
+                            font-size: 14px;
+                        }
+                        input, textarea, select {
+                            padding: 12px;
+                            border: 2px solid #e2e8f0;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            transition: all 0.3s ease;
+                            font-family: inherit;
+                        }
+                        input:focus, textarea:focus, select:focus {
+                            outline: none;
+                            border-color: #667eea;
+                            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                        }
+                        textarea {
+                            resize: vertical;
+                            min-height: 80px;
+                        }
+                        .submit-btn {
+                            background: linear-gradient(45deg, #667eea, #764ba2);
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                            font-size: 16px;
+                        }
+                        .submit-btn:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                        }
+                        @media (max-width: 600px) {
+                            .form-row {
+                                grid-template-columns: 1fr;
+                            }
+                        }
+                    `
+                },
+                
+                api: {
+                    reset() {
+                        const form = this.shadowRoot.querySelector('form');
+                        if (form) form.reset();
+                    }
+                },
+                
+                render: () => ({
+                    form: {
+                        class: 'form-container',
+                        onsubmit: (e) => {
+                            e.preventDefault();
+                            const formData = new FormData(e.target);
+                            const todo = {
+                                id: Date.now().toString(),
+                                title: formData.get('title'),
+                                description: formData.get('description'),
+                                priority: formData.get('priority'),
+                                category: formData.get('category'),
+                                dueDate: formData.get('dueDate'),
+                                completed: false,
+                                createdAt: new Date().toISOString()
+                            };
+                            
+                            if (!todo.title.trim()) {
+                                alert('Please enter a task title');
+                                return;
+                            }
+                            
+                            const todos = context.getState('todos', []);
+                            context.setState('todos', [...todos, todo]);
+                            
+                            context.webComponent.emit('todo-added', todo);
+                            context.webComponent.element.reset();
+                        },
+                        children: [
+                            {
+                                div: {
+                                    class: 'form-group full-width',
+                                    children: [
+                                        { label: { for: 'title', text: 'Task Title *' } },
+                                        { 
+                                            input: { 
+                                                id: 'title',
+                                                name: 'title',
+                                                type: 'text',
+                                                placeholder: 'Enter task title...',
+                                                required: true
+                                            } 
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'form-group full-width',
+                                    children: [
+                                        { label: { for: 'description', text: 'Description' } },
+                                        { 
+                                            textarea: { 
+                                                id: 'description',
+                                                name: 'description',
+                                                placeholder: 'Enter task description...'
+                                            } 
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'form-row',
+                                    children: [
+                                        {
+                                            div: {
+                                                class: 'form-group',
+                                                children: [
+                                                    { label: { for: 'priority', text: 'Priority' } },
+                                                    { 
+                                                        select: { 
+                                                            id: 'priority',
+                                                            name: 'priority',
+                                                            children: [
+                                                                { option: { value: 'low', text: 'Low Priority' } },
+                                                                { option: { value: 'medium', text: 'Medium Priority', selected: true } },
+                                                                { option: { value: 'high', text: 'High Priority' } }
+                                                            ]
+                                                        } 
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                class: 'form-group',
+                                                children: [
+                                                    { label: { for: 'category', text: 'Category' } },
+                                                    { 
+                                                        input: { 
+                                                            id: 'category',
+                                                            name: 'category',
+                                                            type: 'text',
+                                                            placeholder: 'e.g. Work, Personal'
+                                                        } 
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                div: {
+                                    class: 'form-row',
+                                    children: [
+                                        {
+                                            div: {
+                                                class: 'form-group',
+                                                children: [
+                                                    { label: { for: 'dueDate', text: 'Due Date' } },
+                                                    { 
+                                                        input: { 
+                                                            id: 'dueDate',
+                                                            name: 'dueDate',
+                                                            type: 'date'
+                                                        } 
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            div: {
+                                                class: 'form-group',
+                                                style: { display: 'flex', alignItems: 'flex-end' },
+                                                children: [
+                                                    { 
+                                                        button: { 
+                                                            type: 'submit',
+                                                            class: 'submit-btn',
+                                                            text: '+ Add Task'
+                                                        } 
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                })
+            };
+        };
+        const App = (props, {getState, setState})=>{
+            const getTodos = ()=>{
+                const todos = getState('todos', []);
+                const filter = getState('filter', 'all');
+                
+                // Filter todos
+                let filteredTodos = todos;
+                switch (filter) {
+                    case 'completed':
+                        filteredTodos = todos.filter(todo => todo.completed);
+                        break;
+                    case 'pending':
+                        filteredTodos = todos.filter(todo => !todo.completed);
+                        break;
+                    case 'high':
+                    case 'medium':
+                    case 'low':
+                        filteredTodos = todos.filter(todo => todo.priority === filter);
+                        break;
+                }
+
+                return filteredTodos;
+            }
+                
+            return {
+                div: {
+                    style: {
+                        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        minHeight: '100vh',
+                        padding: '20px',
+                        color: '#333'
+                    },
+                    children: [
+                        {
+                            div: {
+                                style: {
+                                    maxWidth: '800px',
+                                    margin: '0 auto',
+                                    background: 'rgba(255, 255, 255, 0.95)',
+                                    borderRadius: '20px',
+                                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
+                                    backdropFilter: 'blur(10px)',
+                                    overflow: 'hidden'
+                                },
+                                children: [
+                                    // Header
+                                    {
+                                        div: {
+                                            style: {
+                                                background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                                                color: 'white',
+                                                padding: '30px',
+                                                textAlign: 'center'
+                                            },
+                                            children: [
+                                                {
+                                                    h1: {
+                                                        text: 'Todo Master',
+                                                        style: {
+                                                            fontSize: '2.5em',
+                                                            fontWeight: '700',
+                                                            margin: '0 0 10px 0'
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    p: {
+                                                        text: 'Pure VDOM Todo Application with Reactive WebComponents',
+                                                        style: {
+                                                            fontSize: '1.1em',
+                                                            opacity: '0.9',
+                                                            margin: '0'
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    // Content
+                                    {
+                                        div: {
+                                            style: { padding: '40px' },
+                                            children: [
+                                                // Statistics Grid
+                                                {
+                                                    div: {
+                                                        style: {
+                                                            display: 'grid',
+                                                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                                            gap: '20px',
+                                                            marginBottom: '30px'
+                                                        },
+                                                        children: [
+                                                            {
+                                                                'todo-stats': {
+                                                                    label: 'Total Tasks',
+                                                                    icon: '📋',
+                                                                    color: '#667eea',
+                                                                    'stat-type': 'total'
+                                                                }
+                                                            },
+                                                            {
+                                                                'todo-stats': {
+                                                                    label: 'Completed',
+                                                                    icon: '✅',
+                                                                    color: '#28a745',
+                                                                    'stat-type': 'completed'
+                                                                }
+                                                            },
+                                                            {
+                                                                'todo-stats': {
+                                                                    label: 'Pending',
+                                                                    icon: '⏳',
+                                                                    color: '#ffc107',
+                                                                    'stat-type': 'pending'
+                                                                }
+                                                            },
+                                                            {
+                                                                'todo-stats': {
+                                                                    label: 'High Priority',
+                                                                    icon: '🔥',
+                                                                    color: '#dc3545',
+                                                                    'stat-type': 'high'
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                // Add Todo Form Section
+                                                {
+                                                    div: {
+                                                        style: {
+                                                            background: '#f8f9fa',
+                                                            borderRadius: '12px',
+                                                            padding: '25px',
+                                                            marginBottom: '25px'
+                                                        },
+                                                        children: [
+                                                            {
+                                                                h2: {
+                                                                    text: '+ Add New Task',
+                                                                    style: {
+                                                                        color: '#495057',
+                                                                        marginBottom: '20px',
+                                                                        fontSize: '1.4em'
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                'todo-form': {}
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                // Filter Controls
+                                                {
+                                                    div: {
+                                                        style: {
+                                                            display: 'flex',
+                                                            gap: '10px',
+                                                            margin: '20px 0',
+                                                            flexWrap: 'wrap'
+                                                        },
+                                                        children: [
+                                                            {
+                                                                button: {
+                                                                    text: 'All Tasks',
+                                                                    onclick: () => setFilter('all'),
+                                                                    style: () => ({
+                                                                        padding: '8px 16px',
+                                                                        border: '2px solid #dee2e6',
+                                                                        background: getState('filter') === 'all' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'white',
+                                                                        color: getState('filter') === 'all' ? 'white' : '#333',
+                                                                        borderRadius: '20px',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'all 0.3s ease',
+                                                                        fontWeight: '500'
+                                                                    })
+                                                                }
+                                                            },
+                                                            {
+                                                                button: {
+                                                                    text: 'Pending',
+                                                                    onclick: () => setFilter('pending'),
+                                                                    style: () => ({
+                                                                        padding: '8px 16px',
+                                                                        border: '2px solid #dee2e6',
+                                                                        background: getState('filter') === 'pending' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'white',
+                                                                        color: getState('filter') === 'pending' ? 'white' : '#333',
+                                                                        borderRadius: '20px',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'all 0.3s ease',
+                                                                        fontWeight: '500'
+                                                                    })
+                                                                }
+                                                            },
+                                                            {
+                                                                button: {
+                                                                    text: 'Completed',
+                                                                    onclick: () => setFilter('completed'),
+                                                                    style: () => ({
+                                                                        padding: '8px 16px',
+                                                                        border: '2px solid #dee2e6',
+                                                                        background: getState('filter') === 'completed' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'white',
+                                                                        color: getState('filter') === 'completed' ? 'white' : '#333',
+                                                                        borderRadius: '20px',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'all 0.3s ease',
+                                                                        fontWeight: '500'
+                                                                    })
+                                                                }
+                                                            },
+                                                            {
+                                                                button: {
+                                                                    text: 'High Priority',
+                                                                    onclick: () => setFilter('high'),
+                                                                    style: () => ({
+                                                                        padding: '8px 16px',
+                                                                        border: '2px solid #dee2e6',
+                                                                        background: getState('filter') === 'high' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'white',
+                                                                        color: getState('filter') === 'high' ? 'white' : '#333',
+                                                                        borderRadius: '20px',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'all 0.3s ease',
+                                                                        fontWeight: '500'
+                                                                    })
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                // Bulk Actions
+                                                {
+                                                    div: {
+                                                        style: {
+                                                            display: 'flex',
+                                                            gap: '10px',
+                                                            margin: '20px 0',
+                                                            flexWrap: 'wrap'
+                                                        },
+                                                        children: [
+                                                            {
+                                                                button: {
+                                                                    text: 'Mark All Complete',
+                                                                    onclick: markAllComplete,
+                                                                    style: {
+                                                                        padding: '10px 20px',
+                                                                        border: 'none',
+                                                                        borderRadius: '6px',
+                                                                        cursor: 'pointer',
+                                                                        fontWeight: '500',
+                                                                        transition: 'all 0.3s ease',
+                                                                        color: 'white',
+                                                                        background: 'linear-gradient(45deg, #28a745, #20c997)'
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                button: {
+                                                                    text: 'Clear Completed',
+                                                                    onclick: clearCompleted,
+                                                                    style: {
+                                                                        padding: '10px 20px',
+                                                                        border: 'none',
+                                                                        borderRadius: '6px',
+                                                                        cursor: 'pointer',
+                                                                        fontWeight: '500',
+                                                                        transition: 'all 0.3s ease',
+                                                                        color: 'white',
+                                                                        background: 'linear-gradient(45deg, #dc3545, #c82333)'
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                button: {
+                                                                    text: 'Load Sample Data',
+                                                                    onclick: importSampleData,
+                                                                    style: {
+                                                                        padding: '10px 20px',
+                                                                        border: 'none',
+                                                                        borderRadius: '6px',
+                                                                        cursor: 'pointer',
+                                                                        fontWeight: '500',
+                                                                        transition: 'all 0.3s ease',
+                                                                        color: 'white',
+                                                                        background: 'linear-gradient(45deg, #6c757d, #495057)'
+                                                                    }
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                // Todo List Section
+                                                {
+                                                    div: {
+                                                        style: {
+                                                            background: '#f8f9fa',
+                                                            borderRadius: '12px',
+                                                            padding: '25px',
+                                                            marginBottom: '25px'
+                                                        },
+                                                        children: [
+                                                            {
+                                                                h2: {
+                                                                    text:()=> `📝 Tasks (${getTodos().length})`,
+                                                                    style: {
+                                                                        color: '#495057',
+                                                                        marginBottom: '20px',
+                                                                        fontSize: '1.4em'
+                                                                    }
+                                                                }
+                                                            },
+                                                            {
+                                                                div: {
+                                                                    style: {
+                                                                        display: 'flex',
+                                                                        flexDirection: 'column',
+                                                                        gap: '10px',
+                                                                        minHeight: '100px'
+                                                                    },
+                                                                    children: ()=>[
+                                                                    ...getTodos().map(todo => ({
+                                                                        'todo-item': {
+                                                                            'todo-id': todo.id,
+                                                                            title: todo.title,
+                                                                            description: todo.description || '',
+                                                                            completed: todo.completed.toString(),
+                                                                            priority: todo.priority,
+                                                                            category: todo.category || '',
+                                                                            'due-date': todo.dueDate || ''
+                                                                        }
+                                                                    }))
+                                                                    ]
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+            
+        
+        }
+        // Initialize Juris with WebComponents
+        const juris = new Juris({
+            features: {
+                webComponentFactory: JurisWebComponentFactory
+            },
+            components:{
+            App
+            },
+            webComponents: {
+                'todo-item': TodoItemComponent,
+                'todo-stats': TodoStatsComponent,
+                'todo-form': TodoFormComponent
+            },
+            states: {
+                todos: [],
+                filter: 'all'
+            },
+            layout: {App:{}}
+        });
+        
+        // Application functions
+        function setFilter(filterType) {
+            juris.setState('filter', filterType);
+        }
+        
+        function markAllComplete() {
+            const todos = juris.getState('todos', []);
+            const updatedTodos = todos.map(todo => ({ ...todo, completed: true }));
+            juris.setState('todos', updatedTodos);
+        }
+        
+        function clearCompleted() {
+            const todos = juris.getState('todos', []);
+            const updatedTodos = todos.filter(todo => !todo.completed);
+            juris.setState('todos', updatedTodos);
+        }
+        
+        function importSampleData() {
+            const sampleTodos = [
+                {
+                    id: '1',
+                    title: 'Review project proposal',
+                    description: 'Go through the Q4 project proposal and provide feedback to the team',
+                    priority: 'high',
+                    category: 'Work',
+                    completed: false,
+                    dueDate: '2024-01-15',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: '2',
+                    title: 'Buy groceries',
+                    description: 'Milk, bread, eggs, vegetables for the week',
+                    priority: 'medium',
+                    category: 'Personal',
+                    completed: false,
+                    dueDate: '2024-01-10',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: '3',
+                    title: 'Finish reading book',
+                    description: 'Complete "The Art of War" - currently on chapter 8',
+                    priority: 'low',
+                    category: 'Learning',
+                    completed: true,
+                    dueDate: null,
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: '4',
+                    title: 'Update portfolio website',
+                    description: 'Add recent projects and update the about section',
+                    priority: 'high',
+                    category: 'Career',
+                    completed: false,
+                    dueDate: '2024-01-12',
+                    createdAt: new Date().toISOString()
+                }
+            ];
+            
+            juris.setState('todos', sampleTodos);
+        }
+        
+        // Event listeners for todo actions
+        document.addEventListener('todo-toggled', (e) => {
+            const todos = juris.getState('todos', []);
+            const updatedTodos = todos.map(todo => 
+                todo.id === e.detail.id ? { ...todo, completed: e.detail.completed } : todo
+            );
+            juris.setState('todos', updatedTodos);
+        });
+        
+        document.addEventListener('todo-delete', (e) => {
+            const todos = juris.getState('todos', []);
+            const updatedTodos = todos.filter(todo => todo.id !== e.detail.id);
+            juris.setState('todos', updatedTodos);
+        });
+        
+        document.addEventListener('todo-edit', (e) => {
+            const todos = juris.getState('todos', []);
+            const todo = todos.find(t => t.id === e.detail.id);
+            if (todo) {
+                const newTitle = prompt('Edit task title:', todo.title);
+                if (newTitle !== null && newTitle.trim()) {
+                    const updatedTodos = todos.map(t => 
+                        t.id === todo.id ? { ...t, title: newTitle.trim() } : t
+                    );
+                    juris.setState('todos', updatedTodos);
+                }
+            }
+        });
+        
+        // Render the application
+        juris.render('#app');
+        
+        console.log('Pure VDOM Todo App initialized');
+    </script>
+</body>
+</html>
