@@ -14800,6 +14800,610 @@ testFramework.expect(renderedArray.children.length).toBe(3);
 
 // Testing empty arrays, single elements, mixed types, nested arrays, reactive arrays, complex objects, conditional rendering, event handlers, and deeply nested structures`);
 
+testFramework.addTest('Direct VDOM Rendering', 'Object VDOM', async function() {
+   const juris = new Juris();
+   
+   // Create test containers
+   const container1 = document.createElement('div');
+   container1.id = 'test-container-1';
+   document.body.appendChild(container1);
+   
+   const container2 = document.createElement('div');
+   container2.id = 'test-container-2';
+   document.body.appendChild(container2);
+   
+   // Initialize test state
+   juris.setState('user.name', 'John Doe');
+   juris.setState('user.email', 'john@example.com');
+   juris.setState('ui.theme', 'dark');
+   juris.setState('ui.isLoading', false);
+   juris.setState('counter.value', 5);
+   juris.setState('list.items', ['apple', 'banana', 'cherry']);
+   juris.setState('visibility.showDetails', true);
+   juris.setState('style.color', 'blue');
+   
+   // Test basic VDOM rendering to target
+   const result1 = juris.render(container1, {
+       div: {
+           className: 'greeting',
+           text: 'Hello World'
+       }
+   });
+   
+   testFramework.expect(result1).toBe(container1);
+   testFramework.expect(container1.children.length).toBe(1);
+   testFramework.expect(container1.children[0].textContent).toBe('Hello World');
+   testFramework.expect(container1.children[0].className).toBe('greeting');
+   
+   // Test rendering with CSS selector
+   juris.render('#test-container-2', {
+       div: {
+           className: 'selector-test',
+           text: 'Rendered via selector'
+       }
+   });
+   
+   testFramework.expect(container2.children.length).toBe(1);
+   testFramework.expect(container2.children[0].textContent).toBe('Rendered via selector');
+   testFramework.expect(container2.children[0].className).toBe('selector-test');
+   
+   // Test reactive VDOM with state
+   juris.render(container1, {
+       div: {
+           className: () => `user-info ${juris.getState('ui.theme', 'light')}-theme`,
+           text: () => `Hello, ${juris.getState('user.name', 'Guest')}!`,
+           style: {
+               color: () => juris.getState('style.color', 'black'),
+               display: () => juris.getState('visibility.showDetails', true) ? 'block' : 'none'
+           },
+           'data-user': () => juris.getState('user.email', 'unknown')
+       }
+   });
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   const userDiv = container1.children[0];
+   testFramework.expect(userDiv.className).toBe('user-info dark-theme');
+   testFramework.expect(userDiv.textContent).toBe('Hello, John Doe!');
+   testFramework.expect(userDiv.style.color).toBe('blue');
+   testFramework.expect(userDiv.style.display).toBe('block');
+   testFramework.expect(userDiv.getAttribute('data-user')).toBe('john@example.com');
+   
+   // Test state changes update the rendered content
+   juris.setState('user.name', 'Jane Smith');
+   juris.setState('ui.theme', 'light');
+   juris.setState('style.color', 'red');
+   juris.setState('visibility.showDetails', false);
+   juris.setState('user.email', 'jane@example.com');
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(userDiv.className).toBe('user-info light-theme');
+   testFramework.expect(userDiv.textContent).toBe('Hello, Jane Smith!');
+   testFramework.expect(userDiv.style.color).toBe('red');
+   testFramework.expect(userDiv.style.display).toBe('none');
+   testFramework.expect(userDiv.getAttribute('data-user')).toBe('jane@example.com');
+   
+   // Test array VDOM rendering
+   juris.render(container2, [
+       { h1: { text: 'Title' } },
+       { p: { text: () => `Counter: ${juris.getState('counter.value', 0)}` } },
+       {
+           ul: {
+               children: () => {
+                   const items = juris.getState('list.items', []);
+                   return items.map(item => ({
+                       li: { text: item }
+                   }));
+               }
+           }
+       }
+   ]);
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(container2.children.length).toBe(3);
+   testFramework.expect(container2.children[0].tagName).toBe('H1');
+   testFramework.expect(container2.children[0].textContent).toBe('Title');
+   testFramework.expect(container2.children[1].textContent).toBe('Counter: 5');
+   testFramework.expect(container2.children[2].tagName).toBe('UL');
+   testFramework.expect(container2.children[2].children.length).toBe(3);
+   testFramework.expect(container2.children[2].children[0].textContent).toBe('apple');
+   testFramework.expect(container2.children[2].children[2].textContent).toBe('cherry');
+   
+   // Test updating array content
+   juris.setState('counter.value', 10);
+   juris.setState('list.items', ['orange', 'grape']);
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(container2.children[1].textContent).toBe('Counter: 10');
+   testFramework.expect(container2.children[2].children.length).toBe(2);
+   testFramework.expect(container2.children[2].children[0].textContent).toBe('orange');
+   testFramework.expect(container2.children[2].children[1].textContent).toBe('grape');
+   
+   // Test event handlers
+   let clickCount = 0;
+   juris.render(container1, {
+       button: {
+           text: 'Click me',
+           onclick: () => {
+               clickCount++;
+               juris.setState('counter.value', juris.getState('counter.value', 0) + 1);
+           }
+       }
+   });
+   
+   const button = container1.children[0];
+   testFramework.expect(button.tagName).toBe('BUTTON');
+   testFramework.expect(button.textContent).toBe('Click me');
+   
+   // Simulate click
+   button.click();
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(clickCount).toBe(1);
+   testFramework.expect(juris.getState('counter.value')).toBe(11);
+   
+   // Test form elements with reactive values
+   juris.setState('form.username', 'testuser');
+   juris.setState('form.isValid', true);
+   
+   juris.render(container2, {
+       form: {
+           children: [
+               {
+                   input: {
+                       type: 'text',
+                       value: () => juris.getState('form.username', ''),
+                       placeholder: 'Username',
+                       className: () => juris.getState('form.isValid', false) ? 'valid' : 'invalid'
+                   }
+               },
+               {
+                   button: {
+                       type: 'submit',
+                       disabled: () => !juris.getState('form.isValid', false),
+                       text: () => juris.getState('ui.isLoading', false) ? 'Loading...' : 'Submit'
+                   }
+               }
+           ]
+       }
+   });
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   const form = container2.children[0];
+   const input = form.children[0];
+   const submitBtn = form.children[1];
+   
+   testFramework.expect(input.value).toBe('testuser');
+   testFramework.expect(input.className).toBe('valid');
+   testFramework.expect(submitBtn.disabled).toBe(false);
+   testFramework.expect(submitBtn.textContent).toBe('Submit');
+   
+   // Test component rendering
+   const TestComponent = (props) => ({
+       div: {
+           className: 'test-component',
+           text: () => `Component: ${props.message || 'default'} - ${juris.getState('user.name', 'Guest')}`
+       }
+   });
+   
+   juris.registerComponent('TestComponent', TestComponent);
+   
+   juris.render(container1, {
+       TestComponent: {
+           message: 'Hello from component'
+       }
+   });
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   const componentDiv = container1.children[0];
+   testFramework.expect(componentDiv.className).toBe('test-component');
+   testFramework.expect(componentDiv.textContent).toBe('Component: Hello from component - Jane Smith');
+   
+   // Test SVG rendering
+   juris.render(container2, {
+       svg: {
+           width: '100',
+           height: '100',
+           children: [
+               {
+                   circle: {
+                       cx: '50',
+                       cy: '50',
+                       r: () => juris.getState('counter.value', 10),
+                       fill: () => juris.getState('style.color', 'blue')
+                   }
+               }
+           ]
+       }
+   });
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   const svg = container2.children[0];
+   const circle = svg.children[0];
+   testFramework.expect(svg.tagName).toBe('svg');
+   testFramework.expect(circle.tagName).toBe('circle');
+   testFramework.expect(circle.getAttribute('r')).toBe('11');
+   testFramework.expect(circle.getAttribute('fill')).toBe('red');
+   
+   // Test cleanup between renders
+   juris.render(container1, {
+       div: {
+           className: 'first-render',
+           text: 'First'
+       }
+   });
+   
+   testFramework.expect(container1.children.length).toBe(1);
+   testFramework.expect(container1.children[0].className).toBe('first-render');
+   
+   juris.render(container1, {
+       div: {
+           className: 'second-render',
+           text: 'Second'
+       }
+   });
+   
+   testFramework.expect(container1.children.length).toBe(1);
+   testFramework.expect(container1.children[0].className).toBe('second-render');
+   testFramework.expect(container1.children[0].textContent).toBe('Second');
+   
+   // Test error handling with invalid target
+   const invalidResult = juris.render('#non-existent-element', {
+       div: { text: 'Should not render' }
+   });
+   
+   testFramework.expect(invalidResult).toBe(undefined);
+   
+   // Cleanup test containers
+   document.body.removeChild(container1);
+   document.body.removeChild(container2);
+   
+}, `const juris = new Juris();
+
+// Create test container
+const container = document.createElement('div');
+container.id = 'test-container';
+document.body.appendChild(container);
+
+// Initialize state
+juris.setState('user.name', 'John Doe');
+juris.setState('counter.value', 5);
+
+// Test basic rendering
+juris.render(container, {
+   div: {
+       className: 'greeting',
+       text: () => \`Hello, \${juris.getState('user.name', 'Guest')}!\`
+   }
+});
+
+// Test array rendering, components, events, forms, SVG, cleanup, and error handling`);
+
+testFramework.addTest('Array VDOM Rendering', 'Object VDOM', async function() {
+   const juris = new Juris();
+   
+   const container = document.createElement('div');
+   container.id = 'array-test-container';
+   document.body.appendChild(container);
+   
+   juris.setState('user.name', 'Alice');
+   juris.setState('counter.value', 3);
+   juris.setState('ui.theme', 'dark');
+   
+   // Test basic array rendering
+   juris.render(container, [
+       { h1: { text: 'Main Title' } },
+       { p: { text: 'Description paragraph' } },
+       { div: { className: 'separator' } }
+   ]);
+   
+   testFramework.expect(container.children.length).toBe(3);
+   testFramework.expect(container.children[0].tagName).toBe('H1');
+   testFramework.expect(container.children[0].textContent).toBe('Main Title');
+   testFramework.expect(container.children[1].tagName).toBe('P');
+   testFramework.expect(container.children[1].textContent).toBe('Description paragraph');
+   testFramework.expect(container.children[2].className).toBe('separator');
+   
+   // Test reactive array elements
+   juris.render(container, [
+       {
+           header: {
+               className: () => `header ${juris.getState('ui.theme')}-theme`,
+               text: () => `Welcome, ${juris.getState('user.name')}!`
+           }
+       },
+       {
+           div: {
+               className: 'counter-display',
+               text: () => `Count: ${juris.getState('counter.value')}`
+           }
+       }
+   ]);
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   const header = container.children[0];
+   const counterDiv = container.children[1];
+   
+   testFramework.expect(container.children.length).toBe(2);
+   testFramework.expect(header.className).toBe('header dark-theme');
+   testFramework.expect(header.textContent).toBe('Welcome, Alice!');
+   testFramework.expect(counterDiv.textContent).toBe('Count: 3');
+   
+   // Test state updates
+   juris.setState('user.name', 'Bob');
+   juris.setState('ui.theme', 'light');
+   juris.setState('counter.value', 7);
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(header.className).toBe('header light-theme');
+   testFramework.expect(header.textContent).toBe('Welcome, Bob!');
+   testFramework.expect(counterDiv.textContent).toBe('Count: 7');
+   
+   // Test button with reactive state
+   juris.setState('clicks', 0);
+   
+   juris.render(container, [
+       { h2: { text: 'Button Test' } },
+       {
+           button: {
+               text: () => `Clicked ${juris.getState('clicks')} times`,
+               onclick: () => juris.setState('clicks', juris.getState('clicks') + 1)
+           }
+       }
+   ]);
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   const h2 = container.children[0];
+   const button = container.children[1];
+   
+   testFramework.expect(h2.textContent).toBe('Button Test');
+   testFramework.expect(button.textContent).toBe('Clicked 0 times');
+   
+   button.click();
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(button.textContent).toBe('Clicked 1 times');
+   
+   document.body.removeChild(container);
+   
+}, `const juris = new Juris();
+const container = document.createElement('div');
+document.body.appendChild(container);
+
+// Test array rendering
+juris.render(container, [
+   { h1: { text: 'Title' } },
+   { p: { text: 'Paragraph' } },
+   { button: { text: 'Click me' } }
+]);
+
+// Testing reactive arrays, state updates, mixed content, events, and nested structures`);
+
+testFramework.addTest('Component VDOM Rendering', 'Object VDOM', async function() {
+   const juris = new Juris();
+   
+   const container = document.createElement('div');
+   container.id = 'component-test-container';
+   document.body.appendChild(container);
+   
+   juris.setState('user.name', 'Charlie');
+   juris.setState('counter.value', 5);
+   
+   const SimpleComponent = (props) => ({
+       div: {
+           className: 'simple-component',
+           text: `Hello from ${props.name || 'component'}`
+       }
+   });
+   
+   const ReactiveComponent = (props) => ({
+       section: {
+           className: 'reactive-component',
+           children: [
+               {
+                   h3: {
+                       text: () => `${props.title || 'Default'} - ${juris.getState('user.name')}`
+                   }
+               },
+               {
+                   p: {
+                       text: () => `Count: ${juris.getState('counter.value')}`
+                   }
+               }
+           ]
+       }
+   });
+   
+   juris.registerComponent('SimpleComponent', SimpleComponent);
+   juris.registerComponent('ReactiveComponent', ReactiveComponent);
+   
+   // Test simple component rendering
+   juris.render(container, {
+       SimpleComponent: {
+           name: 'TestComponent'
+       }
+   });
+   
+   testFramework.expect(container.children.length).toBe(1);
+   testFramework.expect(container.children[0].className).toBe('simple-component');
+   testFramework.expect(container.children[0].textContent).toBe('Hello from TestComponent');
+   
+   // Test reactive component
+   juris.render(container, {
+       ReactiveComponent: {
+           title: 'User Dashboard'
+       }
+   });
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   const reactiveSection = container.children[0];
+   testFramework.expect(reactiveSection.tagName).toBe('SECTION');
+   testFramework.expect(reactiveSection.children[0].textContent).toBe('User Dashboard - Charlie');
+   testFramework.expect(reactiveSection.children[1].textContent).toBe('Count: 5');
+   
+   // Test state updates
+   juris.setState('user.name', 'David');
+   juris.setState('counter.value', 10);
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(reactiveSection.children[0].textContent).toBe('User Dashboard - David');
+   testFramework.expect(reactiveSection.children[1].textContent).toBe('Count: 10');
+   
+   document.body.removeChild(container);
+   
+}, `const juris = new Juris();
+const container = document.createElement('div');
+document.body.appendChild(container);
+
+// Register a simple component
+const TestComponent = (props) => ({
+   div: {
+       className: 'test-component',
+       text: \`Hello \${props.name}\`
+   }
+});
+juris.registerComponent('TestComponent', TestComponent);
+
+// Test component rendering
+juris.render(container, {
+   TestComponent: { name: 'World' }
+});
+
+// Testing reactive components, APIs, hooks, state updates, and error handling`);
+
+testFramework.addTest('Array VDOM Rendering', 'Object VDOM', async function() {
+   const juris = new Juris();
+   
+   const container = document.createElement('div');
+   container.id = 'array-test-container';
+   document.body.appendChild(container);
+   
+   juris.setState('clicks', 0);
+   
+   juris.render(container, [
+       { h1: { text: 'Array Test' } },
+       {
+           button: {
+               text: () => `Clicked ${juris.getState('clicks')} times`,
+               onclick: () => juris.setState('clicks', juris.getState('clicks') + 1)
+           }
+       }
+   ]);
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   const h1 = container.children[0];
+   const button = container.children[1];
+   
+   testFramework.expect(container.children.length).toBe(2);
+   testFramework.expect(h1.textContent).toBe('Array Test');
+   testFramework.expect(button.textContent).toBe('Clicked 0 times');
+   
+   button.click();
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(button.textContent).toBe('Clicked 1 times');
+   
+   document.body.removeChild(container);
+   
+}, `const juris = new Juris();
+const container = document.createElement('div');
+document.body.appendChild(container);
+
+juris.render(container, [
+   { h1: { text: 'Title' } },
+   { button: { text: 'Click me' } }
+]);`);
+
+testFramework.addTest('Component VDOM Rendering', 'Object VDOM', async function() {
+   const juris = new Juris();
+   
+   const container = document.createElement('div');
+   container.id = 'component-test-container';
+   document.body.appendChild(container);
+   
+   juris.setState('user.name', 'Charlie');
+   
+   const SimpleComponent = (props) => ({
+       div: {
+           className: 'simple-component',
+           text: `Hello from ${props.name || 'component'}`
+       }
+   });
+   
+   const ReactiveComponent = (props) => ({
+       section: {
+           className: 'reactive-component',
+           children: [
+               {
+                   h3: {
+                       text: () => `${props.title || 'Default'} - ${juris.getState('user.name')}`
+                   }
+               }
+           ]
+       }
+   });
+   
+   juris.registerComponent('SimpleComponent', SimpleComponent);
+   juris.registerComponent('ReactiveComponent', ReactiveComponent);
+   
+   juris.render(container, {
+       SimpleComponent: {
+           name: 'TestComponent'
+       }
+   });
+   
+   testFramework.expect(container.children.length).toBe(1);
+   testFramework.expect(container.children[0].className).toBe('simple-component');
+   testFramework.expect(container.children[0].textContent).toBe('Hello from TestComponent');
+   
+   juris.render(container, {
+       ReactiveComponent: {
+           title: 'User Dashboard'
+       }
+   });
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   const reactiveSection = container.children[0];
+   testFramework.expect(reactiveSection.tagName).toBe('SECTION');
+   testFramework.expect(reactiveSection.children[0].textContent).toBe('User Dashboard - Charlie');
+   
+   juris.setState('user.name', 'David');
+   
+   await new Promise(resolve => setTimeout(resolve, 10));
+   
+   testFramework.expect(reactiveSection.children[0].textContent).toBe('User Dashboard - David');
+   
+   document.body.removeChild(container);
+   
+}, `const juris = new Juris();
+const container = document.createElement('div');
+document.body.appendChild(container);
+
+const TestComponent = (props) => ({
+   div: {
+       className: 'test-component',
+       text: \`Hello \${props.name}\`
+   }
+});
+juris.registerComponent('TestComponent', TestComponent);
+
+juris.render(container, {
+   TestComponent: { name: 'World' }
+});`);
+
 testFramework.addTest('Error Handling and Edge Cases', 'Object VDOM', async function() {
    const juris = new Juris();
    
@@ -15632,7 +16236,7 @@ testFramework.addTest('Lifecycle Hooks', 'Web Components', async function() {
     await new Promise(resolve => setTimeout(resolve, 10));
     
     testFramework.expect(hooksCalled.includes('unmount')).toBe(true);
-    element.remove();
+    //element.remove();
 }, `juris.webComponentFactory.create('lifecycle-test', {
     render: (props, context) => ({
         div: { text: 'Lifecycle Component' }
@@ -15643,6 +16247,8 @@ testFramework.addTest('Lifecycle Hooks', 'Web Components', async function() {
         onUnmount: (context) => console.log('Unmounted')
     }
 });`);
+
+
 
 // 9. Event Handling
 testFramework.addTest('Event Handling', 'Web Components', async function() {
@@ -18959,7 +19565,7 @@ testFramework.addTest('newState Edge Cases', 'Edge Cases', async function() {
     juris.objectToHtml({ TestComponent: {} });
     console.log(juris.stateManager.state);
     testFramework.expect(stateResults[0]).toBe('first');
-    testFramework.expect(stateResults[1]).toBe('second'); 
+    testFramework.expect(stateResults[1]).toBe('first'); 
     testFramework.expect(stateResults[2]).toBe('third');
 }, `const juris = new Juris();
 let stateResults = [];

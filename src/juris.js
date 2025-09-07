@@ -649,20 +649,20 @@ class ComponentManager {
         return { comptId, compStates };
     }
 
-    #getCompCxt(compId, states) {
-        let ctx = this.juris.createContext();
-        ctx.newState = (key, initVal) => {
-            let path = `##local.${compId}.${key}`;
-            if (this.juris.getSM().getState(path, Symbol('not-found')) === Symbol('not-found')) {
-                this.juris.getSM().setState(path, initVal);
-            }
-            states.add(path);
-            return [
-                () => this.juris.getSM().getState(path, initVal),
-                val => this.juris.getSM().setState(path, val)
-            ];
-        };
-        return ctx;
+    #getCompCxt(comptId, compStates) {
+      const context = this.juris.createContext();
+      context.newState = (key, initialValue) => {
+          const statePath = `##local.${comptId}.${key}`;
+          if (this.juris.stateManager.getState(statePath) === null) {
+              this.juris.stateManager.setState(statePath, initialValue);
+          }
+          compStates.add(statePath);
+          return [
+              () => this.juris.stateManager.getState(statePath, initialValue),
+              value => this.juris.stateManager.setState(statePath, value)
+          ];
+      };
+      return context;
     }
 
     #createWithAsyncProps(name, compFn, props, targetContainer = null) {
