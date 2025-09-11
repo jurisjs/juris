@@ -607,6 +607,8 @@ class ComponentManager {
           return this.#handleAsyncComp(promisify(result), name, props, compStates, targetContainer);
         }
         return this.#procCompResult(result, name, props, compStates, targetContainer);
+       //return this.#newCompFrag(result, name, props, compStates, targetContainer)
+        //return this.#callComponentFunction(compFn, props, context)
       } catch (error) {
         log.ee && console.error(log.e('Component creation failed!', { name, error: error.message }, 'application'));
         return this.#newErrElm(name, error);
@@ -639,28 +641,28 @@ class ComponentManager {
     }
 
     #newCompId(name) {
-        if (!this.comps.has(name)) {
-            this.comps.set(name, 0);
-        }
-        let instanceIndex = this.comps.get(name) + 1;
-        this.comps.set(name, instanceIndex);
-        let comptId = `${name}#${instanceIndex}`;
-        let compStates = new Set();
-        return { comptId, compStates };
+      if (!this.comps.has(name)) {
+          this.comps.set(name, 0);
+      }
+      let instanceIndex = this.comps.get(name) + 1;
+      this.comps.set(name, instanceIndex);
+      let comptId = `${name}#${instanceIndex}`;
+      let compStates = new Set();
+      return { comptId, compStates };
     }
 
     #getCompCxt(comptId, compStates) {
       const context = this.juris.createContext();
       context.newState = (key, initialValue) => {
-          const statePath = `##local.${comptId}.${key}`;
-          if (this.juris.stateManager.getState(statePath) === null) {
-              this.juris.stateManager.setState(statePath, initialValue);
-          }
-          compStates.add(statePath);
-          return [
-              () => this.juris.stateManager.getState(statePath, initialValue),
-              value => this.juris.stateManager.setState(statePath, value)
-          ];
+        const statePath = `##local.${comptId}.${key}`;
+        if (this.juris.stateManager.getState(statePath) === null) {
+            this.juris.stateManager.setState(statePath, initialValue);
+        }
+        compStates.add(statePath);
+        return [
+            () => this.juris.stateManager.getState(statePath, initialValue),
+            value => this.juris.stateManager.setState(statePath, value)
+        ];
       };
       return context;
     }
@@ -688,28 +690,28 @@ class ComponentManager {
     }
 
     async #resolveAsyncProps(props) {
-        let key = this.#newKey(props);
-        let cached = this.asyncPropsCache.get(key);
-        if (cached && Date.now() - cached.timestamp < 5000) {
-            return cached.props;
+      let key = this.#newKey(props);
+      let cached = this.asyncPropsCache.get(key);
+      if (cached && Date.now() - cached.timestamp < 5000) {
+          return cached.props;
+      }
+      let resolved = {};
+      let keys = Object.keys(props);
+      for (let i = 0; i < keys.length; i++) {
+        let k = keys[i];
+        let v = props[k];
+        if (v?.then) {
+          try {
+              resolved[k] = await v;
+          } catch (err) {
+              resolved[k] = { __asyncError: err.message };
+          }
+        } else {
+          resolved[k] = v;
         }
-        let resolved = {};
-        let keys = Object.keys(props);
-        for (let i = 0; i < keys.length; i++) {
-            let k = keys[i];
-            let v = props[k];
-            if (v?.then) {
-                try {
-                    resolved[k] = await v;
-                } catch (err) {
-                    resolved[k] = { __asyncError: err.message };
-                }
-            } else {
-                resolved[k] = v;
-            }
-        }
-        this.asyncPropsCache.set(key, { props: resolved, timestamp: Date.now() });
-        return resolved;
+      }
+      this.asyncPropsCache.set(key, { props: resolved, timestamp: Date.now() });
+      return resolved;
     }
 
     #createSyncComponent(name, compFn, props, targetContainer = null) {
@@ -747,33 +749,101 @@ class ComponentManager {
     #procCompResult(result, name, props, states, targetContainer = null) {
       if (Array.isArray(result)) {
         return this.#newCompFrag(result, name, props, states);
+      }      
+      if (!result || typeof result !== 'object') {
+        let el = this.juris.getDR().render(result, name);
+        return this.#finalizeElement(el, name, states, result);
       }
-      if (result && typeof result === 'object') {
-        if (this.#hasHooks(result)) {
-          return this.#newHooksComp(result, name, props, states, targetContainer);
-        }
-        if (typeof result.render === 'function' && !this.#hasHooks(result)) {
-          return this.#newRenderComp(result, name, props, states, targetContainer);
-        }
-        let keys = Object.keys(result);
-        if (keys.length === 1 && typeof keys[0] === 'string' && keys[0].length > 0) {
-          let el = this.juris.getDR().render(result, name);
-          if (el && states.size > 0) {
-            this.compStates.set(el, states);
-          }
-          if (result.api && typeof result.api === 'object' && el) {
-            el.api = result.api;
-          }
-          if (el && el.setAttribute) {
-            el.setAttribute('data-juris-component', name);
-            el._jurisComponent = name;
-          }
-          return el;
-        }
+      let hasLifecycle = this.#hasHooks(result) || typeof result.render === 'function';
+      
+      if (hasLifecycle) {
+        return this.#createManagedComponent(result, name, props, states, targetContainer);
       }
+      let keys = Object.keys(result);
+      if (keys.length === 1 && typeof keys[0] === 'string' && keys[0].length > 0) {
+        let el = this.juris.getDR().render(result, name);
+        return this.#finalizeElement(el, name, states, result);
+      }
+
       let el = this.juris.getDR().render(result, name);
+      return this.#finalizeElement(el, name, states, result);
+    }
+
+    #createManagedComponent(result, name, props, states, targetContainer = null) {
+      let inst = this.#newComp(result, name, props);
+      let cont = targetContainer || document.createElement('div');
+      let isExternal = !!targetContainer;      
+      if (!isExternal) {
+        cont.setAttribute('data-juris-component', name);
+      }
+      let updateRender = () => {
+        if (cont._reactiveSubscriptions) {
+          cont._reactiveSubscriptions.forEach(unsub => unsub());
+          cont._reactiveSubscriptions = [];
+        }
+        let { result: res, deps } = this.juris.getSM().track(() => {
+          if (inst.render) {
+            return inst.render(cont);
+          }
+          return result;
+        });
+        if (res?.then) {
+          cont.innerHTML = '<div class="juris-loading">Loading...</div>';
+          promisify(res).then(resolved => {
+            this.#updateContainerContent(cont, resolved, name, isExternal);
+          }).catch(err => {
+            log.ee && console.error(`Async render error for ${name}:`, err);
+            cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
+          });
+        } else {
+          this.#updateContainerContent(cont, res, name, isExternal);
+        }
+        deps.forEach(path => {
+          let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
+          if (!cont._reactiveSubscriptions) cont._reactiveSubscriptions = [];
+          cont._reactiveSubscriptions.push(unsub);
+        });
+      };
+      updateRender();
+      this.#setupUnifiedComp(cont, inst, states, name, isExternal);      
+      return cont;
+    }
+
+    #updateContainerContent(cont, content, name, isExternal) {
+      let children = Array.from(cont.children);
+      children.forEach(child => this.cleanup(child));      
+      if (isExternal) {
+        cont.innerHTML = '';
+      } else {
+        cont.innerHTML = '';
+      }
+      let el = this.juris.getDR().render(content);
+      cont.appendChild(el);
+    }
+
+    #setupUnifiedComp(el, inst, states, name, isExternal = false) {
+      inst.isExternalContainer = isExternal;
+      this.insts.set(el, inst);      
+      if (states?.size > 0) {
+        this.compStates.set(el, states);
+      }      
+      if (inst.api && typeof inst.api === 'object') {
+        el.api = inst.api;
+        this.namedComps.set(name, { elm: el, instance: inst });
+      }
+      let hooks = inst.hooks || {};
+      if (hooks.onMount || inst.onMount) {
+        let mountHook = hooks.onMount || inst.onMount;
+        setTimeout(() => this.#runHook(mountHook, el, name, 'onMount'), 0);
+      }
+    }
+
+    #finalizeElement(el, name, states, result) {
       if (el && states.size > 0) {
         this.compStates.set(el, states);
+      }
+      if (result.api && typeof result.api === 'object' && el) {
+        el.api = result.api;
       }
       if (el && el.setAttribute) {
         el.setAttribute('data-juris-component', name);
@@ -781,9 +851,8 @@ class ComponentManager {
       }
       return el;
     }
-
-    #newCompFrag(result, name, props, states) {
-        let frag = document.createDocumentFragment();
+    #newCompFrag(result, name, props, states, targetContainer) {
+        let frag = targetContainer || document.createDocumentFragment();
         let virt = this.#newVirtContainer(frag, name, props);
         let subs = [];
         this.juris.getDR()._handleChildren(virt, result, subs);
@@ -801,110 +870,6 @@ class ComponentManager {
         return frag;
     }
 
-    #newHooksComp(result, name, props, states, targetContainer = null) {
-      let inst = this.#newComp(result, name, props);
-      let cont = targetContainer || document.createElement('div');
-      let isExternalContainer = !!targetContainer;
-      
-      if (!isExternalContainer) {
-        cont.setAttribute('data-juris-component', name);
-      }
-      
-      let updateRender = () => {
-        let { result: res, deps } = this.juris.getSM().track(() => {
-          return inst.render ? inst.render() : result;
-        });
-        let content = this.juris.getDR().render(res, name, props);
-        if (cont.parentNode) {
-          if (cont._reactiveSubscriptions) {
-            cont._reactiveSubscriptions.forEach(unsub => unsub());
-          }
-          let newCont;
-          if (content.constructor === HTMLDivElement) {
-            newCont = content;
-          } else {
-            newCont = isExternalContainer ? cont : document.createElement('div');
-            if (!isExternalContainer) {
-              newCont.setAttribute('data-juris-component', name);
-            }
-            if (isExternalContainer) {
-              cont.innerHTML = '';
-            }
-            newCont.appendChild(content);
-          }
-          if (!isExternalContainer) {
-            cont.parentNode.replaceChild(newCont, cont);
-            cont = newCont;
-          }
-        } else {
-          if (content.constructor === HTMLDivElement && !isExternalContainer) {
-            cont = content;
-          } else {
-            if (isExternalContainer) {
-              cont.innerHTML = '';
-            }
-            cont.appendChild(content);
-          }
-        }
-        
-        // Subscribe to dependencies for future updates
-        deps.forEach(path => {
-          let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
-          // Store subscription for cleanup
-          if (!cont._reactiveSubscriptions) {
-            cont._reactiveSubscriptions = [];
-          }
-          cont._reactiveSubscriptions.push(unsub);
-        });
-      };
-      
-      // Initial render
-      updateRender();
-      
-      if (cont) {
-        this.#setupComp(cont, inst, states, name, isExternalContainer);
-        if (inst.api && typeof inst.api === 'object') {
-          cont.api = inst.api;
-        }
-      }
-      
-      return cont;
-    }
-
-    #newRenderComp(result, name, props, states, targetContainer = null) {
-      let cont = targetContainer || document.createElement('div');
-      let isExternalContainer = !!targetContainer;
-      if (!isExternalContainer) {
-        cont.setAttribute('data-juris-reactive-render', name);
-      }      
-      let data = { 
-        name, 
-        api: result.api || {}, 
-        render: result.render,
-        isExternalContainer: isExternalContainer
-      };
-      this.insts.set(cont, data);      
-      if (result.api && typeof result.api === 'object') {
-        cont.api = result.api;
-      }
-      if (result.api) {
-        this.namedComps.set(name, { elm: cont, instance: data });
-      }      
-      let updateRender = () => this.#runRender(result.render, cont, name, isExternalContainer);
-      let subs = [];
-      this.juris.getDR()._createReactiveUpdate(cont, updateRender, subs);
-      if (subs.length > 0) {
-        this.juris.getDR().subscriptions.set(cont, { 
-          subscriptions: subs, 
-          eventListeners: [] 
-        });
-      }
-      if (states?.size > 0) {
-        this.compStates.set(cont, states);
-      }
-      return cont;
-    }
-
     #newComp(result, name, props) {
         return {
             name, props,
@@ -912,63 +877,6 @@ class ComponentManager {
             api: result.api || {},
             render: result.render
         };
-    }
-
-    #setupComp(el, inst, states, name, isExternalContainer = false) {
-      inst.isExternalContainer = isExternalContainer;
-      this.insts.set(el, inst);        
-      if (states?.size > 0) {
-        this.compStates.set(el, states);
-      }
-      if (inst.api && typeof inst.api === 'object') {
-        el.api = inst.api;
-      }       
-      if (inst.api && Object.keys(inst.api).length > 0) {
-        this.namedComps.set(name, { elm: el, instance: inst });
-      }
-      if (inst.hooks.onMount) {
-        setTimeout(() => this.#runHook(inst.hooks.onMount, el, name, 'onMount'), 0);
-      }
-    }
-
-    #runRender(renderFn, cont, name, isExternalContainer = false) {
-      try {
-        let res = renderFn(cont);
-        if (res?.then) {
-          cont.innerHTML = '<div class="juris-loading">Loading...</div>';
-          promisify(res).then(resolved => {
-            cont.innerHTML = '';
-            let el = this.juris.getDR().render(resolved);
-            if (el) this.#smartAppend(cont, el);
-          }).catch(err => {
-            log.ee && console.error(`Async render error for ${name}:`, err);
-            cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
-          });
-          return;
-        }
-        
-        // Only clear innerHTML if we own the container or it's expected behavior
-        let children = Array.from(cont.children);
-        children.forEach(child => this.cleanup(child));
-        cont.innerHTML = '';
-        
-        let el = this.juris.getDR().render(res);
-        if (el) this.#smartAppend(cont, el);
-      } catch (err) {
-        log.ee && console.error(`Error in reactive render for ${name}:`, err);
-        cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
-      }
-    }
-
-    #smartAppend(cont, el) {
-        if (el.nodeType === Node.ELEMENT_NODE && el.hasAttribute('data-juris-reactive-render')) {
-            while (el.firstChild) {
-                cont.appendChild(el.firstChild);
-            }
-            this.cleanup(el);
-        } else {
-            cont.appendChild(el);
-        }
     }
 
     #runHook(hook, args, componentName, hookName) {
@@ -985,40 +893,40 @@ class ComponentManager {
     }
 
     #newVirtContainer(frag, name, props) {
-        let virt = {
-            _isVirtual: true,
-            _fragment: frag,
-            _componentName: name,
-            _componentProps: props,
-            appendChild: (child) => frag.appendChild(child),
-            removeChild: (child) => {
-                if (child.parentNode === frag) {
-                    frag.removeChild(child);
-                }
-            },
-            replaceChild: (newChild, oldChild) => {
-                if (oldChild.parentNode === frag) {
-                    frag.replaceChild(newChild, oldChild);
-                }
-            },
-            get children() {
-                return Array.from(frag.childNodes);
-            },
-            get parentNode() { return null; },
-            textContent: ''
-        };
-        Object.defineProperty(virt, 'textContent', {
-            set(val) {
-                while (frag.firstChild) {
-                    frag.removeChild(frag.firstChild);
-                }
-                if (val) {
-                    frag.appendChild(document.createTextNode(val));
-                }
-            },
-            get() { return ''; }
-        });
-        return virt;
+      let virt = {
+        _isVirtual: true,
+        _fragment: frag,
+        _componentName: name,
+        _componentProps: props,
+        appendChild: (child) => frag.appendChild(child),
+        removeChild: (child) => {
+            if (child.parentNode === frag) {
+                frag.removeChild(child);
+            }
+        },
+        replaceChild: (newChild, oldChild) => {
+            if (oldChild.parentNode === frag) {
+                frag.replaceChild(newChild, oldChild);
+            }
+        },
+        get children() {
+            return Array.from(frag.childNodes);
+        },
+        get parentNode() { return null; },
+        textContent: ''
+      };
+      Object.defineProperty(virt, 'textContent', {
+        set(val) {
+            while (frag.firstChild) {
+                frag.removeChild(frag.firstChild);
+            }
+            if (val) {
+                frag.appendChild(document.createTextNode(val));
+            }
+        },
+        get() { return ''; }
+      });
+      return virt;
     }
 
     #newPlaceholder(name, className) {
@@ -1062,42 +970,39 @@ class ComponentManager {
     }
 
     cleanup(elm) {
-  if (elm instanceof DocumentFragment) {
-    this.#cleanupFragment(elm);
-    return;
-  }
-  
-  let instance = this.insts.get(elm);
-  if (instance?.hooks?.onUnmount) {
-    this.#runHook(instance.hooks.onUnmount, elm, instance.name, 'onUnmount');
-  }
-  
-  if (elm._reactiveSubscriptions) {
-    elm._reactiveSubscriptions.forEach(unsubscribe => {
-      try { unsubscribe(); } catch (error) { 
-        log.ew && console.warn('Error cleaning up reactive subscription:', error); 
+      if (elm instanceof DocumentFragment) {
+        this.#cleanupFragment(elm);
+        return;
       }
-    });
-    elm._reactiveSubscriptions = [];
-  }
-  
-  // Only perform DOM cleanup if we own the container
-  if (!instance?.isExternalContainer) {
-    this.#cleanupcompStates(elm);
-  } else {
-    // For external containers, only clean up our state references
-    let states = this.compStates.get(elm);
-    if (states) {
-      this.#cleanupStateSet(states);
-      this.compStates.delete(elm);
+      
+      let instance = this.insts.get(elm);
+      if (instance?.hooks?.onUnmount) {
+        this.#runHook(instance.hooks.onUnmount, elm, instance.name, 'onUnmount');
+      }
+      
+      if (elm._reactiveSubscriptions) {
+        elm._reactiveSubscriptions.forEach(unsubscribe => {
+          try { unsubscribe(); } catch (error) { 
+            log.ew && console.warn('Error cleaning up reactive subscription:', error); 
+          }
+        });
+        elm._reactiveSubscriptions = [];
+      }
+      if (!instance?.isExternalContainer) {
+        this.#cleanupcompStates(elm);
+      } else {
+        let states = this.compStates.get(elm);
+        if (states) {
+          this.#cleanupStateSet(states);
+          this.compStates.delete(elm);
+        }
+      }
+      
+      if (this.placeholders.has(elm)) {
+        this.placeholders.delete(elm);
+      }
+      this.insts.delete(elm);
     }
-  }
-  
-  if (this.placeholders.has(elm)) {
-    this.placeholders.delete(elm);
-  }
-  this.insts.delete(elm);
-}
 
     #cleanupFragment(fragment) {
         if (fragment._jurisComponent?.cleanup) {
