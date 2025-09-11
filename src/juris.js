@@ -796,7 +796,11 @@ class ComponentManager {
             cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
           });
         } else {
-          this.#updateContainerContent(cont, res, name, isExternal);
+          if(res){
+            this.#updateContainerContent(cont, res, name, isExternal);
+          }else{
+            cont.appendChild(this.#newErrElm(name, {message:'Component cannot return empty'}))
+          }
         }
         deps.forEach(path => {
           let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
@@ -1066,7 +1070,12 @@ class DOMRenderer {
     this.placeholderConfigs = new Map();
     this.componentStack = [];
     this.objTreeAnalyzer = null;
-    this.SKIP_ATTRS = new Set(['children', 'key']);
+    this.SKIP_ATTRS = new Set(['children', 'key']);    
+    this.BOOLEAN_ATTRS = new Set([
+      'autofocus', 'autoplay', 'checked', 'controls', 'defer', 'disabled',
+      'hidden', 'loop', 'multiple', 'muted', 'open', 'readonly', 'required',
+      'reversed', 'selected'
+    ]);
     this.elementTypeCache = new Map();
     this.defaultPlaceholder = {
       className: 'juris-async-loading',
@@ -1506,6 +1515,9 @@ class DOMRenderer {
   }
   
   render(vnode, componentName = null, returnObjectTree = false, targetContainer = null) {
+    if (typeof vnode === 'string' || typeof vnode === 'number') {
+      return document.createTextNode(String(vnode));
+    }
     if (this._testMode && returnObjectTree && this.objTreeAnalyzer) {
       return this.objTreeAnalyzer.buildObjectTree(vnode, componentName);
     }
@@ -1688,8 +1700,7 @@ class DOMRenderer {
           elm.innerHTML = resolved;
         }
       }, asyncContext);
-    }
-    
+    }    
     return this.#handleAsync(propValue, {
       onResolved: (resolved) => {
         this._setStaticAttribute(elm, propName, resolved);
@@ -2041,20 +2052,23 @@ class DOMRenderer {
   
   _setStaticAttribute(elm, attr, value) {
     if (this.SKIP_ATTRS.has(attr)) return;
-    if (attr in elm && typeof elm[attr] === 'boolean') {
+    if (this.BOOLEAN_ATTRS.has(attr)) {
       let boolValue = value && value !== 'false';
       if (boolValue) {
-        elm.setAttribute(attr, '');
+        elm.setAttribute(attr, attr);
       } else {
         elm.removeAttribute(attr);
       }
-      elm[attr] = boolValue;
+      if (attr in elm) {
+        elm[attr] = boolValue;
+      }
       return;
-    }
+    }    
     if (elm.namespaceURI === 'http://www.w3.org/2000/svg') {
       elm.setAttribute(attr, value);
       return;
     }
+    
     let firstChar = attr.charCodeAt(0);
     if ((firstChar === 100 && attr.charCodeAt(4) === 45) || // data-
         (firstChar === 97 && attr.charCodeAt(4) === 45) ||  // aria-
@@ -2063,6 +2077,7 @@ class DOMRenderer {
       elm.setAttribute(attr, value);
       return;
     }
+    
     if (attr in elm && typeof elm[attr] !== 'function') {
       elm[attr] = value;
     } else {
