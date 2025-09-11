@@ -577,7 +577,7 @@ class ComponentManager {
         this.insts = new Map();
         this.namedComps = new Map();
         this.comps = new Map();
-        this.compStates = new Map();
+        this.componentStates  = new Map();
         this.placeholders = new Map();
         this.asyncPropsCache = new Map();
     }
@@ -601,13 +601,13 @@ class ComponentManager {
         if (this.juris.getDR()._hasAsyncProps(props)) {
           return this.#createWithAsyncProps(name, compFn, props, targetContainer);
         }
-        let { comptId, compStates, context } = this.#getCompContext(name);
+        let { comptId, componentStates , context } = this.#getCompContext(name);
         let result = this.#callComponentFunction(compFn, props, context);
         if (result?.then) {
-          return this.#handleAsyncComp(promisify(result), name, props, compStates, targetContainer);
+          return this.#handleAsyncComp(promisify(result), name, props, componentStates , targetContainer);
         }
-        return this.#procCompResult(result, name, props, compStates, targetContainer);
-       //return this.#newCompFrag(result, name, props, compStates, targetContainer)
+        return this.#procCompResult(result, name, props, componentStates , targetContainer);
+       //return this.#newCompFrag(result, name, props, componentStates , targetContainer)
         //return this.#callComponentFunction(compFn, props, context)
       } catch (error) {
         log.ee && console.error(log.e('Component creation failed!', { name, error: error.message }, 'application'));
@@ -635,9 +635,9 @@ class ComponentManager {
     }
 
     #getCompContext(name) {
-        let { comptId, compStates } = this.#newCompId(name);
-        let context = this.#getCompCxt(comptId, compStates);
-        return { comptId, compStates, context };
+        let { comptId, componentStates  } = this.#newCompId(name);
+        let context = this.#getCompCxt(comptId, componentStates );
+        return { comptId, componentStates , context };
     }
 
     #newCompId(name) {
@@ -647,18 +647,18 @@ class ComponentManager {
       let instanceIndex = this.comps.get(name) + 1;
       this.comps.set(name, instanceIndex);
       let comptId = `${name}#${instanceIndex}`;
-      let compStates = new Set();
-      return { comptId, compStates };
+      let componentStates  = new Set();
+      return { comptId, componentStates  };
     }
 
-    #getCompCxt(comptId, compStates) {
+    #getCompCxt(comptId, componentStates ) {
       const context = this.juris.createContext();
       context.newState = (key, initialValue) => {
         const statePath = `##local.${comptId}.${key}`;
         if (this.juris.stateManager.getState(statePath) === null) {
             this.juris.stateManager.setState(statePath, initialValue);
         }
-        compStates.add(statePath);
+        componentStates .add(statePath);
         return [
             () => this.juris.stateManager.getState(statePath, initialValue),
             value => this.juris.stateManager.setState(statePath, value)
@@ -715,12 +715,12 @@ class ComponentManager {
     }
 
     #createSyncComponent(name, compFn, props, targetContainer = null) {
-      let { comptId, compStates, context } = this.#getCompContext(name);
+      let { comptId, componentStates , context } = this.#getCompContext(name);
       let result = this.#callComponentFunction(compFn, props, context);
       if (result?.then) {
-        return this.#handleAsyncComp(promisify(result), name, props, compStates, targetContainer);
+        return this.#handleAsyncComp(promisify(result), name, props, componentStates , targetContainer);
       }
-      return this.#procCompResult(result, name, props, compStates, targetContainer);
+      return this.#procCompResult(result, name, props, componentStates , targetContainer);
     }
 
     #handleAsyncComp(promise, name, props, states, targetContainer = null) {
@@ -829,7 +829,7 @@ class ComponentManager {
       inst.isExternalContainer = isExternal;
       this.insts.set(el, inst);      
       if (states?.size > 0) {
-        this.compStates.set(el, states);
+        this.componentStates .set(el, states);
       }      
       if (inst.api && typeof inst.api === 'object') {
         el.api = inst.api;
@@ -844,7 +844,7 @@ class ComponentManager {
 
     #finalizeElement(el, name, states, result) {
       if (el && states.size > 0) {
-        this.compStates.set(el, states);
+        this.componentStates .set(el, states);
       }
       if (result.api && typeof result.api === 'object' && el) {
         el.api = result.api;
@@ -869,7 +869,7 @@ class ComponentManager {
             }
         };
         if (states?.size > 0) {
-            frag._juriscompStates = states;
+            frag._juriscomponentStates  = states;
         }
         return frag;
     }
@@ -993,12 +993,12 @@ class ComponentManager {
         elm._reactiveSubscriptions = [];
       }
       if (!instance?.isExternalContainer) {
-        this.#cleanupcompStates(elm);
+        this.#cleanupcomponentStates (elm);
       } else {
-        let states = this.compStates.get(elm);
+        let states = this.componentStates .get(elm);
         if (states) {
           this.#cleanupStateSet(states);
-          this.compStates.delete(elm);
+          this.componentStates .delete(elm);
         }
       }
       
@@ -1012,16 +1012,16 @@ class ComponentManager {
         if (fragment._jurisComponent?.cleanup) {
             fragment._jurisComponent.cleanup();
         }
-        if (fragment._juriscompStates) {
-            this.#cleanupStateSet(fragment._juriscompStates);
+        if (fragment._juriscomponentStates ) {
+            this.#cleanupStateSet(fragment._juriscomponentStates );
         }
     }
 
-    #cleanupcompStates(elm) {
-        let states = this.compStates.get(elm);
+    #cleanupcomponentStates (elm) {
+        let states = this.componentStates .get(elm);
         if (states) {
             this.#cleanupStateSet(states);
-            this.compStates.delete(elm);
+            this.componentStates .delete(elm);
         }
     }
 
@@ -2055,7 +2055,7 @@ class DOMRenderer {
     if (this.BOOLEAN_ATTRS.has(attr)) {
       let boolValue = value && value !== 'false';
       if (boolValue) {
-        elm.setAttribute(attr, attr);
+        elm.setAttribute(attr,'');
       } else {
         elm.removeAttribute(attr);
       }

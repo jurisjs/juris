@@ -108,7 +108,8 @@ const Increment = (props, {getState,setState}) => (
                 default:'Higher'
             }},
             ()=> juris.getState('count', 0),
-            {Home:{}}
+            {Home:{}},
+            {input:{type:'text', readonly:false}}
 
     ]
 });
@@ -122,8 +123,9 @@ juris.registerComponent('Home', (props, { setState, logger }) => ({
         .join('\n')
     );
 
-    debugger;
+    //debugger;
     setState('title', 'Bienvenido');
+    return "hello";
   },
 }));
 juris.render();
