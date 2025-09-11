@@ -946,6 +946,8 @@ class ComponentManager {
           });
           return;
         }
+        
+        // Only clear innerHTML if we own the container or it's expected behavior
         let children = Array.from(cont.children);
         children.forEach(child => this.cleanup(child));
         cont.innerHTML = '';
