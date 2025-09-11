@@ -2392,6 +2392,15 @@ class Juris {
                 setState: (path, value, context) => this.getSM().setState(path, value, context),
                 executeBatch: (callback) => this.executeBatch(callback),
                 subscribe: (path, callback) => this.getSM().subscribe(path, callback),
+                effect: (fn) => {
+                  const { result, deps } = this.getSM().track(fn);
+                  const subscriptions = [];
+                  deps.forEach(path => {
+                    const unsub = this.getSM().subscribeInternal(path, fn);
+                    subscriptions.push(unsub);
+                  });
+                  return () => subscriptions.forEach(unsub => unsub());
+                },
                 compute: (name, fn,option) => this.getSM().compute(name,fn, option),
                 services: this.services,
                 ...(this.services || {}),

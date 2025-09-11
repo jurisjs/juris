@@ -432,6 +432,115 @@ testFramework.expect(lastValue).toBe(2);
 
 unsubscribe();`);
 
+testFramework.addTest('Context effect() with Auto-tracking', 'State Management', async function() {
+  const juris = new Juris();
+  let effectCallCount = 0;
+  let lastOutput = '';
+  
+  // Register a component that uses context.effect
+  juris.registerComponent('EffectTest', (props, context) => {
+    const { getState, setState, effect } = context;
+    
+    // Effect that automatically tracks multiple state dependencies
+    effect(() => {
+      effectCallCount++;
+      const name = getState('user.name', 'Guest');
+      const count = getState('counter', 0);
+      lastOutput = `${name}: ${count}`;
+    });
+    
+    return {
+      div: {
+        text: () => lastOutput,
+        children: [
+          {button: {
+            text: 'Update Counter',
+            onclick: () => setState('counter', getState('counter', 0) + 1)
+          }},
+          {button: {
+            text: 'Update Name',
+            onclick: () => setState('user.name', 'Alice')
+          }}
+        ]
+      }
+    };
+  });
+  
+  // Create component instance
+  const comp = juris.getCM().create('EffectTest', {});
+  
+  await new Promise(resolve => setTimeout(resolve, 10));
+  
+  // Effect should run once on initial render
+  testFramework.expect(effectCallCount).toBe(1);
+  testFramework.expect(lastOutput).toBe('Guest: 0');
+  
+  // Update counter - should trigger effect
+  const counterBtn = comp.querySelector('button');
+  counterBtn.click();
+  
+  await new Promise(resolve => setTimeout(resolve, 10));
+  
+  testFramework.expect(effectCallCount).toBe(2);
+  testFramework.expect(lastOutput).toBe('Guest: 1');
+  
+  // Update name - should also trigger effect
+  const nameBtn = comp.querySelectorAll('button')[1];
+  nameBtn.click();
+  
+  await new Promise(resolve => setTimeout(resolve, 10));
+  
+  testFramework.expect(effectCallCount).toBe(3);
+  testFramework.expect(lastOutput).toBe('Alice: 1');
+  
+}, `const juris = new Juris();
+let effectCallCount = 0;
+let lastOutput = '';
+
+juris.registerComponent('EffectTest', (props, context) => {
+  const { getState, setState, effect } = context;
+  
+  // Auto-tracks dependencies: user.name and counter
+  effect(() => {
+    effectCallCount++;
+    const name = getState('user.name', 'Guest');
+    const count = getState('counter', 0);
+    lastOutput = \`\${name}: \${count}\`;
+  });
+  
+  return {
+    div: {
+      text: () => lastOutput,
+      children: [
+        {button: {
+          text: 'Update Counter',
+          onclick: () => setState('counter', getState('counter', 0) + 1)
+        }},
+        {button: {
+          text: 'Update Name',
+          onclick: () => setState('user.name', 'Alice')
+        }}
+      ]
+    }
+  };
+});
+
+const comp = juris.getCM().create('EffectTest', {});
+
+// Effect runs on initial render
+testFramework.expect(effectCallCount).toBe(1);
+testFramework.expect(lastOutput).toBe('Guest: 0');
+
+// Update counter triggers effect
+comp.querySelector('button').click();
+testFramework.expect(effectCallCount).toBe(2);
+testFramework.expect(lastOutput).toBe('Guest: 1');
+
+// Update name also triggers effect
+comp.querySelectorAll('button')[1].click();
+testFramework.expect(effectCallCount).toBe(3);
+testFramework.expect(lastOutput).toBe('Alice: 1');`);
+
 
 testFramework.addTest('Component newState with Effect', 'State Management', async function() {
   const juris = new Juris();
