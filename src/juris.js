@@ -661,7 +661,8 @@ class ComponentManager {
         componentStates .add(statePath);
         return [
             () => this.juris.stateManager.getState(statePath, initialValue),
-            value => this.juris.stateManager.setState(statePath, value)
+            value => this.juris.stateManager.setState(statePath, value),
+            fn => this.juris.stateManager.subscribe(statePath, fn)
         ];
       };
       return context;

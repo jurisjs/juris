@@ -432,6 +432,109 @@ testFramework.expect(lastValue).toBe(2);
 
 unsubscribe();`);
 
+
+testFramework.addTest('Component newState with Effect', 'State Management', async function() {
+  const juris = new Juris();
+  let effectCallCount = 0;
+  let lastNewValue = null;
+  let lastOldValue = null;
+  
+  // Register a test component that uses newState with effect
+  juris.registerComponent('TestComp', (props, context) => {
+    const [getCount, setCount, effect] = context.newState('count', 0);
+    
+    // Set up effect to track state changes
+    effect((newValue, oldValue) => {
+      effectCallCount++;
+      lastNewValue = newValue;
+      lastOldValue = oldValue;
+    });
+    
+    return {
+      div: {
+        text: () => `Count: ${getCount()}`,
+        children: [
+          {button: {
+            text: 'Increment',
+            onclick: () => setCount(getCount() + 1)
+          }}
+        ]
+      }
+    };
+  });
+  
+  // Create component instance
+  const comp = juris.getCM().create('TestComp', {});
+  
+  // Initial effect should not have fired yet (no state change)
+  testFramework.expect(effectCallCount).toBe(0);
+  
+  // Find the button and simulate click to trigger state change
+  const button = comp.querySelector('button');
+  button.click();
+  
+  await new Promise(resolve => setTimeout(resolve, 10));
+  
+  // Effect should have fired once
+  testFramework.expect(effectCallCount).toBe(1);
+  testFramework.expect(lastNewValue).toBe(1);
+  testFramework.expect(lastOldValue).toBe(0);
+  
+  // Trigger another state change
+  button.click();
+  
+  await new Promise(resolve => setTimeout(resolve, 10));
+  
+  // Effect should have fired again
+  testFramework.expect(effectCallCount).toBe(2);
+  testFramework.expect(lastNewValue).toBe(2);
+  testFramework.expect(lastOldValue).toBe(1);
+  
+}, `const juris = new Juris();
+let effectCallCount = 0;
+let lastNewValue = null;
+let lastOldValue = null;
+
+juris.registerComponent('TestComp', (props, context) => {
+  const [getCount, setCount, effect] = context.newState('count', 0);
+  
+  effect((newValue, oldValue) => {
+    effectCallCount++;
+    lastNewValue = newValue;
+    lastOldValue = oldValue;
+  });
+  
+  return {
+    div: {
+      text: () => \`Count: \${getCount()}\`,
+      children: [
+        {button: {
+          text: 'Increment',
+          onclick: () => setCount(getCount() + 1)
+        }}
+      ]
+    }
+  };
+});
+
+const comp = juris.getCM().create('TestComp', {});
+const button = comp.querySelector('button');
+
+button.click();
+await new Promise(resolve => setTimeout(resolve, 10));
+
+testFramework.expect(effectCallCount).toBe(1);
+testFramework.expect(lastNewValue).toBe(1);
+testFramework.expect(lastOldValue).toBe(0);
+
+button.click();
+await new Promise(resolve => setTimeout(resolve, 10));
+
+testFramework.expect(effectCallCount).toBe(2);
+testFramework.expect(lastNewValue).toBe(2);
+testFramework.expect(lastOldValue).toBe(1);`);
+
+
     testFramework.addTest('Deep State Paths', 'State Management', async function() {
         const juris = new Juris();
         
