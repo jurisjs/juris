@@ -1042,15 +1042,11 @@ class ComponentManager {
     }
 
     getComponent(name) {return this.namedComps.get(name)?.instance || null;}
-
     getComponentAPI(name) {return this.namedComps.get(name)?.instance?.api || null;}
-
     getComponentElement(name) {return this.namedComps.get(name)?.elm || null;}
-
     getNamedComponents() { return Array.from(this.namedComps.keys()); }
-
     clearAsyncPropsCache() { this.asyncPropsCache.clear(); }
-
+    
     _createPlaceholder(text, className, elm = null) {
         let config = this.juris.getDR()._getPlaceholderConfig(elm);
         let placeholder = document.createElement('div');
