@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Component Demo - Juris Framework</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f1f3f4;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="https://unpkg.com/juris@latest/juris.js"></script>
+    <script>
+        const Card = (props, context) => {
+          const {
+            title = '',
+            subtitle = '',
+            children = null,
+            footer = null,
+            image = null,
+            imageAlt = '',
+            variant = 'default',
+            size = 'md',
+            hoverable = false,
+            clickable = false,
+            onClick = null,
+            className = '',
+            style = {},
+            ...otherProps
+          } = props;
+
+          const variants = {
+            default: {
+              border: '1px solid #d1d5db',
+              backgroundColor: '#ffffff',
+            },
+            outlined: {
+              border: '2px solid #3b82f6',
+              backgroundColor: '#ffffff',
+            },
+            elevated: {
+              border: 'none',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            },
+            filled: {
+              border: 'none',
+              backgroundColor: '#f8fafc',
+            },
+          };
+
+          const sizes = {
+            sm: {
+              borderRadius: '6px',
+              headerPadding: '8px 12px',
+              bodyPadding: '12px',
+              footerPadding: '8px 12px',
+            },
+            md: {
+              borderRadius: '8px',
+              headerPadding: '12px 16px',
+              bodyPadding: '16px',
+              footerPadding: '12px 16px',
+            },
+            lg: {
+              borderRadius: '12px',
+              headerPadding: '16px 20px',
+              bodyPadding: '20px',
+              footerPadding: '16px 20px',
+            },
+          };
+
+          const variantStyles = variants[variant] || variants.default;
+          const sizeConfig = sizes[size] || sizes.md;
+
+          const baseStyles = {
+            ...variantStyles,
+            borderRadius: sizeConfig.borderRadius,
+            boxShadow: variant === 'elevated' ? variantStyles.boxShadow : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+            transition: hoverable ? 'all 0.2s ease-in-out' : 'none',
+            cursor: clickable ? 'pointer' : 'default',
+            overflow: 'hidden',
+            ...style,
+          };
+
+          const headerStyles = {
+            padding: sizeConfig.headerPadding,
+            borderBottom: (title || subtitle) ? '1px solid #e5e7eb' : 'none',
+          };
+
+          const titleStyles = {
+            fontWeight: 'bold',
+            fontSize: size === 'lg' ? '1.25rem' : size === 'sm' ? '0.9rem' : '1rem',
+            margin: '0 0 4px 0',
+            color: '#111827',
+          };
+
+          const subtitleStyles = {
+            fontSize: size === 'lg' ? '0.95rem' : size === 'sm' ? '0.8rem' : '0.875rem',
+            color: '#6b7280',
+            margin: '0',
+          };
+
+          const bodyStyles = {
+            padding: sizeConfig.bodyPadding,
+          };
+
+          const footerStyles = {
+            padding: sizeConfig.footerPadding,
+            borderTop: footer ? '1px solid #e5e7eb' : 'none',
+            backgroundColor: '#f9fafb',
+            fontSize: '0.875rem',
+            color: '#6b7280',
+          };
+
+          const imageStyles = {
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+          };
+
+          return {
+            div: {
+              className: `juris-card juris-card-${variant} juris-card-${size} ${hoverable ? 'juris-card-hoverable' : ''} ${clickable ? 'juris-card-clickable' : ''} ${className}`,
+              style: baseStyles,
+              onClick: clickable ? onClick : null,
+              ...otherProps,
+              children: [
+                image && {
+                  img: {
+                    src: image,
+                    alt: imageAlt,
+                    style: imageStyles,
+                    className: 'juris-card-image',
+                  }
+                },
+                (title || subtitle) && {
+                  div: {
+                    className: 'juris-card-header',
+                    style: headerStyles,
+                    children: [
+                      title && {
+                        div: {
+                          style: titleStyles,
+                          children: title,
+                        }
+                      },
+                      subtitle && {
+                        div: {
+                          style: subtitleStyles,
+                          children: subtitle,
+                        }
+                      }
+                    ].filter(Boolean),
+                  }
+                },
+                children && {
+                  div: {
+                    className: 'juris-card-body',
+                    style: bodyStyles,
+                    children: children,
+                  }
+                },
+                footer && {
+                  div: {
+                    className: 'juris-card-footer',
+                    style: footerStyles,
+                    children: footer,
+                  }
+                }
+              ].filter(Boolean),
+            },
+          };
+        };
+
+        const App = (props, context) => ({
+          div: {
+            style: {
+              fontFamily: 'sans-serif',
+              maxWidth: '1000px',
+              margin: '0 auto',
+              padding: '20px',
+            },
+            children: [
+              { h1: { text: 'Juris Card Component Demo' } },
+              
+              { h2: { text: 'Basic Cards' } },
+              { div: { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }, children: [
+                { Card: { 
+                  title: 'Simple Card',
+                  children: 'This is a basic card with just a title and content.'
+                } },
+                { Card: { 
+                  title: 'Card with Subtitle',
+                  subtitle: 'This is a subtitle',
+                  children: 'This card has both a title and subtitle.'
+                } },
+                { Card: { 
+                  children: 'This card has no title, just content in the body.'
+                } },
+              ] } },
+
+              { h2: { text: 'Card Variants' } },
+              { div: { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }, children: [
+                { Card: { 
+                  title: 'Default',
+                  variant: 'default',
+                  children: 'Default card with standard border and shadow.'
+                } },
+                { Card: { 
+                  title: 'Outlined',
+                  variant: 'outlined',
+                  children: 'Outlined card with blue border.'
+                } },
+                { Card: { 
+                  title: 'Elevated',
+                  variant: 'elevated',
+                  children: 'Elevated card with stronger shadow.'
+                } },
+                { Card: { 
+                  title: 'Filled',
+                  variant: 'filled',
+                  children: 'Filled card with background color.'
+                } },
+              ] } },
+
+              { h2: { text: 'Card Sizes' } },
+              { div: { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }, children: [
+                { Card: { 
+                  title: 'Small Card',
+                  subtitle: 'Size: sm',
+                  size: 'sm',
+                  children: 'This is a small card.'
+                } },
+                { Card: { 
+                  title: 'Medium Card',
+                  subtitle: 'Size: md (default)',
+                  size: 'md',
+                  children: 'This is a medium card.'
+                } },
+                { Card: { 
+                  title: 'Large Card',
+                  subtitle: 'Size: lg',
+                  size: 'lg',
+                  children: 'This is a large card with more spacing.'
+                } },
+              ] } },
+
+              { h2: { text: 'Interactive Cards' } },
+              { div: { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }, children: [
+                { Card: { 
+                  title: 'Hoverable Card',
+                  subtitle: 'Hover over me!',
+                  hoverable: true,
+                  variant: 'elevated',
+                  children: 'This card has hover effects - it lifts up when you hover over it.'
+                } },
+                { Card: { 
+                  title: 'Clickable Card',
+                  subtitle: 'Click me!',
+                  clickable: true,
+                  hoverable: true,
+                  onClick: () => alert('Card clicked!'),
+                  children: 'This card is clickable and will show an alert when clicked.'
+                } },
+              ] } },
+
+              { h2: { text: 'Cards with Footer' } },
+              { div: { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }, children: [
+                { Card: { 
+                  title: 'Card with Footer',
+                  children: 'This card has a footer section at the bottom.',
+                  footer: 'Last updated: Today'
+                } },
+                { Card: { 
+                  title: 'Product Card',
+                  subtitle: 'Premium Widget',
+                  children: 'A high-quality widget that does amazing things for your workflow.',
+                  footer: 'Price: $29.99'
+                } },
+              ] } },
+
+              { h2: { text: 'Card with Image' } },
+              { div: { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }, children: [
+                { Card: { 
+                  image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=200&fit=crop',
+                  imageAlt: 'Mountain landscape',
+                  title: 'Beautiful Mountain',
+                  subtitle: 'Nature Photography',
+                  children: 'A stunning view of mountains during sunset.',
+                  footer: 'Photo by: Nature Lover',
+                  hoverable: true
+                } },
+              ] } },
+
+              { h2: { text: 'Custom Styled Card' } },
+              { Card: { 
+                title: 'Custom Gradient Card',
+                subtitle: 'With custom styling',
+                children: 'This card has custom gradient background and styling.',
+                style: {
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none'
+                },
+                hoverable: true
+              } },
+            ],
+          },
+        });
+
+        const juris = new Juris({
+            components: { Card, App },
+            layout: { App: {} },
+            renderMode: 'fine-grained',
+        });
+
+        juris.render('#app');
+    </script>
+</body>
+</html>
