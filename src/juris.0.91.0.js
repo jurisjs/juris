@@ -527,25 +527,21 @@ class StateManager {
 
     #triggerPathSubscribers(path) {
         let subs = this.subscribers.get(path);
-        if (!subs || subs.size === 0) return;
-
-        new Set(subs).forEach(callback => {
-            try {
-                let { result, deps } = this.track(() => callback());
-                deps.forEach(newPath => {
-                    let existingSubs = this.subscribers.get(newPath);
-                    if (!existingSubs) {
-                        existingSubs = new Set();
-                        this.subscribers.set(newPath, existingSubs);
-                    }
-                    if (!existingSubs.has(callback)) {
-                        existingSubs.add(callback);
-                    }
-                });
-            } catch (error) {
-                log.ee && console.error(log.e('Subscriber error:', error), 'application');
-            }
-        });
+        if (subs && subs.size > 0) {
+            new Set(subs).forEach(callback => {
+                try {
+                    let { deps } = this.track(() => callback());
+                    deps.forEach(newPath => {
+                        let existingSubs = this.subscribers.get(newPath);
+                        if (!existingSubs || !existingSubs.has(callback)) {
+                            this.subscribeInternal(newPath, callback);
+                        }
+                    });
+                } catch (error) {
+                    log.ee && console.error(log.e('Subscriber error:', error), 'application');
+                }
+            });
+        }
     }
 
     #hasCircularUpdate(path) {
@@ -591,26 +587,26 @@ class ComponentManager {
             cachedAsyncProps: this.asyncPropsCache.size
         };
     }
-    create(name, props = {}, targetContainer = null) {
-      let compFn = this.components.get(name);
-      if (!compFn) {
-        log.ee && console.error(log.e('Component not found', { name }, 'application'));
-        return null;
-      }
-      try {
-        if (this.juris.getDR()._hasAsyncProps(props)) {
-          return this.#createWithAsyncProps(name, compFn, props, targetContainer);
+    create(name, props = {}) {
+        let compFn = this.components.get(name);
+        if (!compFn) {
+            log.ee && console.error(log.e('Component not found', { name }, 'application'));
+            return null;
         }
-        let { comptId, compStates, context } = this.#getCompContext(name);
-        let result = this.#callComponentFunction(compFn, props, context);
-        if (result?.then) {
-          return this.#handleAsyncComp(promisify(result), name, props, compStates, targetContainer);
+        try {
+            if (this.juris.getDR()._hasAsyncProps(props)) {
+                return this.#createWithAsyncProps(name, compFn, props);
+            }
+            let { comptId, compStates, context } = this.#getCompContext(name);
+            let result = this.#callComponentFunction(compFn, props, context);
+            if (result?.then) {
+                return this.#handleAsyncComp(promisify(result), name, props, compStates);
+            }
+            return this.#procCompResult(result, name, props, compStates);
+        } catch (error) {
+            log.ee && console.error(log.e('Component creation failed!', { name, error: error.message }, 'application'));
+            return this.#newErrElm(name, error);
         }
-        return this.#procCompResult(result, name, props, compStates, targetContainer);
-      } catch (error) {
-        log.ee && console.error(log.e('Component creation failed!', { name, error: error.message }, 'application'));
-        return this.#newErrElm(name, error);
-      }
     }
 
     #callComponentFunction(componentFn, props, context) {
@@ -649,42 +645,34 @@ class ComponentManager {
         return { comptId, compStates };
     }
 
-    #getCompCxt(comptId, compStates) {
-      const context = this.juris.createContext();
-      context.newState = (key, initialValue) => {
-          const statePath = `##local.${comptId}.${key}`;
-          if (this.juris.stateManager.getState(statePath) === null) {
-              this.juris.stateManager.setState(statePath, initialValue);
-          }
-          compStates.add(statePath);
-          return [
-              () => this.juris.stateManager.getState(statePath, initialValue),
-              value => this.juris.stateManager.setState(statePath, value)
-          ];
-      };
-      return context;
+    #getCompCxt(compId, states) {
+        let ctx = this.juris.createContext();
+        ctx.newState = (key, initVal) => {
+            let path = `##local.${compId}.${key}`;
+            if (this.juris.getSM().getState(path, Symbol('not-found')) === Symbol('not-found')) {
+                this.juris.getSM().setState(path, initVal);
+            }
+            states.add(path);
+            return [
+                () => this.juris.getSM().getState(path, initVal),
+                val => this.juris.getSM().setState(path, val)
+            ];
+        };
+        return ctx;
     }
 
-    #createWithAsyncProps(name, compFn, props, targetContainer = null) {
-      let ph = targetContainer || this.#newPlaceholder(name, 'async-props-loading');
-      this.placeholders.set(ph, { name, props, type: 'async-props' });
-      this.#resolveAsyncProps(props).then(resolved => {
-        try {
-          let elem = this.#createSyncComponent(name, compFn, resolved, targetContainer);
-          if (targetContainer) {
-            // If using external container, replace contents instead of element
-            targetContainer.innerHTML = '';
-            if (elem !== targetContainer) {
-              targetContainer.appendChild(elem);
+    #createWithAsyncProps(name, compFn, props) {
+        let ph = this.#newPlaceholder(name, 'async-props-loading');
+        this.placeholders.set(ph, { name, props, type: 'async-props' });
+        this.#resolveAsyncProps(props).then(resolved => {
+            try {
+                let elem = this.#createSyncComponent(name, compFn, resolved);
+                this.#replacePlaceholder(ph, elem);
+            } catch (err) {
+                this.#replaceWithError(ph, err);
             }
-          } else {
-            this.#replacePlaceholder(ph, elem);
-          }
-        } catch (err) {
-          this.#replaceWithError(ph, err);
-        }
-      }).catch(err => this.#replaceWithError(ph, err));
-      return ph;
+        }).catch(err => this.#replaceWithError(ph, err));
+        return ph;
     }
 
     async #resolveAsyncProps(props) {
@@ -712,74 +700,66 @@ class ComponentManager {
         return resolved;
     }
 
-    #createSyncComponent(name, compFn, props, targetContainer = null) {
-      let { comptId, compStates, context } = this.#getCompContext(name);
-      let result = this.#callComponentFunction(compFn, props, context);
-      if (result?.then) {
-        return this.#handleAsyncComp(promisify(result), name, props, compStates, targetContainer);
-      }
-      return this.#procCompResult(result, name, props, compStates, targetContainer);
+    #createSyncComponent(name, compFn, props) {
+        let { comptId, compStates, context } = this.#getCompContext(name);
+        let result = this.#callComponentFunction(compFn, props, context);
+        if (result?.then) {
+            return this.#handleAsyncComp(promisify(result), name, props, compStates);
+        }
+        return this.#procCompResult(result, name, props, compStates);
     }
 
-    #handleAsyncComp(promise, name, props, states, targetContainer = null) {
-      let ph = targetContainer || this.#newPlaceholder(name, 'async-loading');
-      this.placeholders.set(ph, { name, props, states });
-      promise.then(result => {
-        try {
-          let elem = this.#procCompResult(result, name, props, states, targetContainer);
-          if (targetContainer) {
-            // If using external container, replace contents instead of element
-            targetContainer.innerHTML = '';
-            if (elem !== targetContainer) {
-              targetContainer.appendChild(elem);
+    #handleAsyncComp(promise, name, props, states) {
+        let ph = this.#newPlaceholder(name, 'async-loading');
+        this.placeholders.set(ph, { name, props, states });
+        promise.then(result => {
+            try {
+                let elem = this.#procCompResult(result, name, props, states);
+                this.#replacePlaceholder(ph, elem);
+            } catch (err) {
+                log.ee && console.error(log.e('Async component failed', { name, error: err.message }, 'application'));
+                this.#replaceWithError(ph, err);
             }
-          } else {
-            this.#replacePlaceholder(ph, elem);
-          }
-        } catch (err) {
-          log.ee && console.error(log.e('Async component failed', { name, error: err.message }, 'application'));
-          this.#replaceWithError(ph, err);
-        }
-      }).catch(err => this.#replaceWithError(ph, err));
-      return ph;
+        }).catch(err => this.#replaceWithError(ph, err));
+        return ph;
     }
 
-    #procCompResult(result, name, props, states, targetContainer = null) {
-      if (Array.isArray(result)) {
-        return this.#newCompFrag(result, name, props, states);
-      }
-      if (result && typeof result === 'object') {
-        if (this.#hasHooks(result)) {
-          return this.#newHooksComp(result, name, props, states, targetContainer);
+    #procCompResult(result, name, props, states) {
+        if (Array.isArray(result)) {
+            return this.#newCompFrag(result, name, props, states);
         }
-        if (typeof result.render === 'function' && !this.#hasHooks(result)) {
-          return this.#newRenderComp(result, name, props, states, targetContainer);
+        if (result && typeof result === 'object') {
+            if (this.#hasHooks(result)) {
+                return this.#newHooksComp(result, name, props, states);
+            }
+            if (typeof result.render === 'function' && !this.#hasHooks(result)) {
+                return this.#newRenderComp(result, name, props, states);
+            }
+            let keys = Object.keys(result);
+            if (keys.length === 1 && typeof keys[0] === 'string' && keys[0].length > 0) {
+                let el = this.juris.getDR().render(result, name);
+                if (el && states.size > 0) {
+                    this.compStates.set(el, states);
+                }
+                if (result.api && typeof result.api === 'object' && el) {
+                    el.api = result.api;
+                }
+                if (el && el.setAttribute) {
+                    el.setAttribute('data-juris-component', name);
+                    el._jurisComponent = name;
+                }
+                return el;
+            }
         }
-        let keys = Object.keys(result);
-        if (keys.length === 1 && typeof keys[0] === 'string' && keys[0].length > 0) {
-          let el = this.juris.getDR().render(result, name);
-          if (el && states.size > 0) {
+        let el = this.juris.getDR().render(result, name);
+        if (el && states.size > 0) {
             this.compStates.set(el, states);
-          }
-          if (result.api && typeof result.api === 'object' && el) {
-            el.api = result.api;
-          }
-          if (el && el.setAttribute) {
+        }
+        if (el && el.setAttribute) {
             el.setAttribute('data-juris-component', name);
             el._jurisComponent = name;
-          }
-          return el;
         }
-      }
-      let el = this.juris.getDR().render(result, name);
-      if (el && states.size > 0) {
-        this.compStates.set(el, states);
-      }
-      if (el && el.setAttribute) {
-        el.setAttribute('data-juris-component', name);
-        el._jurisComponent = name;
-      }
-      return el;
+        return el;
     }
 
     #newCompFrag(result, name, props, states) {
@@ -801,108 +781,89 @@ class ComponentManager {
         return frag;
     }
 
-    #newHooksComp(result, name, props, states, targetContainer = null) {
-      let inst = this.#newComp(result, name, props);
-      let cont = targetContainer || document.createElement('div');
-      let isExternalContainer = !!targetContainer;
-      
-      if (!isExternalContainer) {
+    #newHooksComp(result, name, props, states) {
+        let inst = this.#newComp(result, name, props);
+        let cont = document.createElement('div');
         cont.setAttribute('data-juris-component', name);
-      }
-      
-      let updateRender = () => {
-        let { result: res, deps } = this.juris.getSM().track(() => {
-          return inst.render ? inst.render() : result;
-        });
-        let content = this.juris.getDR().render(res, name, props);
-        if (cont.parentNode) {
-          if (cont._reactiveSubscriptions) {
-            cont._reactiveSubscriptions.forEach(unsub => unsub());
-          }
-          let newCont;
-          if (content.constructor === HTMLDivElement) {
-            newCont = content;
-          } else {
-            newCont = isExternalContainer ? cont : document.createElement('div');
-            if (!isExternalContainer) {
-              newCont.setAttribute('data-juris-component', name);
+        let updateRender = () => {
+            let { result: res, deps } = this.juris.getSM().track(() => {
+                return inst.render ? inst.render() : result;
+            });
+            let content = this.juris.getDR().render(res, name, props);
+            if (cont.parentNode) {
+                if (cont._reactiveSubscriptions) {
+                    cont._reactiveSubscriptions.forEach(unsub => unsub());
+                }
+                let newCont;
+                if (content.constructor === HTMLDivElement) {
+                    newCont = content;
+                } else {
+                    newCont = document.createElement('div');
+                    newCont.setAttribute('data-juris-component', name);
+                    newCont.appendChild(content);
+                }
+                cont.parentNode.replaceChild(newCont, cont);
+                cont = newCont;
+            } else {
+                if (content.constructor === HTMLDivElement) {
+                    cont = content;
+                } else {
+                    cont.appendChild(content);
+                }
             }
-            if (isExternalContainer) {
-              cont.innerHTML = '';
+            
+            // Subscribe to dependencies for future updates
+            deps.forEach(path => {
+                let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
+                // Store subscription for cleanup
+                if (!cont._reactiveSubscriptions) {
+                    cont._reactiveSubscriptions = [];
+                }
+                cont._reactiveSubscriptions.push(unsub);
+            });
+        };
+        
+        // Initial render
+        updateRender();
+        
+        if (cont) {
+            this.#setupComp(cont, inst, states, name);
+            if (inst.api && typeof inst.api === 'object') {
+                cont.api = inst.api;
             }
-            newCont.appendChild(content);
-          }
-          if (!isExternalContainer) {
-            cont.parentNode.replaceChild(newCont, cont);
-            cont = newCont;
-          }
-        } else {
-          if (content.constructor === HTMLDivElement && !isExternalContainer) {
-            cont = content;
-          } else {
-            if (isExternalContainer) {
-              cont.innerHTML = '';
-            }
-            cont.appendChild(content);
-          }
         }
         
-        // Subscribe to dependencies for future updates
-        deps.forEach(path => {
-          let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
-          // Store subscription for cleanup
-          if (!cont._reactiveSubscriptions) {
-            cont._reactiveSubscriptions = [];
-          }
-          cont._reactiveSubscriptions.push(unsub);
-        });
-      };
-      
-      // Initial render
-      updateRender();
-      
-      if (cont) {
-        this.#setupComp(cont, inst, states, name, isExternalContainer);
-        if (inst.api && typeof inst.api === 'object') {
-          cont.api = inst.api;
-        }
-      }
-      
-      return cont;
+        return cont;
     }
 
-    #newRenderComp(result, name, props, states, targetContainer = null) {
-      let cont = targetContainer || document.createElement('div');
-      let isExternalContainer = !!targetContainer;
-      if (!isExternalContainer) {
+    #newRenderComp(result, name, props, states) {
+        let cont = document.createElement('div');
         cont.setAttribute('data-juris-reactive-render', name);
-      }      
-      let data = { 
-        name, 
-        api: result.api || {}, 
-        render: result.render,
-        isExternalContainer: isExternalContainer
-      };
-      this.insts.set(cont, data);      
-      if (result.api && typeof result.api === 'object') {
-        cont.api = result.api;
-      }
-      if (result.api) {
-        this.namedComps.set(name, { elm: cont, instance: data });
-      }      
-      let updateRender = () => this.#runRender(result.render, cont, name, isExternalContainer);
-      let subs = [];
-      this.juris.getDR()._createReactiveUpdate(cont, updateRender, subs);
-      if (subs.length > 0) {
-        this.juris.getDR().subscriptions.set(cont, { 
-          subscriptions: subs, 
-          eventListeners: [] 
-        });
-      }
-      if (states?.size > 0) {
-        this.compStates.set(cont, states);
-      }
-      return cont;
+        let data = { 
+            name, 
+            api: result.api || {}, 
+            render: result.render 
+        };
+        this.insts.set(cont, data);
+        if (result.api && typeof result.api === 'object') {
+            cont.api = result.api;
+        }
+        if (result.api) {
+            this.namedComps.set(name, { elm: cont, instance: data });
+        }
+        let updateRender = () => this.#runRender(result.render, cont, name);
+        let subs = [];
+        this.juris.getDR()._createReactiveUpdate(cont, updateRender, subs);
+        if (subs.length > 0) {
+            this.juris.getDR().subscriptions.set(cont, { 
+                subscriptions: subs, 
+                eventListeners: [] 
+            });
+        }
+        if (states?.size > 0) {
+            this.compStates.set(cont, states);
+        }
+        return cont;
     }
 
     #newComp(result, name, props) {
@@ -914,48 +875,46 @@ class ComponentManager {
         };
     }
 
-    #setupComp(el, inst, states, name, isExternalContainer = false) {
-      inst.isExternalContainer = isExternalContainer;
-      this.insts.set(el, inst);        
-      if (states?.size > 0) {
-        this.compStates.set(el, states);
-      }
-      if (inst.api && typeof inst.api === 'object') {
-        el.api = inst.api;
-      }       
-      if (inst.api && Object.keys(inst.api).length > 0) {
-        this.namedComps.set(name, { elm: el, instance: inst });
-      }
-      if (inst.hooks.onMount) {
-        setTimeout(() => this.#runHook(inst.hooks.onMount, el, name, 'onMount'), 0);
-      }
+    #setupComp(el, inst, states, name) {
+        this.insts.set(el, inst);        
+        if (states?.size > 0) {
+            this.compStates.set(el, states);
+        }
+        if (inst.api && typeof inst.api === 'object') {
+            el.api = inst.api;
+        }       
+        if (inst.api && Object.keys(inst.api).length > 0) {
+            this.namedComps.set(name, { elm: el, instance: inst });
+        }
+        if (inst.hooks.onMount) {
+            setTimeout(() => this.#runHook(inst.hooks.onMount, el, name, 'onMount'), 0);
+        }
     }
 
-    #runRender(renderFn, cont, name, isExternalContainer = false) {
-      try {
-        let res = renderFn(cont);
-        if (res?.then) {
-          cont.innerHTML = '<div class="juris-loading">Loading...</div>';
-          promisify(res).then(resolved => {
+    #runRender(renderFn, cont, name) {
+        try {
+            let res = renderFn(cont);
+            if (res?.then) {
+                cont.innerHTML = '<div class="juris-loading">Loading...</div>';
+                promisify(res).then(resolved => {
+                    cont.innerHTML = '';
+                    let el = this.juris.getDR().render(resolved);
+                    if (el) this.#smartAppend(cont, el);
+                }).catch(err => {
+                    log.ee && console.error(`Async render error for ${name}:`, err);
+                    cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
+                });
+                return;
+            }
+            let children = Array.from(cont.children);
+            children.forEach(child => this.cleanup(child));
             cont.innerHTML = '';
-            let el = this.juris.getDR().render(resolved);
+            let el = this.juris.getDR().render(res);
             if (el) this.#smartAppend(cont, el);
-          }).catch(err => {
-            log.ee && console.error(`Async render error for ${name}:`, err);
+        } catch (err) {
+            log.ee && console.error(`Error in reactive render for ${name}:`, err);
             cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
-          });
-          return;
         }
-        let children = Array.from(cont.children);
-        children.forEach(child => this.cleanup(child));
-        cont.innerHTML = '';
-        
-        let el = this.juris.getDR().render(res);
-        if (el) this.#smartAppend(cont, el);
-      } catch (err) {
-        log.ee && console.error(`Error in reactive render for ${name}:`, err);
-        cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
-      }
     }
 
     #smartAppend(cont, el) {
@@ -1060,42 +1019,28 @@ class ComponentManager {
     }
 
     cleanup(elm) {
-  if (elm instanceof DocumentFragment) {
-    this.#cleanupFragment(elm);
-    return;
-  }
-  
-  let instance = this.insts.get(elm);
-  if (instance?.hooks?.onUnmount) {
-    this.#runHook(instance.hooks.onUnmount, elm, instance.name, 'onUnmount');
-  }
-  
-  if (elm._reactiveSubscriptions) {
-    elm._reactiveSubscriptions.forEach(unsubscribe => {
-      try { unsubscribe(); } catch (error) { 
-        log.ew && console.warn('Error cleaning up reactive subscription:', error); 
-      }
-    });
-    elm._reactiveSubscriptions = [];
-  }
-  
-  // Only perform DOM cleanup if we own the container
-  if (!instance?.isExternalContainer) {
-    this.#cleanupcompStates(elm);
-  } else {
-    // For external containers, only clean up our state references
-    let states = this.compStates.get(elm);
-    if (states) {
-      this.#cleanupStateSet(states);
-      this.compStates.delete(elm);
+        if (elm instanceof DocumentFragment) {
+            this.#cleanupFragment(elm);
+            return;
+        }
+        let instance = this.insts.get(elm);
+        if (instance?.hooks?.onUnmount) {
+            this.#runHook(instance.hooks.onUnmount, elm, instance.name, 'onUnmount');
+        }
+        if (elm._reactiveSubscriptions) {
+            elm._reactiveSubscriptions.forEach(unsubscribe => {
+                try { unsubscribe(); } catch (error) { 
+                    log.ew && console.warn('Error cleaning up reactive subscription:', error); 
+                }
+            });
+            elm._reactiveSubscriptions = [];
+        }
+        this.#cleanupcompStates(elm);
+        if (this.placeholders.has(elm)) {
+            this.placeholders.delete(elm);
+        }
+        this.insts.delete(elm);
     }
-  }
-  
-  if (this.placeholders.has(elm)) {
-    this.placeholders.delete(elm);
-  }
-  this.insts.delete(elm);
-}
 
     #cleanupFragment(fragment) {
         if (fragment._jurisComponent?.cleanup) {
@@ -1598,14 +1543,14 @@ class DOMRenderer {
     }
   }
   
-  render(vnode, componentName = null, returnObjectTree = false, targetContainer = null) {
+  render(vnode, componentName = null, returnObjectTree = false) {
     if (this._testMode && returnObjectTree && this.objTreeAnalyzer) {
       return this.objTreeAnalyzer.buildObjectTree(vnode, componentName);
     }
-    return this._renderToDOM(vnode, componentName, targetContainer);
+    return this._renderToDOM(vnode, componentName);
   }
   
-  _renderToDOM(vnode, componentName = null, targetContainer = null) {
+  _renderToDOM(vnode, componentName = null) {
     if (typeof vnode === 'string' || typeof vnode === 'number') {
       return document.createTextNode(String(vnode));
     }        
@@ -1619,7 +1564,7 @@ class DOMRenderer {
       return this.#newErrElm('recursion', [...this.componentStack, tagName].join(' → '));
     }        
     if (this.juris.getCM().components.has(tagName)) {
-      return this.#renderComponent(tagName, props, targetContainer);
+      return this.#renderComponent(tagName, props);
     }        
     if (/^[A-Z]/.test(tagName)) {
       return this.#newErrElm('component', `Component "${tagName}" not registered`);
@@ -1705,7 +1650,7 @@ class DOMRenderer {
     return fragment;
   }
   
-  #renderComponent(tagName, props, targetContainer = null) {
+  #renderComponent(tagName, props) {
     let componentFn = this.juris.getCM().components.get(tagName);
     if (!componentFn) {
       log.ee && console.error(log.e('Component not found', { name: tagName }, 'application'));
@@ -1718,7 +1663,7 @@ class DOMRenderer {
     
     this.componentStack.push(tagName);
     let { result, deps } = this.juris.getSM().track(() => 
-      this.juris.getCM().create(tagName, props, targetContainer), true);
+      this.juris.getCM().create(tagName, props), true);
     this.componentStack.pop();
     
     return result;
@@ -2092,36 +2037,15 @@ class DOMRenderer {
   
   #renderStaticChildren(elm, children, componentName) {
     elm.textContent = '';
-    let fragment = document.createDocumentFragment();  
+    let fragment = document.createDocumentFragment();        
     for (let i = 0; i < children.length; i++) {
-      let child = children[i];    
+      let child = children[i];
       if (child != null) {
-        let tagName = Object.keys(child)[0];
-        let props = child[tagName] || {};
-        if (this.juris.getCM().components.has(tagName)) {    
-          let tempContainer = document.createElement('div');
-          let result = this.#renderComponent(tagName, props, tempContainer);        
-          if (tempContainer.firstChild) {
-            let childCount = 0;
-            while (tempContainer.firstChild) {
-              fragment.appendChild(tempContainer.firstChild);
-              childCount++;
-            }
-          } else if (result) {
-            fragment.appendChild(result);
-          } else {
-          }
-        } else {
-          let childElement = this.render(child, componentName);
-          if (childElement) fragment.appendChild(childElement);
-        }
+        let childElement = this.#createChild(child, componentName);
+        if (childElement) fragment.appendChild(childElement);
       }
-    }  
-    if (fragment.hasChildNodes()) {
-      elm.appendChild(fragment);
-    } else {
-      console.log('WARNING: Empty fragment, nothing to append');
-    }
+    }        
+    if (fragment.hasChildNodes()) elm.appendChild(fragment);
   }
   
   #setStyleProperty(elm, prop, value) {
@@ -2469,7 +2393,7 @@ class Juris {
                 setState: (path, value, context) => this.getSM().setState(path, value, context),
                 executeBatch: (callback) => this.executeBatch(callback),
                 subscribe: (path, callback) => this.getSM().subscribe(path, callback),
-                compute: (name, fn,option) => this.getSM().compute(name,fn, option),
+                compute: (fn, deps) => this.getSM().compute(fn, deps),
                 services: this.services,
                 ...(this.services || {}),
                 ...(this.headlessAPIs || {}),
@@ -2562,79 +2486,66 @@ class Juris {
     getHeadlessStatus() { return this.getHM().getStatus(); }
     objectToHtml(vnode) { return this.getDR().render(vnode); }
 
-    render(container = '#app', vdom = null) {
-      let startTime = performance.now();      
-      let containerEl = typeof container === 'string' ?
-          document.querySelector(container) : container;            
-      if (!containerEl) {
-          log.ee && console.error(log.e('Render container not found', { container }, 'application'));
-          return;
-      }        
-      let isHydration = this.getState('isHydration', false);        
-      try {
-          // Handle direct VDOM rendering
-          if (vdom !== null) {
-              this.#renderImmediate(containerEl, vdom);
-              let duration = performance.now() - startTime;
-              log.ei && console.info(log.i('Direct VDOM render completed', { duration: `${duration.toFixed(2)}ms` }, 'application'));
-              return containerEl;
-          }
-          
-          // Original layout rendering
-          if (Array.isArray(this.layout)) {
-              let hasReactiveFunctions = this.layout.some(item => typeof item === 'function');
-              if (hasReactiveFunctions) {
-                  containerEl.innerHTML = '';
-                  let subscriptions = [];
-                  this.getDR()._handleChildren(containerEl, this.layout, subscriptions);
-                  if (subscriptions.length > 0) {
-                      this.getDR().subscriptions.set(containerEl, {
-                          subscriptions,
-                          eventListeners: []
-                      });
-                  }                    
-                  let duration = performance.now() - startTime;
-                  return;
-              }
-          }
-          isHydration ? this.#renderWithHydration(containerEl, vdom) : this.#renderImmediate(containerEl, vdom);
-          let duration = performance.now() - startTime;
-          log.ei && console.info(log.i('Render completed', { duration: `${duration.toFixed(2)}ms`, isHydration }, 'application'));
-      } catch (error) {
-          log.ee && console.error(log.e('Render failed', { error: error.message, container }, 'application'));
-          this.#renderError(containerEl, error);
-      }
+    render(container = '#app') {
+        let startTime = performance.now();      
+        let containerEl = typeof container === 'string' ?
+            document.querySelector(container) : container;            
+        if (!containerEl) {
+            log.ee && console.error(log.e('Render container not found', { container }, 'application'));
+            return;
+        }        
+        let isHydration = this.getState('isHydration', false);        
+        try {
+            if (Array.isArray(this.layout)) {
+                let hasReactiveFunctions = this.layout.some(item => typeof item === 'function');
+                if (hasReactiveFunctions) {
+                    containerEl.innerHTML = '';
+                    let subscriptions = [];
+                    this.getDR()._handleChildren(containerEl, this.layout, subscriptions);
+                    if (subscriptions.length > 0) {
+                        this.getDR().subscriptions.set(containerEl, {
+                            subscriptions,
+                            eventListeners: []
+                        });
+                    }                    
+                    let duration = performance.now() - startTime;
+                    return;
+                }
+            }
+            isHydration?this.#renderWithHydration(containerEl):this.#renderImmediate(containerEl);
+            let duration = performance.now() - startTime;
+            log.ei && console.info(log.i('Render completed', { duration: `${duration.toFixed(2)}ms`, isHydration }, 'application'));
+        } catch (error) {
+            log.ee && console.error(log.e('Render failed', { error: error.message, container }, 'application'));
+            this.#renderError(containerEl, error);
+        }
     }
 
-    #renderImmediate(containerEl, vdom = null) {
-      this.getDR().cleanup(containerEl);
-      containerEl.innerHTML = '';      
-      let content = vdom !== null ? vdom : this.layout;
-      let elm = this.getDR().render(content, null, false, containerEl);
-      if (elm && elm !== containerEl) containerEl.appendChild(elm);
+    #renderImmediate (containerEl) {
+        containerEl.innerHTML = '';
+        let elm = this.getDR().render(this.layout);
+        if (elm) containerEl.appendChild(elm);
     }
     
-    async #renderWithHydration(containerEl, vdom = null) {
-      let stagingEl = document.createElement('div');
-      stagingEl.style.cssText = 'position: absolute; left: -9999px; visibility: hidden;';
-      document.body.appendChild(stagingEl);
-      try {
-        startTracking();
-        let content = vdom !== null ? vdom : this.layout;
-        let elm = this.getDR().render(content);
-        if (elm) stagingEl.appendChild(elm);
-        await onAllComplete();
-        this.getDR().cleanup(containerEl);
-        containerEl.innerHTML = '';
-        while (stagingEl.firstChild) {
-          containerEl.appendChild(stagingEl.firstChild);
+    async #renderWithHydration (containerEl) {
+        let stagingEl = document.createElement('div');
+        stagingEl.style.cssText = 'position: absolute; left: -9999px; visibility: hidden;';
+        document.body.appendChild(stagingEl);
+        try {
+            startTracking();
+            let elm = this.getDR().render(this.layout);
+            if (elm) stagingEl.appendChild(elm);
+            await onAllComplete();
+            containerEl.innerHTML = '';
+            while (stagingEl.firstChild) {
+                containerEl.appendChild(stagingEl.firstChild);
+            }
+            this.getHM().initializeQueued();
+        } finally {
+            stopTracking();
+            document.body.removeChild(stagingEl);
         }
-        this.getHM()?.initializeQueued();
-      } finally {
-        stopTracking();
-        document.body.removeChild(stagingEl);
-      }
-    }
+    };
 
     #renderError(container, error) {
         let errorEl = document.createElement('div');
@@ -2657,11 +2568,7 @@ class Juris {
         return this.domEnhancer.configure(options); 
     }
     // arm() API for window, document, and elements event handling with full Juris context
-    arm(target, handlerFn) {    
-        if(handlerFn == null || typeof handlerFn !== 'function') {
-            log.ew && console.warn(log.w('arm() called without valid handler function'), 'framework');
-            return null;
-        }
+    arm(target, handlerFn) {        
         let context = this.createContext(target);
         let handlers = handlerFn(context);
         let listeners  = [];

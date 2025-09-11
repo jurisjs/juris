@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juris Step Wizard Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 15px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+
+    .main-content {
+      padding: 40px;
+    }
+
+    .step-wizard {
+      margin-bottom: 30px;
+    }
+
+    .step-indicator {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+      position: relative;
+    }
+
+    .step-indicator::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #e0e0e0;
+      z-index: 1;
+      transform: translateY(-50%);
+    }
+
+    .step {
+      background: #e0e0e0;
+      color: #666;
+      width: 120px;
+      height: 40px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      position: relative;
+      z-index: 2;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .step.completed {
+      background: #4caf50;
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .step.active {
+      background: #2196f3;
+      color: white;
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+    }
+
+    .step-content {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 30px;
+      min-height: 200px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      border-left: 4px solid #2196f3;
+    }
+
+    .card h3 {
+      color: #2196f3;
+      margin-bottom: 15px;
+      font-size: 1.4em;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #2196f3;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      background: #2196f3;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1976d2;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #545b62;
+      transform: translateY(-2px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .progress-info {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .completion-card {
+      text-align: center;
+      background: linear-gradient(45deg, #4caf50, #45a049);
+      color: white;
+      border: none;
+    }
+
+    .completion-card h3 {
+      color: white;
+    }
+
+    .summary {
+      background: #f0f8ff;
+      padding: 20px;
+      border-radius: 6px;
+      margin-top: 20px;
+    }
+
+    .summary h4 {
+      color: #2196f3;
+      margin-bottom: 10px;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .summary-item:last-child {
+      border-bottom: none;
+    }
+
+    @media (max-width: 600px) {
+      .step-indicator {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .step-indicator::before {
+        display: none;
+      }
+
+      .step {
+        width: 100%;
+      }
+
+      .controls {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">{..}</div>
+      <h1>Juris Step Wizard</h1>
+      <p>Reactive Step-by-Step Form Demo</p>
+    </div>
+    <div class="main-content">
+      <div id="app"></div>
+    </div>
+  </div>
+
+  <script src="../src/juris.js"></script>
+  <script>
+    const juris = new Juris({
+      states: {
+        wizard: {
+          currentStep: 1,
+          totalSteps: 4,
+          formData: {
+            personal: { name: '', email: '', phone: '' },
+            preferences: { theme: 'light', notifications: true, language: 'en' },
+            billing: { plan: 'basic', paymentMethod: 'card' },
+            review: { confirmed: false }
+          }
+        }
+      },
+      components: {
+        StepRenderer: (props, context) => ({
+          render: () => {
+            const { getState } = context;
+            const currentStep = getState('wizard.currentStep', 1);
+            const totalSteps = props.totalSteps || 4;
+            const steps = props.steps || {};
+
+            return {
+              div: {
+                class: 'step-wizard',
+                children: [
+                  {div: {
+                    class: 'step-indicator',
+                    children: () => {
+                      const current = getState('wizard.currentStep', 1);
+                      return Array.from({ length: totalSteps }, (_, i) => {
+                        const stepNum = i + 1;
+                        let className = 'step';
+                        if (stepNum < current) className += ' completed';
+                        if (stepNum === current) className += ' active';
+                        return {
+                          div: {
+                            key: `step-${stepNum}`,
+                            class: className,
+                            text: `Step ${stepNum}`,
+                            onclick: () => {
+                              context.setState('wizard.currentStep', stepNum);
+                            }
+                          }
+                        };
+                      });
+                    }
+                  }},//step-indicator
+                  {div: {
+                    class: 'step-content',
+                    children: () => {
+                      const step = getState('wizard.currentStep', 1);
+                      return steps[step] ? [steps[step]] : [{div: {text: `Step ${step} content`}}];
+                    }
+                  }}//step-content
+                ]
+              }
+            };
+          }
+        }),
+        Card: (props, context) => ({
+          render: () => ({
+            div: {
+              class: 'card',
+              children: [
+                props.title ? {h3: {text: props.title}} : null,
+                ...(Array.isArray(props.children) ? props.children : [props.children])
+              ].filter(Boolean)
+            }
+          })
+        }),
+        PersonalInfoStep: (props, context) => ({
+          render: () => {
+            const { getState, setState } = context;
+            return {
+              Card: {
+                title: 'Personal Information',
+                children: [
+                  {div: {
+                    class: 'form-group',
+                    children: [
+                      {label: {text: 'Full Name'}},
+                      {input: {
+                        type: 'text',
+                        placeholder: 'Enter your full name',
+                        value: () => getState('wizard.formData.personal.name', ''),
+                        oninput: (e) => setState('wizard.formData.personal.name', e.target.value)
+                      }}
+                    ]
+                  }},//form-group
+                  {div: {
+                    class: 'form-group',
+                    children: [
+                      {label: {text: 'Email Address'}},
+                      {input: {
+                        type: 'email',
+                        placeholder: 'Enter your email',
+                        value: () => getState('wizard.formData.personal.email', ''),
+                        oninput: (e) => setState('wizard.formData.personal.email', e.target.value)
+                      }}
+                    ]
+                  }},//form-group
+                  {div: {
+                    class: 'form-group',
+                    children: [
+                      {label: {text: 'Phone Number'}},
+                      {input: {
+                        type: 'tel',
+                        placeholder: 'Enter your phone number',
+                        value: () => getState('wizard.formData.personal.phone', ''),
+                        oninput: (e) => setState('wizard.formData.personal.phone', e.target.value)
+                      }}
+                    ]
+                  }}//form-group
+                ]
+              }
+            };
+          }
+        }),
+        PreferencesStep: (props, context) => ({
+          render: () => {
+            const { getState, setState } = context;
+            return {
+              Card: {
+                title: 'Preferences',
+                children: [
+                  {div: {
+                    class: 'form-group',
+                    children: [
+                      {label: {text: 'Theme'}},
+                      {select: {
+                        value: () => getState('wizard.formData.preferences.theme', 'light'),
+                        onchange: (e) => setState('wizard.formData.preferences.theme', e.target.value),
+                        children: [
+                          {option: {value: 'light', text: 'Light Theme'}},
+                          {option: {value: 'dark', text: 'Dark Theme'}},
+                          {option: {value: 'auto', text: 'Auto'}}
+                        ]
+                      }}
+                    ]
+                  }},//form-group
+                  {div: {
+                    class: 'form-group',
+                    children: [
+                      {label: {text: 'Language'}},
+                      {select: {
+                        value: () => getState('wizard.formData.preferences.language', 'en'),
+                        onchange: (e) => setState('wizard.formData.preferences.language', e.target.value),
+                        children: [
+                          {option: {value: 'en', text: 'English'}},
+                          {option: {value: 'es', text: 'Spanish'}},
+                          {option: {value: 'fr', text: 'French'}},
+                          {option: {value: 'de', text: 'German'}}
+                        ]
+                      }}
+                    ]
+                  }},//form-group
+                  {div: {
+                    class: 'form-group',
+                    children: [
+                      {label: {
+                        children: [
+                          {input: {
+                            type: 'checkbox',
+                            checked: () => getState('wizard.formData.preferences.notifications', true),
+                            onchange: (e) => setState('wizard.formData.preferences.notifications', e.target.checked),
+                            style: {marginRight: '8px'}
+                          }},
+                          'Enable notifications'
+                        ]
+                      }}
+                    ]
+                  }}//form-group
+                ]
+              }
+            };
+          }
+        }),
+        BillingStep: (props, context) => ({
+          render: () => {
+            const { getState, setState } = context;
+            return {
+              Card: {
+                title: 'Billing Information',
+                children: [
+                  {div: {
+                    class: 'form-group',
+                    children: [
+                      {label: {text: 'Plan'}},
+                      {select: {
+                        value: () => getState('wizard.formData.billing.plan', 'basic'),
+                        onchange: (e) => setState('wizard.formData.billing.plan', e.target.value),
+                        children: [
+                          {option: {value: 'basic', text: 'Basic - $9/month'}},
+                          {option: {value: 'pro', text: 'Pro - $19/month'}},
+                          {option: {value: 'enterprise', text: 'Enterprise - $49/month'}}
+                        ]
+                      }}
+                    ]
+                  }},//form-group
+                  {div: {
+                    class: 'form-group',
+                    children: [
+                      {label: {text: 'Payment Method'}},
+                      {select: {
+                        value: () => getState('wizard.formData.billing.paymentMethod', 'card'),
+                        onchange: (e) => setState('wizard.formData.billing.paymentMethod', e.target.value),
+                        children: [
+                          {option: {value: 'card', text: 'Credit Card'}},
+                          {option: {value: 'paypal', text: 'PayPal'}},
+                          {option: {value: 'bank', text: 'Bank Transfer'}}
+                        ]
+                      }}
+                    ]
+                  }}//form-group
+                ]
+              }
+            };
+          }
+        }),
+        ReviewStep: (props, context) => ({
+          render: () => {
+            const { getState, setState } = context;
+            const formData = getState('wizard.formData', {});
+            
+            return {
+              div: {
+                children: [
+                  {Card: {
+                    title: '🎉 Review Your Information',
+                    class: 'completion-card',
+                    children: [
+                      {p: {text: 'Please review your information before submitting.'}},
+                      {div: {
+                        class: 'summary',
+                        children: [
+                          {h4: {text: 'Personal Information'}},
+                          {div: {
+                            class: 'summary-item',
+                            children: [
+                              {span: {text: 'Name:'}},
+                              {span: {text: () => getState('wizard.formData.personal.name', 'Not provided')}}
+                            ]
+                          }},
+                          {div: {
+                            class: 'summary-item',
+                            children: [
+                              {span: {text: 'Email:'}},
+                              {span: {text: () => getState('wizard.formData.personal.email', 'Not provided')}}
+                            ]
+                          }},
+                          {div: {
+                            class: 'summary-item',
+                            children: [
+                              {span: {text: 'Phone:'}},
+                              {span: {text: () => getState('wizard.formData.personal.phone', 'Not provided')}}
+                            ]
+                          }},
+                          {h4: {text: 'Preferences', style: {marginTop: '20px'}}},
+                          {div: {
+                            class: 'summary-item',
+                            children: [
+                              {span: {text: 'Theme:'}},
+                              {span: {text: () => getState('wizard.formData.preferences.theme', 'light')}}
+                            ]
+                          }},
+                          {div: {
+                            class: 'summary-item',
+                            children: [
+                              {span: {text: 'Language:'}},
+                              {span: {text: () => getState('wizard.formData.preferences.language', 'en')}}
+                            ]
+                          }},
+                          {div: {
+                            class: 'summary-item',
+                            children: [
+                              {span: {text: 'Notifications:'}},
+                              {span: {text: () => getState('wizard.formData.preferences.notifications', true) ? 'Enabled' : 'Disabled'}}
+                            ]
+                          }},
+                          {h4: {text: 'Billing', style: {marginTop: '20px'}}},
+                          {div: {
+                            class: 'summary-item',
+                            children: [
+                              {span: {text: 'Plan:'}},
+                              {span: {text: () => getState('wizard.formData.billing.plan', 'basic')}}
+                            ]
+                          }},
+                          {div: {
+                            class: 'summary-item',
+                            children: [
+                              {span: {text: 'Payment Method:'}},
+                              {span: {text: () => getState('wizard.formData.billing.paymentMethod', 'card')}}
+                            ]
+                          }}
+                        ]
+                      }},//summary
+                      {div: {
+                        class: 'form-group',
+                        style: {marginTop: '20px'},
+                        children: [
+                          {label: {
+                            children: [
+                              {input: {
+                                type: 'checkbox',
+                                checked: () => getState('wizard.formData.review.confirmed', false),
+                                onchange: (e) => setState('wizard.formData.review.confirmed', e.target.checked),
+                                style: {marginRight: '8px'}
+                              }},
+                              'I confirm that all information is correct'
+                            ]
+                          }}
+                        ]
+                      }}//form-group
+                    ]
+                  }}//Card
+                ]
+              }
+            };
+          }
+        })
+      },
+      layout: [
+        {StepRenderer: {
+          totalSteps: 4,
+          steps: {
+            1: {PersonalInfoStep: {}},
+            2: {PreferencesStep: {}},
+            3: {BillingStep: {}},
+            4: {ReviewStep: {}}
+          }
+        }},
+        {div: {
+          class: 'controls',
+          children: [
+            {button: {
+              class: 'btn btn-secondary',
+              text: 'Previous',
+              disabled: () => juris.getState('wizard.currentStep', 1) === 1,
+              onclick: () => {
+                const currentStep = juris.getState('wizard.currentStep', 1);
+                if (currentStep > 1) {
+                  juris.setState('wizard.currentStep', currentStep - 1);
+                }
+              }
+            }},
+            {div: {
+              class: 'progress-info',
+              text: () => {
+                const current = juris.getState('wizard.currentStep', 1);
+                const total = juris.getState('wizard.totalSteps', 4);
+                return `Step ${current} of ${total}`;
+              }
+            }},
+            {button: {
+              class: 'btn btn-primary',
+              text: () => {
+                const currentStep = juris.getState('wizard.currentStep', 1);
+                const totalSteps = juris.getState('wizard.totalSteps', 4);
+                return currentStep === totalSteps ? 'Complete' : 'Next';
+              },
+              disabled: () => {
+                const currentStep = juris.getState('wizard.currentStep', 1);
+                const totalSteps = juris.getState('wizard.totalSteps', 4);
+                if (currentStep === totalSteps) {
+                  return !juris.getState('wizard.formData.review.confirmed', false);
+                }
+                return false;
+              },
+              onclick: () => {
+                const currentStep = juris.getState('wizard.currentStep', 1);
+                const totalSteps = juris.getState('wizard.totalSteps', 4);
+                if (currentStep < totalSteps) {
+                  juris.setState('wizard.currentStep', currentStep + 1);
+                } else {
+                  alert('Form completed! Data would be submitted here.');
+                  console.log('Form Data:', juris.getState('wizard.formData'));
+                }
+              }
+            }}
+          ]
+        }}//controls
+      ]
+    });
+
+    // Use juris.arm() for keyboard navigation
+    juris.arm(document, (context) => ({
+      onkeydown: (e) => {
+        if (e.key === 'ArrowLeft') {
+          const currentStep = context.getState('wizard.currentStep', 1);
+          if (currentStep > 1) {
+            context.setState('wizard.currentStep', currentStep - 1);
+          }
+        } else if (e.key === 'ArrowRight') {
+          const currentStep = context.getState('wizard.currentStep', 1);
+          const totalSteps = context.getState('wizard.totalSteps', 4);
+          if (currentStep < totalSteps) {
+            context.setState('wizard.currentStep', currentStep + 1);
+          }
+        }
+      }
+    }));
+
+    // Render the application
+    juris.render('#app');
+  </script>
+</body>
+</html>

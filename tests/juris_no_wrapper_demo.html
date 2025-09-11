@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="../src/juris.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f9fa;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 20px;
+    }
+    .products {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .cart {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+    .product-card {
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #007bff; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .price { font-weight: bold; color: #28a745; }
+    .original-price { text-decoration: line-through; color: #6c757d; }
+    .tier-badge { 
+      background: #ffc107; 
+      color: #212529; 
+      padding: 2px 8px; 
+      border-radius: 12px; 
+      font-size: 12px; 
+      font-weight: bold;
+    }
+    .warning { 
+      background: #fff3cd; 
+      border: 1px solid #ffeaa7; 
+      color: #856404; 
+      padding: 8px; 
+      border-radius: 4px; 
+      margin: 8px 0; 
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="logo-section"></div>
+    <div class="container">
+      <div class="products" id="products-section"></div>
+      <div class="cart" id="cart-section"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Product data
+    const PRODUCTS = [
+      { id: 1, name: 'Analytics Pro', price: 99, category: 'analytics', tier: 'pro' },
+      { id: 2, name: 'Basic Dashboard', price: 29, category: 'dashboard', tier: 'basic' },
+      { id: 3, name: 'Enterprise Suite', price: 299, category: 'enterprise', tier: 'enterprise' },
+      { id: 4, name: 'API Access', price: 49, category: 'api', tier: 'pro' },
+      { id: 5, name: 'White Label', price: 199, category: 'branding', tier: 'enterprise' }
+    ];
+
+    const JurisLogo = () => ({
+      div: {
+        style: {
+          textAlign: 'center',
+          margin: '20px 0',
+          fontSize: '28px',
+          fontWeight: 'bold',
+          color: '#333'
+        },
+        text: '{..} SaaS Cart Demo - No Wrappers'
+      }
+    });
+
+    // This component uses external container - no wrapper div created
+    const ProductCart = (props, context) => {
+      const { getState, setState } = context;
+
+      const calculateDiscountReasons = () => {
+        const userTier = getState('user.tier', 'basic');
+        const cartLength = getState('cart.items', []).length;
+        const loyaltyDiscount = getState('user.loyaltyDiscount', 0);
+        
+        const reasons = [];
+        if (userTier === 'pro') reasons.push('Pro tier: 10% off');
+        if (userTier === 'enterprise') reasons.push('Enterprise tier: 20% off');
+        if (cartLength >= 3) reasons.push('Bundle discount: 5% off');
+        if (loyaltyDiscount > 0) reasons.push(`Loyalty: ${loyaltyDiscount}% off`);
+        
+        return reasons;
+      };
+
+      const getPricing = () => {
+        const cart = getState('cart.items', []);
+        const userTier = getState('user.tier', 'basic');
+        const loyaltyDiscount = getState('user.loyaltyDiscount', 0);
+        
+        let subtotal = 0;
+        let discount = 0;
+        const itemDetails = [];
+
+        cart.forEach(item => {
+          const product = PRODUCTS.find(p => p.id === item.productId);
+          if (product) {
+            let itemPrice = product.price * item.quantity;
+            let itemDiscount = 0;
+
+            if (userTier === 'pro') itemDiscount += itemPrice * 0.1;
+            if (userTier === 'enterprise') itemDiscount += itemPrice * 0.2;
+            if (cart.length >= 3) itemDiscount += itemPrice * 0.05;
+            itemDiscount += itemPrice * (loyaltyDiscount / 100);
+
+            subtotal += itemPrice;
+            discount += itemDiscount;
+            itemDetails.push({
+              product,
+              originalPrice: itemPrice,
+              discountAmount: itemDiscount,
+              finalPrice: itemPrice - itemDiscount
+            });
+          }
+        });
+
+        return {
+          subtotal,
+          discount,
+          total: subtotal - discount,
+          itemDetails,
+          discountReasons: calculateDiscountReasons()
+        };
+      };
+
+      const addItem = (productId, quantity = 1) => {
+        const product = PRODUCTS.find(p => p.id === productId);
+        const userTier = getState('user.tier', 'basic');
+        const cart = getState('cart.items', []);
+        
+        if (!product) return { success: false, reason: 'product_not_found' };
+        
+        if (product.tier === 'enterprise' && userTier !== 'enterprise') {
+          return { success: false, reason: 'tier_restriction', requiredTier: 'enterprise' };
+        }
+        if (product.tier === 'pro' && userTier === 'basic') {
+          return { success: false, reason: 'tier_restriction', requiredTier: 'pro' };
+        }
+
+        const existingItem = cart.find(item => item.productId === productId);
+        if (existingItem) {
+          return { success: false, reason: 'already_in_cart' };
+        }
+
+        const newItem = { productId, quantity, addedAt: Date.now() };
+        setState('cart.items', [...cart, newItem]);
+        setState('cart.lastAction', `added_${product.name}`);
+        
+        return { success: true, item: newItem };
+      };
+
+      const removeItem = (productId) => {
+        const cart = getState('cart.items', []);
+        const newCart = cart.filter(item => item.productId !== productId);
+        setState('cart.items', newCart);
+        setState('cart.lastAction', `removed_${productId}`);
+        return { success: true };
+      };
+
+      const getAvailableProducts = () => {
+        const userTier = getState('user.tier', 'basic');
+        const cart = getState('cart.items', []);
+        const cartProductIds = cart.map(item => item.productId);
+        
+        return PRODUCTS.map(product => ({
+          ...product,
+          canPurchase: !cartProductIds.includes(product.id) && 
+                      (product.tier === 'basic' || 
+                       (product.tier === 'pro' && userTier !== 'basic') ||
+                       (product.tier === 'enterprise' && userTier === 'enterprise')),
+          restriction: cartProductIds.includes(product.id) ? 'already_in_cart' :
+                      (product.tier === 'enterprise' && userTier !== 'enterprise') ? 'need_enterprise' :
+                      (product.tier === 'pro' && userTier === 'basic') ? 'need_pro' : null
+        }));
+      };
+
+      const checkout = () => {
+        const cart = getState('cart.items', []);
+        const pricing = getPricing();
+        const userPaymentMethods = getState('user.paymentMethods', []);
+        
+        if (cart.length === 0) {
+          return { success: false, reason: 'empty_cart' };
+        }
+        
+        if (userPaymentMethods.length === 0) {
+          return { success: false, reason: 'no_payment_method' };
+        }
+        
+        setState('cart.items', []);
+        setState('cart.lastAction', 'checkout_completed');
+        setState('user.lastPurchase', { 
+          total: pricing.total, 
+          items: cart.length, 
+          timestamp: Date.now() 
+        });
+        
+        return { 
+          success: true, 
+          orderId: `ORD-${Date.now()}`,
+          total: pricing.total 
+        };
+      };
+
+      const getCartStatus = () => {
+        const cart = getState('cart.items', []);
+        const pricing = getPricing();
+        const userTier = getState('user.tier', 'basic');
+        
+        return {
+          itemCount: cart.length,
+          isEmpty: cart.length === 0,
+          total: pricing.total,
+          hasDiscounts: pricing.discount > 0,
+          userTier,
+          lastAction: getState('cart.lastAction', 'none')
+        };
+      };
+
+      return {
+        api: {
+          addItem: addItem,
+          removeItem: removeItem,
+          getPricing: getPricing,
+          getAvailableProducts: getAvailableProducts,
+          checkout: checkout,
+          getCartStatus: getCartStatus
+        },
+
+        render: () => {
+          const cart = getState('cart.items', []);
+          const pricing = getPricing();
+          
+          return [
+            {
+              h3: {
+                text: `Shopping Cart (${cart.length})`
+              }
+            },
+            
+            {
+              div: {
+                style: { marginBottom: '16px' },
+                children: [
+                  {
+                    span: {
+                      class: 'tier-badge',
+                      text: () => `${getState('user.tier', 'basic').toUpperCase()} TIER`
+                    }
+                  }
+                ]
+              }
+            },
+
+            cart.length === 0 ? {
+              div: {
+                style: { 
+                  textAlign: 'center', 
+                  color: '#6c757d',
+                  padding: '40px 0'
+                },
+                text: 'Your cart is empty'
+              }
+            } : {
+              div: {
+                children: [
+                  ...pricing.itemDetails.map(item => ({
+                    div: {
+                      class: 'cart-item',
+                      children: [
+                        {
+                          div: {
+                            children: [
+                              {
+                                div: {
+                                  text: item.product.name,
+                                  style: { fontWeight: '500' }
+                                }
+                              },
+                              {
+                                div: {
+                                  style: { fontSize: '12px', color: '#6c757d' },
+                                  children: [
+                                    item.discountAmount > 0 ? {
+                                      span: {
+                                        class: 'original-price',
+                                        text: `$${item.originalPrice}`
+                                      }
+                                    } : null,
+                                    {
+                                      span: {
+                                        class: 'price',
+                                        text: ` $${item.finalPrice.toFixed(2)}`
+                                      }
+                                    }
+                                  ].filter(Boolean)
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          button: {
+                            class: 'btn btn-danger',
+                            style: { fontSize: '12px', padding: '4px 8px' },
+                            text: '×',
+                            onclick: () => removeItem(item.product.id)
+                          }
+                        }
+                      ]
+                    }
+                  })),
+
+                  pricing.discount > 0 ? {
+                    div: {
+                      class: 'warning',
+                      children: [
+                        {
+                          div: {
+                            text: 'Active Discounts:',
+                            style: { fontWeight: 'bold', marginBottom: '4px' }
+                          }
+                        },
+                        ...pricing.discountReasons.map(reason => ({
+                          div: {
+                            text: `• ${reason}`,
+                            style: { fontSize: '11px' }
+                          }
+                        }))
+                      ]
+                    }
+                  } : null,
+
+                  {
+                    div: {
+                      style: { 
+                        marginTop: '16px', 
+                        paddingTop: '16px', 
+                        borderTop: '2px solid #e9ecef' 
+                      },
+                      children: [
+                        pricing.discount > 0 ? {
+                          div: {
+                            style: { 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              color: '#6c757d',
+                              fontSize: '14px'
+                            },
+                            children: [
+                              { span: { text: 'Subtotal:' } },
+                              { span: { text: `$${pricing.subtotal.toFixed(2)}` } }
+                            ]
+                          }
+                        } : null,
+                        pricing.discount > 0 ? {
+                          div: {
+                            style: { 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              color: '#dc3545',
+                              fontSize: '14px'
+                            },
+                            children: [
+                              { span: { text: 'Discount:' } },
+                              { span: { text: `-$${pricing.discount.toFixed(2)}` } }
+                            ]
+                          }
+                        } : null,
+                        {
+                          div: {
+                            style: { 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              fontSize: '18px',
+                              fontWeight: 'bold',
+                              marginTop: '8px'
+                            },
+                            children: [
+                              { span: { text: 'Total:' } },
+                              { 
+                                span: { 
+                                  class: 'price',
+                                  text: `$${pricing.total.toFixed(2)}` 
+                                } 
+                              }
+                            ]
+                          }
+                        }
+                      ].filter(Boolean)
+                    }
+                  },
+
+                  {
+                    button: {
+                      class: 'btn btn-success',
+                      style: { 
+                        width: '100%', 
+                        marginTop: '16px',
+                        padding: '12px'
+                      },
+                      text: 'Checkout',
+                      onclick: () => {
+                        const result = checkout();
+                        if (result.success) {
+                          alert(`Order ${result.orderId} completed! Total: $${result.total.toFixed(2)}`);
+                        } else {
+                          alert(`Checkout failed: ${result.reason}`);
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ].filter(Boolean);
+        }
+      };
+    };
+
+    // This component also uses external container - no wrapper div created
+    const ProductList = (props, context) => {
+      const { getState } = context;
+      
+      return {
+        render: () => [
+          {
+            h3: {
+              text: 'Available Products'
+            }
+          },
+          
+          {
+            div: {
+              style: { marginBottom: '20px' },
+              children: [
+                {
+                  label: {
+                    text: 'User Tier: ',
+                    style: { marginRight: '8px' }
+                  }
+                },
+                {
+                  select: {
+                    value: () => getState('user.tier', 'basic'),
+                    onchange: (e) => {
+                      context.setState('user.tier', e.target.value);
+                      context.setState('cart.items', []);
+                    },
+                    children: [
+                      { option: { value: 'basic', text: 'Basic' } },
+                      { option: { value: 'pro', text: 'Pro' } },
+                      { option: { value: 'enterprise', text: 'Enterprise' } }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+
+          () => {
+            const cartAPI = context.components.getComponentAPI('ProductCart');
+            if (!cartAPI) return { div: { text: 'Loading...' } };
+            
+            const products = cartAPI.getAvailableProducts();
+            
+            return {
+              div: {
+                children: products.map(product => ({
+                  div: {
+                    class: 'product-card',
+                    children: [
+                      {
+                        div: {
+                          children: [
+                            {
+                              div: {
+                                text: product.name,
+                                style: { fontWeight: '500', marginBottom: '4px' }
+                              }
+                            },
+                            {
+                              div: {
+                                style: { fontSize: '14px', color: '#6c757d' },
+                                text: `${product.category} • ${product.tier} tier`
+                              }
+                            },
+                            {
+                              div: {
+                                class: 'price',
+                                text: `$${product.price}`,
+                                style: { marginTop: '4px' }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        div: {
+                          children: [
+                            product.restriction ? {
+                              div: {
+                                style: { 
+                                  fontSize: '12px', 
+                                  color: '#dc3545',
+                                  marginBottom: '4px'
+                                },
+                                text: product.restriction === 'already_in_cart' ? 'In Cart' :
+                                      product.restriction === 'need_pro' ? 'Requires Pro' :
+                                      product.restriction === 'need_enterprise' ? 'Requires Enterprise' : ''
+                              }
+                            } : null,
+                            {
+                              button: {
+                                class: `btn ${product.canPurchase ? 'btn-primary' : 'btn-secondary'}`,
+                                disabled: !product.canPurchase,
+                                text: product.canPurchase ? 'Add to Cart' : 'Unavailable',
+                                onclick: () => {
+                                  if (product.canPurchase) {
+                                    const result = cartAPI.addItem(product.id);
+                                    if (!result.success) {
+                                      alert(`Cannot add: ${result.reason}`);
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ].filter(Boolean)
+                        }
+                      }
+                    ]
+                  }
+                }))
+              }
+            };
+          }
+        ]
+      };
+    };
+
+    // Initialize the app
+    const cartApp = new Juris({
+      states: {
+        user: {
+          tier: 'basic',
+          loyaltyDiscount: 5,
+          paymentMethods: ['card-1234']
+        },
+        cart: {
+          items: [],
+          lastAction: 'none'
+        }
+      },
+      
+      components: {
+        JurisLogo,
+        ProductCart,
+        ProductList
+      }
+    });
+
+    // Render components to external containers to eliminate wrapper divs
+    cartApp.render('#logo-section', { JurisLogo: {} });
+    
+    // Get the actual DOM elements
+    const productsContainer = document.getElementById('products-section');
+    const cartContainer = document.getElementById('cart-section');
+    
+    // Create components with external containers - this eliminates wrapper divs
+    cartApp.getCM().create('ProductList', {}, productsContainer);
+    cartApp.getCM().create('ProductCart', {}, cartContainer);
+
+    // Demo the clean HTML output
+    setTimeout(() => {
+      console.log('=== Clean HTML Structure (No Extra Wrappers) ===');
+      console.log(document.getElementById('app').innerHTML);
+      
+      const cartAPI = cartApp.getComponentAPI('ProductCart');
+      console.log('=== Cart API Demo ===');
+      console.log('Available methods:', Object.keys(cartAPI));
+      console.log('Current status:', cartAPI.getCartStatus());
+    }, 1000);
+  </script>
+</body>
+</html>

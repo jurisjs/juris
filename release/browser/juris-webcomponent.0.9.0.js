@@ -1,3 +1,4 @@
+//v0.9.0
 // juris-webcomponent.js - Standalone WebComponent Factory Feature
 if (typeof WebComponentFactory === 'undefined') {
     class WebComponentFactory {

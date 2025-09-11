@@ -874,22 +874,27 @@ class ComponentManager {
     #newRenderComp(result, name, props, states, targetContainer = null) {
       let cont = targetContainer || document.createElement('div');
       let isExternalContainer = !!targetContainer;
+      
+      // Only add framework attributes if we created the element
       if (!isExternalContainer) {
         cont.setAttribute('data-juris-reactive-render', name);
-      }      
+      }
+      
       let data = { 
         name, 
         api: result.api || {}, 
         render: result.render,
         isExternalContainer: isExternalContainer
       };
-      this.insts.set(cont, data);      
+      this.insts.set(cont, data);
+      
       if (result.api && typeof result.api === 'object') {
         cont.api = result.api;
       }
       if (result.api) {
         this.namedComps.set(name, { elm: cont, instance: data });
-      }      
+      }
+      
       let updateRender = () => this.#runRender(result.render, cont, name, isExternalContainer);
       let subs = [];
       this.juris.getDR()._createReactiveUpdate(cont, updateRender, subs);
@@ -915,7 +920,9 @@ class ComponentManager {
     }
 
     #setupComp(el, inst, states, name, isExternalContainer = false) {
+      // Add isExternalContainer to instance data
       inst.isExternalContainer = isExternalContainer;
+      
       this.insts.set(el, inst);        
       if (states?.size > 0) {
         this.compStates.set(el, states);
@@ -946,6 +953,8 @@ class ComponentManager {
           });
           return;
         }
+        
+        // Only clear innerHTML if we own the container or it's expected behavior
         let children = Array.from(cont.children);
         children.forEach(child => this.cleanup(child));
         cont.innerHTML = '';

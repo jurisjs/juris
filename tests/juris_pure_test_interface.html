@@ -18568,36 +18568,6 @@ juris.objectToHtml({ TestComponent: {} });
 testFramework.expect(resultElement.tagName).toBe('SPAN');
 testFramework.expect(resultElement.textContent).toBe('converted');`);
 
-testFramework.addTest('Context Utils Render Mode', 'Enhanced Context', async function() {
-    const juris = new Juris({
-    features:{
-        enhance:DOMEnhancer
-    }});
-    let initialMode, changedMode;
-    
-    juris.registerComponent('TestComponent', (props, { utils }) => {
-        initialMode = utils.getRenderMode();
-        utils.setRenderMode('batch');
-        changedMode = utils.getRenderMode();
-        
-        return { div: { text: 'test' } };
-    });
-    
-    juris.objectToHtml({ TestComponent: {} });
-}, `const juris = new Juris({
-    features:{
-        enhance:DOMEnhancer
-    }});
-let initialMode, changedMode;
-
-juris.registerComponent('TestComponent', (props, { utils }) => {
-    initialMode = utils.getRenderMode();
-    utils.setRenderMode('batch');
-    changedMode = utils.getRenderMode();
-    return { div: { text: 'test' } };
-});
-
-juris.objectToHtml({ TestComponent: {} });`);
 
 // Enhancement Options Tests
 testFramework.addTest('Enhancement with Options', 'Enhance API', async function() {
@@ -22603,7 +22573,7 @@ const vnode = {
 
 // ===== CONTROL FLOW COMPONENTS =====
 
-testFramework.addTest('ConditionalRenderer Component', 'Control Flow Components', async function() {
+testFramework.addTest('ConditionalRenderer Component1', 'Control Flow Components', async function() {
     const juris = new Juris({
         components: {
             ConditionalRenderer: (props, context) => ({
@@ -28789,9 +28759,9 @@ testFramework.expect(element.tagName).toBe('P');`);
                     background: '#1a1a1a'
                 },
                 children: [
-                    { 'Header': {} },
-                    { 'Controls': {} },
-                    { 'MainContent': {} }
+                    { Header: {} },
+                    { Controls: {} },
+                    { MainContent: {} }
                 ]
             }
         });
@@ -28817,7 +28787,7 @@ testFramework.expect(element.tagName).toBe('P');`);
                 MainContent,
                 App
             },
-            layout: { 'App': {} }
+            layout: { App: {} }
         });
 
         // Render the application
