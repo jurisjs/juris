@@ -2047,40 +2047,54 @@ class DOMRenderer {
     }
   }
   
-  _setStaticAttribute(elm, attr, value) {
-    if (this.SKIP_ATTRS.has(attr)) return;
-    if (this.BOOLEAN_ATTRS.has(attr)) {
-      let boolValue = value && value !== 'false';
-      if (boolValue) {
-        elm.setAttribute(attr,'');
-      } else {
-        elm.removeAttribute(attr);
-      }
-      if (attr in elm) {
-        elm[attr] = boolValue;
-      }
-      return;
-    }    
-    if (elm.namespaceURI === 'http://www.w3.org/2000/svg') {
-      elm.setAttribute(attr, value);
-      return;
-    }
-    
-    let firstChar = attr.charCodeAt(0);
-    if ((firstChar === 100 && attr.charCodeAt(4) === 45) || // data-
-        (firstChar === 97 && attr.charCodeAt(4) === 45) ||  // aria-
-        attr.indexOf('-') !== -1 ||
-        attr.indexOf(':') !== -1) {
-      elm.setAttribute(attr, value);
-      return;
-    }
-    
-    if (attr in elm && typeof elm[attr] !== 'function') {
-      elm[attr] = value;
+_setStaticAttribute(elm, attr, value) {
+  if (this.SKIP_ATTRS.has(attr)) return;
+  
+  if (this.BOOLEAN_ATTRS.has(attr)) {
+    let boolValue = value && value !== 'false';
+    if (boolValue) {
+      elm.setAttribute(attr,'');
     } else {
+      elm.removeAttribute(attr);
+    }
+    if (attr in elm) {
+      elm[attr] = boolValue;
+    }
+    return;
+  }    
+  
+  if (elm.namespaceURI === 'http://www.w3.org/2000/svg') {
+    elm.setAttribute(attr, value);
+    return;
+  }
+  
+  // Special handling for read-only properties
+  const READ_ONLY_ATTRS = new Set(['list', 'form', 'labels']);
+  if (READ_ONLY_ATTRS.has(attr)) {
+    elm.setAttribute(attr, value);
+    return;
+  }
+  
+  let firstChar = attr.charCodeAt(0);
+  if ((firstChar === 100 && attr.charCodeAt(4) === 45) || // data-
+      (firstChar === 97 && attr.charCodeAt(4) === 45) ||  // aria-
+      attr.indexOf('-') !== -1 ||
+      attr.indexOf(':') !== -1) {
+    elm.setAttribute(attr, value);
+    return;
+  }
+  
+  if (attr in elm && typeof elm[attr] !== 'function') {
+    try {
+      elm[attr] = value;
+    } catch (error) {
+      // If setting property fails (e.g., read-only), fall back to setAttribute
       elm.setAttribute(attr, value);
     }
+  } else {
+    elm.setAttribute(attr, value);
   }
+}
   
   _handleEvent(elm, eventName, handler, eventListeners) {
     eventName = eventName.toLowerCase();
