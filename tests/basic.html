@@ -49,6 +49,13 @@ const Increment = (props, {getState,setState}) => (
         const current = getState('count', 0);
         setState('count', current + 1);
     }
+  }});const Decrement = (props, {getState,setState}) => (
+  {button: {
+    text: ()=>props.lable(),
+    onclick: () => {
+        const current = getState('count', 0);
+        setState('count', current - 1);
+    }
   }});
 	const Counter = (props, {getState,setState}) => ({
       div: {
@@ -61,6 +68,7 @@ const Increment = (props, {getState,setState}) => (
             "Hello",
             {br:{}},
             {Increment:{lable:()=>'Increment:'+ getState('count', 0)}},
+            {Decrement:{lable:()=>'Decrement:'+ getState('count', 0)}},
             ()=>{
                 if(getState('count', 0) < 5){
                   return `Count: ${getState('count', 0)}`
@@ -71,7 +79,7 @@ const Increment = (props, {getState,setState}) => (
                   }}
                 }
 
-                return {Increment:{lable:()=>'Increment:'+ getState('count', 0)}}
+                return {Decrement:{lable:()=>'Decrement:'+ getState('count', 0)}}
 
             },            
             ()=>{
@@ -94,7 +102,7 @@ const Increment = (props, {getState,setState}) => (
   states: {
         count: 0  // Initialize the state
     },
-		components:{Counter,Increment, SwitchRenderer},
+		components:{Counter,Increment, SwitchRenderer,Decrement},
   	layout:[{Counter:{}},
             {h1: {
               text: getUserDisplayName // Reactive function

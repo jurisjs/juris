@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+.custom-datalist-container {
+  position: relative;
+  width: 300px;
+}
+
+#custom-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+#custom-input:focus {
+  border-color: #007cba;
+  outline: none;
+  box-shadow: 0 0 8px rgba(0, 124, 186, 0.2);
+}
+
+.custom-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.dropdown-option {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.dropdown-option:hover {
+  background-color: #f5f5f5;
+}
+
+.dropdown-option:last-child {
+  border-bottom: none;
+}
+
+.dropdown-option.highlighted {
+  background-color: #007cba;
+  color: white;
+}
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script src="../src/juris.js"></script>
+  <script>
+   const DataTable = (props, context) => {
+  const {getState, setState, executeBatch} = context;
+  const tableId = props.tableId || 'default';
+  
+  // Initialize dataset
+  setState(`data.${tableId}.rows`, [
+    {id: 1, name: 'Resti', position: 'Intern'},
+    {id: 2, name: 'Alice', position: 'Developer'},
+    {id: 3, name: 'Bob', position: 'Supervisor'}
+  ]);
+  
+  setState(`data.${tableId}.positions`, [
+    {name: 'Supervisor'},
+    {name: 'Developer'},
+    {name: 'Intern'},
+    {name: 'Manager'},
+    {name: 'Designer'}
+  ]);
+
+  // Update row data function
+  const updateRowData = (rowId, field, newValue) => {
+    const rows = getState(`data.${tableId}.rows`, []);
+    const updatedRows = rows.map(row => 
+      row.id === rowId ? {...row, [field]: newValue} : row
+    );
+    setState(`data.${tableId}.rows`, updatedRows);
+  };
+
+  return {
+    table: {
+      children: [
+        {tr: {
+          children: [
+            {th: {text: 'Id'}},
+            {th: {text: 'Name'}},
+            {th: {text: 'Position'}}
+          ]
+        }},
+        () => {
+          const rows = getState(`data.${tableId}.rows`, []);
+          return rows.map(row => ({
+            tr: {
+              key: `row-${row.id}`,
+              onclick: (e) => {
+                console.log('Row clicked:', row.id);
+                setState(`${tableId}.selectedRow`, row.id);
+              },
+              children: [
+                {td: {
+                  text: row.id,
+                  onclick: (e) => e.stopPropagation()
+                }},
+                {td: {
+                  contenteditable: true,
+                  onclick: (e) => e.stopPropagation(),
+                  onblur: (e) => {
+                    updateRowData(row.id, 'name', e.target.textContent);
+                  },
+                  children: [
+                    () => {
+                      const currentRows = getState(`data.${tableId}.rows`, []);
+                      const currentRow = currentRows.find(r => r.id === row.id);
+                      return currentRow ? currentRow.name : '';
+                    }
+                  ]
+                }},
+                {td: {
+                  contenteditable: () => getState(`editing.${row.id}.position`, false),
+                  onclick: (e) => {
+                    e.stopPropagation();
+                    setState(`editing.${row.id}.position`, true);
+                  },
+                  children: [
+                    () => {
+                      if (!getState(`editing.${row.id}.position`, false)) {
+                        const currentRows = getState(`data.${tableId}.rows`, []);
+                        const currentRow = currentRows.find(r => r.id === row.id);
+                        return currentRow ? currentRow.position : '';
+                      }
+                    },
+                    () => {
+                      if (getState(`editing.${row.id}.position`, false)) {
+                        return {div: {
+                          class: 'custom-datalist-container',
+                          children: [
+                            {input: {
+                              type: 'text',
+                              value: () => {
+                                const currentRows = getState(`data.${tableId}.rows`, []);
+                                const currentRow = currentRows.find(r => r.id === row.id);
+                                return currentRow ? currentRow.position : '';
+                              },
+                              placeholder: 'Enter position',
+                              oninput: (e) => {
+                                updateRowData(row.id, 'position', e.target.value);
+                              },
+                              onblur: (e) => {
+                                setTimeout(() => {
+                                  setState(`editing.${row.id}.position`, false);
+                                }, 150);
+                              }
+                            }},
+                            {div: {
+                              class: 'custom-dropdown',
+                              style: () => ({
+                                display: getState(`editing.${row.id}.position`, false) ? 'block' : 'none'
+                              }),
+                              children: () => {
+                                const positions = getState(`data.${tableId}.positions`, []);
+                                const currentRows = getState(`data.${tableId}.rows`, []);
+                                const currentRow = currentRows.find(r => r.id === row.id);
+                                const filter = currentRow ? currentRow.position.toLowerCase() : '';
+                                
+                                const filteredPositions = positions.filter(item => 
+                                  item.name && item.name.toLowerCase().includes(filter)
+                                );
+                                
+                                return filteredPositions.map(item => ({
+                                  div: {
+                                    class: 'dropdown-option',
+                                    text: item.name,
+                                    onclick: (e) => {
+                                      e.stopPropagation();
+                                      executeBatch(() => {
+                                        updateRowData(row.id, 'position', item.name);
+                                        setState(`editing.${row.id}.position`, false);
+                                      });
+                                    }
+                                  }
+                                }));
+                              }
+                            }}
+                          ]
+                        }};
+                      }
+                    }
+                  ]
+                }}
+              ]
+            }
+          }));
+        }
+      ]
+    }
+  }
+}
+    const juris = new Juris({
+      components:{
+        DataTable,
+      },
+      layout:{
+        DataTable:{}
+      }
+
+    });
+    juris.render();
+    window.juris=juris;
+  </script>  
+  <datalist id="categories">
+    <option value="Electronics">
+    <option value="Clothing">
+    <option value="Books">
+  </datalist>
+</body>
+</html>

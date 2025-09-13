@@ -15,14 +15,17 @@
 			context.setState('count', context.getState('count',0)+1)
 		}}}
 	]
-	const Counter = (context)=>{
+	const Counter = (props,context)=>{
 		return {
-			render:()=>'Count is'+context.getState('count',0),	
+			render:()=>props.label+'-' +context.getState('count',0),	
 			api:{},
 			hooks:{}
 		}	
 	}
-	const ControlFlow = (props) =>props.comps[props.step];
+	const ControlFlow = (props) =>{
+	return {
+		render:()=>props.comps[props.steps()],
+	}}
 
 	const juris = new Juris({
 			components:{
@@ -31,12 +34,28 @@
 				ControlFlow
 			},
 		layout:[
-			{Counter:{}},
+			{Counter:{label:'Count2'}},
 			{Switch:{}},
 			{ControlFlow:{
-				comps:{'count':{Counter:{}}},
-				step:'count',
-			}}
+				comps:{'count':{
+								Counter:{
+									label:'Count3'
+								}},
+								'count1':{
+								Counter:{
+									label:'Count1'
+								}}
+							},
+				steps:()=>{
+					const step = juris.getState('count',0);
+						const map = {
+							0:'count',
+							1:'count1',
+						}
+						return map[step]||'count';
+					}
+				},
+			}
 		]
 	});
 	juris.render();
