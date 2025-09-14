@@ -772,7 +772,7 @@ class ComponentManager {
 
     #createManagedComponent(result, name, props, states, targetContainer = null) {
       let inst = this.#newComp(result, name, props);
-      let cont = document.createElement('div');
+      let cont = targetContainer || document.createElement('div');
       let isExternal = !!targetContainer;      
       if (!isExternal) {
         cont.setAttribute('data-juris-component', name);
@@ -1806,9 +1806,6 @@ class DOMRenderer {
   #handleReactiveChildren(elm, childrenFn, subscriptions, componentName = null) {
     let updateChildren = () => {
       let { result, deps } = this.juris.getSM().track(() => childrenFn(elm));
-      if(!Array.isArray(result)){
-        result=[result];
-      }
       if (this.#isPromiseLike(result)) {
         let asyncContext = { elm, type: 'reactive-children' };
         this.#handleAsync(result, {
@@ -1842,9 +1839,7 @@ class DOMRenderer {
   
   #updateChildren(elm, children, componentName = null) {
     if (children === "ignore") return;
-    if(!Array.isArray(children)){
-      children = [children];
-    }
+    
     let lastChildren = elm._jurisLastChildren;
     if (lastChildren === children) {
       return;
@@ -2269,83 +2264,8 @@ _setStaticAttribute(elm, attr, value) {
   }
 }
 
-/**
- * Juris - JavaScript Unified Reactive Interface Solution
- * The First and Only Non-blocking Reactive Platform, Architecturally Optimized for Next Generation Cutting-Edge Cross-Platform Application.
- * 
- * @class Juris
- * @author Resti Guay
- * @version 0.91.0
- * @license MIT
- * @see {@link https://jurisjs.com/} Official Website
- * @see {@link https://github.com/jurisjs/juris} GitHub Repository
- * @see {@link https://www.npmjs.com/package/juris} NPM Package
- * 
- * @description
- * Juris aims to eliminate build complexity from small to large applications with features including:
- * - Temporal Independent rendering
- * - Automatic deep call stack branch aware dependency detection
- * - Smart Promise (Asynchronous) Handling for Non-Blocking Rendering
- * - Component lazy compilation
- * - Global Non-Reactive State Management
- * - SSR (Server-Side Rendering) ready and CSR (Client-Side Rendering)
- * - Loading Status templating
- * - Web Component support
- * - SVG Support
- * - Dual Template Mode (HTML and Object VDOM)
- * - Advanced Reactive Management with arm() API
- * 
- * @example
- * // Basic initialization
- * const juris = new Juris({
- *   states: { counter: 0 },
- *   components: {
- *     MyComponent: (props) => ({
- *       div: {
- *         text: () => juris.getState('counter', 0),
- *         onclick: () => juris.setState('counter', juris.getState('counter') + 1)
- *       }
- *     })
- *   }
- * });
- * 
- * @example
- * // Advanced configuration with features
- * const juris = new Juris({
- *   states: { app: { theme: 'dark' } },
- *   middleware: [(action) => console.log('State change:', action)],
- *   features: {
- *     compute: ComputePlugin,
- *     enhance: EnhancePlugin,
- *     template: TemplatePlugin
- *   },
- *   services: {
- *     api: new ApiService(),
- *     storage: new StorageService()
- *   }
- * });
- */
 class Juris {
-  /**
-   * @private
-   * @static
-   * @type {boolean}
-   * @description Internal flag to track global instance detection
-   */
-    static #inGlobal = false;/**
-   * Creates a new Juris instance
-   * 
-   * @constructor
-   * @param {JurisConfig} [config={}] - Configuration object for Juris initialization
-   * 
-   * @example
-   * const juris = new Juris({
-   *   states: { user: { name: 'John' } },
-   *   components: { Header: () => ({ h1: { text: 'Hello' } }) },
-   *   services: { api: new ApiService() },
-   *   features: { compute: ComputePlugin }
-   * });
-   */
+    static #inGlobal = false;
     constructor(config = {}) {
         if (config.logLevel) {
             this.setupLogging(config.logLevel);
@@ -2438,124 +2358,18 @@ class Juris {
         this.#detectGlobalAndWarn();
     }
 
-
-  /**
-   * Gets the DOM Renderer instance
-   * 
-   * @returns {DOMRenderer} The DOM renderer instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const renderer = juris.getDR();
-   * const element = renderer.render({ div: { text: 'Hello' } });
-   */
     getDR() { return this.domRenderer; }
-    
-    /**
-   * Gets the State Manager instance
-   * 
-   * @returns {StateManager} The state manager instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const stateManager = juris.getSM();
-   * stateManager.setState('user.name', 'Jane');
-   */
     getSM() { return this.stateManager; }
-
-    
-  /**
-   * Gets the Headless Manager instance
-   * 
-   * @returns {HeadlessManager|undefined} The headless manager instance if available
-   * @since 0.91.0
-   * 
-   * @example
-   * const headless = juris.getHM();
-   * if (headless) {
-   *   headless.register('DataProcessor', processorFn);
-   * }
-   */
     getHM() { return this.headlessManager; }
-    
-  /**
-   * Gets the Component Manager instance
-   * 
-   * @returns {ComponentManager} The component manager instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const componentManager = juris.getCM();
-   * componentManager.register('Button', buttonComponent);
-   */   
     getCM() { return this.componentManager; }
+    #detectGlobalAndWarn() {
+        if (!Juris._done) { (requestIdleCallback || setTimeout)(() => { if (Juris.#inGlobal) return; Juris.#inGlobal = true; for (let key in globalThis) { if (globalThis[key] instanceof Juris) { log.ew && console.warn(`JURIS GLOBAL: '${key}'`); } } }); }
+    }
     
-  /**
-   * Gets the API object of a named component
-   * 
-   * @param {string} name - The name of the component
-   * @returns {Object|null} The component's API object or null if not found
-   * @since 0.91.0
-   * 
-   * @example
-   * // Register component with API
-   * juris.registerComponent('Modal', (props) => ({
-   *   api: {
-   *     open: () => juris.setState('modal.isOpen', true),
-   *     close: () => juris.setState('modal.isOpen', false)
-   *   },
-   *   render: () => ({ div: { text: 'Modal content' } })
-   * }));
-   * 
-   * // Use the API
-   * const modalAPI = juris.getComponentAPI('Modal');
-   * modalAPI.open();
-   */
     getComponentAPI(name) { return this.getCM().getComponentAPI(name); }
-
-    
-  /**
-   * Gets the DOM element of a named component
-   * 
-   * @param {string} name - The name of the component
-   * @returns {HTMLElement|null} The component's DOM element or null if not found
-   * @since 0.91.0
-   * 
-   * @example
-   * const modalElement = juris.getComponentElement('Modal');
-   * if (modalElement) {
-   *   modalElement.scrollIntoView();
-   * }
-   */
     getComponentElement(name) {return this.getCM().getComponentElement(name); }
-    
-  /**
-   * Gets an array of all named component names
-   * 
-   * @returns {string[]} Array of component names that have APIs
-   * @since 0.91.0
-   * 
-   * @example
-   * const componentNames = juris.getNamedComponents();
-   * console.log('Available components:', componentNames);
-   */
     getNamedComponents() { return this.getCM().getNamedComponents();}
 
-    /**
-    * Compiles template elements into Juris components
-    * 
-    * @param {NodeList|HTMLTemplateElement[]|null} [templates=null] - Template elements to compile, or null to auto-detect
-    * @returns {void}
-    * @since 0.91.0
-    * 
-    * @example
-    * // Auto-compile all templates with data-component attribute
-    * juris.compileTemplates();
-    * 
-    * // Compile specific templates
-    * const templates = document.querySelectorAll('template.my-templates');
-    * juris.compileTemplates(templates);
-    */
     compileTemplates(templates = null) {
         if (!this.templateCompiler) {
             log.ew && console.warn(log.w('Template compilation requested but templateCompiler not available'), 'framework');
@@ -2568,17 +2382,6 @@ class Juris {
         });
     }
 
-  /**
-   * Sets up logging configuration for Juris
-   * 
-   * @param {string} level - Log level: 'debug', 'info', 'warn', or 'error'
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.setupLogging('debug'); // Show all logs
-   * juris.setupLogging('error'); // Only show errors
-   */
     setupLogging(level) {
         log.ei=true;log.ed=true;log.el=true;log.ew=true;log.ee=true;
         let levels = { debug: 0, info: 1, warn: 2, error: 3 };
@@ -2591,26 +2394,7 @@ class Juris {
         }
     }
 
-  /**
-   * Sets up loading/async indicators for specific elements
-   * 
-   * @param {string} elementId - The ID of the element to configure
-   * @param {PlaceholderConfig} config - Configuration for loading indicators
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.setupIndicators('app-container', {
-   *   className: 'loading-spinner',
-   *   text: 'Loading application...',
-   *   style: 'opacity: 0.7; text-align: center;'
-   * });
-   */
     setupIndicators(elementId, config) { this.getDR().setupIndicators(elementId, config); }
-
-    #detectGlobalAndWarn() {
-        if (!Juris._done) { (requestIdleCallback || setTimeout)(() => { if (Juris.#inGlobal) return; Juris.#inGlobal = true; for (let key in globalThis) { if (globalThis[key] instanceof Juris) { log.ew && console.warn(`JURIS GLOBAL: '${key}'`); } } }); }
-    }
     #createBaseContext() {
         if (!this.contextTemplate) {
             this.contextTemplate = {
@@ -2662,57 +2446,12 @@ class Juris {
         }
         return this.contextTemplate;
     }
-    
-  /**
-   * Creates a headless context (alias for createContext)
-   * 
-   * @param {HTMLElement|null} [elm=null] - Optional element to bind to the context
-   * @returns {JurisContext} A context object with Juris APIs
-   * @since 0.91.0
-   * 
-   * @example
-   * const headlessContext = juris.createHeadlessContext();
-   * headlessContext.components.registerHeadless('DataProcessor', processorFn);
-   */
     createHeadlessContext(elm = null) {
         return this.createContext(elm);
     }
 
-  /**
-   * Executes multiple state updates in a single batch for better performance
-   * 
-   * @param {Function} callback - Function containing state updates to batch
-   * @returns {*} The return value of the callback
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.executeBatch(() => {
-   *   juris.setState('user.name', 'John');
-   *   juris.setState('user.age', 30);
-   *   juris.setState('user.city', 'New York');
-   * }); // All updates happen together, triggering render only once
-   */
     executeBatch(callback) {return this.getSM().executeBatch(callback);}
 
-  /**
-   * Creates a custom web component from a Juris component definition
-   * 
-   * @param {string} name - The name for the web component (must contain a hyphen)
-   * @param {Function|Object} componentDefinition - The component definition
-   * @param {WebComponentOptions} [options={}] - Options for web component creation
-   * @returns {Function|null} The web component class or null if not available
-   * @since 0.91.0
-   * 
-   * @example
-   * const MyButton = juris.createWebComponent('my-button', (props) => ({
-   *   button: {
-   *     text: props.label || 'Click me',
-   *     onclick: () => console.log('Clicked!')
-   *   }
-   * }));
-   * 
-   * // Usage in HTML: <my-button label="Submit"></my-button>
-   */
     createWebComponent(name, componentDefinition, options = {}) {
         if (!this.webComponentFactory) {
             log.ee && console.error(log.e('WebComponent not available'), 'application');
@@ -2721,23 +2460,6 @@ class Juris {
         return this.webComponentFactory.createWebComponent(name, componentDefinition, options);
     }
 
-  /**
-   * Creates multiple web components from a components object
-   * 
-   * @param {Object.<string, Function>} components - Object mapping component names to definitions
-   * @param {WebComponentOptions} [globalOptions={}] - Global options for all web components
-   * @returns {Object.<string, Function>} Object mapping component names to their web component classes
-   * @since 0.91.0
-   * 
-   * @example
-   * const webComponents = juris.createWebComponents({
-   *   'my-button': (props) => ({ button: { text: props.label } }),
-   *   'my-input': (props) => ({ input: { type: 'text', placeholder: props.hint } })
-   * }, { 
-   *   shadowRoot: true,
-   *   observedAttributes: ['label', 'hint']
-   * });
-   */
     createWebComponents(components, globalOptions = {}) {
         if (!this.webComponentFactory) {
             log.ee && console.error(log.e('WebComponents not available'), 'application');
@@ -2746,21 +2468,6 @@ class Juris {
         return this.webComponentFactory.createMultiple(components, globalOptions);
     }
     
-  /**
-   * Creates a new Juris context with access to all APIs and services
-   * 
-   * @param {HTMLElement|null} [elm=null] - Optional element to bind to the context
-   * @returns {JurisContext} A context object with Juris APIs
-   * @since 0.91.0
-   * 
-   * @example
-   * const context = juris.createContext();
-   * context.setState('user.name', 'John');
-   * 
-   * // With element binding
-   * const elementContext = juris.createContext(document.getElementById('app'));
-   * console.log(elementContext.element); // The bound element
-   */
     createContext(elm = null) {
         let context = { ...this.#createBaseContext() };
         if (this.getHM()) {
@@ -2770,291 +2477,33 @@ class Juris {
         if (elm) context.element = elm;
         return context;
     }
-    
-  /**
-   * Wraps a value or promise with Juris's promise tracking system
-   * 
-   * @param {*} result - Value or promise to wrap
-   * @returns {Promise} A promise that integrates with Juris's async tracking
-   * @since 0.91.0
-   * 
-   * @example
-   * const trackedPromise = juris.promisify(fetch('/api/data'));
-   * trackedPromise.then(data => {
-   *   juris.setState('data', data);
-   * });
-   */
     promisify(result) { return promisify(result);}
-    
-  /**
-   * Gets a value from the global state
-   * 
-   * @param {string} path - Dot-notation path to the state value
-   * @param {*} [defaultValue] - Default value if path doesn't exist
-   * @param {boolean} [track=true] - Whether to track this access for reactivity
-   * @returns {*} The state value or default value
-   * @since 0.91.0
-   * 
-   * @example
-   * const userName = juris.getState('user.name', 'Anonymous');
-   * const settings = juris.getState('app.settings', {});
-   * 
-   * // Skip reactivity tracking
-   * const staticValue = juris.getState('config.version', '1.0.0', false);
-   */
     getState(path, defaultValue, track) { return this.getSM().getState(path, defaultValue, track); }
-    
-  /**
-   * Sets a value in the global state
-   * 
-   * @param {string} path - Dot-notation path to set the value
-   * @param {*} value - The value to set
-   * @param {Object} [context] - Additional context for middleware
-   * @returns {boolean} Whether the state was actually changed
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.setState('user.name', 'John Doe');
-   * juris.setState('app.theme', 'dark');
-   * juris.setState('items', [], { action: 'reset' });
-   */
     setState(path, value, context) {
         return this.getSM().setState(path, value, context);
     }
-    
-  /**
-   * Subscribes to state changes at a specific path
-   * 
-   * @param {string} path - Dot-notation path to subscribe to
-   * @param {Function} callback - Function to call when state changes
-   * @param {boolean} [hierarchical=true] - Whether to listen to child path changes too
-   * @returns {Function} Unsubscribe function
-   * @since 0.91.0
-   * 
-   * @example
-   * const unsubscribe = juris.subscribe('user', (newValue, oldValue, changedPath) => {
-   *   console.log('User changed:', newValue);
-   * });
-   * 
-   * // Later...
-   * unsubscribe();
-   */
     subscribe(path, callback, hierarchical = true) { return this.getSM().subscribe(path, callback, hierarchical); }
-    
-  /**
-   * Subscribes to state changes only at the exact path (no children)
-   * 
-   * @param {string} path - Dot-notation path to subscribe to
-   * @param {Function} callback - Function to call when state changes
-   * @returns {Function} Unsubscribe function
-   * @since 0.91.0
-   * 
-   * @example
-   * const unsubscribe = juris.subscribeExact('user.name', (newValue, oldValue) => {
-   *   console.log('Name changed from', oldValue, 'to', newValue);
-   * });
-   */
     subscribeExact(path, callback) { return this.getSM().subscribeExact(path, callback); }
-    
-  /**
-   * Registers a new component with Juris
-   * 
-   * @param {string} name - The name of the component
-   * @param {Function} component - The component function
-   * @returns {Function} The registered component function
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.registerComponent('Button', (props) => ({
-   *   button: {
-   *     text: props.label,
-   *     class: props.variant || 'primary',
-   *     onclick: props.onClick
-   *   }
-   * }));
-   * 
-   * // Usage in VDOM
-   * { Button: { label: 'Click me', onClick: () => console.log('Clicked!') } }
-   */
     registerComponent(name, component) {
         return this.getCM().register(name, component);
     }
-
-  /**
-   * Registers a headless component (non-visual logic component)
-   * 
-   * @param {string} name - The name of the headless component
-   * @param {Function} component - The headless component function
-   * @param {Object} [options] - Options for the headless component
-   * @returns {*} Result from headless manager registration
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.registerHeadlessComponent('DataManager', (context) => ({
-   *   api: {
-   *     loadData: async () => {
-   *       const data = await fetch('/api/data').then(r => r.json());
-   *       context.setState('app.data', data);
-   *     },
-   *     clearData: () => context.setState('app.data', null)
-   *   }
-   * }));
-   */
+    // Headless component registration
     registerHeadlessComponent(name, component, options) { return this.getHM().register(name, component, options); }
-    
-  /**
-   * Initializes all queued headless components
-   * 
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.initializeQueuedHeadlessComponent();
-   */
     initializeQueuedHeadlessComponent() { this.getHM().initializeQueued(); }
-    
-  /**
-   * Initializes a specific headless component with props
-   * 
-   * @param {string} name - The name of the headless component
-   * @param {Object} [props] - Props to pass to the component
-   * @returns {*} The initialized component instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const dataManager = juris.initializeHeadlessComponent('DataManager', {
-   *   endpoint: '/api/users'
-   * });
-   */
     initializeHeadlessComponent(name, props) { return this.getHM().initialize(name, props); }
-    
-  /**
-   * Gets a headless component instance
-   * 
-   * @param {string} name - The name of the headless component
-   * @returns {*} The headless component instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const dataManager = juris.getHeadlessComponent('DataManager');
-   * if (dataManager) {
-   *   dataManager.loadData();
-   * }
-   */
     getHeadlessComponent(name) { return this.getHM().getInstance(name); }
-    
-  /**
-   * Gets the API of a headless component
-   * 
-   * @param {string} name - The name of the headless component
-   * @returns {Object|null} The headless component's API
-   * @since 0.91.0
-   * 
-   * @example
-   * const api = juris.getHeadlessAPI('DataManager');
-   * if (api) {
-   *   api.loadData();
-   * }
-   */
-   getHeadlessAPI(name) { return this.getHM()?.getAPI(name); }
+    getHeadlessAPI(name) { return this.getHM()?.getAPI(name); }
 
-    
-  /**
-   * Gets a registered component function
-   * 
-   * @param {string} name - The name of the component
-   * @returns {Function|undefined} The component function
-   * @since 0.91.0
-   * 
-   * @example
-   * const ButtonComponent = juris.getComponent('Button');
-   * if (ButtonComponent) {
-   *   const vdom = ButtonComponent({ label: 'Submit' });
-   * }
-   */
     getComponent(name) { return this.getCM().components.get(name); }
 
-
-  /**
-   * Registers and immediately initializes a headless component
-   * 
-   * @param {string} name - The name of the headless component
-   * @param {Function} componentFn - The component function
-   * @param {Object} [options={}] - Options for registration and initialization
-   * @returns {*} The initialized component instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const authManager = juris.registerAndInitHeadless('AuthManager', (context) => ({
-   *   api: {
-   *     login: (credentials) => context.setState('auth.user', credentials),
-   *     logout: () => context.setState('auth.user', null)
-   *   }
-   * }));
-   */
     registerAndInitHeadless(name, componentFn, options = {}) {
         this.getHM().register(name, componentFn, options);
         return this.getHM().initialize(name, options);
     }
 
-  /**
-   * Gets the status of all headless components
-   * 
-   * @returns {Object} Status object with headless component information
-   * @since 0.91.0
-   * 
-   * @example
-   * const status = juris.getHeadlessStatus();
-   * console.log('Registered headless components:', status.registered);
-   * console.log('Initialized headless components:', status.initialized);
-   */
     getHeadlessStatus() { return this.getHM().getStatus(); }
-    
-  /**
-   * Converts a VDOM object to HTML DOM element
-   * 
-   * @param {Object} vnode - The VDOM object to convert
-   * @returns {HTMLElement} The resulting DOM element
-   * @since 0.91.0
-   * 
-   * @example
-   * const element = juris.objectToHtml({
-   *   div: {
-   *     class: 'container',
-   *     children: [
-   *       { h1: { text: 'Hello World' } },
-   *       { p: { text: 'Welcome to Juris' } }
-   *     ]
-   *   }
-   * });
-   * document.body.appendChild(element);
-   */
     objectToHtml(vnode) { return this.getDR().render(vnode); }
-    
-  /**
-   * Renders the application to a container element
-   * 
-   * @param {string|HTMLElement} [container='#app'] - Container selector or element
-   * @param {Object|null} [vdom=null] - Optional VDOM to render instead of layout
-   * @returns {HTMLElement|void} The container element or void
-   * @since 0.91.0
-   * 
-   * @example
-   * // Render with layout from config
-   * juris.render('#app');
-   * 
-   * // Render custom VDOM
-   * juris.render('#content', {
-   *   div: {
-   *     class: 'welcome',
-   *     text: 'Hello World'
-   *   }
-   * });
-   * 
-   * // Render to element reference
-   * const container = document.getElementById('app');
-   * juris.render(container);
-   */
+
     render(container = '#app', vdom = null) {
       let startTime = performance.now();      
       let containerEl = typeof container === 'string' ?
@@ -3140,41 +2589,8 @@ class Juris {
         container.appendChild(errorEl);
     }
 
-  /**
-   * Enhances existing DOM elements with Juris functionality
-   * 
-   * @param {string} selector - CSS selector for elements to enhance
-   * @param {Object|Function} definition - Enhancement definition
-   * @param {Object} [options] - Enhancement options
-   * @returns {*} Result from DOM enhancer
-   * @since 0.91.0
-   * 
-   * @example
-   * // Enhance existing buttons
-   * juris.enhance('button.counter', {
-   *   onclick: (context) => (e) => {
-   *     const count = context.getState('counter', 0);
-   *     context.setState('counter', count + 1);
-   *   },
-   *   text: (context) => () => `Count: ${context.getState('counter', 0)}`
-   * });
-   */
     enhance(selector, definition, options) { return this.domEnhancer.enhance(selector, definition, options); }
     
-  /**
-   * Configures enhancement behavior
-   * 
-   * @param {Object} options - Configuration options for enhancement
-   * @returns {*} Result from DOM enhancer configuration
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.configureEnhancement({
-   *   autoCleanup: true,
-   *   batchUpdates: true,
-   *   debugMode: false
-   * });
-   */
     configureEnhancement(options) { 
         if (!this.domEnhancer) {
             log.ew && console.warn(log.w('Enhancement configuration requested but domEnhancer not available'), 'framework');
@@ -3182,56 +2598,7 @@ class Juris {
         }
         return this.domEnhancer.configure(options); 
     }
-    
-  /**
-   * Arms an element with event handlers and full Juris context access
-   * The arm() API provides a powerful way to handle events with complete access to Juris state and services
-   * 
-   * @param {HTMLElement|Window|Document} target - The target element, window, or document to arm
-   * @param {Function} handlerFn - Function that receives context and returns event handlers object
-   * @returns {ArmedInstance|null} Armed instance with event management capabilities
-   * @since 0.91.0
-   * 
-   * @example
-   * // Arm a button element
-   * const buttonArmed = juris.arm(document.getElementById('myButton'), (context) => ({
-   *   onclick: (e) => {
-   *     const count = context.getState('counter', 0);
-   *     context.setState('counter', count + 1);
-   *     console.log('Button clicked, new count:', count + 1);
-   *   },
-   *   onmouseover: (e) => {
-   *     context.setState('ui.hovered', true);
-   *   },
-   *   onmouseout: (e) => {
-   *     context.setState('ui.hovered', false);
-   *   }
-   * }));
-   * 
-   * @example
-   * // Arm window for global events
-   * const windowArmed = juris.arm(window, (context) => ({
-   *   onresize: (e) => {
-   *     context.setState('ui.windowSize', {
-   *       width: window.innerWidth,
-   *       height: window.innerHeight
-   *     });
-   *   },
-   *   onkeydown: (e) => {
-   *     if (e.key === 'Escape') {
-   *       context.setState('ui.modalOpen', false);
-   *     }
-   *   }
-   * }));
-   * 
-   * @example
-   * // Using armed instance methods
-   * buttonArmed.trigger('onclick'); // Programmatically trigger click
-   * buttonArmed.cleanup(); // Remove all event listeners
-   * 
-   * // Check armed events
-   * console.log(buttonArmed.events); // Array of event information
-   */
+    // arm() API for window, document, and elements event handling with full Juris context
     arm(target, handlerFn) {    
         if(handlerFn == null || typeof handlerFn !== 'function') {
             log.ew && console.warn(log.w('arm() called without valid handler function'), 'framework');
@@ -3293,34 +2660,11 @@ class Juris {
         return instance;
     }
 
-  /**
-   * Cleans up all Juris resources and removes event listeners
-   * 
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * // Clean up when component unmounts or app closes
-   * juris.cleanup();
-   */
     cleanup() {
         this.armedElements = new Map();
         this.getHM()?.cleanup();
     }
 
-  /**
-   * Completely destroys the Juris instance and all associated resources
-   * Use this when you need to completely tear down a Juris application
-   * 
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * // Complete teardown
-   * juris.destroy();
-   * 
-   * // Instance is no longer usable after this
-   */
     destroy() {
         this.cleanup();
         if (this.domEnhancer) {

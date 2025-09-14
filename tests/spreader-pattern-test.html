@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juris Spreader Pattern Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    button {
+      background: #007cba;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background: #005a87;
+    }
+    
+    .item {
+      background: #e3f2fd;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 4px;
+      border-left: 3px solid #2196f3;
+    }
+    
+    .static {
+      background: #f3e5f5;
+      border-left-color: #9c27b0;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script src="../src/juris.js"></script>
+  <script>
+    // Initialize Juris
+    const juris = new Juris({
+      states: {
+        items: ['First Item', 'Second Item'],
+        counter: 0
+      }
+    });
+    const getDynamicItems = (context) => context.getState('items').map((item, index) => ({
+      div: {
+        class: 'item',
+        text: `Dynamic Item ${index + 1}: ${item}`,
+        key: `item-${index}`
+      }
+    }));
+
+    const Spreader = (context) => {
+      return {
+        div: {
+          children:()=>{
+          context.getState('items');
+          return  [...getDynamicItems(context)]      
+          }
+        }
+      };
+    };
+const Spreader2 = (context) => {
+  return {
+    div: {
+      children: () => {
+        const items = context.getState('items');
+        return items.map((item, index) => ({
+          div: {
+            class: 'item',
+            text: `Dynamic Item ${index + 1}: ${item}`,
+            key: `item-${index}`
+          }
+        }));
+      }
+    }
+  };
+};
+    juris.registerComponent('Spreader',Spreader);
+    juris.registerComponent('Spreader2',Spreader2);
+    // Test Component with spreader pattern
+    juris.registerComponent('SpreaderTest', (context) => {
+      return [
+        {
+          div: {
+            class: 'container',
+            children: [
+              {
+                h2: {
+                  text: 'Juris Spreader Pattern Test'
+                }
+              },
+              
+              {
+                div: {
+                  class: 'static item',
+                  text: 'Static Content Before'
+                }
+              },
+              ...getDynamicItems(),
+              // This is the spreader pattern test
+              // Using spread operator with anonymous reactive function
+              ...(() => {
+                const currentItems = context.getState('items');
+                return currentItems.map((item, index) => ({
+                  div: {
+                    class: 'item',
+                    text: `Dynamic Item ${index + 1}: ${item}`,
+                    key: `item-${index}`
+                  }
+                }));
+              })(),
+              
+              {
+                div: {
+                  class: 'static item',
+                  text: 'Static Content After'
+                }
+              },
+              
+              {
+                div: {
+                  style: { marginTop: '20px' },
+                  children: [
+                    {
+                      button: {
+                        text: 'Add Item',
+                        onclick: () => {
+                          const current = context.getState('items');
+                          context.setState('items', [...current, `New Item ${Date.now()}`]);
+                        }
+                      }
+                    },
+                    {
+                      button: {
+                        text: 'Remove Last Item',
+                        onclick: () => {
+                          const current = context.getState('items');
+                          if (current.length > 0) {
+                            context.setState('items', current.slice(0, -1));
+                          }
+                        }
+                      }
+                    },
+                    {
+                      button: {
+                        text: 'Reset Items',
+                        onclick: () => {
+                          context.setState('items', ['First Item', 'Second Item']);
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              
+              {
+                div: {
+                  style: { marginTop: '20px', padding: '10px', background: '#fff3e0' },
+                  children: [
+                    {
+                      h3: { text: 'Debug Info:' }
+                    },
+                    () => ({
+                      p: {
+                        text: `Items count: ${context.getState('items').length}`
+                      }
+                    }),
+                    () => ({
+                      p: {
+                        text: `Items: ${JSON.stringify(context.getState('items'))}`
+                      }
+                    })
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ];
+    });
+
+    // Set layout and render
+    juris.layout = [{ Spreader: {} },
+    { Spreader2: {} },
+                    {
+                      button: {
+                        text: 'Add Item',
+                        onclick: () => {
+                          const current = juris.getState('items');
+                          juris.setState('items', [...current, `New Item ${Date.now()}`]);
+                        }
+                      }
+                    },];
+    juris.render();
+    
+    // Add some console logging to see what happens
+    console.log('Juris instance:', juris);
+    console.log('Initial state:', juris.getState('items'));
+  </script>
+</body>
+</html>

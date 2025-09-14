@@ -25,7 +25,7 @@ docFramework.addDoc(id, documentObject)
 {
   title: string,        // Document title displayed in navigation and header
   category: string,     // Category for grouping documents in sidebar
-  content: string       // Main documentation content/description
+  content: string       // Main documentation content/description, describe all the items they will see int eh sample codes
 }
 ```
 
@@ -34,8 +34,8 @@ docFramework.addDoc(id, documentObject)
 ```javascript
 {
   description: string,           // Brief description for navigation
-  code: string,                 // Complete executable code for live preview
-  codeSnippet: string|array,    // Code examples for documentation (see below)
+  code: string,                 // Complete executable code for live preview. should use actuall css stylinh
+  codeSnippet: string|array,    // Code examples for documentation (see below). should use less css class to focus more on topic.
   liveExample: object,          // Static VDOM example
   interactiveExample: function, // Dynamic component example
   testCode: string,             // Test code (reserved for future use)

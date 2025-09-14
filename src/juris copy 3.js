@@ -748,6 +748,9 @@ class ComponentManager {
     }
 
     #procCompResult(result, name, props, states, targetContainer = null) {
+      if (typeof result === 'function') {
+        result = { render: result };
+      }
       if (Array.isArray(result)) {
         return this.#newCompFrag(result, name, props, states);
       }      
@@ -772,12 +775,17 @@ class ComponentManager {
 
     #createManagedComponent(result, name, props, states, targetContainer = null) {
       let inst = this.#newComp(result, name, props);
-      let cont = document.createElement('div');
-      let isExternal = !!targetContainer;      
+      let cont = targetContainer||document.createElement('div');
+      let isExternal = !!targetContainer;
+      cont.setAttribute('data-juris-debug', `managed-${name}-${Date.now()}`);
+      cont.setAttribute('data-juris-render-count', '0');
       if (!isExternal) {
         cont.setAttribute('data-juris-component', name);
       }
       let updateRender = () => {
+        console.log(cont);
+        let currentCount = parseInt(cont.getAttribute('data-juris-render-count') || '0');
+        cont.setAttribute('data-juris-render-count', currentCount + 1);
         if (cont._reactiveSubscriptions) {
           cont._reactiveSubscriptions.forEach(unsub => unsub());
           cont._reactiveSubscriptions = [];
@@ -815,16 +823,20 @@ class ComponentManager {
     }
 
     #updateContainerContent(cont, content, name, isExternal) {
-      let children = Array.from(cont.children);
-      children.forEach(child => this.cleanup(child));      
-      if (isExternal) {
-        cont.innerHTML = '';
-      } else {
-        cont.innerHTML = '';
-      }
-      let el = this.juris.getDR().render(content);
-      cont.appendChild(el);
-    }
+  console.log('updateContainerContent called', {content, isArray: Array.isArray(content)});
+  console.log('updateContainerContent', cont);
+  let children = Array.from(cont.children);
+  children.forEach(child => this.cleanup(child));      
+  
+  cont.innerHTML = '';
+  
+  let el = this.juris.getDR().render(content);
+  console.log('Rendered element:', el, 'hasChildNodes:', el?.hasChildNodes?.());
+  
+  if (el) cont.appendChild(el);
+  
+  console.log('Container after append:', cont.children.length);
+}
 
     #setupUnifiedComp(el, inst, states, name, isExternal = false) {
       inst.isExternalContainer = isExternal;
@@ -1651,7 +1663,7 @@ class DOMRenderer {
   applyProp(elm, propName, propValue, componentName = null) {
     let subscriptions = [];
     let eventListeners = [];
-    
+    console.log('applyProp',elm)
     if (propName === 'children') {
       this._handleChildren(elm, propValue, subscriptions, componentName);
     } else if (propName === 'text') {
@@ -1789,6 +1801,9 @@ class DOMRenderer {
   }
   
   _handleChildren(elm, children, subscriptions, componentName = null) {
+    if (!Array.isArray(children)) {
+      children = [children];
+    }
     if (typeof children === 'function') {
       this.#handleReactiveChildren(elm, children, subscriptions, componentName);
     } else if (this.#isPromiseLike(children)) {
@@ -1806,9 +1821,6 @@ class DOMRenderer {
   #handleReactiveChildren(elm, childrenFn, subscriptions, componentName = null) {
     let updateChildren = () => {
       let { result, deps } = this.juris.getSM().track(() => childrenFn(elm));
-      if(!Array.isArray(result)){
-        result=[result];
-      }
       if (this.#isPromiseLike(result)) {
         let asyncContext = { elm, type: 'reactive-children' };
         this.#handleAsync(result, {
@@ -1842,7 +1854,7 @@ class DOMRenderer {
   
   #updateChildren(elm, children, componentName = null) {
     if (children === "ignore") return;
-    if(!Array.isArray(children)){
+    if (!Array.isArray(children)) {
       children = [children];
     }
     let lastChildren = elm._jurisLastChildren;
@@ -2038,6 +2050,8 @@ class DOMRenderer {
       }
     }  
     if (fragment.hasChildNodes()) {
+      console.log(elm)
+      console.log(fragment)
       elm.appendChild(fragment);
     } else {
       console.log('WARNING: Empty fragment, nothing to append');
@@ -2107,6 +2121,7 @@ _setStaticAttribute(elm, attr, value) {
                            eventName === 'ondoubleclick' ? 'dblclick' :
                            eventName.slice(2);
     
+  console.log('Event attached:', eventName, 'to', elm.tagName, elm.outerHTML.substring(0, 50));
     elm.addEventListener(actualEventName, handler);
     eventListeners.push({ eventName: actualEventName, handler });
     

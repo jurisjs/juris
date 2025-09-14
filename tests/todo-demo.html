@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Todo App</title>
+  <script src="../src/juris.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    // Simple TodoList component using the same pattern
+    const TodoList = (props, context) => {
+      return {
+        render: () => {
+          const todos = context.getState('todos', []);
+          console.log('TodoList render called, todos:', todos);
+          
+          return todos.map(todo => ({
+            div: {
+              key: todo.id,
+              children: [
+                {input: {
+                  type: 'checkbox',
+                  checked: todo.completed,
+                  onchange: (e) => {
+                    const currentTodos = context.getState('todos', []);
+                    const updated = currentTodos.map(t => 
+                      t.id === todo.id ? { ...t, completed: e.target.checked } : t
+                    );
+                    context.setState('todos', updated);
+                  }
+                }},
+                {span: {
+                  text: todo.text,
+                  style: {
+                    textDecoration: todo.completed ? 'line-through' : 'none'
+                  }
+                }},
+                {button: {
+                  text: 'Delete',
+                  onclick: () => {
+                    const currentTodos = context.getState('todos', []);
+                    const filtered = currentTodos.filter(t => t.id !== todo.id);
+                    context.setState('todos', filtered);
+                  }
+                }}
+              ]
+            }
+          }));
+        }
+      };
+    };
+
+    // Create Juris app
+    const app = new Juris({
+      states: {
+        todos: [
+          { id: 1, text: 'Learn Juris', completed: true },
+          { id: 2, text: 'Build todo app', completed: false }
+        ],
+        newTodoText: ''
+      },
+      components: {
+        TodoList
+      },
+      layout: {
+        div: {
+          children: [
+            {h1: { text: 'Simple Todo App' }},
+            
+            // Add todo form
+            {div: {
+              children: [
+                {input: {
+                  type: 'text',
+                  placeholder: 'Add new todo...',
+                  value: () => app.getState('newTodoText', ''),
+                  oninput: (e) => app.setState('newTodoText', e.target.value)
+                }},
+                {button: {
+                  text: 'Add',
+                  onclick: () => {
+                    const text = app.getState('newTodoText', '').trim();
+                    if (text) {
+                      const todos = app.getState('todos', []);
+                      const newTodo = {
+                        id: Date.now(),
+                        text: text,
+                        completed: false
+                      };
+                      app.setState('todos', [...todos, newTodo]);
+                      app.setState('newTodoText', '');
+                    }
+                  }
+                }}
+              ]
+            }},
+            
+            // Todo list
+            {div: {
+              children: [
+                { TodoList: {} }
+              ]
+            }}
+          ]
+        }
+      }
+    });
+
+    // Render the app
+    app.render('#app');
+  </script>
+</body>
+</html>

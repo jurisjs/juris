@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Industrial Datagrid - Juris Framework</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace; background: #f8f9fa; color: #2c3e50; line-height: 1.4;">
+  <div style="max-width: 1400px; margin: 0 auto; padding: 24px;">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+        <span style="font-size: 28px; font-weight: 700; color: #95a5a6;">{..}</span>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 400; color: #2c3e50; letter-spacing: 0.5px;">INDUSTRIAL DATAFRAME</h1>
+      </div>
+      <p style="margin: 0; font-size: 14px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px;">Employee Management System</p>
+    </div>
+
+    <div id="app"></div>
+  </div>
+
+  <script src="../src/juris.js"></script>
+  <script>
+    const DataGridMain = (props, context) => {
+      const { getState, setState, executeBatch } = context;
+      
+      // Initialize employee records
+      setState('record.0', { id: 1, name: 'Sarah Chen', email: 'sarah@company.com', department: 'Engineering', salary: 95000, level: 'Senior', active: true });
+      setState('record.1', { id: 2, name: 'Michael Rodriguez', email: 'michael@company.com', department: 'Marketing', salary: 70000, level: 'Mid', active: true });
+      setState('record.2', { id: 3, name: 'Emma Johnson', email: 'emma@company.com', department: 'Sales', salary: 85000, level: 'Lead', active: false });
+      setState('record.3', { id: 4, name: 'David Kim', email: 'david@company.com', department: 'Engineering', salary: 120000, level: 'Principal', active: true });
+      setState('record.4', { id: 5, name: 'Lisa Brown', email: 'lisa@company.com', department: 'HR', salary: 65000, level: 'Mid', active: true });
+      
+      setState('recordCount', 5);
+      setState('departments', ['Engineering', 'Marketing', 'Sales', 'Support', 'HR', 'Finance', 'Operations', 'Legal', 'Research', 'Design']);
+      setState('levels', ['Junior', 'Mid', 'Senior', 'Lead', 'Principal', 'Director']);
+      setState('nextId', 6);
+      
+      const updateRecord = (index, field, newValue) => {
+        const record = getState(`record.${index}`);
+        if (record) {
+          setState(`record.${index}`, {...record, [field]: newValue});
+        }
+      };
+      
+      const deleteRecord = (index) => {
+        const recordCount = getState('recordCount', 0);
+        if (index >= 0 && index < recordCount) {
+          for (let i = index; i < recordCount - 1; i++) {
+            const nextRecord = getState(`record.${i + 1}`);
+            setState(`record.${i}`, nextRecord);
+          }
+          setState(`record.${recordCount - 1}`, null);
+          setState('recordCount', recordCount - 1);
+        }
+      };
+      
+      const addNewRecord = () => {
+        const recordCount = getState('recordCount', 0);
+        const nextId = getState('nextId', 6);
+        const newRecord = {
+          id: nextId,
+          name: 'New Employee',
+          email: 'new@company.com',
+          department: 'Engineering',
+          salary: 50000,
+          level: 'Junior',
+          active: true
+        };
+        setState(`record.${recordCount}`, newRecord);
+        setState('recordCount', recordCount + 1);
+        setState('nextId', nextId + 1);
+      };
+      
+      const getBadgeStyle = (level) => {
+        const styles = {
+          'Junior': { background: '#ecf0f1', color: '#7f8c8d', border: '1px solid #bdc3c7' },
+          'Mid': { background: '#fff3cd', color: '#e67e22', border: '1px solid #f39c12' },
+          'Senior': { background: '#d4edda', color: '#27ae60', border: '1px solid #27ae60' },
+          'Lead': { background: '#d1ecf1', color: '#3498db', border: '1px solid #3498db' },
+          'Principal': { background: '#f8d7da', color: '#e74c3c', border: '1px solid #e74c3c' },
+          'Director': { background: '#e2e3e5', color: '#34495e', border: '1px solid #6c757d' }
+        };
+        return styles[level] || styles['Junior'];
+      };
+      
+      const getTextCursorPosition = (element, clientX) => {
+        try {
+          if (document.caretRangeFromPoint) {
+            const range = document.caretRangeFromPoint(clientX, element.getBoundingClientRect().top + 14);
+            if (range && element.contains(range.startContainer)) {
+              return range.startOffset;
+            }
+          } else if (document.caretPositionFromPoint) {
+            const position = document.caretPositionFromPoint(clientX, element.getBoundingClientRect().top + 14);
+            if (position && element.contains(position.offsetNode)) {
+              return position.offset;
+            }
+          }
+        } catch (error) {
+          // Fallback calculation
+        }
+        
+        const rect = element.getBoundingClientRect();
+        const clickX = clientX - rect.left - 8;
+        const textWidth = rect.width - 16;
+        const textLength = element.textContent.length;
+        
+        if (textWidth > 0 && textLength > 0) {
+          const position = Math.round((clickX / textWidth) * textLength);
+          return Math.max(0, Math.min(position, textLength));
+        }
+        return 0;
+      };
+      
+      const setTextCursor = (element, position) => {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        const textNode = element.firstChild;
+        
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          const safePosition = Math.max(0, Math.min(position, textNode.textContent.length));
+          range.setStart(textNode, safePosition);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      };
+      
+      const setInputCursor = (input, position) => {
+        if (input && input.setSelectionRange) {
+          input.focus();
+          const safePosition = Math.min(position, input.value.length);
+          input.setSelectionRange(safePosition, safePosition);
+        }
+      };
+      
+      return {div: {
+        style: {
+          background: '#ffffff',
+          border: '2px solid #bdc3c7',
+          borderRadius: '0px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        },
+        children: [
+          {div: {
+            style: {
+              background: 'linear-gradient(90deg, #ecf0f1 0%, #bdc3c7 100%)',
+              color: '#2c3e50',
+              padding: '20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '2px solid #bdc3c7'
+            },
+            children: [
+              {h2: {
+                style: {
+                  margin: '0',
+                  fontSize: '18px',
+                  fontWeight: '400',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                },
+                text: 'EMPLOYEE DATAFRAME'
+              }},
+              {button: {
+                style: {
+                  padding: '8px 16px',
+                  border: '2px solid #95a5a6',
+                  borderRadius: '0px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '12px',
+                  background: '#ffffff',
+                  color: '#2c3e50',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  transition: 'all 0.2s',
+                  fontFamily: 'inherit'
+                },
+                text: '[ADD RECORD]',
+                onclick: addNewRecord,
+                onmouseover: function() {
+                  this.style.background = '#ecf0f1';
+                  this.style.borderColor = '#7f8c8d';
+                },
+                onmouseout: function() {
+                  this.style.background = '#ffffff';
+                  this.style.borderColor = '#95a5a6';
+                }
+              }}
+            ]
+          }},
+          {div: {
+            children: [
+              {table: {
+                style: {
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '13px',
+                  background: '#ffffff'
+                },
+                children: [
+                  {thead: {
+                    children: [
+                      {tr: {
+                        children: [
+                          {th: {
+                            style: {
+                              background: '#f8f9fa',
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: '#495057',
+                              borderBottom: '2px solid #dee2e6',
+                              width: '60px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              fontSize: '11px'
+                            },
+                            text: 'ID'
+                          }},
+                          {th: {
+                            style: {
+                              background: '#f8f9fa',
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: '#495057',
+                              borderBottom: '2px solid #dee2e6',
+                              width: '200px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              fontSize: '11px'
+                            },
+                            text: 'NAME'
+                          }},
+                          {th: {
+                            style: {
+                              background: '#f8f9fa',
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: '#495057',
+                              borderBottom: '2px solid #dee2e6',
+                              width: '220px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              fontSize: '11px'
+                            },
+                            text: 'EMAIL'
+                          }},
+                          {th: {
+                            style: {
+                              background: '#f8f9fa',
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: '#495057',
+                              borderBottom: '2px solid #dee2e6',
+                              width: '120px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              fontSize: '11px'
+                            },
+                            text: 'DEPT'
+                          }},
+                          {th: {
+                            style: {
+                              background: '#f8f9fa',
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: '#495057',
+                              borderBottom: '2px solid #dee2e6',
+                              width: '120px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              fontSize: '11px'
+                            },
+                            text: 'SALARY'
+                          }},
+                          {th: {
+                            style: {
+                              background: '#f8f9fa',
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: '#495057',
+                              borderBottom: '2px solid #dee2e6',
+                              width: '100px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              fontSize: '11px'
+                            },
+                            text: 'LEVEL'
+                          }},
+                          {th: {
+                            style: {
+                              background: '#f8f9fa',
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: '#495057',
+                              borderBottom: '2px solid #dee2e6',
+                              width: '100px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              fontSize: '11px'
+                            },
+                            text: 'STATUS'
+                          }},
+                          {th: {
+                            style: {
+                              background: '#f8f9fa',
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: '#495057',
+                              borderBottom: '2px solid #dee2e6',
+                              width: '80px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              fontSize: '11px'
+                            },
+                            text: 'ACTION'
+                          }}
+                        ]
+                      }}
+                    ]
+                  }},
+                  {tbody: {
+                    children: () => {
+                      const recordCount = getState('recordCount', 0);
+                      return Array.from({ length: recordCount }, (_, index) => ({
+                        tr: {
+                          key: `row-${index}`,
+                          style: {
+                            borderBottom: '1px solid #dee2e6'
+                          },
+                          children: [
+                            {td: {
+                              style: {
+                                padding: '0',
+                                borderBottom: '1px solid #dee2e6',
+                                height: '44px'
+                              },
+                              children: [
+                                {div: {
+                                  style: {
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    boxSizing: 'border-box'
+                                  },
+                                  children: [
+                                    {span: {
+                                      style: {
+                                        display: 'block',
+                                        width: '100%',
+                                        height: '28px',
+                                        lineHeight: '28px',
+                                        padding: '0 4px',
+                                        margin: '0',
+                                        color: '#6c757d',
+                                        fontSize: '13px',
+                                        fontFamily: 'inherit',
+                                        background: 'transparent',
+                                        border: '1px solid transparent',
+                                        borderRadius: '0px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        boxSizing: 'border-box'
+                                      },
+                                      text: () => {
+                                        const record = getState(`record.${index}`);
+                                        return record?.id || '';
+                                      }
+                                    }}
+                                  ]
+                                }}
+                              ]
+                            }},
+                            {td: {
+                              style: {
+                                padding: '0',
+                                borderBottom: '1px solid #dee2e6',
+                                height: '44px'
+                              },
+                              children: [
+                                {div: {
+                                  style: {
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    boxSizing: 'border-box'
+                                  },
+                                  children: [
+                                    {span: {
+                                      style: {
+                                        cursor: 'text',
+                                        display: 'block',
+                                        width: '100%',
+                                        height: '28px',
+                                        lineHeight: '28px',
+                                        padding: '0 4px',
+                                        margin: '0',
+                                        color: '#2c3e50',
+                                        fontSize: '13px',
+                                        fontFamily: 'inherit',
+                                        background: 'transparent',
+                                        border: '1px solid transparent',
+                                        borderRadius: '0px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        boxSizing: 'border-box'
+                                      },
+                                      contenteditable: true,
+                                      onclick: (e) => {
+                                        e.stopPropagation();
+                                        e.target.style.background = '#f8f9fa';
+                                        e.target.style.borderColor = '#95a5a6';
+                                        setTimeout(() => {
+                                          const position = getTextCursorPosition(e.target, e.clientX);
+                                          setTextCursor(e.target, position);
+                                        }, 0);
+                                      },
+                                      onblur: (e) => {
+                                        e.target.style.background = 'transparent';
+                                        e.target.style.borderColor = 'transparent';
+                                        updateRecord(index, 'name', e.target.textContent);
+                                      },
+                                      text: () => {
+                                        const record = getState(`record.${index}`);
+                                        return record?.name || '';
+                                      }
+                                    }}
+                                  ]
+                                }}
+                              ]
+                            }},
+                            {td: {
+                              style: {
+                                padding: '0',
+                                borderBottom: '1px solid #dee2e6',
+                                height: '44px'
+                              },
+                              children: [
+                                {div: {
+                                  style: {
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    boxSizing: 'border-box'
+                                  },
+                                  children: [
+                                    {span: {
+                                      style: {
+                                        cursor: 'text',
+                                        display: 'block',
+                                        width: '100%',
+                                        height: '28px',
+                                        lineHeight: '28px',
+                                        padding: '0 4px',
+                                        margin: '0',
+                                        color: '#2c3e50',
+                                        fontSize: '13px',
+                                        fontFamily: 'inherit',
+                                        background: 'transparent',
+                                        border: '1px solid transparent',
+                                        borderRadius: '0px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        boxSizing: 'border-box'
+                                      },
+                                      contenteditable: true,
+                                      onclick: (e) => {
+                                        e.stopPropagation();
+                                        e.target.style.background = '#f8f9fa';
+                                        e.target.style.borderColor = '#95a5a6';
+                                        setTimeout(() => {
+                                          const position = getTextCursorPosition(e.target, e.clientX);
+                                          setTextCursor(e.target, position);
+                                        }, 0);
+                                      },
+                                      onblur: (e) => {
+                                        e.target.style.background = 'transparent';
+                                        e.target.style.borderColor = 'transparent';
+                                        updateRecord(index, 'email', e.target.textContent);
+                                      },
+                                      text: () => {
+                                        const record = getState(`record.${index}`);
+                                        return record?.email || '';
+                                      }
+                                    }}
+                                  ]
+                                }}
+                              ]
+                            }},
+                            {td: {
+                              style: {
+                                padding: '0',
+                                borderBottom: '1px solid #dee2e6',
+                                height: '44px'
+                              },
+                              children: [
+                                {div: {
+                                  style: {
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    boxSizing: 'border-box'
+                                  },
+                                  children: [
+                                    () => {
+                                      if (!getState(`editing.${index}.department`, false)) {
+                                        return {span: {
+                                          style: {
+                                            cursor: 'text',
+                                            display: 'block',
+                                            width: '100%',
+                                            height: '28px',
+                                            lineHeight: '28px',
+                                            padding: '0 4px',
+                                            margin: '0',
+                                            color: '#2c3e50',
+                                            fontSize: '13px',
+                                            fontFamily: 'inherit',
+                                            background: 'transparent',
+                                            border: '1px solid transparent',
+                                            borderRadius: '0px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            boxSizing: 'border-box'
+                                          },
+                                          onclick: (e) => {
+                                            e.stopPropagation();
+                                            const position = getTextCursorPosition(e.target, e.clientX);
+                                            setState(`cursor.${index}.department`, position);
+                                            setState(`editing.${index}.department`, true);
+                                            
+                                            setTimeout(() => {
+                                              const input = document.querySelector(`#dept-input-${index}`);
+                                              if (input) {
+                                                setInputCursor(input, position);
+                                              }
+                                            }, 30);
+                                          },
+                                          text: () => {
+                                            const record = getState(`record.${index}`);
+                                            return record?.department || '';
+                                          }
+                                        }};
+                                      }
+                                    },
+                                    () => {
+                                      if (getState(`editing.${index}.department`, false)) {
+                                        return {div: {
+                                          style: {
+                                            position: 'relative',
+                                            width: '100%',
+                                            height: '28px'
+                                          },
+                                          children: [
+                                            {input: {
+                                              id: `dept-input-${index}`,
+                                              style: {
+                                                width: '100%',
+                                                height: '28px',
+                                                padding: '0 4px',
+                                                margin: '0',
+                                                border: '1px solid #95a5a6',
+                                                borderRadius: '0px',
+                                                fontSize: '13px',
+                                                fontFamily: 'inherit',
+                                                background: '#ffffff',
+                                                color: '#2c3e50',
+                                                boxSizing: 'border-box',
+                                                lineHeight: '26px'
+                                              },
+                                              type: 'text',
+                                              value: () => {
+                                                const record = getState(`record.${index}`);
+                                                return record?.department || '';
+                                              },
+                                              oninput: (e) => {
+                                                setState(`temp.${index}.department`, e.target.value);
+                                              },
+                                              onblur: () => {
+                                                setTimeout(() => {
+                                                  const tempValue = getState(`temp.${index}.department`);
+                                                  if (tempValue) {
+                                                    updateRecord(index, 'department', tempValue);
+                                                  }
+                                                  setState(`editing.${index}.department`, false);
+                                                  setState(`temp.${index}.department`, null);
+                                                  setState(`cursor.${index}.department`, null);
+                                                }, 150);
+                                              },
+                                              onkeyup: (e) => {
+                                                if (e.key === 'Enter') {
+                                                  const tempValue = getState(`temp.${index}.department`);
+                                                  if (tempValue) {
+                                                    updateRecord(index, 'department', tempValue);
+                                                  }
+                                                  setState(`editing.${index}.department`, false);
+                                                  setState(`temp.${index}.department`, null);
+                                                  setState(`cursor.${index}.department`, null);
+                                                }
+                                              }
+                                            }},
+                                            {div: {
+                                              style: {
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: '0',
+                                                right: '0',
+                                                background: '#ffffff',
+                                                border: '1px solid #95a5a6',
+                                                borderTop: 'none',
+                                                borderRadius: '0px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                zIndex: '1000',
+                                                maxHeight: '200px',
+                                                overflowY: 'auto'
+                                              },
+                                              children: () => {
+                                                const departments = getState('departments', []);
+                                                const tempValue = getState(`temp.${index}.department`, '');
+                                                const currentValue = tempValue || '';
+                                                const filter = currentValue.toLowerCase();
+                                                
+                                                const filteredDepartments = departments.filter(dept => 
+                                                  dept.toLowerCase().includes(filter)
+                                                );
+                                                
+                                                return filteredDepartments.map(dept => ({
+                                                  div: {
+                                                    style: {
+                                                      padding: '8px 12px',
+                                                      cursor: 'pointer',
+                                                      borderBottom: '1px solid #dee2e6',
+                                                      fontSize: '13px',
+                                                      color: '#2c3e50'
+                                                    },
+                                                    text: dept,
+                                                    onclick: (e) => {
+                                                      e.stopPropagation();
+                                                      executeBatch(() => {
+                                                        updateRecord(index, 'department', dept);
+                                                        setState(`editing.${index}.department`, false);
+                                                        setState(`temp.${index}.department`, null);
+                                                        setState(`cursor.${index}.department`, null);
+                                                      });
+                                                    },
+                                                    onmouseover: function() {
+                                                      this.style.background = '#f8f9fa';
+                                                    },
+                                                    onmouseout: function() {
+                                                      this.style.background = 'transparent';
+                                                    }
+                                                  }
+                                                }));
+                                              }
+                                            }}
+                                          ]
+                                        }};
+                                      }
+                                    }
+                                  ]
+                                }}
+                              ]
+                            }},
+                            {td: {
+                              style: {
+                                padding: '0',
+                                borderBottom: '1px solid #dee2e6',
+                                height: '44px'
+                              },
+                              children: [
+                                {div: {
+                                  style: {
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    boxSizing: 'border-box'
+                                  },
+                                  children: [
+                                    {span: {
+                                      style: {
+                                        cursor: 'text',
+                                        display: 'block',
+                                        width: '100%',
+                                        height: '28px',
+                                        lineHeight: '28px',
+                                        padding: '0 4px',
+                                        margin: '0',
+                                        color: '#2c3e50',
+                                        fontSize: '13px',
+                                        fontFamily: 'inherit',
+                                        background: 'transparent',
+                                        border: '1px solid transparent',
+                                        borderRadius: '0px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        boxSizing: 'border-box'
+                                      },
+                                      contenteditable: true,
+                                      onclick: (e) => {
+                                        e.stopPropagation();
+                                        e.target.style.background = '#f8f9fa';
+                                        e.target.style.borderColor = '#95a5a6';
+                                        setTimeout(() => {
+                                          const position = getTextCursorPosition(e.target, e.clientX);
+                                          setTextCursor(e.target, position);
+                                        }, 0);
+                                      },
+                                      onblur: (e) => {
+                                        e.target.style.background = 'transparent';
+                                        e.target.style.borderColor = 'transparent';
+                                        const value = parseFloat(e.target.textContent.replace(/[$,]/g, '')) || 0;
+                                        updateRecord(index, 'salary', value);
+                                      },
+                                      text: () => {
+                                        const record = getState(`record.${index}`);
+                                        return record?.salary ? `$${record.salary.toLocaleString()}` : '';
+                                      }
+                                    }}
+                                  ]
+                                }}
+                              ]
+                            }},
+                            {td: {
+                              style: {
+                                padding: '0',
+                                borderBottom: '1px solid #dee2e6',
+                                height: '44px'
+                              },
+                              children: [
+                                {div: {
+                                  style: {
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    boxSizing: 'border-box'
+                                  },
+                                  children: [
+                                    () => {
+                                      if (!getState(`editing.${index}.level`, false)) {
+                                        return {span: {
+                                          style: {
+                                            cursor: 'pointer'
+                                          },
+                                          onclick: (e) => {
+                                            e.stopPropagation();
+                                            const position = getTextCursorPosition(e.target, e.clientX);
+                                            setState(`cursor.${index}.level`, position);
+                                            setState(`editing.${index}.level`, true);
+                                            
+                                            setTimeout(() => {
+                                              const input = document.querySelector(`#level-input-${index}`);
+                                              if (input) {
+                                                setInputCursor(input, position);
+                                              }
+                                            }, 30);
+                                          },
+                                          children: [
+                                            () => {
+                                              const record = getState(`record.${index}`);
+                                              const level = record?.level;
+                                              const badgeStyle = getBadgeStyle(level);
+                                              return {span: {
+                                                style: {
+                                                  ...badgeStyle,
+                                                  padding: '4px 8px',
+                                                  borderRadius: '0px',
+                                                  fontSize: '11px',
+                                                  fontWeight: '600',
+                                                  display: 'inline-block',
+                                                  height: '20px',
+                                                  lineHeight: '20px',
+                                                  boxSizing: 'border-box',
+                                                  textTransform: 'uppercase',
+                                                  letterSpacing: '0.5px'
+                                                },
+                                                text: level || ''
+                                              }};
+                                            }
+                                          ]
+                                        }};
+                                      }
+                                    },
+                                    () => {
+                                      if (getState(`editing.${index}.level`, false)) {
+                                        return {div: {
+                                          style: {
+                                            position: 'relative',
+                                            width: '100%',
+                                            height: '28px'
+                                          },
+                                          children: [
+                                            {input: {
+                                              id: `level-input-${index}`,
+                                              style: {
+                                                width: '100%',
+                                                height: '28px',
+                                                padding: '0 4px',
+                                                margin: '0',
+                                                border: '1px solid #95a5a6',
+                                                borderRadius: '0px',
+                                                fontSize: '13px',
+                                                fontFamily: 'inherit',
+                                                background: '#ffffff',
+                                                color: '#2c3e50',
+                                                boxSizing: 'border-box',
+                                                lineHeight: '26px'
+                                              },
+                                              type: 'text',
+                                              value: () => {
+                                                const record = getState(`record.${index}`);
+                                                return record?.level || '';
+                                              },
+                                              oninput: (e) => {
+                                                setState(`temp.${index}.level`, e.target.value);
+                                              },
+                                              onblur: () => {
+                                                setTimeout(() => {
+                                                  const tempValue = getState(`temp.${index}.level`);
+                                                  if (tempValue !== null && tempValue !== undefined) {
+                                                    updateRecord(index, 'level', tempValue);
+                                                  }
+                                                  setState(`editing.${index}.level`, false);
+                                                  setState(`temp.${index}.level`, null);
+                                                  setState(`cursor.${index}.level`, null);
+                                                }, 150);
+                                              },
+                                              onkeyup: (e) => {
+                                                if (e.key === 'Enter') {
+                                                  const tempValue = getState(`temp.${index}.level`);
+                                                  if (tempValue !== null && tempValue !== undefined) {
+                                                    updateRecord(index, 'level', tempValue);
+                                                  }
+                                                  setState(`editing.${index}.level`, false);
+                                                  setState(`temp.${index}.level`, null);
+                                                  setState(`cursor.${index}.level`, null);
+                                                }
+                                              }
+                                            }},
+                                            {div: {
+                                              style: {
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: '0',
+                                                right: '0',
+                                                background: '#ffffff',
+                                                border: '1px solid #95a5a6',
+                                                borderTop: 'none',
+                                                borderRadius: '0px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                zIndex: '1000',
+                                                maxHeight: '200px',
+                                                overflowY: 'auto'
+                                              },
+                                              children: () => {
+                                                const levels = getState('levels', []);
+                                                const tempValue = getState(`temp.${index}.level`);
+                                                
+                                                let filteredLevels;
+                                                if (tempValue === null || tempValue === undefined || tempValue === '') {
+                                                  filteredLevels = levels;
+                                                } else {
+                                                  const filter = tempValue.toLowerCase();
+                                                  filteredLevels = levels.filter(level => 
+                                                    level.toLowerCase().includes(filter)
+                                                  );
+                                                }
+                                                
+                                                return filteredLevels.map(level => ({
+                                                  div: {
+                                                    style: {
+                                                      padding: '8px 12px',
+                                                      cursor: 'pointer',
+                                                      borderBottom: '1px solid #dee2e6',
+                                                      fontSize: '13px',
+                                                      color: '#2c3e50'
+                                                    },
+                                                    text: level,
+                                                    onclick: (e) => {
+                                                      e.stopPropagation();
+                                                      executeBatch(() => {
+                                                        updateRecord(index, 'level', level);
+                                                        setState(`editing.${index}.level`, false);
+                                                        setState(`temp.${index}.level`, null);
+                                                        setState(`cursor.${index}.level`, null);
+                                                      });
+                                                    },
+                                                    onmouseover: function() {
+                                                      this.style.background = '#f8f9fa';
+                                                    },
+                                                    onmouseout: function() {
+                                                      this.style.background = 'transparent';
+                                                    }
+                                                  }
+                                                }));
+                                              }
+                                            }}
+                                          ]
+                                        }};
+                                      }
+                                    }
+                                  ]
+                                }}
+                              ]
+                            }},
+                            {td: {
+                              style: {
+                                padding: '0',
+                                borderBottom: '1px solid #dee2e6',
+                                height: '44px'
+                              },
+                              children: [
+                                {div: {
+                                  style: {
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    boxSizing: 'border-box'
+                                  },
+                                  children: [
+                                    {span: {
+                                      style: {
+                                        cursor: 'pointer'
+                                      },
+                                      onclick: () => {
+                                        const record = getState(`record.${index}`);
+                                        if (record) {
+                                          updateRecord(index, 'active', !record.active);
+                                        }
+                                      },
+                                      children: [
+                                        () => {
+                                          const record = getState(`record.${index}`);
+                                          const isActive = record?.active;
+                                          const badgeStyle = isActive 
+                                            ? { background: '#d4edda', color: '#27ae60', border: '1px solid #27ae60' }
+                                            : { background: '#f8d7da', color: '#e74c3c', border: '1px solid #e74c3c' };
+                                          const text = isActive ? 'ACTIVE' : 'INACTIVE';
+                                          return {span: {
+                                            style: {
+                                              ...badgeStyle,
+                                              padding: '4px 8px',
+                                              borderRadius: '0px',
+                                              fontSize: '11px',
+                                              fontWeight: '600',
+                                              display: 'inline-block',
+                                              height: '20px',
+                                              lineHeight: '20px',
+                                              boxSizing: 'border-box',
+                                              textTransform: 'uppercase',
+                                              letterSpacing: '0.5px'
+                                            },
+                                            text
+                                          }};
+                                        }
+                                      ]
+                                    }}
+                                  ]
+                                }}
+                              ]
+                            }},
+                            {td: {
+                              style: {
+                                padding: '0',
+                                borderBottom: '1px solid #dee2e6',
+                                height: '44px'
+                              },
+                              children: [
+                                {div: {
+                                  style: {
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    boxSizing: 'border-box'
+                                  },
+                                  children: [
+                                    {button: {
+                                      style: {
+                                        padding: '4px 8px',
+                                        border: '1px solid #95a5a6',
+                                        borderRadius: '0px',
+                                        cursor: 'pointer',
+                                        fontWeight: '600',
+                                        fontSize: '10px',
+                                        background: '#f8d7da',
+                                        color: '#e74c3c',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px',
+                                        fontFamily: 'inherit'
+                                      },
+                                      text: '[DEL]',
+                                      onclick: () => {
+                                        const record = getState(`record.${index}`);
+                                        if (record && confirm(`Delete ${record.name}?`)) {
+                                          deleteRecord(index);
+                                        }
+                                      },
+                                      onmouseover: function() {
+                                        this.style.background = '#e74c3c';
+                                        this.style.color = '#ffffff';
+                                      },
+                                      onmouseout: function() {
+                                        this.style.background = '#f8d7da';
+                                        this.style.color = '#e74c3c';
+                                      }
+                                    }}
+                                  ]
+                                }}
+                              ]
+                            }}
+                          ]
+                        }
+                      }));
+                    }
+                  }}
+                ]
+              }}
+            ]
+          }},
+          {div: {
+            style: {
+              padding: '16px 20px',
+              background: '#f8f9fa',
+              color: '#6c757d',
+              fontSize: '12px',
+              textAlign: 'center',
+              borderTop: '1px solid #dee2e6',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
+            },
+            children: [
+              () => {
+                const recordCount = getState('recordCount', 0);
+                let total = 0;
+                let active = 0;
+                let totalSalary = 0;
+                
+                for (let i = 0; i < recordCount; i++) {
+                  const record = getState(`record.${i}`);
+                  if (record) {
+                    total++;
+                    if (record.active) active++;
+                    totalSalary += record.salary || 0;
+                  }
+                }
+                
+                const avgSalary = total > 0 ? Math.round(totalSalary / total) : 0;
+                return `[${total}] Records • [${active}] Active • Avg Salary: $${avgSalary.toLocaleString()}`;
+              }
+            ]
+          }}
+        ]
+      }};
+    };
+
+    const juris = new Juris({
+      components: {
+        DataGridMain
+      },
+      layout: [
+        {DataGridMain: {}}
+      ]
+    });
+
+    juris.arm(document, (context) => ({}));
+
+    juris.render('#app');
+  </script>
+</body>
+</html>

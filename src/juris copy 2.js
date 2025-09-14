@@ -748,6 +748,9 @@ class ComponentManager {
     }
 
     #procCompResult(result, name, props, states, targetContainer = null) {
+      if (typeof result === 'function') {
+        result = { render: result };
+      }
       if (Array.isArray(result)) {
         return this.#newCompFrag(result, name, props, states);
       }      
@@ -772,7 +775,7 @@ class ComponentManager {
 
     #createManagedComponent(result, name, props, states, targetContainer = null) {
       let inst = this.#newComp(result, name, props);
-      let cont = document.createElement('div');
+      let cont = targetContainer || document.createElement('div');
       let isExternal = !!targetContainer;      
       if (!isExternal) {
         cont.setAttribute('data-juris-component', name);
@@ -1789,6 +1792,9 @@ class DOMRenderer {
   }
   
   _handleChildren(elm, children, subscriptions, componentName = null) {
+    if (!Array.isArray(children)) {
+      children = [children];
+    }
     if (typeof children === 'function') {
       this.#handleReactiveChildren(elm, children, subscriptions, componentName);
     } else if (this.#isPromiseLike(children)) {
@@ -1806,9 +1812,6 @@ class DOMRenderer {
   #handleReactiveChildren(elm, childrenFn, subscriptions, componentName = null) {
     let updateChildren = () => {
       let { result, deps } = this.juris.getSM().track(() => childrenFn(elm));
-      if(!Array.isArray(result)){
-        result=[result];
-      }
       if (this.#isPromiseLike(result)) {
         let asyncContext = { elm, type: 'reactive-children' };
         this.#handleAsync(result, {
@@ -1842,7 +1845,7 @@ class DOMRenderer {
   
   #updateChildren(elm, children, componentName = null) {
     if (children === "ignore") return;
-    if(!Array.isArray(children)){
+    if (!Array.isArray(children)) {
       children = [children];
     }
     let lastChildren = elm._jurisLastChildren;

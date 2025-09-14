@@ -1040,110 +1040,320 @@ body {
         const docFramework = new DocumentFramework();
 
         // Beginner-Friendly Juris Documentation with Tailwind CSS
-
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4 drop-shadow-lg',
+        text: '{..}'
+      }},//logo
+      {h1: {
+        class: 'text-3xl font-bold text-white drop-shadow-lg',
+        text: 'Simple Components Demo'
+      }}//title
+    ]
+  }//header
+});
 // =============================================================================
 // GETTING STARTED
 // =============================================================================
 
-docFramework.addDoc('what-is-juris', {
-    title: 'What is Juris?',
-    category: 'Getting Started',
-    content: 'Juris is the first and only non-blocking reactive platform, architecturally optimized for next-generation cross-platform applications. It uses object-first architecture where interfaces are expressed as pure JavaScript objects.',
-    
-    codeSnippet: [
-        `// Traditional DOM manipulation
-document.getElementById('app').innerHTML = '<div>Hello World<\/div>';`,
-        
-        { text: "With Juris, you express UI as objects:" },
-        
-        `// Juris object-first approach
-const HelloWorld = () => ({
-    div: { 
-        class: 'text-blue-500 font-bold',
-        text: 'Hello World' 
-    }
-});`
-    ],
-    
-    code: `// Complete working example
-const juris = new Juris({
-    layout: {
-        div: {
-            class: 'bg-gray-100 flex items-center justify-center',
-            children: [{
-                h1: {
-                    class: 'text-4xl font-bold text-blue-600 p-4',
-                    text: 'Welcome to Juris'
-                }
-            }]
-        }
-    }
-});
-juris.render('#demo');`,
-    
-    technicalDetails: {
-        'Architecture': 'Object-first reactive platform',
-        'Reactivity': 'Intentional reactive functions',
-        'Performance': 'Non-blocking rendering',
-        'Deployment': 'Zero-build complexity'
-    },
-    
-    tags: ['introduction', 'concepts', 'overview']
-});
-
-docFramework.addDoc('installation-cdn', {
-    title: 'CDN Installation',
-    category: 'Getting Started',
-    content: 'Get started instantly with Juris using CDN. No build tools, no complexity - just include the script and start building.',
-    
-    codeSnippet: [
-        `<!-- Latest version (development) -->
-<script src="https://unpkg.com/juris@latest/juris.js"><\/script>`,
-        
-        { text: "For production, use specific versions:" },
-        
-        `<!-- Specific version (recommended for production) -->
-<script src="https://unpkg.com/juris@0.9.0/juris.js"><\/script>
-<script src="https://unpkg.com/juris@0.9.0/juris.mini.js"><\/script>`,
-        
-        { text: "Alternative CDN providers:" },
-        
-        `<!-- JSDelivr -->
-<script src="https://cdn.jsdelivr.net/npm/juris@0.9.0/juris.js"><\/script>`
-    ],
-    
-    code: `<!DOCTYPE html>
+// Documentation entry
+docFramework.addDoc('basic-setup', {
+  title: 'Basic Setup',
+  category: 'Getting Started',
+  content: 'Learn how to set up Juris in a basic HTML page. This example shows a complete counter application using CDN, state management, and reactive rendering. The setup requires only an HTML file with the Juris script and a container element.',
+  
+  codeSnippet: [
+    `// Complete HTML document with Juris CDN
+<!DOCTYPE html>
 <html>
 <head>
-    <title>Juris App<\/title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-    <script src="https://unpkg.com/juris@0.9.0/juris.js"><\/script>
+  <script src="https://unpkg.com/juris@0.9.0/juris.js"><\/script>
 <\/head>
 <body>
-    <div id="app"><\/div>
-    <script>
-        const app = new Juris({
-            layout: {
-                div: {
-                    class: 'p-8 bg-blue-50 rounded-lg',
-                    text: 'Hello from CDN!'
-                }
-            }
-        });
-        app.render('#demo');
-    <\/script>
+  <div id="app"></div>
+  <script>
+    const app = new Juris({
+      states: { count: 0 },
+      layout: {
+        div: {
+          text: () => app.getState('count', 0),
+          children: [
+            { button: { text: '+', onclick: () => app.setState('count', app.getState('count') + 1) } },
+            { button: { text: '-', onclick: () => app.setState('count', app.getState('count') - 1) } }
+          ]
+        }//div
+      }
+    });
+    app.render();
+  <\/script>
 <\/body>
 <\/html>`,
     
-    technicalDetails: {
-        'Setup Time': 'Instant - no build process',
-        'File Size': '38kB, 12kB gzipped',
-        'Dependencies': 'None',
-        'Browser Support': 'All modern browsers'
-    },
+    { text: "Breaking down the setup components:" },
     
-    tags: ['installation', 'cdn', 'quick-start']
+    {
+      title: "CDN Script Include",
+      language: "html",
+      code: `<script src="https://unpkg.com/juris@0.9.0/juris.js"><\/script>`
+    },
+
+    { text: "Container element where Juris will render:" },
+
+    `<div id="app"><\/div>`,
+    
+    { text: "Basic Juris instance with state and layout:" },
+    
+    {
+      title: "Juris Configuration",
+      language: "javascript",
+      code: `const app = new Juris({
+  states: { count: 0 },
+  layout: {
+    div: {
+      text: () => app.getState('count', 0),
+      children: [
+        { button: { text: '+', onclick: () => app.setState('count', app.getState('count') + 1) } },
+        { button: { text: '-', onclick: () => app.setState('count', app.getState('count') - 1) } }
+      ]
+    }//div
+  }
+});`
+    },
+
+    { text: "Render the application:" },
+
+    `app.render(); // Renders to #app by default`,
+    
+    { separator: "Key Concepts" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'Setup Requirements' }},
+          {p: { text: 'CDN Script: Include Juris from unpkg CDN' }},
+          {p: { text: 'Container: HTML element with id for rendering' }},
+          {p: { text: 'States: Initial state object for reactive data' }},
+          {p: { text: 'Layout: VDOM structure defining the UI' }},
+          {p: { text: 'Render: Call app.render() to mount the application' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete working counter application with styling
+const CounterApp = (props, {getState, setState}) => ({
+  div: {
+    class: 'flex flex-col items-center p-8 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen',
+    children: [
+      {div: {
+        class: 'bg-white rounded-lg shadow-xl p-8 mb-8',
+        children: [
+          {div: {
+            class: 'flex items-center justify-center mb-6',
+            children: [
+              {span: {
+                class: 'text-4xl font-mono font-bold text-blue-600 mr-4',
+                text: '{..}'
+              }},//logo
+              {h1: {
+                class: 'text-3xl font-bold text-gray-800',
+                text: 'Juris Counter Demo'
+              }}//title
+            ]
+          }},//header
+          {div: {
+            class: 'text-center',
+            children: [
+              {div: {
+                class: 'text-6xl font-bold text-blue-600 mb-6',
+                text: () => getState('count', 0)
+              }},//counter-display
+              {div: {
+                class: 'flex gap-4 justify-center',
+                children: [
+                  {button: {
+                    class: 'px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-xl font-bold rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:scale-105',
+                    text: '+',
+                    onclick: () => setState('count', getState('count') + 1)
+                  }},//increment
+                  {button: {
+                    class: 'px-8 py-4 bg-red-500 hover:bg-red-600 text-white text-xl font-bold rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:scale-105',
+                    text: '-',
+                    onclick: () => setState('count', getState('count') - 1)
+                  }}//decrement
+                ]
+              }},//buttons
+              {button: {
+                class: 'mt-4 px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors',
+                text: 'Reset',
+                onclick: () => setState('count', 0)
+              }}//reset
+            ]
+          }}//counter-content
+        ]
+      }},//card
+      {div: {
+        class: 'bg-white rounded-lg shadow-lg p-6 max-w-2xl',
+        children: [
+          {h2: {
+            class: 'text-xl font-bold text-gray-800 mb-4',
+            text: 'How It Works'
+          }},//how-title
+          {ul: {
+            class: 'space-y-2 text-gray-600',
+            children: [
+              {li: { 
+                class: 'flex items-start',
+                children: [
+                  {span: { class: 'text-blue-500 mr-2', text: '•' }},
+                  {span: { text: 'State management with reactive updates' }}
+                ]
+              }},
+              {li: { 
+                class: 'flex items-start',
+                children: [
+                  {span: { class: 'text-blue-500 mr-2', text: '•' }},
+                  {span: { text: 'VDOM structure with compact syntax' }}
+                ]
+              }},
+              {li: { 
+                class: 'flex items-start',
+                children: [
+                  {span: { class: 'text-blue-500 mr-2', text: '•' }},
+                  {span: { text: 'Event handlers with direct state access' }}
+                ]
+              }},
+              {li: { 
+                class: 'flex items-start',
+                children: [
+                  {span: { class: 'text-blue-500 mr-2', text: '•' }},
+                  {span: { text: 'No build tools or compilation required' }}
+                ]
+              }}
+            ]
+          }}//features
+        ]
+      }}//info-card
+    ]
+  }//app
 });
+
+// HTML setup with Tailwind CSS for styling
+const htmlSetup = \`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juris Counter App</title>
+  <script src="https://unpkg.com/juris@0.88.2/juris.js"><\/script>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    // Complete counter application
+    const app = new Juris({
+      states: { 
+        count: 0 
+      },
+      components: {
+        CounterApp: (props, {getState, setState}) => ({
+          div: {
+            class: 'flex flex-col items-center p-8 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen',
+            children: [
+              {div: {
+                class: 'bg-white rounded-lg shadow-xl p-8 mb-8',
+                children: [
+                  {div: {
+                    class: 'flex items-center justify-center mb-6',
+                    children: [
+                      {span: {
+                        class: 'text-4xl font-mono font-bold text-blue-600 mr-4',
+                        text: '{..}'
+                      }},
+                      {h1: {
+                        class: 'text-3xl font-bold text-gray-800',
+                        text: 'Juris Counter Demo'
+                      }}
+                    ]
+                  }},
+                  {div: {
+                    class: 'text-center',
+                    children: [
+                      {div: {
+                        class: 'text-6xl font-bold text-blue-600 mb-6',
+                        text: () => getState('count', 0)
+                      }},
+                      {div: {
+                        class: 'flex gap-4 justify-center',
+                        children: [
+                          {button: {
+                            class: 'px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-xl font-bold rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:scale-105',
+                            text: '+',
+                            onclick: () => setState('count', getState('count') + 1)
+                          }},
+                          {button: {
+                            class: 'px-8 py-4 bg-red-500 hover:bg-red-600 text-white text-xl font-bold rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:scale-105',
+                            text: '-',
+                            onclick: () => setState('count', getState('count') - 1)
+                          }}
+                        ]
+                      }},
+                      {button: {
+                        class: 'mt-4 px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors',
+                        text: 'Reset',
+                        onclick: () => setState('count', 0)
+                      }}
+                    ]
+                  }}
+                ]
+              }}
+            ]
+          }
+        })
+      },
+      layout: [
+        { CounterApp: {} }
+      ]
+    });
+    
+    // Render the application
+    app.render('#app');
+  <\/script>
+</body>
+</html>\`;
+
+// Simple inline demo for documentation
+const demo = new Juris({
+  states: { count: 0 },
+  components: {
+    JurisLogo,
+    CounterApp
+  },
+  layout: [
+    { JurisLogo: {} },
+    { CounterApp: {} }
+  ]
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'CDN Version': 'Uses unpkg.com for latest Juris version',
+    'Container Element': 'Requires DOM element with id for rendering',
+    'State Management': 'Initial states defined in states object',
+    'Reactive Updates': 'Functions in layout auto-update on state changes',
+    'Event Handling': 'Direct onclick handlers with setState calls',
+    'Rendering': 'app.render() mounts to #app container by default'
+  },
+  
+  tags: ['getting-started', 'setup', 'cdn', 'html', 'counter', 'basic']
+});
+
 
 docFramework.addDoc('your-first-component', {
     title: 'Your First Component',
@@ -1722,6 +1932,559 @@ demo.render('#demo');`,
     tags: ['elements', 'html', 'forms', 'basics']
 });
 
+// Documentation entry
+docFramework.addDoc('dom-fundamentals', {
+  title: 'Attributes',
+  category: 'DOM Fundamentals', 
+  content: 'Learn how Juris handles various DOM attributes including ARIA accessibility attributes, data attributes, boolean attributes, and third-party library integration. Understanding these fundamentals ensures your Juris applications are accessible, compatible with external libraries, and follow web standards.',
+  
+  codeSnippet: [
+    `// Boolean attributes in Juris
+const FormInputs = () => ({
+  form: {
+    children: [
+      {input: {
+        type: 'text',
+        required: true,        // Boolean: sets required=""
+        disabled: false,       // Boolean: removes disabled attribute  
+        readonly: true,        // Boolean: sets readonly=""
+        autofocus: true        // Boolean: sets autofocus=""
+      }},
+      {button: {
+        type: 'submit',
+        disabled: false,       // Boolean: button is enabled
+        text: 'Submit'
+      }}
+    ]
+  }
+});`,
+
+    { text: "ARIA attributes for accessibility:" },
+
+    {
+      title: "ARIA Accessibility Attributes",
+      language: "javascript",
+      code: `const AccessibleComponent = () => ({
+  div: {
+    role: 'main',
+    'aria-label': 'Main content area',
+    'aria-describedby': 'help-text',
+    children: [
+      {h1: {
+        id: 'page-title',
+        'aria-level': '1',
+        text: 'Welcome'
+      }},
+      {button: {
+        'aria-expanded': false,
+        'aria-controls': 'dropdown-menu',
+        'aria-haspopup': 'menu',
+        'aria-labelledby': 'page-title',
+        text: 'Menu',
+        onclick: () => {
+          // Toggle aria-expanded state
+          const expanded = context.getState('menu.expanded', false);
+          context.setState('menu.expanded', !expanded);
+        }
+      }},
+      {div: {
+        id: 'dropdown-menu',
+        role: 'menu',
+        'aria-hidden': () => !context.getState('menu.expanded', false),
+        'aria-labelledby': 'menu-button'
+      }}
+    ]
+  }
+});`
+    },
+
+    { text: "Data attributes and custom attributes:" },
+
+    `// Data attributes and custom properties
+const ComponentWithData = () => ({
+  div: {
+    'data-component': 'user-card',
+    'data-user-id': '12345', 
+    'data-theme': 'dark',
+    'data-analytics': 'track-clicks',
+    // Third-party library attributes
+    'x-data': '{ open: false }',           // Alpine.js
+    'v-if': 'showComponent',               // Vue.js  
+    'ng-show': 'isVisible',                // AngularJS
+    // Custom attributes
+    'my-custom-attr': 'custom-value',
+    tabindex: '0'
+  }
+});`,
+
+    { text: "SVG attributes and namespaced elements:" },
+
+    {
+      title: "SVG and Namespaced Attributes", 
+      language: "javascript",
+      code: `const SvgComponent = () => ({
+  svg: {
+    width: '100',
+    height: '100',
+    viewBox: '0 0 100 100',
+    xmlns: 'http://www.w3.org/2000/svg',
+    children: [
+      {circle: {
+        cx: '50',
+        cy: '50', 
+        r: '40',
+        fill: 'blue',
+        stroke: 'black',
+        'stroke-width': '2'
+      }},
+      {text: {
+        x: '50',
+        y: '55',
+        'text-anchor': 'middle',
+        'font-family': 'Arial',
+        'font-size': '14',
+        fill: 'white',
+        text: 'SVG'
+      }}
+    ]
+  }
+});`
+    },
+
+    { text: "Form attributes and input types:" },
+
+    {
+      title: "Form Elements and Validation",
+      language: "javascript",
+      code: `const FormValidation = (props, context) => ({
+  form: {
+    novalidate: false,  // Enable browser validation
+    children: [
+      {input: {
+        type: 'email',
+        name: 'email',
+        placeholder: 'Enter email...',
+        required: true,
+        'aria-invalid': () => context.getState('form.emailError', false),
+        'aria-describedby': 'email-error',
+        pattern: '[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$',
+        autocomplete: 'email',
+        spellcheck: false
+      }},
+      {div: {
+        id: 'email-error', 
+        role: 'alert',
+        'aria-live': 'polite',
+        text: () => context.getState('form.emailError', '') || ''
+      }},
+      {select: {
+        name: 'country',
+        required: true,
+        'aria-label': 'Select country',
+        multiple: false,
+        children: [
+          {option: { value: '', text: 'Choose country...', disabled: true, selected: true }},
+          {option: { value: 'us', text: 'United States' }},
+          {option: { value: 'uk', text: 'United Kingdom' }},
+          {option: { value: 'ca', text: 'Canada' }}
+        ]
+      }},
+      {textarea: {
+        name: 'message',
+        rows: '4',
+        cols: '50',
+        placeholder: 'Enter message...',
+        maxlength: '500',
+        'aria-label': 'Message content',
+        spellcheck: true,
+        wrap: 'soft'
+      }}
+    ]
+  }
+});`
+    },
+    
+    { separator: "Attribute Types & Handling" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'DOM Attribute Categories' }},
+          {p: { text: 'Boolean: true sets attribute, false removes it (required, disabled, checked)' }},
+          {p: { text: 'ARIA: Accessibility attributes with aria- prefix for screen readers' }},
+          {p: { text: 'Data: Custom data-* attributes for storing metadata' }},
+          {p: { text: 'SVG: Specialized attributes for SVG elements (cx, cy, viewBox)' }},
+          {p: { text: 'Third-party: Framework-specific attributes (x-data, v-if, ng-show)' }},
+          {p: { text: 'Standard: Regular HTML attributes (id, class, style, tabindex)' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete DOM fundamentals demonstration
+const AccessibilityDemo = (props, context) => ({
+  main: {
+    role: 'main',
+    'aria-labelledby': 'main-heading',
+    class: 'p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4',
+    children: [
+      {h1: {
+        id: 'main-heading',
+        'aria-level': '1',
+        class: 'text-lg font-bold text-blue-800 mb-4',
+        text: 'Accessibility Features'
+      }},
+      {div: {
+        role: 'group',
+        'aria-labelledby': 'controls-heading',
+        children: [
+          {h2: {
+            id: 'controls-heading',
+            'aria-level': '2',
+            class: 'text-md font-semibold text-blue-700 mb-2',
+            text: 'Interactive Controls'
+          }},
+          {button: {
+            id: 'menu-button',
+            'aria-expanded': () => context.getState('menu.expanded', false),
+            'aria-controls': 'collapsible-menu',
+            'aria-haspopup': 'menu',
+            class: () => \`px-4 py-2 rounded transition-colors \${
+              context.getState('menu.expanded', false) 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
+            }\`,
+            text: () => context.getState('menu.expanded', false) ? 'Hide Menu' : 'Show Menu',
+            onclick: () => {
+              const expanded = context.getState('menu.expanded', false);
+              context.setState('menu.expanded', !expanded);
+            }
+          }},
+          {div: {
+            id: 'collapsible-menu',
+            role: 'menu',
+            'aria-hidden': () => !context.getState('menu.expanded', false),
+            'aria-labelledby': 'menu-button',
+            class: () => \`mt-2 p-3 bg-white rounded border \${
+              context.getState('menu.expanded', false) ? 'block' : 'hidden'
+            }\`,
+            children: [
+              {div: {
+                role: 'menuitem',
+                tabindex: '0',
+                class: 'p-2 hover:bg-gray-100 cursor-pointer',
+                text: 'Menu Item 1',
+                'aria-label': 'First menu option'
+              }},
+              {div: {
+                role: 'menuitem', 
+                tabindex: '0',
+                class: 'p-2 hover:bg-gray-100 cursor-pointer',
+                text: 'Menu Item 2',
+                'aria-label': 'Second menu option'
+              }}
+            ]
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+const BooleanAttributesDemo = (props, context) => ({
+  div: {
+    class: 'p-6 bg-green-50 border border-green-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'text-lg font-bold text-green-800 mb-4',
+        text: 'Boolean Attributes Demo'
+      }},
+      {form: {
+        novalidate: context.getState('form.noValidate', false),
+        children: [
+          {div: {
+            class: 'space-y-3',
+            children: [
+              {label: {
+                class: 'flex items-center gap-2',
+                children: [
+                  {input: {
+                    type: 'checkbox',
+                    name: 'required-toggle',
+                    checked: () => context.getState('form.required', true),
+                    onchange: (e) => context.setState('form.required', e.target.checked)
+                  }},
+                  {span: { text: 'Make email field required' }}
+                ]
+              }},
+              {label: {
+                class: 'flex items-center gap-2', 
+                children: [
+                  {input: {
+                    type: 'checkbox',
+                    name: 'disabled-toggle',
+                    checked: () => context.getState('form.disabled', false),
+                    onchange: (e) => context.setState('form.disabled', e.target.checked)
+                  }},
+                  {span: { text: 'Disable submit button' }}
+                ]
+              }},
+              {input: {
+                type: 'email',
+                name: 'email',
+                placeholder: 'Enter email address...',
+                class: 'w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500',
+                required: () => context.getState('form.required', true),
+                'aria-label': 'Email address',
+                'aria-required': () => context.getState('form.required', true),
+                autocomplete: 'email',
+                spellcheck: false
+              }},
+              {button: {
+                type: 'submit',
+                class: 'px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded transition-colors',
+                text: 'Submit Form',
+                disabled: () => context.getState('form.disabled', false),
+                'aria-disabled': () => context.getState('form.disabled', false)
+              }}
+            ]
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+const DataAttributesDemo = (props, context) => ({
+  div: {
+    class: 'p-6 bg-purple-50 border border-purple-200 rounded-lg mb-4',
+    'data-component': 'data-attributes-demo',
+    'data-version': '1.0.0',
+    children: [
+      {h3: {
+        class: 'text-lg font-bold text-purple-800 mb-4',
+        text: 'Data & Custom Attributes'
+      }},
+      {div: {
+        class: 'space-y-3',
+        children: [
+          {div: {
+            'data-user-id': '12345',
+            'data-role': 'admin',
+            'data-theme': () => context.getState('user.theme', 'light'),
+            'data-analytics': 'user-card',
+            class: 'p-3 bg-white rounded border',
+            children: [
+              {p: { 
+                class: 'font-semibold',
+                text: 'User Card with Data Attributes'
+              }},
+              {p: { 
+                class: 'text-sm text-gray-600',
+                text: () => \`Theme: \${context.getState('user.theme', 'light')}\`
+              }}
+            ]
+          }},
+          {div: {
+            // Third-party framework attributes
+            'x-data': '{ count: 0 }',                    // Alpine.js
+            'v-if': 'showElement',                       // Vue.js
+            'ng-controller': 'MyController',             // AngularJS
+            // Custom attributes
+            'my-custom-attr': 'example-value',
+            'company-data': 'internal-use',
+            class: 'p-3 bg-white rounded border border-dashed',
+            children: [
+              {p: {
+                class: 'font-semibold mb-2',
+                text: 'Third-party & Custom Attributes'
+              }},
+              {p: {
+                class: 'text-sm text-gray-600',
+                text: 'This element has Alpine.js, Vue.js, and custom attributes'
+              }}
+            ]
+          }},
+          {button: {
+            class: 'px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors',
+            text: 'Toggle Theme',
+            onclick: () => {
+              const current = context.getState('user.theme', 'light');
+              context.setState('user.theme', current === 'light' ? 'dark' : 'light');
+            }
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+const SvgDemo = (props, context) => ({
+  div: {
+    class: 'p-6 bg-orange-50 border border-orange-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'text-lg font-bold text-orange-800 mb-4',
+        text: 'SVG Attributes Demo'
+      }},
+      {div: {
+        class: 'flex items-center gap-4',
+        children: [
+          {svg: {
+            width: '120',
+            height: '120', 
+            viewBox: '0 0 120 120',
+            xmlns: 'http://www.w3.org/2000/svg',
+            class: 'border border-orange-300 rounded',
+            children: [
+              {circle: {
+                cx: '60',
+                cy: '60',
+                r: () => context.getState('svg.radius', 40),
+                fill: () => context.getState('svg.color', 'orange'),
+                stroke: '#d97706',
+                'stroke-width': '3',
+                opacity: '0.8'
+              }},
+              {text: {
+                x: '60',
+                y: '65',
+                'text-anchor': 'middle',
+                'font-family': 'Arial, sans-serif',
+                'font-size': '14',
+                'font-weight': 'bold',
+                fill: 'white',
+                text: 'SVG'
+              }}
+            ]
+          }},
+          {div: {
+            class: 'space-y-2',
+            children: [
+              {label: {
+                class: 'block text-sm font-medium text-orange-700',
+                text: 'Circle Size:'
+              }},
+              {input: {
+                type: 'range',
+                min: '20',
+                max: '50',
+                value: () => context.getState('svg.radius', 40),
+                oninput: (e) => context.setState('svg.radius', parseInt(e.target.value)),
+                class: 'w-full'
+              }},
+              {label: {
+                class: 'block text-sm font-medium text-orange-700 mt-2',
+                text: 'Color:'
+              }},
+              {select: {
+                value: () => context.getState('svg.color', 'orange'),
+                onchange: (e) => context.setState('svg.color', e.target.value),
+                class: 'w-full px-2 py-1 border border-orange-300 rounded',
+                children: [
+                  {option: { value: 'orange', text: 'Orange' }},
+                  {option: { value: 'blue', text: 'Blue' }},
+                  {option: { value: 'green', text: 'Green' }},
+                  {option: { value: 'red', text: 'Red' }}
+                ]
+              }}
+            ]
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4',
+        text: '{..}'
+      }},
+      {h1: {
+        class: 'text-3xl font-bold text-white',
+        text: 'DOM Fundamentals Demo'
+      }}
+    ]
+  }
+});
+
+// Demo application
+const demo = new Juris({
+  states: {
+    menu: { expanded: false },
+    form: { 
+      required: true, 
+      disabled: false,
+      noValidate: false
+    },
+    user: { theme: 'light' },
+    svg: { radius: 40, color: 'orange' }
+  },
+  components: {
+    JurisLogo,
+    AccessibilityDemo,
+    BooleanAttributesDemo,
+    DataAttributesDemo,
+    SvgDemo
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            { AccessibilityDemo: {} },
+            { BooleanAttributesDemo: {} },
+            { DataAttributesDemo: {} },
+            { SvgDemo: {} },
+            {div: {
+              class: 'mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg',
+              children: [
+                {h4: {
+                  class: 'font-bold text-yellow-800 mb-2',
+                  text: 'DOM Fundamentals Key Points'
+                }},
+                {ul: {
+                  class: 'text-yellow-700 space-y-1 text-sm',
+                  children: [
+                    {li: { text: '• Boolean attributes: true sets attribute, false removes it' }},
+                    {li: { text: '• ARIA attributes improve accessibility for screen readers' }},
+                    {li: { text: '• Data attributes store custom metadata (data-*)'  }},
+                    {li: { text: '• SVG elements use specialized attributes (cx, cy, viewBox)' }},
+                    {li: { text: '• Third-party attributes work seamlessly (x-data, v-if, ng-*)' }},
+                    {li: { text: '• All standard HTML attributes are supported' }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }
+      }]
+    }
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'Boolean Attributes': 'true sets attribute="", false removes attribute entirely',
+    'ARIA Support': 'Full support for aria-* attributes for accessibility',
+    'Data Attributes': 'Custom data-* attributes for metadata storage',
+    'SVG Attributes': 'Specialized attributes like cx, cy, viewBox work correctly',
+    'Third-party': 'Framework attributes like x-data, v-if, ng-* pass through',
+    'Standard HTML': 'All HTML5 attributes supported including form validation'
+  },
+  
+  tags: ['dom', 'attributes', 'aria', 'accessibility', 'svg', 'boolean', 'data-attributes']
+});
 // =============================================================================
 // ATTRIBUTES & PROPERTIES
 // =============================================================================
@@ -1834,8 +2597,4419 @@ demo.render('#demo');
     tags: ['attributes', 'properties', 'static', 'html']
 });
 
+// Documentation entry
+docFramework.addDoc('simple-components', {
+  title: 'Simple Components',
+  category: 'Basics',
+  content: 'Learn component creation patterns in Juris using regular functions and arrow functions. Components can be static (no props), dynamic (with props), or interactive (with context). Understanding these patterns helps you choose the right approach for different use cases.',
+  
+  codeSnippet: [
+    `// Regular function without props - static content
+function WelcomeMessage() {
+  return {
+    div: {
+      text: 'Welcome to Juris!',
+      onclick: () => console.log('Welcome clicked!')
+    }//div
+  };
+}`,
+
+    { text: "Arrow function without props - concise syntax for static components:" },
+
+    {
+      title: "Arrow Function (No Props)",
+      language: "javascript", 
+      code: `const HelloWorld = () => ({
+  h1: {
+    text: 'Hello World',
+    onclick: () => console.log('Hello clicked!')
+  }//h1
+});`
+    },
+
+    { text: "Regular function with props - accepts data for dynamic content:" },
+
+    `// Regular function with props
+function SimpleButton(props) {
+  return {
+    button: {
+      text: props.label || 'Click me',
+      class: props.variant || 'primary',
+      onclick: () => console.log('Button clicked!')
+    }//button
+  };
+}`,
+    
+    { text: "Arrow function with props - implicit return with props parameter:" },
+    
+    {
+      title: "Arrow Function with Props", 
+      language: "javascript",
+      code: `const ArrowButton = (props) => ({
+  button: {
+    text: props.label || 'Arrow Click',
+    class: props.variant || 'primary',
+    onclick: () => console.log('Arrow button clicked!')
+  }//button
+});`
+    },
+
+    { text: "Components with context access state and services - regular function with two parameters:" },
+
+    {
+      title: "Regular Function with Context",
+      language: "javascript",
+      code: `function ContextButton(props, context) {
+  return {
+    button: {
+      text: props.label || 'Context Button',
+      onclick: () => {
+        context.setState('buttonClicks', context.getState('buttonClicks', 0) + 1);
+        console.log('Button with context clicked!');
+      }
+    }//button
+  };
+}`
+    },
+
+    { text: "Arrow function with context - implicit return with both props and context:" },
+
+    {
+      title: "Arrow Function with Context",
+      language: "javascript",
+      code: `const ArrowContextButton = (props, context) => ({
+  button: {
+    text: props.label || 'Arrow Context',
+    onclick: () => {
+      context.setState('buttonClicks', context.getState('buttonClicks', 0) + 1);
+      console.log('Arrow context button clicked!');
+    }
+  }//button
+});`
+    },
+    
+    { separator: "Component Creation Patterns" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'Function Declaration Patterns' }},
+          {p: { text: 'No params: () => static components with fixed content' }},
+          {p: { text: 'Props only: (props) => dynamic components with customizable content' }},
+          {p: { text: 'Props + Context: (props, context) => interactive components with state access' }},
+          {p: { text: 'Regular functions: Explicit return statement, function hoisting' }},
+          {p: { text: 'Arrow functions: Implicit return with parentheses, no hoisting' }},
+          {p: { text: 'Context provides: getState, setState, services, and more Juris APIs' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// All component patterns with proper styling
+function WelcomeMessage() {
+  return {
+    div: {
+      class: 'p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 cursor-pointer hover:bg-blue-100 transition-colors',
+      text: 'Welcome to Juris!',
+      onclick: () => console.log('Welcome message clicked')
+    }//div
+  };
+}
+
+const HelloWorld = () => ({
+  h1: {
+    class: 'text-3xl font-bold text-green-600 p-4 bg-green-50 border-l-4 border-green-500 cursor-pointer hover:bg-green-100 transition-colors',
+    text: 'Hello World',
+    onclick: () => console.log('Hello world clicked')
+  }//h1
+});
+
+function SimpleButton(props) {
+  return {
+    button: {
+      class: \`px-6 py-3 rounded-lg font-medium transition-all duration-200 \${
+        props.variant === 'secondary' 
+          ? 'bg-gray-500 hover:bg-gray-600 text-white shadow-md hover:shadow-lg' 
+          : 'bg-blue-500 hover:bg-blue-600 text-white shadow-md hover:shadow-lg'
+      }\`,
+      text: props.label || 'Click me',
+      onclick: () => {
+        console.log('Function component clicked');
+        console.log('Props received:', props);
+      }
+    }//button
+  };
+}
+
+const ArrowButton = (props) => ({
+  button: {
+    class: \`px-6 py-3 rounded-lg font-medium transition-all duration-200 \${
+      props.variant === 'secondary' 
+        ? 'bg-purple-500 hover:bg-purple-600 text-white shadow-md hover:shadow-lg' 
+        : 'bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg'
+    }\`,
+    text: props.label || 'Arrow Click',
+    onclick: () => {
+      console.log('Arrow component clicked');  
+      console.log('Props received:', props);
+    }
+  }//button
+});
+
+function ContextButton(props, context) {
+  return {
+    button: {
+      class: 'px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200',
+      text: () => {
+        const clicks = context.getState('buttonClicks', 0);
+        return \`\${props.label || 'Context'} (\${clicks})\`;
+      },
+      onclick: () => {
+        const currentClicks = context.getState('buttonClicks', 0);
+        context.setState('buttonClicks', currentClicks + 1);
+        console.log('Context button clicked, total:', currentClicks + 1);
+      }
+    }//button
+  };
+}
+
+const ArrowContextButton = (props, context) => ({
+  button: {
+    class: 'px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200',
+    text: () => {
+      const clicks = context.getState('buttonClicks', 0);
+      return \`\${props.label || 'Arrow Context'} (\${clicks})\`;
+    },
+    onclick: () => {
+      const currentClicks = context.getState('buttonClicks', 0);
+      context.setState('buttonClicks', currentClicks + 1);
+      console.log('Arrow context clicked, total:', currentClicks + 1);
+    }
+  }//button
+});
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4 drop-shadow-lg',
+        text: '{..}'
+      }},//logo
+      {h1: {
+        class: 'text-3xl font-bold text-white drop-shadow-lg',
+        text: 'Simple Components Demo'
+      }}//title
+    ]
+  }//header
+});
+
+// Click counter display
+const ClickCounter = (props, context) => ({
+  div: {
+    class: 'mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center',
+    children: [
+      {h3: {
+        class: 'text-lg font-semibold text-yellow-800 mb-2',
+        text: 'Context Buttons Click Counter'
+      }},//counter-title
+      {p: {
+        class: 'text-2xl font-bold text-yellow-600',
+        text: () => \`Total Clicks: \${context.getState('buttonClicks', 0)}\`
+      }}//counter-display
+    ]
+  }//counter
+});
+
+// Usage in Juris application
+const demo = new Juris({
+  states: {
+    buttonClicks: 0
+  },
+  components: {
+    JurisLogo,
+    WelcomeMessage,
+    HelloWorld,
+    SimpleButton, 
+    ArrowButton,
+    ContextButton,
+    ArrowContextButton,
+    ClickCounter
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            {div: {
+              class: 'grid gap-6 mb-8',
+              children: [
+                {h2: {
+                  class: 'text-2xl font-bold text-gray-800 mb-4 text-center',
+                  text: 'Static Components (No Props)'
+                }},//section-title
+                {div: {
+                  class: 'grid md:grid-cols-2 gap-4',
+                  children: [
+                    { WelcomeMessage: {} },
+                    { HelloWorld: {} }
+                  ]
+                }}//static-components
+              ]
+            }},//static-section
+            {div: {
+              class: 'grid gap-6 mb-8',
+              children: [
+                {h2: {
+                  class: 'text-2xl font-bold text-gray-800 mb-4 text-center',
+                  text: 'Dynamic Components (With Props)'
+                }},//section-title
+                {div: {
+                  class: 'flex flex-wrap justify-center gap-4',
+                  children: [
+                    { SimpleButton: { label: 'Function Style', variant: 'primary' } },
+                    { SimpleButton: { label: 'Function Secondary', variant: 'secondary' } },
+                    { ArrowButton: { label: 'Arrow Style', variant: 'primary' } },
+                    { ArrowButton: { label: 'Arrow Secondary', variant: 'secondary' } }
+                  ]
+                }}//dynamic-components
+              ]
+            }},//dynamic-section
+            {div: {
+              class: 'grid gap-6',
+              children: [
+                {h2: {
+                  class: 'text-2xl font-bold text-gray-800 mb-4 text-center',
+                  text: 'Interactive Components (With Context)'
+                }},//section-title
+                {div: {
+                  class: 'flex flex-wrap justify-center gap-4 mb-4',
+                  children: [
+                    { ContextButton: { label: 'Context Function' } },
+                    { ArrowContextButton: { label: 'Context Arrow' } }
+                  ]
+                }},//context-buttons
+                { ClickCounter: {} }
+              ]
+            }}//context-section
+          ]
+        }//container
+      }]
+    }//app
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'No Props Pattern': 'Empty parentheses () for static components',
+    'Props Pattern': 'Single props parameter for dynamic components',
+    'Context Pattern': 'Two parameters (props, context) for state-aware components',
+    'Function Declaration': 'Explicit return statement, function hoisting available',
+    'Arrow Function': 'Implicit return with parentheses, no hoisting',
+    'Context APIs': 'getState, setState, services, and full Juris functionality'
+  },
+  
+  tags: ['beginner', 'functions', 'components', 'syntax', 'props', 'context', 'state']
+});
+
+docFramework.addDoc('what-is-juris', {
+    title: 'What is Juris?',
+    category: 'Getting Started',
+    content: 'Juris is the first and only non-blocking reactive platform, architecturally optimized for next-generation cross-platform applications. It uses object-first architecture where interfaces are expressed as pure JavaScript objects.',
+    
+    codeSnippet: [
+        `// Traditional DOM manipulation
+document.getElementById('app').innerHTML = '<div>Hello World<\/div>';`,
+        
+        { text: "With Juris, you express UI as objects:" },
+        
+        `// Juris object-first approach
+const HelloWorld = () => ({
+    div: { 
+        class: 'text-blue-500 font-bold',
+        text: 'Hello World' 
+    }
+});`
+    ],
+    
+    code: `// Complete working example
+const juris = new Juris({
+    layout: {
+        div: {
+            class: 'bg-gray-100 flex items-center justify-center',
+            children: [{
+                h1: {
+                    class: 'text-4xl font-bold text-blue-600 p-4',
+                    text: 'Welcome to Juris'
+                }
+            }]
+        }
+    }
+});
+juris.render('#demo');`,
+    
+    technicalDetails: {
+        'Architecture': 'Object-first reactive platform',
+        'Reactivity': 'Intentional reactive functions',
+        'Performance': 'Non-blocking rendering',
+        'Deployment': 'Zero-build complexity'
+    },
+    
+    tags: ['introduction', 'concepts', 'overview']
+});
+
+docFramework.addDoc('installation-cdn', {
+    title: 'CDN Installation',
+    category: 'Getting Started',
+    content: 'Get started instantly with Juris using CDN. No build tools, no complexity - just include the script and start building.',
+    
+    codeSnippet: [
+        `<!-- Latest version (development) -->
+<script src="https://unpkg.com/juris@latest/juris.js"><\/script>`,
+        
+        { text: "For production, use specific versions:" },
+        
+        `<!-- Specific version (recommended for production) -->
+<script src="https://unpkg.com/juris@0.9.0/juris.js"><\/script>
+<script src="https://unpkg.com/juris@0.9.0/juris.mini.js"><\/script>`,
+        
+        { text: "Alternative CDN providers:" },
+        
+        `<!-- JSDelivr -->
+<script src="https://cdn.jsdelivr.net/npm/juris@0.9.0/juris.js"><\/script>`
+    ],
+    
+    code: `<!DOCTYPE html>
+<html>
+<head>
+    <title>Juris App</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <script src="https://unpkg.com/juris@0.9.0/juris.js"><\/script>
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+        const app = new Juris({
+            layout: {
+                div: {
+                    class: 'p-8 bg-blue-50 rounded-lg',
+                    text: 'Hello from CDN!'
+                }
+            }
+        });
+        app.render('#demo');
+    <\/script>
+</body>
+</html>`,
+    
+    technicalDetails: {
+        'Setup Time': 'Instant - no build process',
+        'File Size': '38kB, 12kB gzipped',
+        'Dependencies': 'None',
+        'Browser Support': 'All modern browsers'
+    },
+    
+    tags: ['installation', 'cdn', 'quick-start']
+});
 
 
+
+// Documentation entry
+docFramework.addDoc('getstate-setstate-api', {
+  title: 'getState & setState APIs',
+  category: 'State Management',
+  content: 'Master the core state management APIs in Juris. getState retrieves values from the global state with automatic dependency tracking for reactivity. setState updates state values and triggers re-renders of dependent components. Both functions use dot-notation paths to access nested object properties.',
+  
+  codeSnippet: [
+    `// Basic getState usage
+const userName = context.getState('user.name', 'Guest');
+const userAge = context.getState('user.profile.age', 0);
+const settings = context.getState('app.settings', {});
+
+// Basic setState usage  
+context.setState('user.name', 'John Doe');
+context.setState('user.profile.age', 30);
+context.setState('app.theme', 'dark');`,
+
+    { text: "getState function signature and parameters:" },
+
+    {
+      title: "getState Function Signature",
+      language: "javascript",
+      code: `// context.getState(path, defaultValue, track)
+
+// Required parameter
+const value = context.getState('user.name');  // Returns undefined if not found
+
+// With default value
+const name = context.getState('user.name', 'Anonymous');  // Returns 'Anonymous' if not found
+
+// Skip reactivity tracking (for non-reactive usage)
+const staticValue = context.getState('config.version', '1.0.0', false);`
+    },
+
+    { text: "setState function signature and advanced usage:" },
+
+    {
+      title: "setState Function Signature",
+      language: "javascript",
+      code: `// context.setState(path, value, context)
+
+// Basic usage
+context.setState('counter', 10);
+
+// Nested object updates
+context.setState('user.profile.city', 'New York');
+
+// With context information for middleware
+context.setState('user.lastLogin', new Date(), {
+  action: 'login',
+  source: 'form-submit'
+});
+
+// Functional updates based on current state
+const currentCount = context.getState('counter', 0);
+context.setState('counter', currentCount + 1);`
+    },
+
+    { text: "Reactive usage in component VDOM - getState automatically tracks dependencies:" },
+
+    `// Reactive text that updates when state changes
+const UserGreeting = (props, context) => ({
+  div: {
+    children: [
+      // This automatically re-renders when user.name changes
+      {h1: { 
+        text: () => \`Hello, \${context.getState('user.name', 'Guest')}!\` 
+      }},
+      // This re-renders when user.profile.age changes  
+      {p: { 
+        text: () => \`Age: \${context.getState('user.profile.age', 'Unknown')}\`
+      }}
+    ]
+  }
+});`,
+
+    { text: "Working with different data types and nested objects:" },
+
+    {
+      title: "Data Types and Nested Objects",
+      language: "javascript",
+      code: `// Primitives
+context.setState('counter', 42);                    // number
+context.setState('message', 'Hello World');          // string
+context.setState('isActive', true);                  // boolean
+
+// Objects
+context.setState('user', {
+  name: 'John',
+  email: 'john@example.com'
+});
+
+// Arrays
+context.setState('items', ['apple', 'banana', 'cherry']);
+
+// Nested updates
+context.setState('user.preferences.theme', 'dark');
+context.setState('user.preferences.language', 'en');
+
+// Reading nested data
+const theme = context.getState('user.preferences.theme', 'light');
+const items = context.getState('items', []);
+const firstItem = context.getState('items.0', null); // Array index access`
+    },
+
+    { text: "Advanced patterns with conditional updates and transformations:" },
+
+    {
+      title: "Advanced State Patterns",
+      language: "javascript",
+      code: `// Conditional updates
+const toggleTheme = () => {
+  const currentTheme = context.getState('app.theme', 'light');
+  context.setState('app.theme', currentTheme === 'light' ? 'dark' : 'light');
+};
+
+// Incrementing counters safely
+const incrementCounter = (amount = 1) => {
+  const current = context.getState('counter', 0);
+  context.setState('counter', current + amount);
+};
+
+// Array operations
+const addItem = (item) => {
+  const items = context.getState('items', []);
+  context.setState('items', [...items, item]);
+};
+
+const removeItem = (index) => {
+  const items = context.getState('items', []);
+  context.setState('items', items.filter((_, i) => i !== index));
+};
+
+// Object merging
+const updateUserProfile = (updates) => {
+  const currentUser = context.getState('user', {});
+  context.setState('user', { ...currentUser, ...updates });
+};`
+    },
+    
+    { separator: "Key Features & Best Practices" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'getState & setState Features' }},
+          {p: { text: 'Dot Notation: Use "user.profile.age" to access nested properties' }},
+          {p: { text: 'Default Values: getState returns default if path doesn\'t exist' }},
+          {p: { text: 'Automatic Tracking: getState in reactive functions triggers re-renders' }},
+          {p: { text: 'Type Safety: Works with primitives, objects, arrays, and complex data' }},
+          {p: { text: 'Performance: Only components using changed paths re-render' }},
+          {p: { text: 'Immutability: Always create new objects/arrays for setState' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete examples demonstrating getState and setState APIs
+const Counter = (props, context) => {
+  return {
+    div: {
+      class: 'p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-blue-800 mb-4',
+          text: 'Counter Demo'
+        }},
+        {div: {
+          class: 'text-4xl font-bold text-blue-600 text-center mb-4',
+          text: () => context.getState('counter', 0)
+        }},
+        {div: {
+          class: 'flex gap-2 justify-center',
+          children: [
+            {button: {
+              class: 'px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors',
+              text: '+1',
+              onclick: () => {
+                const current = context.getState('counter', 0);
+                context.setState('counter', current + 1);
+              }
+            }},
+            {button: {
+              class: 'px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors',
+              text: '-1',
+              onclick: () => {
+                const current = context.getState('counter', 0);
+                context.setState('counter', current - 1);
+              }
+            }},
+            {button: {
+              class: 'px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors',
+              text: 'Reset',
+              onclick: () => context.setState('counter', 0)
+            }}
+          ]
+        }}
+      ]
+    }
+  };
+};
+
+const UserProfile = (props, context) => {
+  return {
+    div: {
+      class: 'p-6 bg-green-50 border border-green-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-green-800 mb-4',
+          text: 'User Profile Demo'
+        }},
+        {div: {
+          class: 'space-y-3 mb-4',
+          children: [
+            {div: {
+              class: 'p-3 bg-white rounded border',
+              children: [
+                {strong: { text: 'Name: ' }},
+                {span: { 
+                  text: () => context.getState('user.name', 'Not set') 
+                }}
+              ]
+            }},
+            {div: {
+              class: 'p-3 bg-white rounded border',
+              children: [
+                {strong: { text: 'Email: ' }},
+                {span: { 
+                  text: () => context.getState('user.email', 'Not set') 
+                }}
+              ]
+            }},
+            {div: {
+              class: 'p-3 bg-white rounded border',
+              children: [
+                {strong: { text: 'Age: ' }},
+                {span: { 
+                  text: () => context.getState('user.profile.age', 'Not set') 
+                }}
+              ]
+            }},
+            {div: {
+              class: 'p-3 bg-white rounded border',
+              children: [
+                {strong: { text: 'Theme: ' }},
+                {span: { 
+                  text: () => context.getState('user.preferences.theme', 'light') 
+                }}
+              ]
+            }}
+          ]
+        }},
+        {div: {
+          class: 'flex flex-wrap gap-2',
+          children: [
+            {button: {
+              class: 'px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded transition-colors',
+              text: 'Set Name',
+              onclick: () => context.setState('user.name', 'John Doe')
+            }},
+            {button: {
+              class: 'px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded transition-colors',
+              text: 'Set Email',
+              onclick: () => context.setState('user.email', 'john@example.com')
+            }},
+            {button: {
+              class: 'px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded transition-colors',
+              text: 'Set Age',
+              onclick: () => context.setState('user.profile.age', 30)
+            }},
+            {button: {
+              class: 'px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded transition-colors',
+              text: 'Toggle Theme',
+              onclick: () => {
+                const current = context.getState('user.preferences.theme', 'light');
+                context.setState('user.preferences.theme', current === 'light' ? 'dark' : 'light');
+              }
+            }},
+            {button: {
+              class: 'px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded transition-colors',
+              text: 'Clear All',
+              onclick: () => {
+                context.setState('user', {});
+              }
+            }}
+          ]
+        }}
+      ]
+    }
+  };
+};
+
+const TodoList = (props, context) => {
+  return {
+    div: {
+      class: 'p-6 bg-purple-50 border border-purple-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-purple-800 mb-4',
+          text: 'Todo List - Array State Demo'
+        }},
+        {div: {
+          class: 'flex gap-2 mb-4',
+          children: [
+            {input: {
+              class: 'flex-1 px-3 py-2 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500',
+              type: 'text',
+              placeholder: 'Enter todo item...',
+              value: () => context.getState('todoInput', ''),
+              oninput: (e) => context.setState('todoInput', e.target.value)
+            }},
+            {button: {
+              class: 'px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors',
+              text: 'Add',
+              onclick: () => {
+                const input = context.getState('todoInput', '');
+                if (input.trim()) {
+                  const todos = context.getState('todos', []);
+                  const newTodo = {
+                    id: Date.now(),
+                    text: input.trim(),
+                    completed: false
+                  };
+                  context.setState('todos', [...todos, newTodo]);
+                  context.setState('todoInput', '');
+                }
+              }
+            }}
+          ]
+        }},
+        {div: {
+          class: 'space-y-2 mb-4',
+          children: () => {
+            const todos = context.getState('todos', []);
+            return todos.length ? todos.map((todo, index) => ({
+              div: {
+                class: \`flex items-center gap-2 p-2 bg-white rounded border \${
+                  todo.completed ? 'bg-gray-50 text-gray-500' : ''
+                }\`,
+                children: [
+                  {input: {
+                    type: 'checkbox',
+                    checked: todo.completed,
+                    onchange: () => {
+                      const todos = context.getState('todos', []);
+                      const updated = todos.map(t => 
+                        t.id === todo.id ? { ...t, completed: !t.completed } : t
+                      );
+                      context.setState('todos', updated);
+                    }
+                  }},
+                  {span: {
+                    class: todo.completed ? 'line-through flex-1' : 'flex-1',
+                    text: todo.text
+                  }},
+                  {button: {
+                    class: 'px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded transition-colors',
+                    text: '×',
+                    onclick: () => {
+                      const todos = context.getState('todos', []);
+                      context.setState('todos', todos.filter(t => t.id !== todo.id));
+                    }
+                  }}
+                ]
+              }
+            })) : [{
+              p: {
+                class: 'text-gray-500 text-center py-4',
+                text: 'No todos yet. Add some above!'
+              }
+            }];
+          }
+        }},
+        {div: {
+          class: 'flex gap-2',
+          children: [
+            {button: {
+              class: 'px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm rounded transition-colors',
+              text: 'Add Sample Items',
+              onclick: () => {
+                const samples = ['Learn Juris', 'Build an app', 'Deploy project'];
+                const todos = context.getState('todos', []);
+                const newTodos = samples.map((text, i) => ({
+                  id: Date.now() + i,
+                  text,
+                  completed: false
+                }));
+                context.setState('todos', [...todos, ...newTodos]);
+              }
+            }},
+            {button: {
+              class: 'px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded transition-colors',
+              text: 'Clear All',
+              onclick: () => context.setState('todos', [])
+            }}
+          ]
+        }},
+        {div: {
+          class: 'mt-4 p-3 bg-white rounded border text-sm text-gray-600',
+          children: [
+            {p: {
+              text: () => {
+                const todos = context.getState('todos', []);
+                const completed = todos.filter(t => t.completed).length;
+                return \`Total: \${todos.length} | Completed: \${completed} | Remaining: \${todos.length - completed}\`;
+              }
+            }}
+          ]
+        }}
+      ]
+    }
+  };
+};
+
+// State inspector component
+const StateInspector = (props, context) => ({
+  div: {
+    class: 'p-6 bg-gray-50 border border-gray-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'text-lg font-bold text-gray-800 mb-4',
+        text: 'Live State Inspector'
+      }},
+      {pre: {
+        class: 'bg-gray-800 text-green-400 p-4 rounded text-sm overflow-auto max-h-64',
+        text: () => {
+          const state = {
+            counter: context.getState('counter', 0),
+            user: context.getState('user', {}),
+            todos: context.getState('todos', []),
+            todoInput: context.getState('todoInput', '')
+          };
+          return JSON.stringify(state, null, 2);
+        }
+      }}
+    ]
+  }
+});
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4',
+        text: '{..}'
+      }},
+      {h1: {
+        class: 'text-3xl font-bold text-white',
+        text: 'getState & setState Demo'
+      }}
+    ]
+  }
+});
+
+// Demo application
+const demo = new Juris({
+  states: {
+    counter: 0,
+    user: {},
+    todos: [],
+    todoInput: ''
+  },
+  components: {
+    JurisLogo,
+    Counter,
+    UserProfile,
+    TodoList,
+    StateInspector
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            { Counter: {} },
+            { UserProfile: {} },
+            { TodoList: {} },
+            { StateInspector: {} },
+            {div: {
+              class: 'mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg',
+              children: [
+                {h4: {
+                  class: 'font-bold text-yellow-800 mb-2',
+                  text: 'getState & setState Key Points'
+                }},
+                {ul: {
+                  class: 'text-yellow-700 space-y-1 text-sm',
+                  children: [
+                    {li: { text: '• Use dot notation for nested properties: "user.profile.age"' }},
+                    {li: { text: '• Always provide default values to avoid undefined errors' }},
+                    {li: { text: '• getState in reactive functions automatically tracks dependencies' }},
+                    {li: { text: '• setState triggers re-renders only for dependent components' }},
+                    {li: { text: '• Use immutable updates for objects and arrays' }},
+                    {li: { text: '• State inspector shows live state changes as you interact' }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }
+      }]
+    }
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'getState Signature': 'getState(path, defaultValue, track=true)',
+    'setState Signature': 'setState(path, value, context={})',
+    'Path Format': 'Dot notation strings like "user.profile.age"',
+    'Default Values': 'Returned when path does not exist in state',
+    'Reactivity Tracking': 'getState automatically tracks dependencies for re-rendering',
+    'Immutable Updates': 'Always create new objects/arrays, never mutate existing state'
+  },
+  
+  tags: ['state', 'getstate', 'setstate', 'reactivity', 'core-api', 'fundamentals']
+});
+
+// Documentation entry
+docFramework.addDoc('reactive-static-getstate', {
+  title: 'Reactive vs Static getState',
+  category: 'State Management',
+  content: 'Understand the difference between reactive and static usage of getState in Juris. Reactive usage automatically tracks dependencies and triggers re-renders when state changes, while static usage reads the current value without creating reactive dependencies. Learn when to use each pattern for optimal performance and behavior.',
+  
+  codeSnippet: [
+    `// REACTIVE usage - automatically re-renders when state changes
+const ReactiveComponent = (props, context) => ({
+  div: {
+    // This function tracks dependency on 'counter' 
+    text: () => \`Count: \${context.getState('counter', 0)}\`,
+    // This re-renders whenever counter changes
+    class: () => context.getState('counter', 0) > 5 ? 'bg-red-100' : 'bg-blue-100'
+  }
+});
+
+// STATIC usage - reads current value without reactivity
+const StaticComponent = (props, context) => {
+  // Read state value once during component creation
+  const initialCount = context.getState('counter', 0);
+  
+  return {
+    div: {
+      // This never changes, even if counter state changes
+      text: \`Initial count was: \${initialCount}\`,
+      // Static values don't create reactive dependencies
+      class: initialCount > 5 ? 'bg-red-100' : 'bg-blue-100'
+    }
+  };
+};`,
+
+    { text: "Controlling reactivity with the third parameter:" },
+
+    {
+      title: "Track Parameter Control",
+      language: "javascript",
+      code: `// Reactive by default (track = true)
+const reactiveValue = context.getState('user.name', 'Guest'); 
+
+// Explicitly reactive
+const explicitReactive = context.getState('user.name', 'Guest', true);
+
+// Static usage - skip tracking (track = false) 
+const staticValue = context.getState('user.name', 'Guest', false);
+
+// Usage in components
+const MixedComponent = (props, context) => ({
+  div: {
+    children: [
+      // Reactive - updates when user.name changes
+      {p: { text: () => \`Hello \${context.getState('user.name', 'Guest')}\` }},
+      
+      // Static - never changes after initial render
+      {p: { text: \`Initial name: \${context.getState('user.name', 'Guest', false)}\` }}
+    ]
+  }
+});`
+    },
+
+    { text: "Event handlers and static reads for performance:" },
+
+    `// Event handlers typically use static reads
+const ButtonComponent = (props, context) => ({
+  button: {
+    text: 'Increment Counter',
+    onclick: () => {
+      // Static read in event handler - no reactive dependency needed
+      const currentValue = context.getState('counter', 0, false);
+      context.setState('counter', currentValue + 1);
+    }
+  }
+});
+
+// Mixed reactive and static usage
+const SmartComponent = (props, context) => ({
+  div: {
+    children: [
+      // Reactive display
+      {h1: { text: () => \`Current: \${context.getState('counter', 0)}\` }},
+      
+      // Button with static read in handler
+      {button: {
+        text: 'Double It',
+        onclick: () => {
+          // Static read - we don't want this button to re-render when counter changes
+          const current = context.getState('counter', 0, false);
+          context.setState('counter', current * 2);
+        }
+      }}
+    ]
+  }
+});`,
+
+    { text: "Performance considerations and best practices:" },
+
+    {
+      title: "Performance Patterns",
+      language: "javascript",
+      code: `// ❌ Avoid: Unnecessary reactive reads in calculations
+const BadComponent = (props, context) => ({
+  div: {
+    text: () => {
+      // This creates reactive dependency even though we just need current value
+      const count = context.getState('counter', 0);
+      const doubled = count * 2;
+      const tripled = count * 3;
+      return \`Doubled: \${doubled}, Tripled: \${tripled}\`;
+    }
+  }
+});
+
+// ✅ Better: Single reactive read with calculations
+const GoodComponent = (props, context) => ({
+  div: {
+    text: () => {
+      const count = context.getState('counter', 0); // One reactive dependency
+      const doubled = count * 2;
+      const tripled = count * 3;
+      return \`Doubled: \${doubled}, Tripled: \${tripled}\`;
+    }
+  }
+});
+
+// ✅ Best: Static reads for one-time initialization
+const OptimalComponent = (props, context) => {
+  // Static read during component creation
+  const theme = context.getState('user.theme', 'light', false);
+  
+  return {
+    div: {
+      class: \`theme-\${theme}\`, // Won't change even if user.theme changes
+      children: [
+        // Reactive where needed
+        {p: { text: () => \`Count: \${context.getState('counter', 0)}\` }}
+      ]
+    }
+  };
+};`
+    },
+    
+    { separator: "When to Use Each Pattern" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'Reactive vs Static Usage Guidelines' }},
+          {p: { text: 'Reactive: UI elements that should update when state changes' }},
+          {p: { text: 'Reactive: Dynamic styling, conditional rendering, live data displays' }},
+          {p: { text: 'Static: Event handlers, one-time initialization, calculations' }},
+          {p: { text: 'Static: Configuration values, IDs, constants that don\'t change' }},
+          {p: { text: 'Performance: Use static reads to avoid unnecessary re-renders' }},
+          {p: { text: 'Memory: Static reads don\'t create subscription overhead' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete demonstration of reactive vs static getState usage
+const ReactiveDisplay = (props, context) => ({
+  div: {
+    class: 'p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'text-lg font-bold text-blue-800 mb-4',
+        text: 'Reactive Display - Updates Automatically'
+      }},
+      {div: {
+        class: 'space-y-2',
+        children: [
+          {div: {
+            class: 'p-3 bg-white rounded border',
+            children: [
+              {strong: { text: 'Live Counter: ' }},
+              // Reactive - updates when counter changes
+              {span: { 
+                class: () => context.getState('counter', 0) > 10 ? 'text-red-600 font-bold' : 'text-blue-600',
+                text: () => context.getState('counter', 0) 
+              }}
+            ]
+          }},
+          {div: {
+            class: 'p-3 bg-white rounded border',
+            children: [
+              {strong: { text: 'Status: ' }},
+              // Reactive conditional text
+              {span: { 
+                text: () => {
+                  const count = context.getState('counter', 0);
+                  return count === 0 ? 'Starting' : 
+                         count < 5 ? 'Low' :
+                         count < 10 ? 'Medium' : 'High';
+                }
+              }}
+            ]
+          }},
+          {div: {
+            class: 'p-3 bg-white rounded border',
+            children: [
+              {strong: { text: 'User: ' }},
+              // Reactive user name display
+              {span: { text: () => context.getState('user.name', 'No user set') }}
+            ]
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+const StaticDisplay = (props, context) => {
+  // Static reads during component creation - never change
+  const initialCounter = context.getState('counter', 0, false);
+  const initialUser = context.getState('user.name', 'No user', false);
+  const componentId = \`component-\${Date.now()}\`;
+  
+  return {
+    div: {
+      class: 'p-6 bg-green-50 border border-green-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-green-800 mb-4',
+          text: 'Static Display - Never Changes'
+        }},
+        {div: {
+          class: 'space-y-2',
+          children: [
+            {div: {
+              class: 'p-3 bg-white rounded border',
+              children: [
+                {strong: { text: 'Initial Counter: ' }},
+                {span: { 
+                  class: initialCounter > 10 ? 'text-red-600' : 'text-green-600',
+                  text: initialCounter 
+                }}
+              ]
+            }},
+            {div: {
+              class: 'p-3 bg-white rounded border',
+              children: [
+                {strong: { text: 'Initial User: ' }},
+                {span: { text: initialUser }}
+              ]
+            }},
+            {div: {
+              class: 'p-3 bg-white rounded border',
+              children: [
+                {strong: { text: 'Component ID: ' }},
+                {span: { text: componentId }}
+              ]
+            }},
+            {div: {
+              class: 'p-3 bg-white rounded border border-dashed border-green-400',
+              children: [
+                {strong: { text: 'Direct Static Text: ' }},
+                {span: { class: 'text-green-700 font-mono', text: 'This text will never change' }}
+              ]
+            }},
+            {div: {
+              class: 'p-3 bg-white rounded border border-dashed border-green-400',
+              // Direct static usage - reads current value once
+              text: \`Snapshot: \${context.getState('user.name', 'No user')} has \${context.getState('counter', 0)} points\`
+            }}
+          ]
+        }}
+      ]
+    }
+  };
+};
+
+const ControlPanel = (props, context) => ({
+  div: {
+    class: 'p-6 bg-purple-50 border border-purple-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'text-lg font-bold text-purple-800 mb-4',
+        text: 'Controls - Try changing values to see reactive vs static'
+      }},
+      {div: {
+        class: 'grid grid-cols-2 gap-4 mb-4',
+        children: [
+          {div: {
+            children: [
+              {label: { class: 'block text-sm font-medium text-purple-700 mb-2', text: 'Counter Controls:' }},
+              {div: {
+                class: 'flex gap-2',
+                children: [
+                  {button: {
+                    class: 'px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors',
+                    text: '+1',
+                    onclick: () => {
+                      // Static read in event handler - no reactive dependency
+                      const current = context.getState('counter', 0, false);
+                      context.setState('counter', current + 1);
+                    }
+                  }},
+                  {button: {
+                    class: 'px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors',
+                    text: '-1',
+                    onclick: () => {
+                      const current = context.getState('counter', 0, false);
+                      context.setState('counter', current - 1);
+                    }
+                  }},
+                  {button: {
+                    class: 'px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors',
+                    text: '+10',
+                    onclick: () => {
+                      const current = context.getState('counter', 0, false);
+                      context.setState('counter', current + 10);
+                    }
+                  }},
+                  {button: {
+                    class: 'px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors',
+                    text: 'Reset',
+                    onclick: () => context.setState('counter', 0)
+                  }}
+                ]
+              }}
+            ]
+          }},
+          {div: {
+            children: [
+              {label: { class: 'block text-sm font-medium text-purple-700 mb-2', text: 'User Name:' }},
+              {div: {
+                class: 'flex gap-2',
+                children: [
+                  {input: {
+                    class: 'flex-1 px-3 py-2 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500',
+                    type: 'text',
+                    placeholder: 'Enter name...',
+                    value: () => context.getState('user.name', ''),
+                    oninput: (e) => context.setState('user.name', e.target.value)
+                  }},
+                  {button: {
+                    class: 'px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors',
+                    text: 'Clear',
+                    onclick: () => context.setState('user.name', '')
+                  }}
+                ]
+              }}
+            ]
+          }}
+        ]
+      }},
+      {div: {
+        class: 'p-3 bg-white rounded border text-sm',
+        children: [
+          {p: { class: 'text-purple-700 mb-1', text: 'Notice how:' }},
+          {ul: {
+            class: 'text-purple-600 space-y-1 pl-4',
+            children: [
+              {li: { text: '• Reactive display updates immediately when you change values' }},
+              {li: { text: '• Static display shows initial values and never changes' }},
+              {li: { text: '• Event handlers use static reads (track=false) for performance' }}
+            ]
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+const PerformanceExample = (props, context) => {
+  const [renderCount, setRenderCount] = context.newState('renderCount', 0);
+  
+  // Track renders
+  setRenderCount(renderCount() + 1);
+  
+  return {
+    div: {
+      class: 'p-6 bg-orange-50 border border-orange-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-orange-800 mb-4',
+          text: 'Performance Tracking'
+        }},
+        {div: {
+          class: 'grid grid-cols-2 gap-4',
+          children: [
+            {div: {
+              class: 'p-4 bg-white rounded border',
+              children: [
+                {h4: { class: 'font-semibold text-orange-700 mb-2', text: 'Reactive Usage' }},
+                {p: { class: 'text-sm text-orange-600 mb-2', text: 'This re-renders when counter changes:' }},
+                {div: {
+                  class: 'text-2xl font-bold text-orange-800',
+                  text: () => context.getState('counter', 0)
+                }},
+                {p: { 
+                  class: 'text-xs text-orange-500 mt-1',
+                  text: () => \`Renders: \${renderCount()}\`
+                }}
+              ]
+            }},
+            {div: {
+              class: 'p-4 bg-white rounded border',
+              children: [
+                {h4: { class: 'font-semibold text-orange-700 mb-2', text: 'Static Usage' }},
+                {p: { class: 'text-sm text-orange-600 mb-2', text: 'This never re-renders:' }},
+                {div: {
+                  class: 'text-2xl font-bold text-gray-600',
+                  text: context.getState('counter', 0, false) // Static read
+                }},
+                {p: { class: 'text-xs text-gray-500 mt-1', text: 'Always shows initial value' }}
+              ]
+            }}
+          ]
+        }},
+        {div: {
+          class: 'mt-4 p-3 bg-yellow-100 rounded border border-yellow-300',
+          children: [
+            {p: { class: 'text-sm text-yellow-800', text: 'The reactive side re-renders every time counter changes, while the static side shows the initial value forever.' }}
+          ]
+        }}
+      ]
+    }
+  };
+};
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4',
+        text: '{..}'
+      }},
+      {h1: {
+        class: 'text-3xl font-bold text-white',
+        text: 'Reactive vs Static getState'
+      }}
+    ]
+  }
+});
+
+// Demo application
+const demo = new Juris({
+  states: {
+    counter: 5,
+    user: {
+      name: 'Alice'
+    }
+  },
+  components: {
+    JurisLogo,
+    ReactiveDisplay,
+    StaticDisplay,
+    ControlPanel,
+    PerformanceExample
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            { ReactiveDisplay: {} },
+            { StaticDisplay: {} },
+            { ControlPanel: {} },
+            { PerformanceExample: {} },
+            {div: {
+              class: 'mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg',
+              children: [
+                {h4: {
+                  class: 'font-bold text-yellow-800 mb-2',
+                  text: 'Key Takeaways'
+                }},
+                {ul: {
+                  class: 'text-yellow-700 space-y-1 text-sm',
+                  children: [
+                    {li: { text: '• Reactive: Use in UI elements that should update when state changes' }},
+                    {li: { text: '• Static: Use for one-time reads, event handlers, and calculations' }},
+                    {li: { text: '• Performance: Static reads avoid unnecessary re-renders and subscriptions' }},
+                    {li: { text: '• Control: Use getState(path, default, false) for static reads' }},
+                    {li: { text: '• Default: getState is reactive by default (track = true)' }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }
+      }]
+    }
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'Reactive Usage': 'getState(path, default) or getState(path, default, true)',
+    'Static Usage': 'getState(path, default, false) - no dependency tracking',
+    'Performance Impact': 'Reactive creates subscriptions, static does not',
+    'Re-render Behavior': 'Reactive triggers re-renders, static does not',
+    'Memory Usage': 'Static usage has lower memory overhead',
+    'Best Practice': 'Use static in event handlers and calculations, reactive in UI'
+  },
+  
+  tags: ['getstate', 'reactive', 'static', 'performance', 'optimization', 'tracking']
+});
+
+// Documentation entry
+docFramework.addDoc('state-propagation', {
+  title: 'State Change Propagation',
+  category: 'State Management',
+  content: 'Understand how state changes propagate through nested objects in Juris. When you change a state path, Juris automatically notifies all components that depend on that path or any child paths. This hierarchical propagation system ensures reactive updates while maintaining performance.',
+  
+  codeSnippet: [
+    `// State structure example
+states: {
+  user: {
+    name: 'John',
+    profile: {
+      age: 25,
+      city: 'NYC'
+    }
+  }
+}`,
+
+    { text: "Components watching different state paths:" },
+
+    {
+      title: "Component Dependencies",
+      language: "javascript",
+      code: `// Component watching user.name
+const UserProfile = (props, context) => ({
+  div: {
+    text: () => \`Name: \${context.getState('user.name')}\`
+  }
+});
+
+// Component watching user.profile.age  
+const UserAge = (props, context) => ({
+  div: {
+    text: () => \`Age: \${context.getState('user.profile.age')}\`
+  }
+});
+
+// Component watching entire user object
+const FullUser = (props, context) => ({
+  div: {
+    text: () => JSON.stringify(context.getState('user'))
+  }
+});`
+    },
+
+    { text: "Different types of state changes and their propagation effects:" },
+
+    {
+      title: "Leaf Property Change",
+      language: "javascript",
+      code: `// Changing a specific nested property
+context.setState('user.name', 'Jane');
+
+// Updates triggered:
+// ✓ Components watching 'user.name' (exact match)
+// ✓ Components watching 'user' (parent path)
+// ✗ Components watching 'user.profile.age' (sibling path)
+// ✗ Components watching 'user.profile.city' (sibling path)`
+    },
+
+    {
+      title: "Parent Object Change",
+      language: "javascript", 
+      code: `// Changing the entire user object
+context.setState('user', {
+  name: 'Alice',
+  profile: { age: 30, city: 'LA' }
+});
+
+// Updates triggered:
+// ✓ Components watching 'user' (exact match)
+// ✓ Components watching 'user.name' (child path)
+// ✓ Components watching 'user.profile' (child path)
+// ✓ Components watching 'user.profile.age' (child path)
+// ✓ Components watching 'user.profile.city' (child path)
+// ALL components that depend on any part of user object update!`
+    },
+
+    {
+      title: "Nested Object Change",
+      language: "javascript",
+      code: `// Changing a nested object
+context.setState('user.profile', { age: 28, city: 'Boston' });
+
+// Updates triggered:
+// ✓ Components watching 'user.profile' (exact match)
+// ✓ Components watching 'user.profile.age' (child path)
+// ✓ Components watching 'user.profile.city' (child path)
+// ✓ Components watching 'user' (parent path)
+// ✗ Components watching 'user.name' (sibling path)`
+    },
+    
+    { separator: "Propagation Rules" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'State Change Propagation Logic' }},
+          {p: { text: 'Exact Match: Components watching the exact changed path always update' }},
+          {p: { text: 'Parent Paths: Components watching parent paths of changed path update' }},
+          {p: { text: 'Child Paths: Components watching child paths of changed path update' }},
+          {p: { text: 'Sibling Paths: Components watching sibling paths do NOT update' }},
+          {p: { text: 'Performance: Only affected components re-render, not entire app' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete state propagation demonstration
+const UserProfile = (props, context) => ({
+  div: {
+    class: 'p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'font-bold text-blue-800 mb-2',
+        text: 'User Profile (watches user.name)'
+      }},
+      {p: {
+        class: 'text-blue-700',
+        text: () => \`Name: \${context.getState('user.name', 'Unknown')}\`
+      }},
+      {small: {
+        class: 'text-blue-500',
+        text: \`Last updated: \${new Date().toLocaleTimeString()}\`
+      }}
+    ]
+  }
+});
+
+const UserAge = (props, context) => ({
+  div: {
+    class: 'p-4 bg-green-50 border border-green-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'font-bold text-green-800 mb-2',
+        text: 'Age Component (watches user.profile.age)'
+      }},
+      {p: {
+        class: 'text-green-700',
+        text: () => \`Age: \${context.getState('user.profile.age', 0)}\`
+      }},
+      {small: {
+        class: 'text-green-500',
+        text: \`Last updated: \${new Date().toLocaleTimeString()}\`
+      }}
+    ]
+  }
+});
+
+const UserCity = (props, context) => ({
+  div: {
+    class: 'p-4 bg-purple-50 border border-purple-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'font-bold text-purple-800 mb-2',
+        text: 'City Component (watches user.profile.city)'
+      }},
+      {p: {
+        class: 'text-purple-700',
+        text: () => \`City: \${context.getState('user.profile.city', 'Unknown')}\`
+      }},
+      {small: {
+        class: 'text-purple-500',
+        text: \`Last updated: \${new Date().toLocaleTimeString()}\`
+      }}
+    ]
+  }
+});
+
+const FullUser = (props, context) => ({
+  div: {
+    class: 'p-4 bg-orange-50 border border-orange-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'font-bold text-orange-800 mb-2',
+        text: 'Full User Component (watches entire user object)'
+      }},
+      {pre: {
+        class: 'text-orange-700 text-sm bg-orange-100 p-2 rounded overflow-auto',
+        text: () => JSON.stringify(context.getState('user', {}), null, 2)
+      }},
+      {small: {
+        class: 'text-orange-500',
+        text: \`Last updated: \${new Date().toLocaleTimeString()}\`
+      }}
+    ]
+  }
+});
+
+// Control panel for testing propagation
+const ControlPanel = (props, context) => ({
+  div: {
+    class: 'p-6 bg-gray-50 border border-gray-200 rounded-lg',
+    children: [
+      {h3: {
+        class: 'font-bold text-gray-800 mb-4',
+        text: 'Test State Changes'
+      }},
+      {div: {
+        class: 'grid grid-cols-2 gap-4',
+        children: [
+          {button: {
+            class: 'px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors',
+            text: 'Change Name Only',
+            onclick: () => {
+              const names = ['John', 'Jane', 'Alice', 'Bob'];
+              const current = context.getState('user.name', 'John');
+              const newName = names[Math.floor(Math.random() * names.length)];
+              context.setState('user.name', newName);
+            }
+          }},
+          {button: {
+            class: 'px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors',
+            text: 'Change Age Only',
+            onclick: () => {
+              const newAge = Math.floor(Math.random() * 50) + 20;
+              context.setState('user.profile.age', newAge);
+            }
+          }},
+          {button: {
+            class: 'px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors',
+            text: 'Change City Only',
+            onclick: () => {
+              const cities = ['NYC', 'LA', 'Chicago', 'Boston', 'Miami'];
+              const newCity = cities[Math.floor(Math.random() * cities.length)];
+              context.setState('user.profile.city', newCity);
+            }
+          }},
+          {button: {
+            class: 'px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded transition-colors',
+            text: 'Change Entire User',
+            onclick: () => {
+              const names = ['Complete', 'Full', 'Total', 'Whole'];
+              const cities = ['Seattle', 'Portland', 'Austin', 'Denver'];
+              context.setState('user', {
+                name: names[Math.floor(Math.random() * names.length)],
+                profile: {
+                  age: Math.floor(Math.random() * 30) + 25,
+                  city: cities[Math.floor(Math.random() * cities.length)]
+                }
+              });
+            }
+          }},
+          {button: {
+            class: 'px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors',
+            text: 'Change Profile Object',
+            onclick: () => {
+              context.setState('user.profile', {
+                age: Math.floor(Math.random() * 40) + 18,
+                city: 'New Profile City'
+              });
+            }
+          }},
+          {button: {
+            class: 'px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors',
+            text: 'Reset All',
+            onclick: () => {
+              context.setState('user', {
+                name: 'John',
+                profile: { age: 25, city: 'NYC' }
+              });
+            }
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4',
+        text: '{..}'
+      }},
+      {h1: {
+        class: 'text-3xl font-bold text-white',
+        text: 'State Propagation Demo'
+      }}
+    ]
+  }
+});
+
+// Demo application
+const demo = new Juris({
+  states: {
+    user: {
+      name: 'John',
+      profile: {
+        age: 25,
+        city: 'NYC'
+      }
+    }
+  },
+  components: {
+    JurisLogo,
+    UserProfile,
+    UserAge,
+    UserCity,
+    FullUser,
+    ControlPanel
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            {div: {
+              class: 'grid md:grid-cols-2 gap-6 mb-8',
+              children: [
+                { UserProfile: {} },
+                { UserAge: {} },
+                { UserCity: {} },
+                { FullUser: {} }
+              ]
+            }},
+            { ControlPanel: {} },
+            {div: {
+              class: 'mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg',
+              children: [
+                {h4: {
+                  class: 'font-bold text-yellow-800 mb-2',
+                  text: 'How to Test Propagation'
+                }},
+                {ul: {
+                  class: 'text-yellow-700 space-y-1 text-sm',
+                  children: [
+                    {li: { text: '• Click "Change Name Only" - only Name and Full User components update' }},
+                    {li: { text: '• Click "Change Age Only" - only Age and Full User components update' }},
+                    {li: { text: '• Click "Change Entire User" - ALL components update' }},
+                    {li: { text: '• Watch the timestamps to see which components actually re-render' }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }
+      }]
+    }
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'Exact Match': 'Components watching the exact changed path always update',
+    'Parent Propagation': 'Changes bubble up to parent path watchers',
+    'Child Propagation': 'Parent changes trigger all child path watchers',
+    'Sibling Isolation': 'Sibling paths do not trigger each other',
+    'Performance': 'Only affected components re-render, not entire application',
+    'Hierarchical': 'Uses dot notation path hierarchy for propagation logic'
+  },
+  
+  tags: ['state', 'propagation', 'reactivity', 'objects', 'hierarchy', 'performance']
+});
+
+
+// Documentation entry
+docFramework.addDoc('newstate-api', {
+  title: 'newState API',
+  category: 'State Management',
+  content: 'Learn how to use the newState API for component-local state management. The newState function creates isolated state that belongs to a specific component instance, automatically cleaned up when the component unmounts. It returns an array with getter, setter, and subscription functions for reactive state management.',
+  
+  codeSnippet: [
+    `// Basic newState usage in a component
+const Counter = (props, context) => {
+  const [count, setCount] = context.newState('count', 0);
+  
+  return {
+    div: {
+      children: [
+        {p: { text: () => \`Count: \${count()}\` }},
+        {button: { 
+          text: 'Increment', 
+          onclick: () => setCount(count() + 1) 
+        }}
+      ]
+    }
+  };
+}`,
+
+    { text: "The newState function signature and return values:" },
+
+    {
+      title: "newState Function Signature",
+      language: "javascript",
+      code: `// context.newState(key, initialValue)
+// Returns: [getter, setter, subscriber]
+
+const [getValue, setValue, subscribe] = context.newState('stateName', defaultValue);
+
+// Getter function - reactive
+const currentValue = getValue();
+
+// Setter function - updates state
+setValue(newValue);
+
+// Subscriber function - listen to changes
+const unsubscribe = subscribe(() => {
+  console.log('State changed:', getValue());
+});`
+    },
+
+    { text: "Multiple state variables in a single component:" },
+
+    `// Component with multiple local state variables
+const UserForm = (props, context) => {
+  const [name, setName] = context.newState('name', '');
+  const [email, setEmail] = context.newState('email', '');
+  const [age, setAge] = context.newState('age', 18);
+  
+  return {
+    form: {
+      children: [
+        {input: { 
+          type: 'text', 
+          placeholder: 'Name',
+          value: () => name(),
+          oninput: (e) => setName(e.target.value)
+        }},
+        {input: { 
+          type: 'email', 
+          placeholder: 'Email',
+          value: () => email(),
+          oninput: (e) => setEmail(e.target.value)
+        }},
+        {input: { 
+          type: 'number', 
+          placeholder: 'Age',
+          value: () => age(),
+          oninput: (e) => setAge(parseInt(e.target.value))
+        }}
+      ]
+    }
+  };
+}`,
+
+    { text: "Advanced usage with state subscription and effects:" },
+
+    {
+      title: "State Subscription Example",
+      language: "javascript",
+      code: `const AdvancedCounter = (props, context) => {
+  const [count, setCount, subscribeToCount] = context.newState('count', 0);
+  const [message, setMessage] = context.newState('message', '');
+  
+  // Subscribe to count changes
+  subscribeToCount(() => {
+    const currentCount = count();
+    if (currentCount === 10) {
+      setMessage('You reached 10!');
+    } else if (currentCount === 0) {
+      setMessage('Back to zero');
+    } else {
+      setMessage('');
+    }
+  });
+  
+  return {
+    div: {
+      children: [
+        {h3: { text: () => \`Count: \${count()}\` }},
+        {p: { text: () => message() }},
+        {button: { 
+          text: '+', 
+          onclick: () => setCount(count() + 1) 
+        }},
+        {button: { 
+          text: '-', 
+          onclick: () => setCount(count() - 1) 
+        }},
+        {button: { 
+          text: 'Reset', 
+          onclick: () => setCount(0) 
+        }}
+      ]
+    }
+  };
+};`
+    },
+    
+    { separator: "Key Features & Benefits" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'newState API Features' }},
+          {p: { text: 'Component Isolation: State is scoped to individual component instances' }},
+          {p: { text: 'Automatic Cleanup: State is removed when component unmounts' }},
+          {p: { text: 'Reactive Updates: Getter functions trigger re-renders when state changes' }},
+          {p: { text: 'Type Flexibility: Can store any JavaScript value (primitives, objects, arrays)' }},
+          {p: { text: 'Subscription Support: Optional third parameter for custom state listeners' }},
+          {p: { text: 'Performance: Only components using the state re-render on changes' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete examples demonstrating newState API
+const SimpleCounter = (props, context) => {
+  const [count, setCount] = context.newState('count', 0);
+  
+  return {
+    div: {
+      class: 'p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-blue-800 mb-4',
+          text: 'Simple Counter'
+        }},
+        {div: {
+          class: 'text-3xl font-bold text-blue-600 mb-4 text-center',
+          text: () => count()
+        }},
+        {div: {
+          class: 'flex gap-2 justify-center',
+          children: [
+            {button: {
+              class: 'px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors',
+              text: '+',
+              onclick: () => setCount(count() + 1)
+            }},
+            {button: {
+              class: 'px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors',
+              text: '-',
+              onclick: () => setCount(count() - 1)
+            }},
+            {button: {
+              class: 'px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors',
+              text: 'Reset',
+              onclick: () => setCount(0)
+            }}
+          ]
+        }}
+      ]
+    }
+  };
+};
+
+const TodoList = (props, context) => {
+  const [todos, setTodos] = context.newState('todos', []);
+  const [newTodo, setNewTodo] = context.newState('newTodo', '');
+  
+  const addTodo = () => {
+    if (newTodo().trim()) {
+      const todo = {
+        id: Date.now(),
+        text: newTodo().trim(),
+        completed: false
+      };
+      setTodos([...todos(), todo]);
+      setNewTodo('');
+    }
+  };
+  
+  const toggleTodo = (id) => {
+    setTodos(todos().map(todo => 
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    ));
+  };
+  
+  const deleteTodo = (id) => {
+    setTodos(todos().filter(todo => todo.id !== id));
+  };
+  
+  return {
+    div: {
+      class: 'p-6 bg-green-50 border border-green-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-green-800 mb-4',
+          text: 'Todo List with Array State'
+        }},
+        {div: {
+          class: 'flex gap-2 mb-4',
+          children: [
+            {input: {
+              class: 'flex-1 px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500',
+              type: 'text',
+              placeholder: 'Add new todo...',
+              value: () => newTodo(),
+              oninput: (e) => setNewTodo(e.target.value),
+              onkeypress: (e) => {
+                if (e.key === 'Enter') addTodo();
+              }
+            }},
+            {button: {
+              class: 'px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors',
+              text: 'Add',
+              onclick: addTodo
+            }}
+          ]
+        }},
+        {div: {
+          class: 'space-y-2',
+          children: () => {
+            const todoList = todos();
+            return todoList.length ? todoList.map(todo => ({
+              div: {
+                class: \`flex items-center gap-2 p-2 bg-white rounded border \${
+                  todo.completed ? 'bg-gray-50 text-gray-500' : ''
+                }\`,
+                children: [
+                  {input: {
+                    type: 'checkbox',
+                    checked: todo.completed,
+                    onchange: () => toggleTodo(todo.id)
+                  }},
+                  {span: {
+                    class: todo.completed ? 'line-through' : '',
+                    text: todo.text
+                  }},
+                  {button: {
+                    class: 'ml-auto px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded transition-colors',
+                    text: '×',
+                    onclick: () => deleteTodo(todo.id)
+                  }}
+                ]
+              }
+            })) : [{
+              p: {
+                class: 'text-gray-500 text-center py-4',
+                text: 'No todos yet. Add one above!'
+              }
+            }];
+          }
+        }}
+      ]
+    }
+  };
+};
+
+const UserProfile = (props, context) => {
+  const [user, setUser] = context.newState('user', {
+    name: '',
+    email: '',
+    age: 18
+  });
+  const [isEditing, setIsEditing] = context.newState('isEditing', false);
+  
+  const updateUser = (field, value) => {
+    setUser({
+      ...user(),
+      [field]: value
+    });
+  };
+  
+  return {
+    div: {
+      class: 'p-6 bg-purple-50 border border-purple-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-purple-800 mb-4',
+          text: 'User Profile with Object State'
+        }},
+        {div: {
+          class: 'space-y-4',
+          children: () => {
+            const currentUser = user();
+            const editing = isEditing();
+            
+            return editing ? [
+              {div: {
+                children: [
+                  {label: { class: 'block text-sm font-medium text-purple-700 mb-1', text: 'Name:' }},
+                  {input: {
+                    class: 'w-full px-3 py-2 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500',
+                    type: 'text',
+                    value: currentUser.name,
+                    oninput: (e) => updateUser('name', e.target.value)
+                  }}
+                ]
+              }},
+              {div: {
+                children: [
+                  {label: { class: 'block text-sm font-medium text-purple-700 mb-1', text: 'Email:' }},
+                  {input: {
+                    class: 'w-full px-3 py-2 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500',
+                    type: 'email',
+                    value: currentUser.email,
+                    oninput: (e) => updateUser('email', e.target.value)
+                  }}
+                ]
+              }},
+              {div: {
+                children: [
+                  {label: { class: 'block text-sm font-medium text-purple-700 mb-1', text: 'Age:' }},
+                  {input: {
+                    class: 'w-full px-3 py-2 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500',
+                    type: 'number',
+                    value: currentUser.age,
+                    oninput: (e) => updateUser('age', parseInt(e.target.value) || 18)
+                  }}
+                ]
+              }},
+              {button: {
+                class: 'px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors',
+                text: 'Save',
+                onclick: () => setIsEditing(false)
+              }}
+            ] : [
+              {div: { children: [
+                {strong: { text: 'Name: ' }},
+                {span: { text: currentUser.name || 'Not set' }}
+              ]}},
+              {div: { children: [
+                {strong: { text: 'Email: ' }},
+                {span: { text: currentUser.email || 'Not set' }}
+              ]}},
+              {div: { children: [
+                {strong: { text: 'Age: ' }},
+                {span: { text: currentUser.age }}
+              ]}},
+              {button: {
+                class: 'px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors',
+                text: 'Edit',
+                onclick: () => setIsEditing(true)
+              }}
+            ];
+          }
+        }}
+      ]
+    }
+  };
+};
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4',
+        text: '{..}'
+      }},
+      {h1: {
+        class: 'text-3xl font-bold text-white',
+        text: 'newState API Demo'
+      }}
+    ]
+  }
+});
+
+// Demo application
+const demo = new Juris({
+  components: {
+    JurisLogo,
+    SimpleCounter,
+    TodoList,
+    UserProfile
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            {div: {
+              class: 'grid md:grid-cols-1 gap-6',
+              children: [
+                { SimpleCounter: {} },
+                { TodoList: {} },
+                { UserProfile: {} }
+              ]
+            }},
+            {div: {
+              class: 'mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg',
+              children: [
+                {h4: {
+                  class: 'font-bold text-yellow-800 mb-2',
+                  text: 'newState API Benefits'
+                }},
+                {ul: {
+                  class: 'text-yellow-700 space-y-1 text-sm',
+                  children: [
+                    {li: { text: '• Component-scoped state that doesn\\'t affect other components' }},
+                    {li: { text: '• Automatic cleanup when component unmounts' }},
+                    {li: { text: '• Reactive updates - only re-renders when state actually changes' }},
+                    {li: { text: '• Works with any data type: primitives, objects, arrays' }},
+                    {li: { text: '• Optional subscription for custom side effects' }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }
+      }]
+    }
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'Function Signature': 'context.newState(key, initialValue) returns [getter, setter, subscriber]',
+    'State Isolation': 'Each component instance gets its own isolated state',
+    'Automatic Cleanup': 'State is removed when component unmounts',
+    'Reactive Getter': 'Getter function triggers re-renders when called in VDOM',
+    'State Path': 'Stored as ##local.ComponentName#instance.key internally',
+    'Data Types': 'Supports all JavaScript types: primitives, objects, arrays'
+  },
+  
+  tags: ['state', 'local-state', 'newstate', 'component-state', 'reactive', 'api']
+});
+
+// Documentation entry
+docFramework.addDoc('executebatch-api', {
+  title: 'executeBatch API',
+  category: 'State Management',
+  content: 'Learn how to use executeBatch to optimize performance when making multiple state updates. Instead of triggering re-renders after each setState call, executeBatch groups all state changes and triggers a single re-render at the end, significantly improving performance for bulk operations.',
+  
+  codeSnippet: [
+    `// Without executeBatch - triggers 3 separate re-renders
+context.setState('user.name', 'John');     // Re-render 1
+context.setState('user.age', 30);          // Re-render 2  
+context.setState('user.city', 'NYC');      // Re-render 3
+
+// With executeBatch - triggers only 1 re-render
+context.executeBatch(() => {
+  context.setState('user.name', 'John');
+  context.setState('user.age', 30);
+  context.setState('user.city', 'NYC');
+}); // Single re-render after all updates`,
+
+    { text: "Basic executeBatch syntax and usage patterns:" },
+
+    {
+      title: "executeBatch Function Signature",
+      language: "javascript",
+      code: `// context.executeBatch(callback)
+// Returns: the return value of the callback function
+
+const result = context.executeBatch(() => {
+  // Multiple state updates
+  context.setState('counter', 5);
+  context.setState('message', 'Updated');
+  
+  // Can include other logic
+  console.log('Batch update complete');
+  
+  // Return value (optional)
+  return 'batch-completed';
+});
+
+console.log(result); // 'batch-completed'`
+    },
+
+    { text: "Practical example with form data updates:" },
+
+    `// Form submission with multiple field updates
+const handleFormSubmit = (formData) => {
+  context.executeBatch(() => {
+    context.setState('user.name', formData.name);
+    context.setState('user.email', formData.email);
+    context.setState('user.phone', formData.phone);
+    context.setState('user.address', formData.address);
+    context.setState('ui.isLoading', false);
+    context.setState('ui.message', 'Profile updated successfully');
+  });
+  // Only one re-render happens here, after all 6 updates
+};`,
+
+    { text: "Array operations with executeBatch for better performance:" },
+
+    {
+      title: "Bulk Array Updates",
+      language: "javascript",
+      code: `// Adding multiple items to a list efficiently
+const addMultipleItems = (newItems) => {
+  context.executeBatch(() => {
+    const currentItems = context.getState('items', []);
+    const updatedItems = [...currentItems, ...newItems];
+    
+    context.setState('items', updatedItems);
+    context.setState('itemCount', updatedItems.length);
+    context.setState('lastUpdate', new Date().toISOString());
+    context.setState('ui.status', 'Items added successfully');
+  });
+};
+
+// Clearing and resetting multiple related states
+const resetApplication = () => {
+  context.executeBatch(() => {
+    context.setState('items', []);
+    context.setState('selectedItems', []);
+    context.setState('filter', '');
+    context.setState('sortBy', 'name');
+    context.setState('ui.message', 'Application reset');
+  });
+};`
+    },
+
+    { text: "Async operations with executeBatch:" },
+
+    {
+      title: "Async Batch Operations",
+      language: "javascript",
+      code: `// executeBatch works with async functions too
+const loadUserData = async (userId) => {
+  context.setState('ui.loading', true);
+  
+  try {
+    const result = await context.executeBatch(async () => {
+      const user = await fetchUser(userId);
+      const preferences = await fetchUserPreferences(userId);
+      const notifications = await fetchNotifications(userId);
+      
+      context.setState('user', user);
+      context.setState('preferences', preferences);
+      context.setState('notifications', notifications);
+      context.setState('ui.loading', false);
+      
+      return { user, preferences, notifications };
+    });
+    
+    console.log('All data loaded:', result);
+  } catch (error) {
+    context.setState('ui.error', error.message);
+    context.setState('ui.loading', false);
+  }
+};`
+    },
+    
+    { separator: "Performance Benefits & Best Practices" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'executeBatch Benefits & Usage' }},
+          {p: { text: 'Performance: Reduces multiple re-renders to a single re-render' }},
+          {p: { text: 'Consistency: All state changes happen atomically' }},
+          {p: { text: 'User Experience: Prevents flickering from intermediate states' }},
+          {p: { text: 'Best Practice: Use for any operation updating 2+ state paths' }},
+          {p: { text: 'Async Support: Works with both synchronous and asynchronous operations' }},
+          {p: { text: 'Return Values: Can return data from the batch operation' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete examples demonstrating executeBatch performance benefits
+const PerformanceDemo = (props, context) => {
+  const [updateCount, setUpdateCount] = context.newState('updates', 0);
+  const [lastMethod, setLastMethod] = context.newState('method', '');
+  
+  // Without batch - multiple re-renders
+  const updateWithoutBatch = () => {
+    const start = performance.now();
+    setLastMethod('Without Batch');
+    
+    // Each setState triggers a separate re-render
+    context.setState('demo.counter1', Math.floor(Math.random() * 100));
+    context.setState('demo.counter2', Math.floor(Math.random() * 100));
+    context.setState('demo.counter3', Math.floor(Math.random() * 100));
+    context.setState('demo.message', 'Updated without batch');
+    context.setState('demo.timestamp', new Date().toISOString());
+    
+    const end = performance.now();
+    context.setState('demo.performanceTime', end - start);
+    setUpdateCount(updateCount() + 1);
+  };
+  
+  // With batch - single re-render
+  const updateWithBatch = () => {
+    const start = performance.now();
+    setLastMethod('With Batch');
+    
+    context.executeBatch(() => {
+      context.setState('demo.counter1', Math.floor(Math.random() * 100));
+      context.setState('demo.counter2', Math.floor(Math.random() * 100));
+      context.setState('demo.counter3', Math.floor(Math.random() * 100));
+      context.setState('demo.message', 'Updated with batch');
+      context.setState('demo.timestamp', new Date().toISOString());
+      
+      const end = performance.now();
+      context.setState('demo.performanceTime', end - start);
+    });
+    
+    setUpdateCount(updateCount() + 1);
+  };
+  
+  return {
+    div: {
+      class: 'p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-blue-800 mb-4',
+          text: 'Performance Comparison Demo'
+        }},
+        {div: {
+          class: 'grid grid-cols-3 gap-4 mb-4 p-4 bg-white rounded border',
+          children: [
+            {div: {
+              class: 'text-center',
+              children: [
+                {label: { class: 'block text-sm font-medium text-gray-700', text: 'Counter 1' }},
+                {div: {
+                  class: 'text-2xl font-bold text-blue-600',
+                  text: () => context.getState('demo.counter1', 0)
+                }}
+              ]
+            }},
+            {div: {
+              class: 'text-center',
+              children: [
+                {label: { class: 'block text-sm font-medium text-gray-700', text: 'Counter 2' }},
+                {div: {
+                  class: 'text-2xl font-bold text-blue-600',
+                  text: () => context.getState('demo.counter2', 0)
+                }}
+              ]
+            }},
+            {div: {
+              class: 'text-center',
+              children: [
+                {label: { class: 'block text-sm font-medium text-gray-700', text: 'Counter 3' }},
+                {div: {
+                  class: 'text-2xl font-bold text-blue-600',
+                  text: () => context.getState('demo.counter3', 0)
+                }}
+              ]
+            }}
+          ]
+        }},
+        {div: {
+          class: 'mb-4 p-3 bg-white rounded border',
+          children: [
+            {p: {
+              class: 'text-sm text-gray-600',
+              text: () => \`Message: \${context.getState('demo.message', 'No updates yet')}\`
+            }},
+            {p: {
+              class: 'text-sm text-gray-600',
+              text: () => \`Last Update: \${context.getState('demo.timestamp', 'Never')}\`
+            }},
+            {p: {
+              class: 'text-sm text-gray-600',
+              text: () => \`Performance: \${context.getState('demo.performanceTime', 0).toFixed(2)}ms\`
+            }},
+            {p: {
+              class: 'text-sm text-gray-600',
+              text: () => \`Total Updates: \${updateCount()} | Last Method: \${lastMethod()}\`
+            }}
+          ]
+        }},
+        {div: {
+          class: 'flex gap-4 justify-center',
+          children: [
+            {button: {
+              class: 'px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors',
+              text: 'Update Without Batch',
+              onclick: updateWithoutBatch
+            }},
+            {button: {
+              class: 'px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors',
+              text: 'Update With Batch',
+              onclick: updateWithBatch
+            }}
+          ]
+        }}
+      ]
+    }
+  };
+};
+
+const FormBatchDemo = (props, context) => {
+  const [formData, setFormData] = context.newState('formData', {
+    name: '',
+    email: '',
+    phone: '',
+    address: ''
+  });
+  
+  const updateField = (field, value) => {
+    setFormData({
+      ...formData(),
+      [field]: value
+    });
+  };
+  
+  // Submit with batch for all validations and updates
+  const handleSubmit = () => {
+    const data = formData();
+    
+    context.executeBatch(() => {
+      // Validate and update multiple states atomically
+      context.setState('form.isSubmitting', true);
+      context.setState('form.errors', {});
+      
+      // Simulate validation
+      const errors = {};
+      if (!data.name) errors.name = 'Name is required';
+      if (!data.email) errors.email = 'Email is required';
+      
+      if (Object.keys(errors).length > 0) {
+        context.setState('form.errors', errors);
+        context.setState('form.isSubmitting', false);
+        context.setState('form.message', 'Please fix validation errors');
+      } else {
+        context.setState('form.submittedData', data);
+        context.setState('form.message', 'Form submitted successfully!');
+        context.setState('form.isSubmitting', false);
+        context.setState('form.submitCount', context.getState('form.submitCount', 0) + 1);
+      }
+    });
+  };
+  
+  return {
+    div: {
+      class: 'p-6 bg-green-50 border border-green-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-green-800 mb-4',
+          text: 'Form Batch Update Demo'
+        }},
+        {div: {
+          class: 'space-y-4 mb-4',
+          children: [
+            {div: {
+              children: [
+                {label: { class: 'block text-sm font-medium text-green-700 mb-1', text: 'Name:' }},
+                {input: {
+                  class: 'w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500',
+                  type: 'text',
+                  value: () => formData().name,
+                  oninput: (e) => updateField('name', e.target.value)
+                }}
+              ]
+            }},
+            {div: {
+              children: [
+                {label: { class: 'block text-sm font-medium text-green-700 mb-1', text: 'Email:' }},
+                {input: {
+                  class: 'w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500',
+                  type: 'email',
+                  value: () => formData().email,
+                  oninput: (e) => updateField('email', e.target.value)
+                }}
+              ]
+            }},
+            {div: {
+              children: [
+                {label: { class: 'block text-sm font-medium text-green-700 mb-1', text: 'Phone:' }},
+                {input: {
+                  class: 'w-full px-3 py-2 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500',
+                  type: 'tel',
+                  value: () => formData().phone,
+                  oninput: (e) => updateField('phone', e.target.value)
+                }}
+              ]
+            }}
+          ]
+        }},
+        {div: {
+          class: 'mb-4',
+          children: [
+            {button: {
+              class: 'px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors mr-2',
+              text: () => context.getState('form.isSubmitting', false) ? 'Submitting...' : 'Submit Form',
+              disabled: () => context.getState('form.isSubmitting', false),
+              onclick: handleSubmit
+            }},
+            {button: {
+              class: 'px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors',
+              text: 'Reset',
+              onclick: () => {
+                context.executeBatch(() => {
+                  setFormData({ name: '', email: '', phone: '', address: '' });
+                  context.setState('form.errors', {});
+                  context.setState('form.message', '');
+                  context.setState('form.submittedData', null);
+                });
+              }
+            }}
+          ]
+        }},
+        {div: {
+          class: 'p-3 bg-white rounded border text-sm',
+          children: [
+            {p: {
+              class: 'text-green-600 mb-2',
+              text: () => context.getState('form.message', 'Fill out the form above')
+            }},
+            {p: {
+              class: 'text-gray-600',
+              text: () => \`Submit Count: \${context.getState('form.submitCount', 0)}\`
+            }}
+          ]
+        }}
+      ]
+    }
+  };
+};
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4',
+        text: '{..}'
+      }},
+      {h1: {
+        class: 'text-3xl font-bold text-white',
+        text: 'executeBatch API Demo'
+      }}
+    ]
+  }
+});
+
+// Demo application
+const demo = new Juris({
+  states: {
+    demo: {
+      counter1: 0,
+      counter2: 0,
+      counter3: 0,
+      message: 'No updates yet',
+      timestamp: 'Never',
+      performanceTime: 0
+    },
+    form: {
+      errors: {},
+      message: '',
+      isSubmitting: false,
+      submitCount: 0,
+      submittedData: null
+    }
+  },
+  components: {
+    JurisLogo,
+    PerformanceDemo,
+    FormBatchDemo
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            { PerformanceDemo: {} },
+            { FormBatchDemo: {} },
+            {div: {
+              class: 'mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg',
+              children: [
+                {h4: {
+                  class: 'font-bold text-yellow-800 mb-2',
+                  text: 'executeBatch Best Practices'
+                }},
+                {ul: {
+                  class: 'text-yellow-700 space-y-1 text-sm',
+                  children: [
+                    {li: { text: '• Use for any operation that updates 2 or more state paths' }},
+                    {li: { text: '• Prevents flickering from intermediate state changes' }},
+                    {li: { text: '• Significantly improves performance for bulk operations' }},
+                    {li: { text: '• Works with both sync and async operations' }},
+                    {li: { text: '• All state changes happen atomically - either all succeed or all fail' }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }
+      }]
+    }
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'Function Signature': 'context.executeBatch(callback) - callback can be sync or async',
+    'Performance Benefit': 'Reduces N state updates from N re-renders to 1 re-render',
+    'Atomic Updates': 'All state changes happen together - no intermediate states',
+    'Return Values': 'Returns the return value of the callback function',
+    'Async Support': 'Works with async/await and Promise-based operations',
+    'Error Handling': 'If callback throws, no state changes are applied'
+  },
+  
+  tags: ['performance', 'batch', 'state', 'optimization', 'executebatch', 'bulk-updates']
+});
+
+// Documentation entry
+docFramework.addDoc('subscribe-api', {
+  title: 'subscribe() API',
+  category: 'State Management',
+  content: 'Learn how to use the subscribe API to listen for state changes and execute custom logic when state updates occur. The subscribe function allows you to react to state changes programmatically, perform side effects, sync with external systems, or implement complex business logic that goes beyond simple UI updates.',
+  
+  codeSnippet: [
+    `// Basic subscription to state changes
+const unsubscribe = context.subscribe('user.name', (newValue, oldValue, path) => {
+  console.log(\`User name changed from \${oldValue} to \${newValue}\`);
+});
+
+// Later, stop listening
+unsubscribe();`,
+
+    { text: "Subscribe function signature and callback parameters:" },
+
+    {
+      title: "subscribe Function Signature",
+      language: "javascript",
+      code: `// context.subscribe(path, callback, hierarchical = true)
+// Returns: unsubscribe function
+
+const unsubscribe = context.subscribe('user', (newValue, oldValue, changedPath) => {
+  // newValue: the new state value at the changed path
+  // oldValue: the previous state value  
+  // changedPath: the exact path that changed
+  
+  console.log('State changed:', {
+    newValue,
+    oldValue, 
+    changedPath
+  });
+});
+
+// Stop subscription
+unsubscribe();`
+    },
+
+    { text: "Hierarchical vs exact subscriptions:" },
+
+    `// Hierarchical subscription (default) - listens to child changes too
+const unsubHierarchical = context.subscribe('user', (newVal, oldVal, path) => {
+  console.log(\`User object changed at: \${path}\`);
+  // Triggers for: user.name, user.email, user.profile.age, etc.
+});
+
+// Exact subscription - only listens to exact path changes
+const unsubExact = context.subscribeExact('user.name', (newVal, oldVal, path) => {
+  console.log(\`Only user.name changed: \${newVal}\`);
+  // Only triggers for user.name, not user.email or user.profile.age
+});`,
+
+    { text: "Practical examples with side effects and external integrations:" },
+
+    {
+      title: "Side Effects and Integrations",
+      language: "javascript",
+      code: `// Save to localStorage when settings change
+context.subscribe('app.settings', (newSettings) => {
+  localStorage.setItem('appSettings', JSON.stringify(newSettings));
+});
+
+// Sync user data with server
+context.subscribe('user', async (userData) => {
+  if (userData.id) {
+    try {
+      await fetch(\`/api/users/\${userData.id}\`, {
+        method: 'PUT',
+        body: JSON.stringify(userData),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      console.log('User data synced to server');
+    } catch (error) {
+      console.error('Failed to sync user data:', error);
+    }
+  }
+});
+
+// Log all state changes for debugging
+context.subscribe('', (newValue, oldValue, path) => {
+  console.log('Global state change:', {
+    path,
+    before: oldValue,
+    after: newValue,
+    timestamp: new Date().toISOString()
+  });
+});`
+    },
+
+    { text: "Multiple subscriptions and subscription management:" },
+
+    {
+      title: "Subscription Management",
+      language: "javascript",
+      code: `// Managing multiple subscriptions
+const subscriptions = [];
+
+// Add subscription
+subscriptions.push(
+  context.subscribe('user.theme', (theme) => {
+    document.body.className = \`theme-\${theme}\`;
+  })
+);
+
+subscriptions.push(
+  context.subscribe('notifications', (notifications) => {
+    updateNotificationBadge(notifications.length);
+  })
+);
+
+// Cleanup all subscriptions
+const cleanup = () => {
+  subscriptions.forEach(unsubscribe => unsubscribe());
+  subscriptions.length = 0;
+};
+
+// Use in component lifecycle
+const MyComponent = (props, context) => {
+  // Setup subscriptions in component
+  const userSub = context.subscribe('user.status', (status) => {
+    if (status === 'offline') {
+      showOfflineMessage();
+    }
+  });
+  
+  // Return component with cleanup
+  return {
+    div: { 
+      text: 'Component content',
+      // Store cleanup function for later use
+      onunmount: () => userSub()
+    }
+  };
+};`
+    },
+    
+    { separator: "Key Features & Use Cases" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'subscribe API Features & Use Cases' }},
+          {p: { text: 'Side Effects: Execute custom logic when state changes' }},
+          {p: { text: 'External Sync: Integrate with APIs, localStorage, or other systems' }},
+          {p: { text: 'Hierarchical: Listen to parent path and all child changes' }},
+          {p: { text: 'Exact Matching: Listen only to specific path changes' }},
+          {p: { text: 'Cleanup: Returns unsubscribe function for proper cleanup' }},
+          {p: { text: 'Debugging: Monitor state changes for development and debugging' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete examples demonstrating subscribe API usage
+const NotificationCenter = (props, context) => {
+  const [logs, setLogs] = context.newState('logs', []);
+  
+  // Subscribe to multiple state paths
+    const subscriptions = [];
+    
+    // Monitor user changes
+    subscriptions.push(
+      context.subscribe('user', (newValue, oldValue, path) => {
+        const log = {
+          id: Date.now(),
+          type: 'user',
+          path,
+          message: \`User data changed at \${path}\`,
+          timestamp: new Date().toLocaleTimeString(),
+          newValue,
+          oldValue
+        };
+        setLogs(prev => [log, ...prev.slice(0, 9)]); // Keep last 10
+      })
+    );
+    
+    // Monitor counter changes
+    subscriptions.push(
+      context.subscribe('counter', (newValue, oldValue) => {
+        const log = {
+          id: Date.now() + 1,
+          type: 'counter', 
+          path: 'counter',
+          message: \`Counter: \${oldValue} → \${newValue}\`,
+          timestamp: new Date().toLocaleTimeString(),
+          newValue,
+          oldValue
+        };
+        setLogs(prev => [log, ...prev.slice(0, 9)]);
+      })
+    );
+    
+    // Cleanup function
+    return () => {
+      subscriptions.forEach(unsub => unsub());
+    };
+  
+  return {
+    div: {
+      class: 'p-6 bg-yellow-50 border border-yellow-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-yellow-800 mb-4',
+          text: 'Live State Change Monitor'
+        }},
+        {div: {
+          class: 'space-y-2 max-h-64 overflow-y-auto',
+          children: () => {
+            const logEntries = logs();
+            return logEntries.length ? logEntries.map(log => ({
+              div: {
+                class: \`p-3 bg-white rounded border-l-4 \${
+                  log.type === 'user' ? 'border-blue-400' : 'border-green-400'
+                }\`,
+                children: [
+                  {div: {
+                    class: 'flex justify-between items-start mb-1',
+                    children: [
+                      {span: {
+                        class: 'text-sm font-medium text-gray-800',
+                        text: log.message
+                      }},
+                      {span: {
+                        class: 'text-xs text-gray-500',
+                        text: log.timestamp
+                      }}
+                    ]
+                  }},
+                  {div: {
+                    class: 'text-xs text-gray-600',
+                    text: \`Path: \${log.path}\`
+                  }}
+                ]
+              }
+            })) : [{
+              p: {
+                class: 'text-gray-500 text-center py-4',
+                text: 'No state changes yet. Try updating some values!'
+              }
+            }];
+          }
+        }},
+        {button: {
+          class: 'mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded transition-colors',
+          text: 'Clear Logs',
+          onclick: () => setLogs([])
+        }}
+      ]
+    }
+  };
+};
+
+const LocalStorageSync = (props, context) => {
+  const [syncStatus, setSyncStatus] = context.newState('syncStatus', 'idle');
+  
+  // Setup localStorage sync subscription
+  const setupSync = () => {
+    // Subscribe to settings changes and sync to localStorage
+    const unsubscribe = context.subscribe('settings', (newSettings) => {
+      setSyncStatus('syncing');
+      try {
+        localStorage.setItem('juris-settings', JSON.stringify(newSettings));
+        setSyncStatus('synced');
+        setTimeout(() => setSyncStatus('idle'), 1000);
+      } catch (error) {
+        console.error('LocalStorage sync failed:', error);
+        setSyncStatus('error');
+      }
+    });
+    
+    // Load initial settings from localStorage
+    try {
+      const saved = localStorage.getItem('juris-settings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        context.setState('settings', settings);
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+    
+    return unsubscribe;
+  };
+  
+  // Initialize sync
+  const unsubscribe = setupSync();
+  
+  return {
+    div: {
+      class: 'p-6 bg-green-50 border border-green-200 rounded-lg mb-4',
+      children: [
+        {h3: {
+          class: 'text-lg font-bold text-green-800 mb-4',
+          text: 'LocalStorage Sync Demo'
+        }},
+        {div: {
+          class: 'space-y-3 mb-4',
+          children: [
+            {div: {
+              class: 'flex items-center gap-2',
+              children: [
+                {label: { class: 'text-sm font-medium text-green-700', text: 'Theme:' }},
+                {select: {
+                  class: 'px-3 py-1 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500',
+                  value: () => context.getState('settings.theme', 'light'),
+                  onchange: (e) => context.setState('settings.theme', e.target.value),
+                  children: [
+                    {option: { value: 'light', text: 'Light' }},
+                    {option: { value: 'dark', text: 'Dark' }},
+                    {option: { value: 'auto', text: 'Auto' }}
+                  ]
+                }}
+              ]
+            }},
+            {div: {
+              class: 'flex items-center gap-2',
+              children: [
+                {label: { class: 'text-sm font-medium text-green-700', text: 'Language:' }},
+                {select: {
+                  class: 'px-3 py-1 border border-green-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500',
+                  value: () => context.getState('settings.language', 'en'),
+                  onchange: (e) => context.setState('settings.language', e.target.value),
+                  children: [
+                    {option: { value: 'en', text: 'English' }},
+                    {option: { value: 'es', text: 'Spanish' }},
+                    {option: { value: 'fr', text: 'French' }}
+                  ]
+                }}
+              ]
+            }},
+            {div: {
+              class: 'flex items-center gap-2',
+              children: [
+                {input: {
+                  type: 'checkbox',
+                  checked: () => context.getState('settings.notifications', true),
+                  onchange: (e) => context.setState('settings.notifications', e.target.checked)
+                }},
+                {label: { class: 'text-sm font-medium text-green-700', text: 'Enable notifications' }}
+              ]
+            }}
+          ]
+        }},
+        {div: {
+          class: \`p-3 rounded text-sm \${
+            syncStatus() === 'synced' ? 'bg-green-100 text-green-700' :
+            syncStatus() === 'syncing' ? 'bg-yellow-100 text-yellow-700' :
+            syncStatus() === 'error' ? 'bg-red-100 text-red-700' :
+            'bg-gray-100 text-gray-700'
+          }\`,
+          children: [
+            {span: {
+              text: () => {
+                const status = syncStatus();
+                return status === 'synced' ? '✓ Settings saved to localStorage' :
+                       status === 'syncing' ? '⟳ Syncing settings...' :
+                       status === 'error' ? '✗ Failed to save settings' :
+                       'Settings will auto-save on change';
+              }
+            }}
+          ]
+        }},
+        // Cleanup subscription when component is removed
+        {div: {
+          style: 'display: none',
+          onunmount: () => unsubscribe()
+        }}
+      ]
+    }
+  };
+};
+
+const CounterComponent = (props, context) => ({
+  div: {
+    class: 'p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'text-lg font-bold text-blue-800 mb-4',
+        text: 'Counter - Try changing values to see subscriptions'
+      }},
+      {div: {
+        class: 'text-3xl font-bold text-blue-600 text-center mb-4',
+        text: () => context.getState('counter', 0)
+      }},
+      {div: {
+        class: 'flex gap-2 justify-center',
+        children: [
+          {button: {
+            class: 'px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors',
+            text: '+5',
+            onclick: () => {
+              const current = context.getState('counter', 0);
+              context.setState('counter', current + 5);
+            }
+          }},
+          {button: {
+            class: 'px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors',
+            text: '-3',
+            onclick: () => {
+              const current = context.getState('counter', 0);
+              context.setState('counter', current - 3);
+            }
+          }},
+          {button: {
+            class: 'px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors',
+            text: 'Reset',
+            onclick: () => context.setState('counter', 0)
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+const UserForm = (props, context) => ({
+  div: {
+    class: 'p-6 bg-purple-50 border border-purple-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'text-lg font-bold text-purple-800 mb-4',
+        text: 'User Profile - Changes trigger subscriptions'
+      }},
+      {div: {
+        class: 'space-y-3',
+        children: [
+          {input: {
+            class: 'w-full px-3 py-2 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500',
+            type: 'text',
+            placeholder: 'Enter name...',
+            value: () => context.getState('user.name', ''),
+            oninput: (e) => context.setState('user.name', e.target.value)
+          }},
+          {input: {
+            class: 'w-full px-3 py-2 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500',
+            type: 'email',
+            placeholder: 'Enter email...',
+            value: () => context.getState('user.email', ''),
+            oninput: (e) => context.setState('user.email', e.target.value)
+          }},
+          {button: {
+            class: 'px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors',
+            text: 'Clear User Data',
+            onclick: () => context.setState('user', {})
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4',
+        text: '{..}'
+      }},
+      {h1: {
+        class: 'text-3xl font-bold text-white',
+        text: 'subscribe() API Demo'
+      }}
+    ]
+  }
+});
+
+// Demo application
+const demo = new Juris({
+  states: {
+    counter: 0,
+    user: {},
+    settings: {
+      theme: 'light',
+      language: 'en',
+      notifications: true
+    }
+  },
+  components: {
+    JurisLogo,
+    NotificationCenter,
+    LocalStorageSync,
+    CounterComponent,
+    UserForm
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            { NotificationCenter: {} },
+            { LocalStorageSync: {} },
+            { CounterComponent: {} },
+            { UserForm: {} },
+            {div: {
+              class: 'mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg',
+              children: [
+                {h4: {
+                  class: 'font-bold text-yellow-800 mb-2',
+                  text: 'subscribe() API Key Points'
+                }},
+                {ul: {
+                  class: 'text-yellow-700 space-y-1 text-sm',
+                  children: [
+                    {li: { text: '• Execute custom logic when state changes occur' }},
+                    {li: { text: '• Hierarchical subscriptions listen to child path changes too' }},
+                    {li: { text: '• subscribeExact() for listening only to specific paths' }},
+                    {li: { text: '• Always clean up subscriptions to prevent memory leaks' }},
+                    {li: { text: '• Perfect for side effects, external API sync, and debugging' }},
+                    {li: { text: '• Monitor shows live state changes as you interact with components' }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }
+      }]
+    }
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'Function Signature': 'subscribe(path, callback, hierarchical=true) returns unsubscribe function',
+    'Callback Parameters': 'callback(newValue, oldValue, changedPath)',
+    'Hierarchical Mode': 'Default - listens to path and all child changes',
+    'Exact Mode': 'subscribeExact() - listens only to specific path',
+    'Cleanup': 'Always call returned unsubscribe function to prevent memory leaks',
+    'Use Cases': 'Side effects, external sync, debugging, custom business logic'
+  },
+  
+  tags: ['subscribe', 'state-changes', 'side-effects', 'listeners', 'reactivity', 'cleanup']
+});
+
+// Documentation entry
+docFramework.addDoc('single-element-components', {
+  title: 'Single Element Components',
+  category: 'Component Patterns',
+  content: 'Learn how to create components that return a single DOM element. These focused components are perfect for reusable UI elements, form inputs, buttons, and other atomic design patterns. Single element components are easier to style, compose, and maintain compared to complex multi-element structures.',
+  
+  codeSnippet: [
+    `// Basic single element component - button
+const PrimaryButton = (props) => ({
+  button: {
+    class: 'px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors',
+    text: props.text || 'Click me',
+    onclick: props.onClick || (() => {})
+  }//button
+});
+
+// Usage in layout
+{ PrimaryButton: { text: 'Submit', onClick: handleSubmit } }`,
+
+    { text: "Single input element with validation states:" },
+
+    {
+      title: "Input Component with States",
+      language: "javascript",
+      code: `const FormInput = (props) => ({
+  input: {
+    type: props.type || 'text',
+    placeholder: props.placeholder || '',
+    value: props.value || '',
+    class: \`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 \${
+      props.error 
+        ? 'border-red-500 focus:ring-red-500' 
+        : 'border-gray-300 focus:ring-blue-500'
+    }\`,
+    'aria-invalid': props.error ? 'true' : 'false',
+    'aria-describedby': props.error ? \`\${props.name}-error\` : undefined,
+    onchange: props.onChange,
+    oninput: props.onInput
+  }//input
+});`
+    },
+
+    { text: "Single span element for displaying dynamic text:" },
+
+    `// Text display component
+const StatusText = (props, context) => ({
+  span: {
+    class: \`font-medium \${
+      props.status === 'success' ? 'text-green-600' :
+      props.status === 'error' ? 'text-red-600' :
+      props.status === 'warning' ? 'text-yellow-600' :
+      'text-gray-600'
+    }\`,
+    text: () => context.getState(props.path, props.defaultText || 'No status'),
+    'aria-live': 'polite'
+  }//span
+});`,
+
+    { text: "Single image element with error handling:" },
+
+    {
+      title: "Image Component with Fallback",
+      language: "javascript",
+      code: `      
+      const Avatar = (props, context) => {
+  const [imageError, setImageError] = context.newState('imageError', false);
+  
+  return {
+    img: {
+      src: imageError() ? (props.fallback || '/default-avatar.png') : props.src,
+      alt: props.alt || 'User avatar',
+      class: \`\${props.size === 'large' ? 'w-16 h-16' : 'w-8 h-8'} rounded-full object-cover border-2 border-gray-200\`,
+      onerror: () => setImageError(true),
+      onload: () => setImageError(false)
+    }//img
+  };
+};`
+    },
+
+    { text: "Single div element as a container with dynamic styling:" },
+
+    {
+      title: "Container Component",
+      language: "javascript", 
+      code: `const Card = (props) => ({
+  div: {
+    class: \`p-6 rounded-lg shadow-md transition-all duration-200 \${
+      props.variant === 'success' ? 'bg-green-50 border border-green-200' :
+      props.variant === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+      props.variant === 'error' ? 'bg-red-50 border border-red-200' :
+      'bg-white border border-gray-200'
+    } \${props.clickable ? 'cursor-pointer hover:shadow-lg' : ''}\`,
+    onclick: props.onClick,
+    children: props.children || []
+  }//div
+});`
+    },
+    
+    { separator: "Single Element Patterns" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'Single Element Design Benefits' }},
+          {p: { text: 'Simplicity: Easier to understand, test, and maintain' }},
+          {p: { text: 'Composability: Can be easily combined into larger components' }},
+          {p: { text: 'Reusability: Focused purpose makes them highly reusable' }},
+          {p: { text: 'Styling: Simpler CSS and style management' }},
+          {p: { text: 'Performance: Minimal DOM structure reduces overhead' }},
+          {p: { text: 'Atomic Design: Perfect for design system building blocks' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete single element component examples
+  
+const StatusText = (props, context) => ({
+  span: {
+    class: \`font-medium \${
+      props.status === 'success' ? 'text-green-600' :
+      props.status === 'error' ? 'text-red-600' :
+      props.status === 'warning' ? 'text-yellow-600' :
+      'text-gray-600'
+    }\`,
+    text: () => context.getState(props.path, props.defaultText || 'No status'),
+    'aria-live': 'polite'
+  }//span
+})
+//
+const PrimaryButton = (props) => ({
+  button: {
+    class: \`px-6 py-3 rounded-lg font-medium transition-all duration-200 \${
+      props.variant === 'secondary' 
+        ? 'bg-gray-500 hover:bg-gray-600 text-white' 
+        : props.variant === 'danger'
+        ? 'bg-red-500 hover:bg-red-600 text-white'
+        : 'bg-blue-500 hover:bg-blue-600 text-white'
+    } \${props.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}\`,
+    text: props.text || 'Click me',
+    disabled: props.disabled,
+    onclick: props.disabled ? undefined : (props.onClick || (() => {})),
+    'aria-label': props.ariaLabel
+  }//button
+});
+
+const FormInput = (props, context) => {
+  const [focused, setFocused] = context.newState('focused', false);
+  
+  return {
+    input: {
+      type: props.type || 'text',
+      name: props.name,
+      placeholder: props.placeholder || '',
+      value: () => context.getState(props.statePath, props.defaultValue || ''),
+      class: \`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 \${
+        props.error 
+          ? 'border-red-500 focus:border-red-600 focus:ring-4 focus:ring-red-100' 
+          : focused() 
+          ? 'border-blue-500 focus:border-blue-600 focus:ring-4 focus:ring-blue-100'
+          : 'border-gray-300 focus:border-blue-500'
+      }\`,
+      'aria-invalid': props.error ? 'true' : 'false',
+      'aria-describedby': props.error ? \`\${props.name}-error\` : undefined,
+      required: props.required,
+      onfocus: () => setFocused(true),
+      onblur: () => setFocused(false),
+      oninput: (e) => {
+        if (props.statePath) {
+          context.setState(props.statePath, e.target.value);
+        }
+        if (props.onInput) props.onInput(e);
+      }
+    }//input
+  };
+};
+
+
+const StatusBadge = (props, context) => ({
+  span: {
+    class: \`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium \${
+      props.status === 'online' ? 'bg-green-100 text-green-800' :
+      props.status === 'offline' ? 'bg-gray-100 text-gray-800' :
+      props.status === 'busy' ? 'bg-red-100 text-red-800' :
+      props.status === 'away' ? 'bg-yellow-100 text-yellow-800' :
+      'bg-blue-100 text-blue-800'
+    }\`,
+    text: () => {
+      const status = props.dynamicStatus ? context.getState(props.dynamicStatus, props.status) : props.status;
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    },
+    'aria-label': \`Status: \${props.status}\`
+  }//span
+});
+
+const ProgressBar = (props, context) => ({
+  div: {
+    class: 'w-full bg-gray-200 rounded-full h-3 overflow-hidden',
+    role: 'progressbar',
+    'aria-valuemin': '0',
+    'aria-valuemax': '100',
+    'aria-valuenow': () => context.getState(props.progressPath, props.value || 0),
+    'aria-label': props.label || 'Progress',
+    children: [{
+      div: {
+        class: \`h-full transition-all duration-300 ease-out \${
+          props.color === 'success' ? 'bg-green-500' :
+          props.color === 'warning' ? 'bg-yellow-500' :
+          props.color === 'danger' ? 'bg-red-500' :
+          'bg-blue-500'
+        }\`,
+        style: () => ({
+          width: \`\${Math.min(100, Math.max(0, context.getState(props.progressPath, props.value || 0)))}%\`
+        })
+      }//progress-fill
+    }]
+  }//progress-container
+});
+
+const IconButton = (props) => ({
+  button: {
+    class: \`p-3 rounded-full transition-all duration-200 \${
+      props.variant === 'ghost' 
+        ? 'text-gray-600 hover:bg-gray-100' 
+        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+    } \${props.size === 'large' ? 'p-4' : 'p-3'}\`,
+    'aria-label': props.ariaLabel || props.tooltip,
+    title: props.tooltip,
+    onclick: props.onClick,
+    children: [{
+      span: {
+        class: \`block \${props.size === 'large' ? 'text-xl' : 'text-lg'}\`,
+        text: props.icon || '○'
+      }//icon
+    }]
+  }//button
+});
+
+const Separator = (props) => ({
+  hr: {
+    class: \`border-0 \${
+      props.orientation === 'vertical' 
+        ? 'w-px bg-gray-300 mx-4' 
+        : 'h-px bg-gray-300 my-4'
+    } \${props.thick ? (props.orientation === 'vertical' ? 'w-1' : 'h-1') : ''}\`
+  }//hr
+});
+
+// Demo components for testing
+const SingleElementDemo = (props, context) => ({
+  div: {
+    class: 'p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4',
+    children: [
+      {h3: {
+        class: 'text-lg font-bold text-blue-800 mb-4',
+        text: 'Single Element Components Gallery'
+      }},
+      {div: {
+        class: 'space-y-6',
+        children: [
+          // Buttons section
+          {div: {
+            children: [
+              {h4: { class: 'font-semibold text-blue-700 mb-2', text: 'Buttons' }},
+              {div: {
+                class: 'flex gap-3 flex-wrap',
+                children: [
+                  { PrimaryButton: { text: 'Primary', onClick: () => alert('Primary clicked!') } },
+                  { PrimaryButton: { text: 'Secondary', variant: 'secondary', onClick: () => alert('Secondary clicked!') } },
+                  { PrimaryButton: { text: 'Danger', variant: 'danger', onClick: () => alert('Danger clicked!') } },
+                  { PrimaryButton: { text: 'Disabled', disabled: true } },
+                  { IconButton: { icon: '⚙️', tooltip: 'Settings', onClick: () => alert('Settings!') } },
+                  { IconButton: { icon: '❤️', variant: 'ghost', size: 'large', tooltip: 'Like' } }
+                ]
+              }}
+            ]
+          }},
+          // Inputs section  
+          {div: {
+            children: [
+              {h4: { class: 'font-semibold text-blue-700 mb-2', text: 'Form Inputs' }},
+              {div: {
+                class: 'space-y-3 max-w-md',
+                children: [
+                  { FormInput: { 
+                    placeholder: 'Enter your name...', 
+                    statePath: 'demo.name',
+                    name: 'name'
+                  } },
+                  { FormInput: { 
+                    type: 'email',
+                    placeholder: 'Enter email...', 
+                    statePath: 'demo.email',
+                    name: 'email',
+                    error: () => context.getState('demo.email', '').length > 0 && !context.getState('demo.email', '').includes('@')
+                  } }
+                ]
+              }}
+            ]
+          }},
+          // Status indicators
+          {div: {
+            children: [
+              {h4: { class: 'font-semibold text-blue-700 mb-2', text: 'Status Indicators' }},
+              {div: {
+                class: 'flex gap-3 flex-wrap items-center',
+                children: [
+                  { StatusBadge: { status: 'online' } },
+                  { StatusBadge: { status: 'busy' } },
+                  { StatusBadge: { status: 'away' } },
+                  { StatusBadge: { status: 'offline' } },
+                  { Separator: { orientation: 'vertical' } },
+                  { StatusText: { 
+                    path: 'demo.status', 
+                    defaultText: 'Ready',
+                    status: 'success'
+                  } }
+                ]
+              }}
+            ]
+          }},
+          // Progress bars
+          {div: {
+            children: [
+              {h4: { class: 'font-semibold text-blue-700 mb-2', text: 'Progress Indicators' }},
+              {div: {
+                class: 'space-y-3',
+                children: [
+                  { ProgressBar: { 
+                    progressPath: 'demo.progress1', 
+                    label: 'Upload progress',
+                    color: 'success'
+                  } },
+                  { ProgressBar: { 
+                    progressPath: 'demo.progress2', 
+                    label: 'Processing',
+                    color: 'warning'
+                  } }
+                ]
+              }}
+            ]
+          }},
+          // Controls
+          {div: {
+            children: [
+              {h4: { class: 'font-semibold text-blue-700 mb-2', text: 'Interactive Controls' }},
+              {div: {
+                class: 'flex gap-3 flex-wrap',
+                children: [
+                  { PrimaryButton: { 
+                    text: 'Update Progress', 
+                    onClick: () => {
+                      context.setState('demo.progress1', Math.random() * 100);
+                      context.setState('demo.progress2', Math.random() * 100);
+                    }
+                  } },
+                  { PrimaryButton: { 
+                    text: 'Update Status', 
+                    variant: 'secondary',
+                    onClick: () => {
+                      const statuses = ['Ready', 'Processing', 'Complete', 'Error'];
+                      const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                      context.setState('demo.status', randomStatus);
+                    }
+                  } },
+                  { PrimaryButton: { 
+                    text: 'Clear Fields', 
+                    variant: 'danger',
+                    onClick: () => {
+                      context.setState('demo.name', '');
+                      context.setState('demo.email', '');
+                    }
+                  } }
+                ]
+              }}
+            ]
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4',
+        text: '{..}'
+      }},
+      {h1: {
+        class: 'text-3xl font-bold text-white',
+        text: 'Single Element Components'
+      }}
+    ]
+  }
+});
+
+// Demo application
+const demo = new Juris({
+  states: {
+    demo: {
+      name: '',
+      email: '',
+      status: 'Ready',
+      progress1: 45,
+      progress2: 78
+    }
+  },
+  components: {
+    JurisLogo,
+    PrimaryButton,
+    FormInput,
+    StatusBadge,
+    StatusText,
+    ProgressBar,
+    IconButton,
+    Separator,
+    SingleElementDemo
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            { SingleElementDemo: {} },
+            {div: {
+              class: 'mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg',
+              children: [
+                {h4: {
+                  class: 'font-bold text-yellow-800 mb-2',
+                  text: 'Single Element Component Benefits'
+                }},
+                {ul: {
+                  class: 'text-yellow-700 space-y-1 text-sm',
+                  children: [
+                    {li: { text: '• Focused responsibility - each component has one clear purpose' }},
+                    {li: { text: '• Easy composition - combine single elements into complex UIs' }},
+                    {li: { text: '• Better reusability - atomic components work in many contexts' }},
+                    {li: { text: '• Simpler testing - fewer moving parts to validate' }},
+                    {li: { text: '• Cleaner styling - easier CSS management per component' }},
+                    {li: { text: '• Performance optimized - minimal DOM overhead' }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }
+      }]
+    }
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'Single Return': 'Component returns exactly one DOM element as the root',
+    'Focused Purpose': 'Each component handles one specific UI concern',
+    'Props Interface': 'Clean props API for customization and behavior',
+    'State Integration': 'Can use both local newState and global state paths',
+    'Composability': 'Easy to combine into larger component structures',
+    'Atomic Design': 'Perfect building blocks for design system components'
+  },
+  
+  tags: ['components', 'single-element', 'atomic-design', 'reusable', 'composition', 'ui-patterns']
+});
+
+// Documentation entry
+docFramework.addDoc('array-components', {
+  title: 'Array Components',
+  category: 'Component Patterns',
+  content: 'Learn how to create components that return arrays of elements with proper reactivity. Array components are ideal for lists, navigation items, form fields, and conditional content where you need multiple elements without wrapper containers. Understanding reactive vs static patterns is crucial for dynamic behavior.',
+  
+  codeSnippet: [
+    `// Static array component - never changes after creation
+const StaticButtonGroup = (props) => [
+  {button: {
+    class: 'px-4 py-2 bg-blue-500 text-white rounded-l',
+    text: 'Save',
+    onclick: props.onSave
+  }},//save
+  {button: {
+    class: 'px-4 py-2 bg-blue-500 text-white',
+    text: 'Cancel',
+    onclick: props.onCancel
+  }},//cancel
+  {button: {
+    class: 'px-4 py-2 bg-blue-500 text-white rounded-r',
+    text: 'Help',
+    onclick: props.onHelp
+  }}//help
+];`,
+
+    { text: "Reactive array component - updates when state changes:" },
+
+    {
+      title: "Reactive Array Component",
+      language: "javascript",
+      code: `const TodoItems = (props, context) => {
+  // Return function for reactivity
+  return () => {
+    const todos = context.getState('todos', []);
+    
+    return todos.map(todo => ({
+      div: {
+        class: \`flex items-center gap-3 p-2 border rounded \${
+          todo.completed ? 'opacity-50' : ''
+        }\`,
+        children: [
+          {input: {
+            type: 'checkbox',
+            checked: todo.completed,
+            onchange: () => {
+              const updated = todos.map(t => 
+                t.id === todo.id ? { ...t, completed: !t.completed } : t
+              );
+              context.setState('todos', updated);
+            }
+          }},//checkbox
+          {span: {
+            class: todo.completed ? 'line-through' : '',
+            text: todo.text
+          }}//text
+        ]
+      }//todo
+    }));
+  };
+};`
+    },
+
+    { text: "Conditional array elements based on state:" },
+
+    `// Reactive conditional array
+const StatusMessages = (props, context) => {
+  return () => {
+    const messages = [];
+    const isLoading = context.getState('ui.loading', false);
+    const error = context.getState('ui.error', null);
+    const success = context.getState('ui.success', null);
+    
+    if (isLoading) {
+      messages.push({
+        div: {
+          class: 'p-3 bg-blue-50 text-blue-700 rounded',
+          text: 'Loading...'
+        }//loading
+      });
+    }
+    
+    if (error) {
+      messages.push({
+        div: {
+          class: 'p-3 bg-red-50 text-red-700 rounded',
+          text: error
+        }//error
+      });
+    }
+    
+    if (success) {
+      messages.push({
+        div: {
+          class: 'p-3 bg-green-50 text-green-700 rounded', 
+          text: success
+        }//success
+      });
+    }
+    
+    return messages;
+  };
+};`,
+
+    { text: "Mixed static and dynamic array elements:" },
+
+    {
+      title: "Navigation Menu with Dynamic Items",
+      language: "javascript",
+      code: `const NavigationMenu = (props, context) => {
+  return () => {
+    const menuItems = [];
+    const currentUser = context.getState('user', null);
+    
+    // Always show home
+    menuItems.push({
+      a: {
+        href: '/',
+        class: 'block px-4 py-2 hover:bg-gray-100',
+        text: 'Home'
+      }//home
+    });
+    
+    // Conditionally show user items
+    if (currentUser) {
+      menuItems.push({
+        a: {
+          href: '/dashboard',
+          class: 'block px-4 py-2 hover:bg-gray-100',
+          text: 'Dashboard'
+        }//dashboard
+      });
+      
+      menuItems.push({
+        a: {
+          href: '/profile',
+          class: 'block px-4 py-2 hover:bg-gray-100',
+          text: \`Profile (\${currentUser.name})\`
+        }//profile
+      });
+    } else {
+      menuItems.push({
+        a: {
+          href: '/login',
+          class: 'block px-4 py-2 hover:bg-gray-100',
+          text: 'Login'
+        }//login
+      });
+    }
+    
+    return menuItems;
+  };
+};`
+    },
+    
+    { separator: "Reactivity Patterns" },
+    
+    {
+      div: {
+        children: [
+          {h4: { text: 'Array Component Reactivity Rules' }},
+          {p: { text: 'Static Arrays: Return array directly - never changes after creation' }},
+          {p: { text: 'Reactive Arrays: Return function that creates array with current state' }},
+          {p: { text: 'State Access: Use getState() inside the returned function for reactivity' }},
+          {p: { text: 'Performance: Only reactive when state dependencies change' }},
+          {p: { text: 'Usage: Static for fixed content, reactive for dynamic content' }},
+          {p: { text: 'Composition: Mix static elements with dynamic based on needs' }}
+        ]
+      }
+    }
+  ],
+  
+  code: `// Complete reactive array component examples
+const TodoList = (props, context) => {
+  return {
+  render:() => {
+    const todos = context.getState('todos', []);
+    
+    if (todos.length === 0) {
+      return [{
+        div: {
+          class: 'text-center py-8 text-gray-500',
+          text: 'No todos yet. Add some above!'
+        }//empty
+      }];
+    }
+    
+    return todos.map(todo => ({
+      div: {
+        class: \`flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm border \${
+          todo.completed ? 'opacity-60' : ''
+        }\`,
+        children: [
+          {input: {
+            type: 'checkbox',
+            checked: todo.completed,
+            onchange: () => {
+              const updated = todos.map(t => 
+                t.id === todo.id ? { ...t, completed: !t.completed } : t
+              );
+              context.setState('todos', updated);
+            }
+          }},//checkbox
+          {span: {
+            class: \`flex-1 \${todo.completed ? 'line-through text-gray-500' : 'text-gray-800'}\`,
+            text: todo.text
+          }},//text
+          {button: {
+            class: 'px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded transition-colors',
+            text: 'Delete',
+            onclick: () => {
+              const filtered = todos.filter(t => t.id !== todo.id);
+              context.setState('todos', filtered);
+            }
+          }}//delete
+        ]
+      }//todo
+    }));
+  }};
+};
+
+const BreadcrumbTrail = (props, context) => {
+  return () => {
+    const breadcrumbs = context.getState('navigation.breadcrumbs', []);
+    const elements = [];
+    
+    breadcrumbs.forEach((crumb, index) => {
+      // Add breadcrumb link
+      elements.push({
+        a: {
+          href: crumb.href,
+          class: \`hover:text-blue-600 transition-colors \${
+            index === breadcrumbs.length - 1 
+              ? 'text-gray-800 font-semibold' 
+              : 'text-blue-500'
+          }\`,
+          text: crumb.label,
+          onclick: (e) => {
+            if (index < breadcrumbs.length - 1) {
+              e.preventDefault();
+              if (props.onNavigate) props.onNavigate(crumb);
+            }
+          }
+        }//link
+      });
+      
+      // Add separator except for last item
+      if (index < breadcrumbs.length - 1) {
+        elements.push({
+          span: {
+            class: 'mx-2 text-gray-400',
+            text: '/'
+          }//separator
+        });
+      }
+    });
+    
+    return elements;
+  };
+};
+
+const StatusIndicators = (props, context) => {
+  return () => {
+    const indicators = [];
+    const isOnline = context.getState('app.isOnline', true);
+    const notifications = context.getState('app.notifications', 0);
+    const lastSync = context.getState('app.lastSync', null);
+    
+    // Connection status
+    indicators.push({
+      div: {
+        class: \`flex items-center gap-2 px-3 py-1 rounded-full text-sm \${
+          isOnline 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-red-100 text-red-800'
+        }\`,
+        children: [
+          {span: { text: isOnline ? '●' : '●', class: 'text-xs' }},
+          {span: { text: isOnline ? 'Online' : 'Offline' }}
+        ]
+      }//connection
+    });
+    
+    // Notifications (conditional)
+    if (notifications > 0) {
+      indicators.push({
+        div: {
+          class: 'flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm',
+          children: [
+            {span: { text: '🔔' }},
+            {span: { text: \`\${notifications} notification\${notifications > 1 ? 's' : ''}\` }}
+          ]
+        }//notifications
+      });
+    }
+    
+    // Sync status (conditional)
+    if (lastSync) {
+      indicators.push({
+        div: {
+          class: 'flex items-center gap-2 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm',
+          children: [
+            {span: { text: '↻' }},
+            {span: { text: \`Synced \${lastSync}\` }}
+          ]
+        }//sync
+      });
+    }
+    
+    return indicators;
+  };
+};
+
+const FormFieldGroup = (props, context) => {
+  return () => {
+    const fields = [];
+    const showOptional = context.getState('form.showOptional', false);
+    
+    // Always show required fields
+    fields.push({
+      input: {
+        type: 'text',
+        name: 'name',
+        placeholder: 'Full Name (required)',
+        required: true,
+        class: 'w-full px-3 py-2 border border-gray-300 rounded mb-3',
+        value: () => context.getState('form.name', ''),
+        oninput: (e) => context.setState('form.name', e.target.value)
+      }//name
+    });
+    
+    fields.push({
+      input: {
+        type: 'email',
+        name: 'email',
+        placeholder: 'Email Address (required)',
+        required: true,
+        class: 'w-full px-3 py-2 border border-gray-300 rounded mb-3',
+        value: () => context.getState('form.email', ''),
+        oninput: (e) => context.setState('form.email', e.target.value)
+      }//email
+    });
+    
+    // Conditionally show optional fields
+    if (showOptional) {
+      fields.push({
+        input: {
+          type: 'tel',
+          name: 'phone',
+          placeholder: 'Phone Number (optional)',
+          class: 'w-full px-3 py-2 border border-gray-300 rounded mb-3',
+          value: () => context.getState('form.phone', ''),
+          oninput: (e) => context.setState('form.phone', e.target.value)
+        }//phone
+      });
+      
+      fields.push({
+        textarea: {
+          name: 'notes',
+          placeholder: 'Additional Notes (optional)',
+          rows: '3',
+          class: 'w-full px-3 py-2 border border-gray-300 rounded mb-3',
+          value: () => context.getState('form.notes', ''),
+          oninput: (e) => context.setState('form.notes', e.target.value)
+        }//notes
+      });
+    }
+    
+    return fields;
+  };
+};
+console.warn('ArrayDemo');
+debugger;
+// Demo component showcasing array components
+const ArrayDemo = (props, context) => ({
+  div: {
+    class: 'space-y-8',
+    children: [
+      // Todo list demo
+      {div: {
+        class: 'p-6 bg-blue-50 border border-blue-200 rounded-lg',
+        children: [
+          {h3: {
+            class: 'text-lg font-bold text-blue-800 mb-4',
+            text: 'Reactive Todo List'
+          }},
+          {div: {
+            class: 'flex gap-2 mb-4',
+            children: [
+              {input: {
+                type: 'text',
+                placeholder: 'Add todo...',
+                class: 'flex-1 px-3 py-2 border border-blue-300 rounded',
+                value: () => context.getState('newTodo', ''),
+                oninput: (e) => context.setState('newTodo', e.target.value),
+                onkeypress: (e) => {
+                  if (e.key === 'Enter') {
+                    const text = context.getState('newTodo', '').trim();
+                    if (text) {
+                      const todos = context.getState('todos', []);
+                      context.setState('todos', [...todos, {
+                        id: Date.now(),
+                        text,
+                        completed: false
+                      }]);
+                      context.setState('newTodo', '');
+                    }
+                  }
+                }
+              }},//input
+              {button: {
+                class: 'px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded',
+                text: 'Add',
+                onclick: () => {
+                  const text = context.getState('newTodo', '').trim();
+                  if (text) {
+                    const todos = context.getState('todos', []);
+                    context.setState('todos', [...todos, {
+                      id: Date.now(),
+                      text,
+                      completed: false
+                    }]);
+                    context.setState('newTodo', '');
+                  }
+                }
+              }}//add-btn
+            ]
+          }},
+          {div: {
+            class: 'space-y-2',
+            children: { TodoList: {} }
+          }}
+        ]
+      }},
+      
+      // Breadcrumbs demo
+      {div: {
+        class: 'p-6 bg-green-50 border border-green-200 rounded-lg',
+        children: [
+          {h3: {
+            class: 'text-lg font-bold text-green-800 mb-4',
+            text: 'Dynamic Breadcrumbs'
+          }},
+          {nav: {
+            class: 'flex items-center mb-4',
+            children: { BreadcrumbTrail: {} }
+          }},
+          {button: {
+            class: 'px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded mr-2',
+            text: 'Add Level',
+            onclick: () => {
+              const current = context.getState('navigation.breadcrumbs', []);
+              const newCrumb = {
+                label: \`Level \${current.length + 1}\`,
+                href: \`/level\${current.length + 1}\`
+              };
+              context.setState('navigation.breadcrumbs', [...current, newCrumb]);
+            }
+          }},
+          {button: {
+            class: 'px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded',
+            text: 'Remove Level',
+            onclick: () => {
+              const current = context.getState('navigation.breadcrumbs', []);
+              if (current.length > 1) {
+                context.setState('navigation.breadcrumbs', current.slice(0, -1));
+              }
+            }
+          }}
+        ]
+      }},
+      
+      // Status indicators demo
+      {div: {
+        class: 'p-6 bg-purple-50 border border-purple-200 rounded-lg',
+        children: [
+          {h3: {
+            class: 'text-lg font-bold text-purple-800 mb-4',
+            text: 'Conditional Status Indicators'
+          }},
+          {div: {
+            class: 'flex flex-wrap gap-3 mb-4',
+            children: { StatusIndicators: {} }
+          }},
+          {div: {
+            class: 'flex gap-2 flex-wrap',
+            children: [
+              {button: {
+                class: 'px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded',
+                text: 'Toggle Online',
+                onclick: () => {
+                  const isOnline = context.getState('app.isOnline', true);
+                  context.setState('app.isOnline', !isOnline);
+                }
+              }},
+              {button: {
+                class: 'px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded',
+                text: 'Add Notification',
+                onclick: () => {
+                  const count = context.getState('app.notifications', 0);
+                  context.setState('app.notifications', count + 1);
+                }
+              }},
+              {button: {
+                class: 'px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded',
+                text: 'Update Sync',
+                onclick: () => {
+                  context.setState('app.lastSync', new Date().toLocaleTimeString());
+                }
+              }}
+            ]
+          }}
+        ]
+      }},
+      
+      // Form fields demo
+      {div: {
+        class: 'p-6 bg-orange-50 border border-orange-200 rounded-lg',
+        children: [
+          {h3: {
+            class: 'text-lg font-bold text-orange-800 mb-4',
+            text: 'Conditional Form Fields'
+          }},
+          {div: {
+            class: 'mb-4',
+            children: [
+              {label: {
+                class: 'flex items-center gap-2',
+                children: [
+                  {input: {
+                    type: 'checkbox',
+                    checked: () => context.getState('form.showOptional', false),
+                    onchange: (e) => context.setState('form.showOptional', e.target.checked)
+                  }},
+                  {span: { text: 'Show optional fields' }}
+                ]
+              }}
+            ]
+          }},
+          {form: {
+            class: 'space-y-0',
+            children: { FormFieldGroup: {} }
+          }}
+        ]
+      }}
+    ]
+  }
+});
+
+// Juris logo component
+const JurisLogo = () => ({
+  div: {
+    class: 'flex items-center justify-center mb-8 p-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg',
+    children: [
+      {span: {
+        class: 'text-4xl font-mono font-bold text-white mr-4',
+        text: '{..}'
+      }},
+      {h1: {
+        class: 'text-3xl font-bold text-white',
+        text: 'Array Components'
+      }}
+    ]
+  }
+});
+
+// Demo application
+const demo = new Juris({
+  states: {
+    todos: [
+      { id: 1, text: 'Learn array components', completed: true },
+      { id: 2, text: 'Build reactive lists', completed: false }
+    ],
+    newTodo: '',
+    navigation: {
+      breadcrumbs: [
+        { label: 'Home', href: '/' },
+        { label: 'Components', href: '/components' }
+      ]
+    },
+    app: {
+      isOnline: true,
+      notifications: 2,
+      lastSync: '3:45 PM'
+    },
+    form: {
+      name: '',
+      email: '',
+      phone: '',
+      notes: '',
+      showOptional: false
+    }
+  },
+  components: {
+    JurisLogo,
+    TodoList,
+    BreadcrumbTrail,
+    StatusIndicators,
+    FormFieldGroup,
+    ArrayDemo
+  },
+  layout: {
+    div: {
+      class: 'min-h-screen bg-gray-100 py-8',
+      children: [{
+        div: {
+          class: 'max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8',
+          children: [
+            { JurisLogo: {} },
+            { ArrayDemo: {} },
+            {div: {
+              class: 'mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg',
+              children: [
+                {h4: {
+                  class: 'font-bold text-yellow-800 mb-2',
+                  text: 'Array Component Reactivity'
+                }},
+                {ul: {
+                  class: 'text-yellow-700 space-y-1 text-sm',
+                  children: [
+                    {li: { text: '• Static arrays: return [] directly, never change' }},
+                    {li: { text: '• Reactive arrays: return () => [] function for dynamic updates' }},
+                    {li: { text: '• Use getState() inside returned function for reactivity' }},
+                    {li: { text: '• Perfect for lists, menus, conditional content' }},
+                    {li: { text: '• No wrapper div - elements render directly in parent' }},
+                    {li: { text: '• Mix static and dynamic elements as needed' }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }
+      }]
+    }
+  }
+});
+
+// Render to demo container
+demo.render('#demo');`,
+  
+  technicalDetails: {
+    'Static Arrays': 'Return [] directly - fixed content that never changes',
+    'Reactive Arrays': 'Return () => [] function - rebuilds array when state changes',
+    'State Access': 'Use getState() inside returned function for reactive dependencies', 
+    'Conditional Logic': 'Use if statements and array.push() for conditional elements',
+    'Performance': 'Only re-evaluates when tracked state dependencies change',
+    'No Container': 'Elements render directly without wrapper div'
+  },
+  
+  tags: ['components', 'arrays', 'reactivity', 'lists', 'conditional', 'dynamic']
+});
 
         // localStorage utilities
         function saveCurrentDoc(docId) {
@@ -2503,12 +7677,13 @@ demo.render('#demo');
                                                 }
                                             }];
                                         }
-                                        return logs.map((log, index) => ({
+                                        return logs.map((log, index) => {
+                                        return {
                                             div: {
                                                 class: 'console-log' + (log.type === 'error' ? ' console-error' : ''),
                                                 text: `${log.type === 'error' ? '❌' : 'ℹ️'} ${log.message}`
                                             }
-                                        }));
+                                        }});
                                     }
                                 }
                             }
@@ -2776,7 +7951,21 @@ demo.render('#demo');
                             type: 'error',
                             message: args.join(' ')
                         }]);
-                    }
+                    },                    
+                    warn: (...args) => {
+                        const logs = juris.getState('consoleOutput', []);
+                        juris.setState('consoleOutput', [...logs, {
+                            type: 'warn',
+                            message: args.join(' ')
+                        }]);
+                    },                  
+                    info: (...args) => {
+                        const logs = juris.getState('consoleOutput', []);
+                        juris.setState('consoleOutput', [...logs, {
+                            type: 'info',
+                            message: args.join(' ')
+                        }]);
+                    },
                 };
                 
                 const func = new Function('console', 'Juris', code);

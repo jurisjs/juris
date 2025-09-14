@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced Industrial Datagrid - Juris Framework</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace; background: #f8f9fa; color: #2c3e50; line-height: 1.4;">
+  <div style="max-width: 1400px; margin: 0 auto; padding: 24px;">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+        <span style="font-size: 28px; font-weight: 700; color: #95a5a6;">{..}</span>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 400; color: #2c3e50; letter-spacing: 0.5px;">ENHANCED INDUSTRIAL DATAFRAME</h1>
+      </div>
+      <p style="margin: 0; font-size: 14px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px;">Complete Data Management with Drag & Drop Reordering</p>
+    </div>
+
+    <div id="app"></div>
+  </div>
+
+  <script src="../src/juris.js"></script>
+  <script>
+    const defaultTheme = {
+      container: {
+        background: '#ffffff',
+        border: '2px solid #bdc3c7',
+        borderRadius: '0px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+      },
+      header: {
+        background: 'linear-gradient(90deg, #ecf0f1 0%, #bdc3c7 100%)',
+        color: '#2c3e50',
+        padding: '20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottom: '2px solid #bdc3c7'
+      },
+      title: {
+        margin: '0',
+        fontSize: '18px',
+        fontWeight: '400',
+        textTransform: 'uppercase',
+        letterSpacing: '1px'
+      },
+      button: {
+        padding: '8px 16px',
+        border: '2px solid #95a5a6',
+        borderRadius: '0px',
+        cursor: 'pointer',
+        fontWeight: '600',
+        fontSize: '12px',
+        background: '#ffffff',
+        color: '#2c3e50',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        transition: 'all 0.2s',
+        fontFamily: 'inherit'
+      },
+      filterContainer: {
+        background: '#f8f9fa',
+        padding: '16px',
+        borderBottom: '1px solid #dee2e6',
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center',
+        flexWrap: 'wrap'
+      },
+      filterInput: {
+        padding: '6px 12px',
+        border: '1px solid #95a5a6',
+        borderRadius: '0px',
+        fontSize: '12px',
+        fontFamily: 'inherit',
+        background: '#ffffff',
+        color: '#2c3e50',
+        minWidth: '150px'
+      },
+      filterSelect: {
+        padding: '6px 12px',
+        border: '1px solid #95a5a6',
+        borderRadius: '0px',
+        fontSize: '12px',
+        fontFamily: 'inherit',
+        background: '#ffffff',
+        color: '#2c3e50'
+      },
+      clearButton: {
+        padding: '6px 12px',
+        border: '1px solid #95a5a6',
+        borderRadius: '0px',
+        cursor: 'pointer',
+        fontWeight: '600',
+        fontSize: '11px',
+        background: '#e74c3c',
+        color: '#ffffff',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        fontFamily: 'inherit'
+      },
+      table: {
+        width: '100%',
+        borderCollapse: 'collapse',
+        fontSize: '13px',
+        background: '#ffffff'
+      },
+      tableHeader: {
+        background: '#f8f9fa',
+        padding: '12px 16px',
+        textAlign: 'left',
+        fontWeight: '600',
+        color: '#495057',
+        borderBottom: '2px solid #dee2e6',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        fontSize: '11px',
+        position: 'relative',
+        userSelect: 'none'
+      },
+      tableHeaderSortable: {
+        cursor: 'pointer'
+      },
+      tableHeaderNonSortable: {
+        cursor: 'default'
+      },
+      sortIndicator: {
+        position: 'absolute',
+        right: '8px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        fontSize: '10px',
+        opacity: '0.7'
+      },
+      tableRow: {
+        borderBottom: '1px solid #dee2e6',
+        cursor: 'grab',
+        transition: 'all 0.2s ease'
+      },
+      tableRowDragging: {
+        opacity: '0.5',
+        background: '#f8f9fa',
+        cursor: 'grabbing',
+        transform: 'scale(1.02)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        zIndex: '1000',
+        position: 'relative'
+      },
+      tableRowDragOver: {
+        background: '#e3f2fd',
+        borderTop: '2px solid #2196f3',
+        borderBottom: '2px solid #2196f3'
+      },
+      dragHandle: {
+        cursor: 'grab',
+        padding: '8px 4px',
+        color: '#95a5a6',
+        fontSize: '14px',
+        textAlign: 'center',
+        userSelect: 'none',
+        width: '20px'
+      },
+      dragHandleActive: {
+        cursor: 'grabbing',
+        color: '#2c3e50'
+      },
+      tableCell: {
+        padding: '0',
+        borderBottom: '1px solid #dee2e6',
+        height: '44px'
+      },
+      cellContainer: {
+        position: 'relative',
+        width: '100%',
+        height: '44px',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '8px 12px',
+        boxSizing: 'border-box'
+      },
+      textCell: {
+        cursor: 'text',
+        display: 'block',
+        width: '100%',
+        height: '28px',
+        lineHeight: '28px',
+        padding: '0 4px',
+        margin: '0',
+        color: '#2c3e50',
+        fontSize: '13px',
+        fontFamily: 'inherit',
+        background: 'transparent',
+        border: '1px solid transparent',
+        borderRadius: '0px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        boxSizing: 'border-box'
+      },
+      dropdownInput: {
+        width: '100%',
+        height: '28px',
+        padding: '0 4px',
+        margin: '0',
+        border: '1px solid #95a5a6',
+        borderRadius: '0px',
+        fontSize: '13px',
+        fontFamily: 'inherit',
+        background: '#ffffff',
+        color: '#2c3e50',
+        boxSizing: 'border-box'
+      },
+      dropdownList: {
+        position: 'absolute',
+        top: '100%',
+        left: '0',
+        right: '0',
+        background: '#ffffff',
+        border: '1px solid #95a5a6',
+        borderTop: 'none',
+        borderRadius: '0px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        zIndex: '1000',
+        maxHeight: '200px',
+        overflowY: 'auto'
+      },
+      dropdownItem: {
+        padding: '8px 12px',
+        cursor: 'pointer',
+        borderBottom: '1px solid #dee2e6',
+        fontSize: '13px',
+        color: '#2c3e50'
+      },
+      dropdownLoading: {
+        padding: '8px 12px',
+        fontSize: '12px',
+        color: '#6c757d',
+        fontStyle: 'italic',
+        textAlign: 'center'
+      },
+      dropdownError: {
+        padding: '8px 12px',
+        fontSize: '12px',
+        color: '#e74c3c',
+        fontStyle: 'italic',
+        textAlign: 'center'
+      },
+      deleteButton: {
+        padding: '4px 8px',
+        border: '1px solid #95a5a6',
+        borderRadius: '0px',
+        cursor: 'pointer',
+        fontWeight: '600',
+        fontSize: '10px',
+        background: '#f8d7da',
+        color: '#e74c3c',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        fontFamily: 'inherit'
+      }
+    };
+
+    const mergeTheme = (base, override = {}) => {
+      const result = {};
+      const allKeys = new Set([...Object.keys(base), ...Object.keys(override)]);
+      
+      allKeys.forEach(key => {
+        if (typeof base[key] === 'object' && base[key] !== null && !Array.isArray(base[key])) {
+          result[key] = { ...base[key], ...(override[key] || {}) };
+        } else {
+          result[key] = override[key] !== undefined ? override[key] : base[key];
+        }
+      });
+      
+      return result;
+    };
+
+    const TextCell = (props, context) => {
+      const { 
+        rowIndex, 
+        column, 
+        value, 
+        onCellUpdate,
+        dataGridId = 'default',
+        theme = {},
+        cellTheme = {},
+        focusTheme = {},
+        disabledTheme = {}
+      } = props;
+      
+      const finalTheme = mergeTheme(defaultTheme, theme);
+      const cellStyles = mergeTheme(finalTheme.textCell, cellTheme);
+      const focusStyles = mergeTheme({ background: '#f8f9fa', borderColor: '#95a5a6' }, focusTheme);
+      const disabledStyles = mergeTheme({ cursor: 'default', color: '#6c757d' }, disabledTheme);
+      
+      const baseStyles = column.editable !== false ? cellStyles : { ...cellStyles, ...disabledStyles };
+      
+      const getTextCursorPosition = (element, clientX) => {
+        try {
+          if (document.caretRangeFromPoint) {
+            const range = document.caretRangeFromPoint(clientX, element.getBoundingClientRect().top + 14);
+            if (range && element.contains(range.startContainer)) {
+              return range.startOffset;
+            }
+          }
+        } catch (error) {}
+        
+        const rect = element.getBoundingClientRect();
+        const clickX = clientX - rect.left - 8;
+        const textWidth = rect.width - 16;
+        const textLength = element.textContent.length;
+        
+        if (textWidth > 0 && textLength > 0) {
+          const position = Math.round((clickX / textWidth) * textLength);
+          return Math.max(0, Math.min(position, textLength));
+        }
+        return 0;
+      };
+      
+      const setTextCursor = (element, position) => {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        const textNode = element.firstChild;
+        
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          const safePosition = Math.max(0, Math.min(position, textNode.textContent.length));
+          range.setStart(textNode, safePosition);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      };
+      
+      return {span: {
+        style: baseStyles,
+        contenteditable: column.editable !== false,
+        onclick: column.editable !== false ? (e) => {
+          e.stopPropagation();
+          Object.assign(e.target.style, focusStyles);
+          setTimeout(() => {
+            const position = getTextCursorPosition(e.target, e.clientX);
+            setTextCursor(e.target, position);
+          }, 0);
+        } : undefined,
+        onblur: column.editable !== false ? (e) => {
+          Object.assign(e.target.style, baseStyles);
+          if (onCellUpdate) {
+            onCellUpdate(rowIndex, column.path, e.target.textContent);
+          }
+        } : undefined,
+        text: value()
+      }};
+    };
+
+    const NumberCell = (props, context) => {
+      const { 
+        rowIndex, 
+        column, 
+        value, 
+        onCellUpdate, 
+        dataGridId = 'default',
+        theme = {},
+        cellTheme = {},
+        focusTheme = {},
+        disabledTheme = {}
+      } = props;
+      
+      const formatNumber = (num) => {
+        if (num === null || num === undefined || num === '') return '';
+        const parsed = parseFloat(num);
+        if (isNaN(parsed)) return '';
+        
+        if (column.format === 'currency') {
+          return `$${parsed.toLocaleString()}`;
+        }
+        return parsed.toLocaleString();
+      };
+      
+      const parseNumber = (str) => {
+        const cleaned = str.replace(/[$,]/g, '');
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? 0 : parsed;
+      };
+      
+      return {TextCell: {
+        rowIndex,
+        column,
+        value: () => formatNumber(value()),
+        dataGridId,
+        onCellUpdate: onCellUpdate ? (rowIdx, path, newValue) => {
+          const parsed = parseNumber(newValue);
+          onCellUpdate(rowIdx, path, parsed);
+        } : undefined,
+        theme,
+        cellTheme,
+        focusTheme,
+        disabledTheme
+      }};
+    };
+
+    const DropdownCell = (props, context) => {
+      const { getState, setState, executeBatch } = context;
+      const { 
+        rowIndex, 
+        column, 
+        value, 
+        onCellUpdate,
+        dataGridId = 'default',
+        theme = {},
+        cellTheme = {},
+        inputTheme = {},
+        listTheme = {},
+        itemTheme = {},
+        itemHoverTheme = {},
+        containerTheme = {},
+        loadingTheme = {},
+        errorTheme = {}
+      } = props;
+      
+      const finalTheme = mergeTheme(defaultTheme, theme);
+      const cellStyles = mergeTheme(finalTheme.textCell, cellTheme);
+      const inputStyles = mergeTheme(finalTheme.dropdownInput, inputTheme);
+      const listStyles = mergeTheme(finalTheme.dropdownList, listTheme);
+      const itemStyles = mergeTheme(finalTheme.dropdownItem, itemTheme);
+      const itemHoverStyles = mergeTheme({ background: '#f8f9fa' }, itemHoverTheme);
+      const containerStyles = mergeTheme(finalTheme.cellContainer, containerTheme);
+      const loadingStyles = mergeTheme(finalTheme.dropdownLoading, loadingTheme);
+      const errorStyles = mergeTheme(finalTheme.dropdownError, errorTheme);
+      
+      const editKey = `editing.${dataGridId}.${rowIndex}.${column.key}`;
+      const tempKey = `temp.${dataGridId}.${rowIndex}.${column.key}`;
+      const optionsKey = `options.${dataGridId}.${column.key}`;
+      const optionsLoadingKey = `optionsLoading.${dataGridId}.${column.key}`;
+      const optionsErrorKey = `optionsError.${dataGridId}.${column.key}`;
+      
+      const initializeOptions = () => {
+        if (getState(optionsKey) === null) {
+          const rawOptions = column.options;
+          
+          if (typeof rawOptions === 'function') {
+            setState(optionsLoadingKey, true);
+            setState(optionsErrorKey, null);
+            
+            try {
+              const result = rawOptions();
+              
+              if (result && typeof result.then === 'function') {
+                result
+                  .then(resolvedOptions => {
+                    if (Array.isArray(resolvedOptions)) {
+                      setState(optionsKey, resolvedOptions);
+                    } else {
+                      setState(optionsKey, []);
+                      setState(optionsErrorKey, 'Invalid options format');
+                    }
+                  })
+                  .catch(error => {
+                    setState(optionsKey, []);
+                    setState(optionsErrorKey, error.message || 'Failed to load options');
+                  })
+                  .finally(() => {
+                    setState(optionsLoadingKey, false);
+                  });
+              } else {
+                if (Array.isArray(result)) {
+                  setState(optionsKey, result);
+                } else {
+                  setState(optionsKey, []);
+                  setState(optionsErrorKey, 'Invalid options format');
+                }
+                setState(optionsLoadingKey, false);
+              }
+            } catch (error) {
+              setState(optionsKey, []);
+              setState(optionsErrorKey, error.message || 'Failed to load options');
+              setState(optionsLoadingKey, false);
+            }
+          } else if (Array.isArray(rawOptions)) {
+            setState(optionsKey, rawOptions);
+            setState(optionsLoadingKey, false);
+          } else {
+            setState(optionsKey, []);
+            setState(optionsLoadingKey, false);
+            setState(optionsErrorKey, 'Invalid options configuration');
+          }
+        }
+      };
+      
+      initializeOptions();
+      
+      const getResolvedOptions = () => {
+        const options = getState(optionsKey, []);
+        const isLoading = getState(optionsLoadingKey, false);
+        const error = getState(optionsErrorKey, null);
+        
+        return { options, isLoading, error };
+      };
+      
+      const refreshOptions = () => {
+        setState(optionsKey, null);
+        setState(optionsLoadingKey, false);
+        setState(optionsErrorKey, null);
+        initializeOptions();
+      };
+      
+      return {div: {
+        style: containerStyles,
+        children: [
+          () => {
+            if (!getState(editKey, false)) {
+              return {span: {
+                style: cellStyles,
+                onclick: (e) => {
+                  e.stopPropagation();
+                  executeBatch(() => {
+                    setState(tempKey, value() || '');
+                    setState(editKey, true);
+                  });
+                  
+                  setTimeout(() => {
+                    const input = document.getElementById(`dropdown-${dataGridId}-${rowIndex}-${column.key}`);
+                    if (input) {
+                      input.focus();
+                      input.select();
+                    }
+                  }, 10);
+                },
+                text: value()
+              }};
+            }
+          },
+          () => {
+            if (getState(editKey, false)) {
+              const { options, isLoading, error } = getResolvedOptions();
+              
+              return {div: {
+                style: { position: 'relative', width: '100%', height: '28px' },
+                children: [
+                  {input: {
+                    id: `dropdown-${dataGridId}-${rowIndex}-${column.key}`,
+                    style: inputStyles,
+                    type: 'text',
+                    value: () => getState(tempKey, value() || ''),
+                    oninput: (e) => {
+                      setState(tempKey, e.target.value);
+                    },
+                    onblur: () => {
+                      setTimeout(() => {
+                        const finalValue = getState(tempKey, value());
+                        if (finalValue && finalValue !== value() && onCellUpdate) {
+                          onCellUpdate(rowIndex, column.path, finalValue);
+                        }
+                        executeBatch(() => {
+                          setState(editKey, false);
+                          setState(tempKey, null);
+                        });
+                      }, 200);
+                    },
+                    onkeydown: (e) => {
+                      if (e.key === 'Enter') {
+                        const finalValue = getState(tempKey, value());
+                        if (finalValue !== value() && onCellUpdate) {
+                          onCellUpdate(rowIndex, column.path, finalValue);
+                        }
+                        executeBatch(() => {
+                          setState(editKey, false);
+                          setState(tempKey, null);
+                        });
+                      }
+                      if (e.key === 'Escape') {
+                        executeBatch(() => {
+                          setState(editKey, false);
+                          setState(tempKey, null);
+                        });
+                      }
+                      if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                        e.preventDefault();
+                        refreshOptions();
+                      }
+                    }
+                  }},
+                  {div: {
+                    style: listStyles,
+                    children: () => {
+                      if (isLoading) {
+                        return [{div: {
+                          style: loadingStyles,
+                          text: 'Loading options...'
+                        }}];
+                      }
+                      
+                      if (error) {
+                        return [
+                          {div: {
+                            style: errorStyles,
+                            text: `Error: ${error}`
+                          }},
+                          {div: {
+                            style: { ...itemStyles, background: '#f8f9fa', fontStyle: 'italic' },
+                            text: 'Press F5 or Ctrl+R to retry',
+                            onclick: (e) => {
+                              e.stopPropagation();
+                              refreshOptions();
+                            }
+                          }}
+                        ];
+                      }
+                      
+                      if (!Array.isArray(options) || options.length === 0) {
+                        return [{div: {
+                          style: { ...itemStyles, fontStyle: 'italic', color: '#6c757d' },
+                          text: 'No options available'
+                        }}];
+                      }
+                      
+                      const tempValue = getState(tempKey, '');
+                      const filter = (tempValue || '').toLowerCase();
+                      const filteredOptions = filter === '' ?
+                        options : 
+                        options.filter(option => 
+                          String(option).toLowerCase().includes(filter)
+                        );
+                      
+                      if (filteredOptions.length === 0) {
+                        return [{div: {
+                          style: { ...itemStyles, fontStyle: 'italic', color: '#6c757d' },
+                          text: 'No matching options'
+                        }}];
+                      }
+                      
+                      return filteredOptions.map((option, index) => ({
+                        div: {
+                          key: `option-${index}`,
+                          style: itemStyles,
+                          text: String(option),
+                          onmousedown: (e) => {
+                            e.preventDefault();
+                          },
+                          onclick: (e) => {
+                            e.stopPropagation();
+                            if (onCellUpdate) {
+                              onCellUpdate(rowIndex, column.path, option);
+                            }
+                            executeBatch(() => {
+                              setState(editKey, false);
+                              setState(tempKey, null);
+                            });
+                          },
+                          onmouseover: function() {
+                            Object.assign(this.style, itemHoverStyles);
+                          },
+                          onmouseout: function() {
+                            Object.assign(this.style, itemStyles);
+                          }
+                        }
+                      }));
+                    }
+                  }}
+                ]
+              }};
+            }
+          }
+        ]
+      }};
+    };
+
+    const DataGrid = (props, context) => {
+      const { getState, setState, executeBatch } = context;
+      const { 
+        dataGridId = 'default',
+        title = 'DATA GRID',
+        data = [], 
+        columns = [], 
+        onUpdate,
+        onAdd,
+        onDelete,
+        onRowReorder,
+        enableFilter = true,
+        enableSort = true,
+        enableRowDrag = true,
+        theme = {}
+      } = props;
+      
+      const finalTheme = mergeTheme(defaultTheme, theme);
+      
+      const filterTextKey = `filter.${dataGridId}.text`;
+      const filterColumnKey = `filter.${dataGridId}.column`;
+      const sortColumnKey = `sort.${dataGridId}.column`;
+      const sortDirectionKey = `sort.${dataGridId}.direction`;
+      const draggedTaskKey = `draggedTask.${dataGridId}`;
+      
+      const dataArray = data;
+      
+      const handleCellUpdate = (rowIndex, fieldPath, newValue) => {
+        if (onUpdate) {
+          onUpdate(rowIndex, fieldPath, newValue);
+        }
+      };
+      
+      const getValue = (obj, path) => {
+        return path.split('.').reduce((curr, key) => curr?.[key], obj);
+      };
+      
+      const clearFilters = () => {
+        executeBatch(() => {
+          setState(filterTextKey, '');
+          setState(filterColumnKey, 'all');
+        });
+      };
+      
+      const isColumnSortable = (column) => {
+        return enableSort && column.sortable === true;
+      };
+      
+      const handleSort = (column) => {
+        if (!isColumnSortable(column)) return;
+        
+        const currentSortColumn = getState(sortColumnKey, '');
+        const currentDirection = getState(sortDirectionKey, 'asc');
+        
+        if (currentSortColumn === column.key) {
+          setState(sortDirectionKey, currentDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+          setState(sortColumnKey, column.key);
+          setState(sortDirectionKey, 'asc');
+        }
+      };
+      
+      const getSortIndicator = (column) => {
+        const currentSortColumn = getState(sortColumnKey, '');
+        const currentDirection = getState(sortDirectionKey, 'asc');
+        
+        if (currentSortColumn === column.key) {
+          return currentDirection === 'asc' ? '▲' : '▼';
+        }
+        return '';
+      };
+      
+      const getFilteredAndSortedData = () => {
+        let filteredData = [...dataArray()];
+        
+        if (enableFilter) {
+          const filterText = getState(filterTextKey, '');
+          const filterColumn = getState(filterColumnKey, 'all');
+          
+          if (filterText) {
+            filteredData = filteredData.filter(row => {
+              if (filterColumn === 'all') {
+                return columns.some(col => {
+                  const value = getValue(row, col.path);
+                  return String(value || '').toLowerCase().includes(filterText.toLowerCase());
+                });
+              } else {
+                const column = columns.find(col => col.key === filterColumn);
+                if (column) {
+                  const value = getValue(row, column.path);
+                  return String(value || '').toLowerCase().includes(filterText.toLowerCase());
+                }
+              }
+              return false;
+            });
+          }
+        }
+        
+        if (enableSort) {
+          const sortColumn = getState(sortColumnKey, '');
+          const sortDirection = getState(sortDirectionKey, 'asc');
+          
+          if (sortColumn) {
+            const column = columns.find(col => col.key === sortColumn);
+            if (column && isColumnSortable(column)) {
+              filteredData.sort((a, b) => {
+                const aValue = getValue(a, column.path);
+                const bValue = getValue(b, column.path);
+                
+                let comparison = 0;
+                if (column.type === 'number') {
+                  const numA = parseFloat(aValue) || 0;
+                  const numB = parseFloat(bValue) || 0;
+                  comparison = numA - numB;
+                } else {
+                  const strA = String(aValue || '').toLowerCase();
+                  const strB = String(bValue || '').toLowerCase();
+                  comparison = strA.localeCompare(strB);
+                }
+                
+                return sortDirection === 'asc' ? comparison : -comparison;
+              });
+            }
+          }
+        }
+        
+        return filteredData;
+      };
+      
+      const renderCell = (row, column, rowIndex) => {
+        const value = () => getValue(row, column.path);
+        const cellProps = {
+          rowIndex,
+          column,
+          value,
+          dataGridId,
+          onCellUpdate: column.editable !== false ? handleCellUpdate : undefined,
+          theme: finalTheme,
+          cellTheme: { ...(column.cellTheme || {}) },
+          focusTheme: column.focusTheme,
+          disabledTheme: column.disabledTheme,
+          containerTheme: { ...(column.containerTheme || {}) },
+          inputTheme: column.inputTheme,
+          listTheme: column.listTheme,
+          itemTheme: column.itemTheme,
+          itemHoverTheme: column.itemHoverTheme,
+          loadingTheme: column.loadingTheme,
+          errorTheme: column.errorTheme
+        };
+        
+        switch (column.type) {
+          case 'number':
+            return {NumberCell: cellProps};
+          case 'dropdown':
+            return {DropdownCell: cellProps};
+          default:
+            return {TextCell: cellProps};
+        }
+      };
+      
+      return {div: {
+        id: `datagrid-${dataGridId}`,
+        'data-datagrid-id': dataGridId,
+        style: finalTheme.container,
+        children: [
+          {div: {
+            style: finalTheme.header,
+            children: [
+              {h2: {
+                style: finalTheme.title,
+                text: title
+              }},
+              onAdd ? {button: {
+                style: finalTheme.button,
+                text: '[ADD RECORD]',
+                onclick: onAdd,
+                onmouseover: function() {
+                  Object.assign(this.style, { background: '#ecf0f1', borderColor: '#7f8c8d' });
+                },
+                onmouseout: function() {
+                  Object.assign(this.style, finalTheme.button);
+                }
+              }} : null
+            ]
+          }},
+          
+          enableFilter ? {div: {
+            style: finalTheme.filterContainer,
+            children: [
+              {span: {
+                style: { fontSize: '12px', fontWeight: '600', color: '#495057' },
+                text: 'FILTER:'
+              }},
+              {select: {
+                style: finalTheme.filterSelect,
+                value: () => getState(filterColumnKey, 'all'),
+                onchange: (e) => setState(filterColumnKey, e.target.value),
+                children: [
+                  {option: { value: 'all', text: 'All Columns' }},
+                  ...columns.map(col => ({
+                    option: { value: col.key, text: col.label }
+                  }))
+                ]
+              }},
+              {input: {
+                style: finalTheme.filterInput,
+                type: 'text',
+                placeholder: 'Enter filter text...',
+                value: () => getState(filterTextKey, ''),
+                oninput: (e) => setState(filterTextKey, e.target.value)
+              }},
+              {button: {
+                style: finalTheme.clearButton,
+                text: '[CLEAR]',
+                onclick: clearFilters
+              }},
+              {span: {
+                style: { fontSize: '11px', color: '#6c757d', marginLeft: '12px' },
+                text: () => {
+                  const filteredCount = getFilteredAndSortedData().length;
+                  const totalCount = dataArray().length;
+                  return filteredCount !== totalCount ? 
+                    `Showing ${filteredCount} of ${totalCount} records` : 
+                    `${totalCount} records`;
+                }
+              }},
+              enableRowDrag ? {span: {
+                style: { fontSize: '11px', color: '#6c757d', marginLeft: '12px', fontStyle: 'italic' },
+                text: '• Drag rows to reorder'
+              }} : null
+            ]
+          }} : null,
+          
+          {table: {
+            style: finalTheme.table,
+            children: [
+              {thead: {
+                children: [
+                  {tr: {
+                    children: [
+                      enableRowDrag ? {th: {
+                        style: { 
+                          ...finalTheme.tableHeader, 
+                          ...finalTheme.tableHeaderNonSortable,
+                          width: '40px',
+                          textAlign: 'center'
+                        },
+                        text: '☰'
+                      }} : null,
+                      ...columns.map(column => ({
+                        th: {
+                          style: { 
+                            ...finalTheme.tableHeader,
+                            ...(isColumnSortable(column) ? finalTheme.tableHeaderSortable : finalTheme.tableHeaderNonSortable),
+                            width: column.width || 'auto',
+                            ...(column.headerTheme || {})
+                          },
+                          onclick: isColumnSortable(column) ? () => handleSort(column) : undefined,
+                          children: [
+                            {span: {
+                              text: column.label
+                            }},
+                            isColumnSortable(column) ? {span: {
+                              style: finalTheme.sortIndicator,
+                              text: () => getSortIndicator(column)
+                            }} : null
+                          ]
+                        }
+                      })),
+                      onDelete ? {th: {
+                        style: { 
+                          ...finalTheme.tableHeader,
+                          ...finalTheme.tableHeaderNonSortable, 
+                          width: '80px'
+                        },
+                        text: 'ACTION'
+                      }} : null
+                    ].filter(Boolean)
+                  }}
+                ]
+              }},
+              {tbody: {
+                children: () => {
+                  return getFilteredAndSortedData().map((row, displayIndex) => {
+                    const originalIndex = dataArray().findIndex(item => 
+                      item.id === row.id
+                    );
+                    
+                    return {
+                      tr: {
+                        key: `row-${dataGridId}-${row.id}`,
+                        style: finalTheme.tableRow,
+                        draggable: enableRowDrag ? 'true' : 'false',
+                        ondragstart: enableRowDrag ? (e) => {
+                          setState(draggedTaskKey, { index: originalIndex, row });
+                          e.currentTarget.classList.add('dragging');
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/html', e.currentTarget.outerHTML);
+                        } : undefined,
+                        ondragend: enableRowDrag ? (e) => {
+                          e.currentTarget.classList.remove('dragging');
+                        } : undefined,
+                        ondragover: enableRowDrag ? (e) => {
+                          e.preventDefault();
+                          e.currentTarget.classList.add('drag-over');
+                        } : undefined,
+                        ondragleave: enableRowDrag ? (e) => {
+                          e.currentTarget.classList.remove('drag-over');
+                        } : undefined,
+                        ondrop: enableRowDrag ? (e) => {
+                          e.preventDefault();
+                          e.currentTarget.classList.remove('drag-over');
+                          
+                          const draggedTask = getState(draggedTaskKey);
+                          if (draggedTask && onRowReorder) {
+                            const targetIndex = dataArray().findIndex(item => 
+                              item.id === row.id
+                            );
+                            if (draggedTask.index !== targetIndex) {
+                              onRowReorder(draggedTask.index, targetIndex);
+                            }
+                          }
+                          setState(draggedTaskKey, null);
+                        } : undefined,
+                        children: [
+                          enableRowDrag ? {td: {
+                            style: finalTheme.tableCell,
+                            children: [
+                              {div: {
+                                style: finalTheme.dragHandle,
+                                text: '⋮⋮'
+                              }}
+                            ]
+                          }} : null,
+                          ...columns.map(column => ({
+                            td: {
+                              style: finalTheme.tableCell,
+                              children: [
+                                column.type === 'dropdown' ? 
+                                  renderCell(row, column, originalIndex) : 
+                                  {div: {
+                                    style: finalTheme.cellContainer,
+                                    children: [
+                                      renderCell(row, column, originalIndex)
+                                    ]
+                                  }}
+                              ]
+                            }
+                          })),
+                          onDelete ? {td: {
+                            style: finalTheme.tableCell,
+                            children: [
+                              {div: {
+                                style: finalTheme.cellContainer,
+                                children: [
+                                  {button: {
+                                    style: finalTheme.deleteButton,
+                                    text: '[DEL]',
+                                    onclick: () => {
+                                      if (confirm(`Delete this record?`)) {
+                                        onDelete(originalIndex);
+                                      }
+                                    },
+                                    onmouseover: function() {
+                                      Object.assign(this.style, { background: '#e74c3c', color: '#ffffff' });
+                                    },
+                                    onmouseout: function() {
+                                      Object.assign(this.style, finalTheme.deleteButton);
+                                    }
+                                  }}
+                                ]
+                              }}
+                            ]
+                          }} : null
+                        ].filter(Boolean)
+                      }
+                    };
+                  });
+                }
+              }}
+            ]
+          }}
+        ]
+      }};
+    };
+
+    const AppDemo = (props, context) => {
+      const { getState, setState, executeBatch } = context;
+      
+      setState('employees', [
+        { id: 1, name: 'Sarah Chen', email: 'sarah@company.com', department: 'Engineering', salary: 95000, level: 'Senior', active: true },
+        { id: 2, name: 'Michael Rodriguez', email: 'michael@company.com', department: 'Marketing', salary: 70000, level: 'Mid', active: true },
+        { id: 3, name: 'Emma Johnson', email: 'emma@company.com', department: 'Sales', salary: 85000, level: 'Lead', active: false },
+        { id: 4, name: 'David Kim', email: 'david@company.com', department: 'Engineering', salary: 120000, level: 'Principal', active: true },
+        { id: 5, name: 'Lisa Brown', email: 'lisa@company.com', department: 'HR', salary: 65000, level: 'Mid', active: true },
+        { id: 6, name: 'James Wilson', email: 'james@company.com', department: 'Sales', salary: 78000, level: 'Senior', active: true },
+        { id: 7, name: 'Maria Garcia', email: 'maria@company.com', department: 'Marketing', salary: 62000, level: 'Junior', active: true },
+        { id: 8, name: 'Robert Taylor', email: 'robert@company.com', department: 'Engineering', salary: 110000, level: 'Lead', active: false },
+        { id: 9, name: 'Jennifer White', email: 'jennifer@company.com', department: 'HR', salary: 72000, level: 'Senior', active: true },
+        { id: 10, name: 'Christopher Lee', email: 'chris@company.com', department: 'Finance', salary: 88000, level: 'Mid', active: true }
+      ]);
+      setState('nextId', 11);
+      
+      const getDepartmentOptions = () => {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            if (Math.random() > 0.1) {
+              resolve(['Engineering', 'Marketing', 'Sales', 'Support', 'HR', 'Finance', 'Operations', 'Legal', 'Research', 'Design']);
+            } else {
+              reject(new Error('Network timeout'));
+            }
+          }, 1500);
+        });
+      };
+      
+      const getLevelOptions = () => {
+        const employees = getState('employees', []);
+        const currentLevels = [...new Set(employees.map(emp => emp.level))];
+        const allLevels = ['Junior', 'Mid', 'Senior', 'Lead', 'Principal', 'Director'];
+        
+        return allLevels.map(level => 
+          currentLevels.includes(level) ? `${level}` : level
+        );
+      };
+      
+      const customTheme = {
+        container: {
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          border: '3px solid #4c51bf',
+          borderRadius: '12px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
+        },
+        header: {
+          background: 'rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '2px solid rgba(255,255,255,0.2)',
+          borderRadius: '12px 12px 0 0'
+        },
+        title: {
+          color: '#ffffff',
+          fontWeight: '700',
+          textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+        },
+        button: {
+          background: 'rgba(255,255,255,0.9)',
+          color: '#4c51bf',
+          borderRadius: '8px',
+          border: '2px solid rgba(255,255,255,0.3)',
+          fontWeight: '700'
+        },
+        filterContainer: {
+          background: 'rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(255,255,255,0.2)'
+        },
+        filterInput: {
+          background: 'rgba(255,255,255,0.9)',
+          borderColor: 'rgba(255,255,255,0.3)',
+          borderRadius: '6px'
+        },
+        filterSelect: {
+          background: 'rgba(255,255,255,0.9)',
+          borderColor: 'rgba(255,255,255,0.3)',
+          borderRadius: '6px'
+        },
+        clearButton: {
+          background: 'rgba(231, 76, 60, 0.9)',
+          borderColor: 'rgba(231, 76, 60, 0.3)',
+          borderRadius: '6px'
+        },
+        textCell: {
+          borderRadius: '4px',
+          transition: 'all 0.3s ease'
+        },
+        dropdownLoading: {
+          background: 'rgba(76, 81, 191, 0.1)',
+          color: '#4c51bf',
+          fontWeight: '600'
+        },
+        dropdownError: {
+          background: 'rgba(231, 76, 60, 0.1)',
+          color: '#e74c3c',
+          fontWeight: '600'
+        },
+        dragHandle: {
+          color: 'rgba(255,255,255,0.7)'
+        }
+      };
+
+      const columns = [
+        { 
+          key: 'id', 
+          label: 'ID', 
+          path: 'id', 
+          type: 'number', 
+          width: '60px', 
+          editable: false,
+          sortable: true,
+          cellTheme: { fontWeight: '700', color: '#4c51bf' }
+        },
+        { 
+          key: 'name', 
+          label: 'NAME', 
+          path: 'name', 
+          type: 'text', 
+          width: '200px',
+          sortable: true,
+          focusTheme: { background: 'rgba(76, 81, 191, 0.1)', borderColor: '#4c51bf' }
+        },
+        { 
+          key: 'email', 
+          label: 'EMAIL', 
+          path: 'email', 
+          type: 'text', 
+          width: '220px',
+          sortable: false,
+          cellTheme: { fontStyle: 'italic' }
+        },
+        { 
+          key: 'department', 
+          label: 'DEPT', 
+          path: 'department', 
+          type: 'dropdown', 
+          width: '120px',
+          sortable: true,
+          options: getDepartmentOptions,
+          inputTheme: { borderColor: '#4c51bf', borderRadius: '6px' },
+          listTheme: { borderColor: '#4c51bf', borderRadius: '0 0 6px 6px' },
+          itemHoverTheme: { background: 'rgba(76, 81, 191, 0.1)' }
+        },
+        { 
+          key: 'salary', 
+          label: 'SALARY', 
+          path: 'salary', 
+          type: 'number', 
+          width: '120px', 
+          format: 'currency',
+          sortable: true,
+          cellTheme: { fontWeight: '600', color: '#16a085' }
+        },
+        { 
+          key: 'level', 
+          label: 'LEVEL', 
+          path: 'level', 
+          type: 'dropdown', 
+          width: '120px',
+          sortable: true,
+          options: getLevelOptions,
+          inputTheme: { borderColor: '#16a085' },
+          listTheme: { borderColor: '#16a085' }
+        }
+      ];
+      
+      const updateEmployee = (rowIndex, fieldPath, newValue) => {
+        setState(`employees.${rowIndex}.${fieldPath}`, newValue);
+      };
+      
+      const reorderEmployee = (fromIndex, toIndex) => {
+        const employees = getState('employees', []);
+        const updatedEmployees = [...employees];
+        const [movedEmployee] = updatedEmployees.splice(fromIndex, 1);
+        updatedEmployees.splice(toIndex, 0, movedEmployee);
+        setState('employees', updatedEmployees);
+      };
+      
+      const addEmployee = () => {
+        const employees = getState('employees', []);
+        const nextId = getState('nextId', 11);
+        const newEmployee = {
+          id: nextId,
+          name: 'New Employee',
+          email: 'new@company.com',
+          department: 'Engineering',
+          salary: 50000,
+          level: 'Junior',
+          active: true
+        };
+        executeBatch(() => {
+          setState('employees', [...employees, newEmployee]);
+          setState('nextId', nextId + 1);
+        });
+      };
+      
+      const deleteEmployee = (index) => {
+        const employees = getState('employees', []);
+        const filtered = employees.filter((_, i) => i !== index);
+        setState('employees', filtered);
+      };
+      
+      return {div: {
+        children: [
+          {DataGrid: {
+            dataGridId: 'employees-enhanced',
+            title: 'ENHANCED EMPLOYEE DATAFRAME WITH ROW DRAGGING',
+            data: () => getState('employees', []),
+            columns,
+            onUpdate: updateEmployee,
+            onRowReorder: reorderEmployee,
+            onAdd: addEmployee,
+            onDelete: deleteEmployee,
+            enableFilter: true,
+            enableSort: false,
+            enableRowDrag: true,
+            theme: customTheme
+          }},
+          
+          {div: {
+            style: { marginTop: '32px' },
+            children: [
+              {DataGrid: {
+                dataGridId: 'employees-basic',
+                title: 'BASIC DATAFRAME (NO DRAGGING)',
+                data: () => getState('employees', []).slice(0, 5),
+                columns: [
+                  { key: 'id', label: 'ID', path: 'id', type: 'number', width: '60px', editable: false, sortable: true },
+                  { key: 'name', label: 'NAME', path: 'name', type: 'text', width: '200px', sortable: true },
+                  { key: 'department', label: 'DEPT', path: 'department', type: 'dropdown', width: '120px', sortable: true,
+                    options: ['Engineering', 'Marketing', 'Sales', 'HR'] },
+                  { key: 'level', label: 'LEVEL', path: 'level', type: 'dropdown', width: '100px', sortable: true,
+                    options: ['Junior', 'Mid', 'Senior', 'Lead'] }
+                ],
+                onUpdate: updateEmployee,
+                enableFilter: true,
+                enableSort: true,
+                enableRowDrag: false
+              }}
+            ]
+          }}
+        ]
+      }};
+    };
+
+    const juris = new Juris({
+      components: {
+        TextCell,
+        NumberCell,
+        DropdownCell,
+        DataGrid,
+        AppDemo
+      },
+      layout: [
+        {AppDemo: {}}
+      ]
+    });
+
+    juris.arm(document, (context) => ({}));
+
+    juris.render('#app');
+  </script>
+</body>
+</html>

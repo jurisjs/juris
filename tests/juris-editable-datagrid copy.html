@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juris Generic Editable Datagrid - Fixed Dropdowns</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f7fa;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .datagrid-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .datagrid-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .datagrid-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .btn-primary:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    .datagrid-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      table-layout: fixed;
+    }
+    .datagrid-table th {
+      background: #f8fafc;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      color: #334155;
+      border-bottom: 2px solid #e2e8f0;
+      height: 20px;
+    }
+    .datagrid-table td {
+      padding: 0;
+      border-bottom: 1px solid #e2e8f0;
+      position: relative;
+      overflow: hidden;
+      height: 44px;
+    }
+    .datagrid-table tr:hover {
+      background: #f8fafc;
+    }
+    .cell-container {
+      position: relative;
+      width: 100%;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      box-sizing: border-box;
+    }
+    .cell-display {
+      cursor: text;
+      display: block;
+      width: 100%;
+      height: 28px;
+      line-height: 28px;
+      padding: 0 4px;
+      margin: 0;
+      user-select: text;
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      word-wrap: break-word;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      box-sizing: border-box;
+    }
+    .cell-display:hover {
+      background: rgba(102, 126, 234, 0.1);
+      border-radius: 3px;
+    }
+    .edit-input {
+      position: absolute;
+      top: 8px;
+      left: 12px;
+      width: calc(100% - 24px);
+      height: 28px;
+      padding: 0 4px;
+      margin: 0;
+      border: 1px solid #667eea;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      background: white;
+      box-sizing: border-box;
+      z-index: 10;
+      line-height: 26px;
+    }
+    .edit-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
+    .edit-select {
+      position: absolute;
+      top: 8px;
+      left: 12px;
+      width: calc(100% - 24px);
+      height: 28px;
+      padding: 0 4px;
+      margin: 0;
+      border: 1px solid #667eea;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      background: white;
+      box-sizing: border-box;
+      z-index: 10;
+    }
+    .edit-select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      height: 28px;
+      align-items: center;
+    }
+    .stats {
+      padding: 16px 20px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 14px;
+      text-align: center;
+    }
+    .badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-block;
+      height: 20px;
+      line-height: 20px;
+      box-sizing: border-box;
+    }
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .badge-error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .badge-info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .col-id { width: 60px; }
+    .col-name { width: 200px; }
+    .col-email { width: 220px; }
+    .col-category { width: 120px; }
+    .col-amount { width: 120px; }
+    .col-priority { width: 100px; }
+    .col-status { width: 100px; }
+    .col-actions { width: 80px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script src="../src/juris.js"></script>
+  <script>
+    const gridConfiguration = {
+      title: 'Generic Data Management',
+      idField: 'id',
+      columns: [
+        { 
+          key: 'name', 
+          label: 'Name', 
+          type: 'text', 
+          required: true,
+          cssClass: 'col-name'
+        },
+        { 
+          key: 'email', 
+          label: 'Email', 
+          type: 'email', 
+          required: true,
+          validation: (value) => /\S+@\S+\.\S+/.test(value),
+          cssClass: 'col-email'
+        },
+        { 
+          key: 'category', 
+          label: 'Category', 
+          type: 'select', 
+          options: ['Technology', 'Marketing', 'Sales', 'Support', 'Management'],
+          default: 'Technology',
+          cssClass: 'col-category'
+        },
+        { 
+          key: 'amount', 
+          label: 'Amount', 
+          type: 'number', 
+          format: (value) => `$${value.toLocaleString()}`,
+          default: 0,
+          cssClass: 'col-amount'
+        },
+        { 
+          key: 'priority', 
+          label: 'Priority', 
+          type: 'select',
+          options: ['Low', 'Medium', 'High', 'Critical'],
+          display: 'badge',
+          badgeClass: (value) => {
+            const classes = {
+              'Low': 'badge-info',
+              'Medium': 'badge-warning', 
+              'High': 'badge-error',
+              'Critical': 'badge-error'
+            };
+            return classes[value] || 'badge-info';
+          },
+          cssClass: 'col-priority'
+        },
+        { 
+          key: 'status', 
+          label: 'Status', 
+          type: 'toggle',
+          toggleValues: { true: 'Active', false: 'Inactive' },
+          display: 'badge',
+          badgeClass: (value) => value ? 'badge-success' : 'badge-error',
+          cssClass: 'col-status'
+        }
+      ],
+      newRecord: {
+        name: 'New Record',
+        email: 'new@example.com',
+        category: 'Technology',
+        amount: 1000,
+        priority: 'Medium',
+        status: true
+      }
+    };
+
+    const sampleRecords = [
+      { id: 1, name: 'John Doe', email: 'john@example.com', category: 'Technology', amount: 75000, priority: 'High', status: true },
+      { id: 2, name: 'Jane Smith', email: 'jane@example.com', category: 'Marketing', amount: 65000, priority: 'Medium', status: true },
+      { id: 3, name: 'Bob Johnson', email: 'bob@example.com', category: 'Sales', amount: 70000, priority: 'Low', status: false },
+      { id: 4, name: 'Alice Brown', email: 'alice@example.com', category: 'Technology', amount: 80000, priority: 'Critical', status: true },
+      { id: 5, name: 'Charlie Davis', email: 'charlie@example.com', category: 'Support', amount: 60000, priority: 'Medium', status: true }
+    ];
+
+    const jurisApp = new Juris({
+      states: {
+        configuration: gridConfiguration,
+        dataRecords: sampleRecords,
+        rowStructure: sampleRecords.map(item => ({ 
+          rowId: `row_${item[gridConfiguration.idField]}`, 
+          recordId: item[gridConfiguration.idField], 
+          visible: true 
+        })),
+        cellStructure: (() => {
+          const cells = {};
+          sampleRecords.forEach(item => {
+            gridConfiguration.columns.forEach(col => {
+              cells[`cell_${item[gridConfiguration.idField]}_${col.key}`] = {
+                rowId: `row_${item[gridConfiguration.idField]}`,
+                recordId: item[gridConfiguration.idField],
+                field: col.key,
+                type: col.type,
+                visible: true,
+                config: col
+              };
+            });
+          });
+          return cells;
+        })(),
+        nextRecordId: 6
+      },
+      components: {
+        CellEditor: (props, context) => {
+          const { getState, setState } = context;
+          const { cellIdentifier } = props;
+          
+          const cellConfiguration = getState(`cellStructure.${cellIdentifier}`);
+          if (!cellConfiguration) return {td: {text: 'Invalid Cell'}};
+          
+          const { recordId, field, type, config } = cellConfiguration;
+          
+          const [editingMode, setEditingMode] = context.newState('editingMode', false);
+          const [currentValue, setCurrentValue] = context.newState('currentValue', '');
+          const [cursorPosition, setCursorPosition] = context.newState('cursorPosition', 0);
+          const [blurTimeout, setBlurTimeout] = context.newState('blurTimeout', null);
+          
+          const determineCursorPosition = (element, clientX, clientY) => {
+            try {
+              if (document.caretRangeFromPoint) {
+                const range = document.caretRangeFromPoint(clientX, clientY);
+                if (range && element.contains(range.startContainer)) {
+                  return range.startOffset;
+                }
+              } else if (document.caretPositionFromPoint) {
+                const position = document.caretPositionFromPoint(clientX, clientY);
+                if (position && element.contains(position.offsetNode)) {
+                  return position.offset;
+                }
+              }
+              
+              const rect = element.getBoundingClientRect();
+              const clickX = clientX - rect.left;
+              const textWidth = element.scrollWidth || element.offsetWidth;
+              const textLength = element.textContent.length;
+              if (textWidth > 0 && textLength > 0) {
+                const position = Math.round((clickX / textWidth) * textLength);
+                return Math.max(0, Math.min(position, textLength));
+              }
+              return 0;
+            } catch (error) {
+              return 0;
+            }
+          };
+          
+          const beginEditing = (event) => {
+            const dataRecords = getState('dataRecords', []);
+            const idField = getState('configuration.idField');
+            const record = dataRecords.find(item => item[idField] === recordId);
+            
+            if (record) {
+              const fieldValue = record[field];
+              setCurrentValue(fieldValue);
+              
+              if (event && event.target && type !== 'toggle' && type !== 'select' && type !== 'number') {
+                const position = determineCursorPosition(event.target, event.clientX, event.clientY);
+                setCursorPosition(position);
+              }
+              
+              setEditingMode(true);
+            }
+          };
+          
+          const commitChanges = () => {
+            const timeout = blurTimeout();
+            if (timeout) {
+              clearTimeout(timeout);
+              setBlurTimeout(null);
+            }
+            
+            const dataRecords = getState('dataRecords', []);
+            const idField = getState('configuration.idField');
+            const updatedRecords = dataRecords.map(item => {
+              if (item[idField] === recordId) {
+                let newValue = currentValue();
+                
+                if (type === 'number') {
+                  newValue = parseFloat(newValue) || 0;
+                } else if (type === 'toggle') {
+                  newValue = !item[field];
+                }
+                
+                if (config.validation && !config.validation(newValue)) {
+                  alert(`Invalid ${config.label}: ${newValue}`);
+                  return item;
+                }
+                
+                return { ...item, [field]: newValue };
+              }
+              return item;
+            });
+            
+            setState('dataRecords', updatedRecords);
+            setEditingMode(false);
+          };
+          
+          const cancelEditing = () => {
+            const timeout = blurTimeout();
+            if (timeout) {
+              clearTimeout(timeout);
+              setBlurTimeout(null);
+            }
+            setEditingMode(false);
+          };
+          
+          const handleSelectBlur = () => {
+            const timeoutId = setTimeout(() => {
+              commitChanges();
+            }, 150);
+            setBlurTimeout(timeoutId);
+          };
+          
+          const handleSelectFocus = () => {
+            const timeout = blurTimeout();
+            if (timeout) {
+              clearTimeout(timeout);
+              setBlurTimeout(null);
+            }
+          };
+          
+          const applyCursorPosition = (inputElement, position, fieldType) => {
+            try {
+              if (inputElement) {
+                inputElement.focus();
+                const textSupportedTypes = ['text', 'email', 'password', 'search', 'tel', 'url'];
+                if (inputElement.setSelectionRange && textSupportedTypes.includes(fieldType)) {
+                  const safePosition = Math.min(position, inputElement.value.length);
+                  requestAnimationFrame(() => {
+                    inputElement.setSelectionRange(safePosition, safePosition);
+                  });
+                }
+              }
+            } catch (error) {
+              if (inputElement) {
+                inputElement.focus();
+              }
+            }
+          };
+          
+          return {td: {
+            class: config.cssClass || '',
+            children: [
+              {div: {class: 'cell-container',
+                children: [
+                  () => {
+                    if (type === 'toggle') {
+                      const dataRecords = getState('dataRecords', []);
+                      const idField = getState('configuration.idField');
+                      const record = dataRecords.find(item => item[idField] === recordId);
+                      if (!record) return {span: {text: ''}};
+                      
+                      const value = record[field];
+                      const displayValue = config.toggleValues ? config.toggleValues[value] : (value ? 'Yes' : 'No');
+                      
+                      if (config.display === 'badge') {
+                        const badgeClass = config.badgeClass ? config.badgeClass(value) : 'badge-info';
+                        return {span: {
+                          class: `badge ${badgeClass}`,
+                          text: displayValue,
+                          onclick: commitChanges
+                        }};
+                      }
+                      
+                      return {span: {
+                        class: 'cell-display',
+                        text: displayValue,
+                        onclick: commitChanges
+                      }};
+                    }
+                    
+                    if (editingMode()) {
+                      if (type === 'select' && config.options) {
+                        const selectedValue = currentValue();
+                        setTimeout(() => {
+                          const selects = document.querySelectorAll('.edit-select');
+                          const lastSelect = selects[selects.length - 1];
+                          if (lastSelect) {
+                            lastSelect.focus();
+                          }
+                        }, 10);
+                        
+                        return {select: {
+                          class: 'edit-select',
+                          value: selectedValue,
+                          onchange: (e) => {
+                            setCurrentValue(e.target.value);
+                            setTimeout(commitChanges, 50);
+                          },
+                          onblur: handleSelectBlur,
+                          onfocus: handleSelectFocus,
+                          onkeyup: (e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              commitChanges();
+                            }
+                            if (e.key === 'Escape') {
+                              e.preventDefault();
+                              cancelEditing();
+                            }
+                          },
+                          children: config.options.map(opt => ({
+                            option: { 
+                              value: opt, 
+                              text: opt,
+                              selected: opt === selectedValue
+                            }
+                          }))
+                        }};
+                      }
+                      
+                      const inputType = type === 'email' ? 'text' : type;
+                      
+                      setTimeout(() => {
+                        const inputs = document.querySelectorAll('.edit-input');
+                        const lastInput = inputs[inputs.length - 1];
+                        if (lastInput) {
+                          const position = cursorPosition();
+                          applyCursorPosition(lastInput, position, inputType);
+                        }
+                      }, 20);
+                      
+                      return {input: {
+                        class: 'edit-input',
+                        type: inputType,
+                        value: () => currentValue(),
+                        oninput: (e) => setCurrentValue(e.target.value),
+                        onblur: commitChanges,
+                        onkeyup: (e) => {
+                          if (e.key === 'Enter') commitChanges();
+                          if (e.key === 'Escape') cancelEditing();
+                        }
+                      }};
+                    }
+                    
+                    const dataRecords = getState('dataRecords', []);
+                    const idField = getState('configuration.idField');
+                    const record = dataRecords.find(item => item[idField] === recordId);
+                    if (!record) return {span: {text: ''}};
+                    
+                    let displayValue = record[field];
+                    
+                    if (config.format) {
+                      displayValue = config.format(displayValue);
+                    }
+                    
+                    if (config.display === 'badge') {
+                      const badgeClass = config.badgeClass ? config.badgeClass(record[field]) : 'badge-info';
+                      return {span: {
+                        class: `badge ${badgeClass}`,
+                        text: displayValue,
+                        onclick: beginEditing
+                      }};
+                    }
+                    
+                    return {span: {
+                      class: 'cell-display',
+                      text: displayValue,
+                      onclick: beginEditing
+                    }};
+                  }
+                ]
+              }}
+            ]
+          }};
+        },
+        
+        ActionColumn: (props, context) => {
+          const { getState, setState } = context;
+          const { rowIdentifier } = props;
+          
+          return {td: {class: 'col-actions',
+            children: [
+              {div: {class: 'cell-container',
+                children: [
+                  {div: {class: 'actions',
+                    children: [
+                      {button: {
+                        class: 'btn btn-danger',
+                        text: 'Delete',
+                        style: {fontSize: '12px', padding: '4px 8px'},
+                        onclick: () => {
+                          const rowStructure = getState('rowStructure', []);
+                          const row = rowStructure.find(r => r.rowId === rowIdentifier);
+                          if (!row) return;
+                          
+                          const dataRecords = getState('dataRecords', []);
+                          const idField = getState('configuration.idField');
+                          const record = dataRecords.find(item => item[idField] === row.recordId);
+                          
+                          if (record && confirm(`Delete record ${record.name || record[idField]}?`)) {
+                            const filteredRecords = dataRecords.filter(item => item[idField] !== row.recordId);
+                            setState('dataRecords', filteredRecords);
+                            
+                            const filteredRows = rowStructure.filter(r => r.rowId !== rowIdentifier);
+                            setState('rowStructure', filteredRows);
+                            
+                            const cellStructure = getState('cellStructure', {});
+                            const updatedCells = {};
+                            Object.keys(cellStructure).forEach(cellId => {
+                              if (cellStructure[cellId].rowId !== rowIdentifier) {
+                                updatedCells[cellId] = cellStructure[cellId];
+                              }
+                            });
+                            setState('cellStructure', updatedCells);
+                          }
+                        }
+                      }}
+                    ]
+                  }}
+                ]
+              }}
+            ]
+          }};
+        },
+        
+        DataRowRenderer: (props, context) => {
+          const { rowIdentifier } = props;
+          const { getState } = context;
+          
+          return {tr: {key: rowIdentifier,
+            children: [
+              {td: {class: 'col-id',
+                children: [
+                  {div: {class: 'cell-container',
+                    children: [
+                      () => {
+                        const rowStructure = getState('rowStructure', []);
+                        const row = rowStructure.find(r => r.rowId === rowIdentifier);
+                        if (!row) return {span: {class: 'cell-display', text: ''}};
+                        
+                        const dataRecords = getState('dataRecords', []);
+                        const idField = getState('configuration.idField');
+                        const record = dataRecords.find(item => item[idField] === row.recordId);
+                        return {span: {class: 'cell-display', text: record ? record[idField] : ''}};
+                      }
+                    ]
+                  }}
+                ]
+              }},
+              () => {
+                const configuration = getState('configuration');
+                const recordIdStr = rowIdentifier.split('_')[1];
+                return configuration.columns.map(col => ({
+                  CellEditor: {cellIdentifier: `cell_${recordIdStr}_${col.key}`}
+                }));
+              },
+              {ActionColumn: {rowIdentifier}}
+            ]
+          }};
+        },
+        
+        DataGridMain: (props, context) => {
+          const { getState, setState } = context;
+          
+          const addNewRecord = () => {
+            const dataRecords = getState('dataRecords', []);
+            const rowStructure = getState('rowStructure', []);
+            const cellStructure = getState('cellStructure', {});
+            const nextRecordId = getState('nextRecordId', 1);
+            const configuration = getState('configuration');
+            
+            const newRecord = {
+              [configuration.idField]: nextRecordId,
+              ...configuration.newRecord
+            };
+            setState('dataRecords', [...dataRecords, newRecord]);
+            
+            const newRowId = `row_${nextRecordId}`;
+            setState('rowStructure', [...rowStructure, { 
+              rowId: newRowId, 
+              recordId: nextRecordId, 
+              visible: true 
+            }]);
+            
+            const newCells = { ...cellStructure };
+            configuration.columns.forEach(col => {
+              newCells[`cell_${nextRecordId}_${col.key}`] = {
+                rowId: newRowId,
+                recordId: nextRecordId,
+                field: col.key,
+                type: col.type,
+                visible: true,
+                config: col
+              };
+            });
+            setState('cellStructure', newCells);
+            setState('nextRecordId', nextRecordId + 1);
+          };
+          
+          return {div: {class: 'datagrid-container',
+            children: [
+              {div: {class: 'datagrid-header',
+                children: [
+                  {h2: {class: 'datagrid-title', 
+                    children: [
+                      () => {
+                        const configuration = getState('configuration');
+                        return {span: {text: configuration.title}};
+                      }
+                    ]
+                  }},
+                  {button: {
+                    class: 'btn btn-primary',
+                    text: 'Add Record',
+                    onclick: addNewRecord
+                  }}
+                ]
+              }},
+              {div: {style: {overflow: 'auto'},
+                children: [
+                  {table: {class: 'datagrid-table',
+                    children: [
+                      {thead: {
+                        children: [
+                          {tr: {
+                            children: [
+                              {th: {class: 'col-id', text: 'ID'}},
+                              () => {
+                                const configuration = getState('configuration');
+                                return configuration.columns.map(col => ({
+                                  th: { 
+                                    class: col.cssClass || '', 
+                                    text: col.label 
+                                  }
+                                }));
+                              },
+                              {th: {class: 'col-actions', text: 'Actions'}}
+                            ]
+                          }}
+                        ]
+                      }},
+                      {tbody: {
+                        children: () => {
+                          const rowStructure = getState('rowStructure', []);
+                          return rowStructure.filter(row => row.visible).map(row => ({
+                            DataRowRenderer: {key: row.rowId, rowIdentifier: row.rowId}
+                          }));
+                        }
+                      }}
+                    ]
+                  }}
+                ]
+              }},
+              {div: {class: 'stats',
+                children: [
+                  () => {
+                    const dataRecords = getState('dataRecords', []);
+                    const configuration = getState('configuration');
+                    
+                    const total = dataRecords.length;
+                    let stats = `${total} records total`;
+                    
+                    const statusColumn = configuration.columns.find(col => col.type === 'toggle');
+                    if (statusColumn) {
+                      const active = dataRecords.filter(item => item[statusColumn.key]).length;
+                      stats += ` • ${active} active`;
+                    }
+                    
+                    const amountColumn = configuration.columns.find(col => col.type === 'number');
+                    if (amountColumn && dataRecords.length > 0) {
+                      const average = Math.round(dataRecords.reduce((sum, item) => sum + (item[amountColumn.key] || 0), 0) / dataRecords.length);
+                      stats += ` • Average ${amountColumn.label.toLowerCase()}: ${amountColumn.format ? amountColumn.format(average) : average}`;
+                    }
+                    
+                    return {span: {text: stats}};
+                  }
+                ]
+              }}
+            ]
+          }};
+        }
+      },
+      layout: [
+        {div: {class: 'header',
+          children: [
+            {div: {class: 'logo', text: 'J'}},
+            {div: {
+              children: [
+                {h1: {text: 'Juris Generic Editable Datagrid', style: {margin: '0', fontSize: '28px', color: '#1e293b'}}},
+                {p: {text: 'Fixed dropdown behavior • Reliable blur handling • Consistent edit mode exit', style: {margin: '5px 0 0 0', color: '#64748b'}}}
+              ]
+            }}
+          ]
+        }},
+        {DataGridMain: {}}
+      ]
+    });
+
+    jurisApp.render('#app');
+  </script>
+</body>
+</html>
