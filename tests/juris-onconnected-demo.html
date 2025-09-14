@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juris onconnected Demo - Style Recalculation</title>
+  <script src="../src/juris.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .demo-section {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .demo-section:last-child {
+      border-bottom: none;
+    }
+    .adaptive-box {
+      background: linear-gradient(45deg, #ff9a56, #ff6b6b);
+      border-radius: 8px;
+      margin: 10px 0;
+      transition: all 0.3s ease;
+      color: white;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .responsive-grid {
+      display: grid;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .grid-item {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+    .grid-item:hover {
+      transform: translateY(-2px);
+    }
+    .measurement-display {
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 10px 0;
+      font-family: monospace;
+    }
+    .control-panel {
+      background: #e9ecef;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      transition: background 0.2s ease;
+    }
+    .btn:hover {
+      background: #0056b3;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    const juris = new Juris({
+      states: {
+        windowSize: {width: window.innerWidth, height: window.innerHeight},
+        adaptiveBoxes: [
+          {id: 1, ratio: 0.5, minHeight: 60},
+          {id: 2, ratio: 0.3, minHeight: 80},
+          {id: 3, ratio: 0.7, minHeight: 100}
+        ],
+        gridColumns: 3,
+        measurements: {},
+        animationEnabled: true
+      },
+      layout: {div: {class: 'container',
+        children: [
+          {div: {class: 'header',
+            children: [
+              {span: {class: 'logo', text: '{..}'}},
+              {span: {text: 'Juris onconnected Demo - Style Recalculation'}}
+            ]
+          }},
+          
+          {div: {class: 'demo-section',
+            children: [
+              {h2: {text: 'Adaptive Boxes with onconnected Style Calculation'}},
+              {p: {text: 'These boxes calculate their height based on container width after being connected to DOM:'}},
+              () => {
+                const boxes = juris.getState('adaptiveBoxes', []);
+                return boxes.map(box => {
+                  const boxId = box.id;
+                  const boxRatio = box.ratio;
+                  const boxMinHeight = box.minHeight;
+                  
+                  return {
+                    div: {
+                      class: 'adaptive-box',
+                      key: `box-${boxId}`,
+                      style: () => {
+                        const currentBoxes = juris.getState('adaptiveBoxes', []);
+                        const currentBox = currentBoxes.find(b => b.id === boxId);
+                        if (!currentBox) return {height: `${boxMinHeight}px`};
+                        
+                        const measurements = juris.getState('measurements', {});
+                        const boxMeasurement = measurements[`box-${boxId}`];
+                        
+                        let calculatedHeight = currentBox.minHeight;
+                        if (boxMeasurement && boxMeasurement.containerWidth) {
+                          calculatedHeight = Math.max(
+                            boxMeasurement.containerWidth * currentBox.ratio,
+                            currentBox.minHeight
+                          );
+                        }
+                        
+                        return {
+                          height: `${calculatedHeight}px`,
+                          background: `linear-gradient(45deg, 
+                            hsl(${(boxId * 60) % 360}, 70%, 60%), 
+                            hsl(${(boxId * 60 + 40) % 360}, 70%, 50%))`
+                        };
+                      },
+                      onconnected: (e) => {
+                        const containerWidth = e.target.parentElement.clientWidth;
+                        const measurements = juris.getState('measurements', {});
+                        juris.setState('measurements', {
+                          ...measurements,
+                          [`box-${boxId}`]: {containerWidth, timestamp: Date.now()}
+                        });
+                        
+                        // Trigger style recalculation
+                        if (e.target.$?.style) {
+                          e.target.$.style();
+                        }
+                      },
+                      onclick: () => {
+                        const currentBoxes = juris.getState('adaptiveBoxes', []);
+                        const updatedBoxes = currentBoxes.map(b => 
+                          b.id === boxId 
+                            ? {...b, ratio: Math.random() * 0.8 + 0.2}
+                            : b
+                        );
+                        juris.setState('adaptiveBoxes', updatedBoxes);
+                      },
+                      children: [
+                        () => {
+                          const currentBoxes = juris.getState('adaptiveBoxes', []);
+                          const currentBox = currentBoxes.find(b => b.id === boxId);
+                          if (!currentBox) return `Box ${boxId} - Loading...`;
+                          return `Box ${boxId} - Ratio: ${currentBox.ratio.toFixed(2)} (Click to randomize)`;
+                        }
+                      ]
+                    }
+                  };
+                });
+              }
+            ]
+          }},
+
+          {div: {class: 'demo-section',
+            children: [
+              {h2: {text: 'Responsive Grid with Dynamic Columns'}},
+              {div: {class: 'control-panel',
+                children: [
+                  {label: {text: 'Grid Columns: '}},
+                  {input: {type: 'range', min: '1', max: '6', 
+                    value: () => juris.getState('gridColumns', 3),
+                    oninput: (e) => juris.setState('gridColumns', parseInt(e.target.value))
+                  }},
+                  {span: {text: () => ` ${juris.getState('gridColumns', 3)} columns`}}
+                ]
+              }},
+              {div: {
+                class: 'responsive-grid',
+                style: () => ({
+                  gridTemplateColumns: `repeat(${juris.getState('gridColumns', 3)}, 1fr)`
+                }),
+                onconnected: (e) => {
+                  const gridWidth = e.target.clientWidth;
+                  const columns = juris.getState('gridColumns', 3);
+                  const measurements = juris.getState('measurements', {});
+                  juris.setState('measurements', {
+                    ...measurements,
+                    grid: {
+                      width: gridWidth,
+                      columns,
+                      itemWidth: gridWidth / columns,
+                      timestamp: Date.now()
+                    }
+                  });
+                  
+                  // Trigger style recalculation
+                  if (e.target.$?.style) {
+                    e.target.$.style();
+                  }
+                },
+                children: Array.from({length: 12}, (_, i) => ({
+                  div: {
+                    class: 'grid-item',
+                    key: `grid-item-${i}`,
+                    style: () => {
+                      const measurements = juris.getState('measurements', {});
+                      const gridMeasurement = measurements.grid;
+                      if (!gridMeasurement) return {};
+                      
+                      const itemWidth = gridMeasurement.itemWidth - 15; // Account for gap
+                      return {
+                        minHeight: `${Math.max(itemWidth * 0.6, 80)}px`,
+                        transform: juris.getState('animationEnabled') 
+                          ? `scale(${0.95 + (i % 3) * 0.05})` 
+                          : 'none'
+                      };
+                    },
+                    onconnected: (e) => {
+                      // Individual item measurements
+                      const itemWidth = e.target.clientWidth;
+                      const itemHeight = e.target.clientHeight;
+                      const measurements = juris.getState('measurements', {});
+                      juris.setState('measurements', {
+                        ...measurements,
+                        [`grid-item-${i}`]: {width: itemWidth, height: itemHeight}
+                      });
+                    },
+                    text: `Item ${i + 1}`
+                  }
+                }))
+              }}
+            ]
+          }},
+
+          {div: {class: 'demo-section',
+            children: [
+              {h2: {text: 'Real-time Measurements Display'}},
+              {div: {class: 'measurement-display',
+                children: [
+                  {h4: {text: 'Window Size:'}},
+                  {p: {text: () => {
+                    const size = juris.getState('windowSize', {});
+                    return `${size.width}px × ${size.height}px`;
+                  }}},
+                  {h4: {text: 'Grid Measurements:'}},
+                  {pre: {text: () => {
+                    const measurements = juris.getState('measurements', {});
+                    const grid = measurements.grid;
+                    if (!grid) return 'Grid not measured yet';
+                    return `Width: ${grid.width}px\nColumns: ${grid.columns}\nItem Width: ${grid.itemWidth.toFixed(1)}px`;
+                  }}},
+                  {h4: {text: 'Adaptive Box Measurements:'}},
+                  {div: {
+                    children: () => {
+                      const measurements = juris.getState('measurements', {});
+                      const boxes = juris.getState('adaptiveBoxes', []);
+                      return boxes.map(box => {
+                        const measurement = measurements[`box-${box.id}`];
+                        return {p: {
+                          key: `measurement-${box.id}`,
+                          text: measurement 
+                            ? `Box ${box.id}: Container ${measurement.containerWidth}px → Height ${Math.max(measurement.containerWidth * box.ratio, box.minHeight).toFixed(1)}px`
+                            : `Box ${box.id}: Not measured yet`
+                        }};
+                      });
+                    }
+                  }}
+                ]
+              }},
+              {div: {class: 'control-panel',
+                children: [
+                  {button: {class: 'btn', text: 'Toggle Animations',
+                    onclick: () => {
+                      const current = juris.getState('animationEnabled', true);
+                      juris.setState('animationEnabled', !current);
+                    }
+                  }},
+                  {button: {class: 'btn', text: 'Clear Measurements',
+                    onclick: () => juris.setState('measurements', {})
+                  }},
+                  {button: {class: 'btn', text: 'Randomize All Ratios',
+                    onclick: () => {
+                      const boxes = juris.getState('adaptiveBoxes', []);
+                      const updated = boxes.map(box => ({
+                        ...box,
+                        ratio: Math.random() * 0.8 + 0.2
+                      }));
+                      juris.setState('adaptiveBoxes', updated);
+                    }
+                  }}
+                ]
+              }}
+            ]
+          }}
+        ]
+      }}
+    });
+
+    // Window resize handler using juris.arm()
+    juris.arm(window, (context) => ({
+      onresize: (e) => {
+        context.setState('windowSize', {
+          width: window.innerWidth,
+          height: window.innerHeight
+        });
+        
+        // Clear measurements to trigger recalculation
+        context.setState('measurements', {});
+      }
+    }));
+
+    // Render the application
+    juris.render('#app');
+  </script>
+</body>
+</html>

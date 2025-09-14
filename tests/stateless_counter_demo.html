@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stateless Counter - Juris.JS v0.91.0</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f0f23;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .app {
+      background: linear-gradient(145deg, #1a1a2e, #16213e);
+      border-radius: 24px;
+      padding: 48px;
+      box-shadow: 
+        0 25px 50px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .title {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 32px;
+      color: #64ffda;
+      text-shadow: 0 0 20px rgba(100,255,218,0.3);
+    }
+    
+    .display {
+      text-align: center;
+      font-size: 4rem;
+      font-weight: 700;
+      margin: 32px 0;
+      padding: 24px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.2s ease;
+      min-width: 200px;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+    
+    .btn {
+      width: 64px;
+      height: 64px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn:active {
+      transform: scale(0.95);
+    }
+    
+    .btn-dec {
+      background: linear-gradient(145deg, #ff4757, #ff3742);
+      color: white;
+      box-shadow: 0 8px 16px rgba(255,71,87,0.3);
+    }
+    
+    .btn-dec:hover {
+      box-shadow: 0 12px 24px rgba(255,71,87,0.4);
+      transform: translateY(-2px);
+    }
+    
+    .btn-zero {
+      background: linear-gradient(145deg, #747d8c, #57606f);
+      color: white;
+      box-shadow: 0 8px 16px rgba(116,125,140,0.3);
+    }
+    
+    .btn-zero:hover {
+      box-shadow: 0 12px 24px rgba(116,125,140,0.4);
+      transform: translateY(-2px);
+    }
+    
+    .btn-inc {
+      background: linear-gradient(145deg, #5352ed, #3742fa);
+      color: white;
+      box-shadow: 0 8px 16px rgba(83,82,237,0.3);
+    }
+    
+    .btn-inc:hover {
+      box-shadow: 0 12px 24px rgba(83,82,237,0.4);
+      transform: translateY(-2px);
+    }
+    
+    .demo-info {
+      margin-top: 32px;
+      padding: 24px;
+      background: rgba(100,255,218,0.1);
+      border-radius: 12px;
+      border: 1px solid rgba(100,255,218,0.2);
+      text-align: center;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    .highlight {
+      color: #64ffda;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script src="../src/juris.js"></script>
+  <script>
+    const CounterApp = () => ({
+      div: {
+        class: 'app',
+        children: [
+          {div: {
+            class: 'title',
+            text: 'element.$ Counter'
+          }},
+          
+          {div: {
+            class: 'display',
+            text: (elm, options = {}) => {
+              return options.value !== undefined ? options.value.toString() : '0';
+            },
+            style: {
+              color: (elm, options = {}) => {
+                const val = options.value || 0;
+                if (val > 0) return '#64ffda';
+                if (val < 0) return '#ff4757';
+                return '#ffffff';
+              },
+              transform: (elm, options = {}) => {
+                if (options.pulse) return 'scale(1.1)';
+                return 'scale(1)';
+              }
+            }
+          }},
+          
+          {div: {
+            class: 'controls',
+            children: [
+              {button: {
+                class: 'btn btn-dec',
+                text: '−',
+                onclick: (e) => {
+                  const display = document.querySelector('.display');
+                  const current = parseInt(display.textContent) || 0;
+                  const newValue = current - 1;
+                  
+                  display.$.text({ value: newValue });
+                  display.$.style.color({ value: newValue });
+                  display.$.style.transform({ pulse: true });
+                  setTimeout(() => display.$.style.transform({}), 150);
+                }
+              }},
+              
+              {button: {
+                class: 'btn btn-zero',
+                text: '0',
+                onclick: (e) => {
+                  const display = document.querySelector('.display');
+                  
+                  display.$.text({ value: 0 });
+                  display.$.style.color({ value: 0 });
+                  display.$.style.transform({ pulse: true });
+                  setTimeout(() => display.$.style.transform({}), 150);
+                }
+              }},
+              
+              {button: {
+                class: 'btn btn-inc',
+                text: '+',
+                onclick: (e) => {
+                  const display = document.querySelector('.display');
+                  const current = parseInt(display.textContent) || 0;
+                  const newValue = current + 1;
+                  
+                  display.$.text({ value: newValue });
+                  display.$.style.color({ value: newValue });
+                  display.$.style.transform({ pulse: true });
+                  setTimeout(() => display.$.style.transform({}), 150);
+                }
+              }}
+            ]
+          }},
+          
+          {div: {
+            class: 'demo-info',
+            children: [
+              {div: {
+                text: 'This counter has zero global state. The value exists only in the DOM.'
+              }},
+              {br: {}},
+              {div: {
+                text: 'All updates use '
+              }},
+              {span: {
+                class: 'highlight',
+                text: 'element.$.text()'
+              }},
+              {span: {
+                text: ' and '
+              }},
+              {span: {
+                class: 'highlight', 
+                text: 'element.$.style.color()'
+              }},
+              {span: {
+                text: ' with runtime options.'
+              }}
+            ]
+          }}
+        ]
+      }
+    });
+
+    const juris = new Juris({
+      layout: CounterApp()
+    });
+
+    juris.render('#app');
+  </script>
+</body>
+</html>

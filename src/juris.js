@@ -1109,7 +1109,7 @@ class DOMRenderer {
     this.placeholderConfigs = new Map();
     this.componentStack = [];
     this.objTreeAnalyzer = null;
-    this.SKIP_ATTRS = new Set(['children', 'key']);    
+    this.SKIP_ATTRS = new Set(['children', 'key', 'ref']);    
     this.BOOLEAN_ATTRS = new Set([
       'autofocus', 'autoplay', 'checked', 'controls', 'defer', 'disabled',
       'hidden', 'loop', 'multiple', 'muted', 'open', 'readonly', 'required',
@@ -1735,11 +1735,35 @@ class DOMRenderer {
     }, asyncContext);
   }
   
+  #attachRecompute(elm, propName, reactiveFn, updateDom) {
+    if (!elm.$) {
+      elm.$ = {};
+    }    
+    if (propName.startsWith('style_')) {
+      if (!elm.$.style) elm.$.style = {};
+      let styleProp = propName.substring(6);
+      elm.$.style[styleProp] = (options = {}) => {
+        let value = reactiveFn(elm, options);
+        updateDom(value);
+        return value;
+      };
+    } else {
+      elm.$[propName] = (options = {}) => {
+        let value = reactiveFn(elm, options);
+        updateDom(value);
+        return value;
+      };
+    }
+  }
+  
   #handleText(elm, text, subscriptions) {
     if (typeof text === 'function') {
       try {
         let {result, deps} = this.juris.getSM().track(() => text(elm));
-        elm.textContent = result;
+        elm.textContent = result;        
+        this.#attachRecompute(elm, 'text', text, (value) => {
+          elm.textContent = value;
+        });
         if(deps.size === 0){  // Use the result from tracking
           return;
         }
@@ -1777,7 +1801,12 @@ class DOMRenderer {
       });    
       if (typeof result === 'object') {
         Object.assign(elm.style, result);
-      }    
+      }      
+      this.#attachRecompute(elm, 'style', style, (value) => {
+        if (typeof value === 'object') {
+          Object.assign(elm.style, value);
+        }
+      });
       if (deps.size === 0) {
         return;
       }    
@@ -1824,6 +1853,9 @@ class DOMRenderer {
   #handleReactiveStyleProperty(elm, prop, valueFn, subscriptions) {
     let {result, deps} = this.juris.getSM().track(() => valueFn(elm));  
     this.#setStyleProperty(elm, prop, result);    
+    this.#attachRecompute(elm, `style_${prop}`, valueFn, (value) => {
+      this.#setStyleProperty(elm, prop, value);
+    });
     if (deps.size === 0) {
       return;
     }    
@@ -1838,7 +1870,10 @@ class DOMRenderer {
   
   #handleReactiveAttribute(elm, attr, valueFn, subscriptions) {
     let {result, deps} = this.juris.getSM().track(() => valueFn(elm));
-    this.#setStaticAttribute(elm, attr, result);
+    this.#setStaticAttribute(elm, attr, result);    
+    this.#attachRecompute(elm, attr, valueFn, (value) => {
+      this.#setStaticAttribute(elm, attr, value);
+    });
     if (deps.size === 0) {
       return;
     }  
@@ -1864,6 +1899,15 @@ class DOMRenderer {
           this.#updateChildren(elm, result, componentName);
         }
       }      
+      this.#attachRecompute(elm, 'children', children, (result) => {
+        if (result !== "ignore") {
+          if (typeof result === 'string' || typeof result === 'number') {
+            elm.textContent = String(result);
+          } else {
+            this.#updateChildren(elm, result, componentName);
+          }
+        }
+      });
       if (deps.size === 0) {
         return;
       }      
@@ -2129,7 +2173,7 @@ class DOMRenderer {
   }
   
   #handleEvent(elm, eventName, handler, eventListeners) {
-    if (propName === 'onconnected') {
+    if (eventName === 'onconnected') {
       elm._jurisOnConnected = handler;
       return;
     }
@@ -3124,8 +3168,8 @@ class Juris {
         while (stagingEl.firstChild) {
           containerEl.appendChild(stagingEl.firstChild);
         }
-        this.getHM()?.initializeQueued();
         this.getDR()._processPendingConnectedCallbacks();
+        this.getHM()?.initializeQueued();
       } finally {
         stopTracking();
         document.body.removeChild(stagingEl);
