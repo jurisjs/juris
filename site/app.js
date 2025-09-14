@@ -17448,7 +17448,7 @@ juris.enhance('#counter-btn', {
 // Global access for debugging
 //window.juris = juris;
 
-console.log('🚀 Website Ready - Making Problems Obsolete!');
+//console.log('🚀 Website Ready - Making Problems Obsolete!');
 const endTime = performance.now();
 console.log(`🕒 Initialization Time: ${endTime - startTime} ms`);
 juris.setState('metrics.renderTime', {

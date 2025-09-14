@@ -152,8 +152,31 @@ class StateManager {
         this.pathCache = new Map();
         this.maxCacheSize = 500;
         this.plugins = new Map();
+        this.isDeferringSubscriptions = false;
+        this.deferredSubscriptions = [];
     }
-
+    startDeferringSubscriptions() {
+      this.isDeferringSubscriptions = true;
+      this.deferredSubscriptions = [];
+    }
+    processDeferredSubscriptions() {
+    if (!this.isDeferringSubscriptions) return;
+    
+    // Temporarily disable deferring to create real subscriptions
+    let wasDeferring = this.isDeferringSubscriptions;
+    this.isDeferringSubscriptions = false;
+    
+    this.deferredSubscriptions.forEach(({path, callback, unsubscriber}) => {
+        // Create real subscription
+        let realUnsub = this.subscribeInternal(path, callback);
+        // Update the mutable reference to point to real unsubscriber
+        unsubscriber.fn = realUnsub;
+    });
+    
+    // Clear the deferred list and reset state
+    this.deferredSubscriptions = [];
+    this.isDeferringSubscriptions = false;
+}
     addPlugin(name, plugin) {
         this.plugins.set(name, plugin);
         if (plugin.initialize && typeof plugin.initialize === 'function') {
@@ -482,16 +505,49 @@ class StateManager {
     }
 
     subscribeInternal(path, callback) {
-        if (!this.subscribers.has(path)) this.subscribers.set(path, new Set());
-        this.subscribers.get(path).add(callback);
+    if (this.isDeferringSubscriptions) {
+        // Create a mutable unsubscriber reference
+        let unsubscriber = { fn: null };
+        
+        this.deferredSubscriptions.push({
+            path, 
+            callback,
+            unsubscriber // Store reference so we can update it later
+        });
+        
         return () => {
-            let subs = this.subscribers.get(path);
-            if (subs) {
-                subs.delete(callback);
-                if (subs.size === 0) this.subscribers.delete(path);
+            if (unsubscriber.fn) {
+                // Call the real unsubscriber if it exists
+                unsubscriber.fn();
+            } else {
+                // Remove from deferred list if not yet processed
+                let index = this.deferredSubscriptions.findIndex(
+                    sub => sub.path === path && sub.callback === callback && sub.unsubscriber === unsubscriber
+                );
+                if (index !== -1) {
+                    this.deferredSubscriptions.splice(index, 1);
+                }
             }
         };
     }
+    
+    // Normal subscription logic
+    if (!this.subscribers.has(path)) {
+        this.subscribers.set(path, new Set());
+    }
+    
+    this.subscribers.get(path).add(callback);
+    
+    return () => {
+        let subs = this.subscribers.get(path);
+        if (subs) {
+            subs.delete(callback);
+            if (subs.size === 0) {
+                this.subscribers.delete(path);
+            }
+        }
+    };
+}
 
     #notifySubscribers(path, newValue, oldValue) {
         this.#triggerPathSubscribers(path);
@@ -1078,6 +1134,7 @@ class DOMRenderer {
     this.cleanupTimeout = null;
     this._testMode = false;
     this._lastObjectTree = null;
+    this.pendingConnectedCallbacks = new Set();
   }
 
   #handleAsync = (promise, handlers = {}, context = {}) => {    
@@ -1601,8 +1658,17 @@ class DOMRenderer {
   
   applyProp(elm, propName, propValue, componentName = null) {
     let subscriptions = [];
-    let eventListeners = [];    
-    if (propName === 'children') {
+    let eventListeners = [];
+    if (propName === 'onconnected') {
+      elm._jurisOnConnected = propValue;
+      this.pendingConnectedCallbacks.add(elm);
+      return () => {
+        this.pendingConnectedCallbacks.delete(elm);
+        if (elm._jurisOnConnected) {
+          delete elm._jurisOnConnected;
+        }
+      };
+    } else if (propName === 'children') {
       this._handleChildren(elm, propValue, subscriptions, componentName);
     } else if (propName === 'text') {
       this.#handleText(elm, propValue, subscriptions);
@@ -1630,7 +1696,24 @@ class DOMRenderer {
       });
     };
   }
-  
+
+  _processPendingConnectedCallbacks() {
+    this.pendingConnectedCallbacks.forEach(elm => {
+      if (elm.isConnected && elm._jurisOnConnected) {
+        try {
+          elm._jurisOnConnected.call(elm, { 
+            type: 'connected', 
+            target: elm,
+            timeStamp: Date.now()
+          });
+        } catch (error) {
+          log.ee && console.error(log.e('onconnected callback error:', error), 'application');
+        }
+      }
+    });
+    this.pendingConnectedCallbacks.clear();
+  }
+
   #handleAsyncProp(elm, propName, propValue) {
     let asyncContext = {
       elm,
@@ -2046,6 +2129,10 @@ class DOMRenderer {
   }
   
   #handleEvent(elm, eventName, handler, eventListeners) {
+    if (propName === 'onconnected') {
+      elm._jurisOnConnected = handler;
+      return;
+    }
     eventName = eventName.toLowerCase();
     let actualEventName = eventName === 'onclick' ? 'click' : 
                            eventName === 'ondoubleclick' ? 'dblclick' :
@@ -2989,17 +3076,20 @@ class Juris {
         return;
       }      
       try {
+        this.getSM().startDeferringSubscriptions();
         let content = vdom !== null ? vdom : this.layout;
         let isHydration = this.getState('isHydration', false);        
         if (isHydration) {
           this.#renderWithHydration(containerEl, content);
         } else {
           this.#renderImmediate(containerEl, content);
-        }        
+        }
+        this.getSM().processDeferredSubscriptions();        
         let duration = performance.now() - startTime;
         log.ei && console.info(log.i('Render completed', {duration: `${duration.toFixed(2)}ms`,isHydration}, 'application'));        
         return containerEl;        
       } catch (error) {
+        this.getSM().processDeferredSubscriptions();
         log.ee && console.error(log.e('Render failed', { 
           error: error.message, 
           container 
@@ -3016,6 +3106,7 @@ class Juris {
       if (elm && elm !== containerEl) {
         containerEl.appendChild(elm);
       }
+      this.getDR()._processPendingConnectedCallbacks();
     }
     
     async #renderWithHydration(containerEl, vdom = null) {
@@ -3034,6 +3125,7 @@ class Juris {
           containerEl.appendChild(stagingEl.firstChild);
         }
         this.getHM()?.initializeQueued();
+        this.getDR()._processPendingConnectedCallbacks();
       } finally {
         stopTracking();
         document.body.removeChild(stagingEl);
