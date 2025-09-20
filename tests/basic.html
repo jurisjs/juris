@@ -7,7 +7,9 @@
 <body>
   <div id="app">1</div>
 </body>
-<script>
+<script type="module">
+
+			import {Counter as Counter2} from './comp.js';
 function examplePromise() {
   return new Promise((resolve, reject) => {
     // Simulate async operation with setTimeout
@@ -41,9 +43,11 @@ const SwitchRenderer = (props, context) => {
 
 
 //usage
-
 const Increment = (props, {getState,setState}) => (
   {button: {
+    ref:(el)=>{
+      window.element=el;
+    },
     text: ()=>props.lable(),
     onclick: () => {
         const current = getState('count', 0);
@@ -109,55 +113,55 @@ const Increment = (props, {getState,setState}) => (
         count: 0  // Initialize the state
     },
 		components:{Counter,Increment, SwitchRenderer,Decrement},
-  	layout:[{Counter:{}},
-            {h1: {
-              text: getUserDisplayName // Reactive function
-            }},
-            { SwitchRenderer: {
-                value: () => juris.getState('count', 0),
-                0: 'Zero',
-                1: 'One',
-                2: 'Two',
-                3: 'Three',
-                default:'Higher'
-            }},
-            ()=> juris.getState('count', 0),
-            {Home:{}},
-            {input:{type:'text', readonly:false}},
-
+  	layout:[
+      {Counter:{}},
+      {h1: {
+        text: getUserDisplayName // Reactive function
+      }},
+      { SwitchRenderer: {
+          value: () => juris.getState('count', 0),
+          0: 'Zero',
+          1: 'One',
+          2: 'Two',
+          3: 'Three',
+          default:'Higher'
+      }},
+      ()=> juris.getState('count', 0),
+      {Home:{}},
+      {input:{type:'text', readonly:false}},
     ]
 });
 
 const DisplayCount = (context)=>{
-  return ()=>'DisplayCount Count ' +context.getState('count', 0)
+    //context.juris.registerComponent('Counter2', Counter2);
+  return [()=>'DisplayCount Count ' +context.getState('count', 0)]
 }
 const DisplayCount2 = (context)=>{
-  return {render:()=>({
-    span:{text:'DisplayCount2 Count ' +context.getState('count', 0)}
-  })}
+  return [()=>{return {div:{text:'DisplayCount2 Count ' +context.getState('count', 0)}}}]
 }
 const DisplayCount3 = (context)=>{
+    context.juris.registerComponent('Counter2', Counter2);
   return {render:()=>{
-    const count = context.getState('count', 0);
-    return {
-      span:{text:'DisplayCount3 Count ' +count}
-    }}
+      const count = context.getState('count', 0);
+      return {Counter2:{name:'testi'}}
+    },
+    hooks:{
+      onMount:()=>console.log('mounted')
+    }
   }}
+
+
 
 const DisplayCount4 = (context)=>{
   return {
   render:()=>{
     const count = context.getState('count', 0);
-    return [{
-      span:{text:'DisplayCount4 Count ' +count},
+    return {
+      span:{text:'DisplayCount4 Count ' +count}
       
-    },
-    {br:{}},
-    {
-      span:{text:'DisplayCount4 Count ' +count},
-      
-    }]}
+    }
   }
+}
 }
 juris.registerComponent('DisplayCount', DisplayCount)
 juris.registerComponent('DisplayCount2', DisplayCount2)
@@ -178,5 +182,6 @@ juris.registerComponent('Home', (props, { setState, logger }) => ({
   },
 }));
 juris.render();
+window.juris = juris;
 </script>
 </html>

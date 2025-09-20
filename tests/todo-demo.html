@@ -15,8 +15,7 @@
       return {
         render: () => {
           const todos = context.getState('todos', []);
-          console.log('TodoList render called, todos:', todos);
-          
+          console.log('TodoList render called, todos:', todos);          
           return todos.map(todo => ({
             div: {
               key: todo.id,
@@ -111,6 +110,7 @@
 
     // Render the app
     app.render('#app');
+    window.juris = app;
   </script>
 </body>
 </html>

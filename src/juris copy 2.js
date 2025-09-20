@@ -654,15 +654,18 @@ class ComponentManager {
         return null;
       }
       try {
+        let refCallback = props.ref;
+        let componentProps = { ...props };
+        delete componentProps.ref;
         if (this.juris.getDR()._hasAsyncProps(props)) {
-          return this.#createWithAsyncProps(name, compFn, props, targetContainer);
+          return this.#createWithAsyncProps(name, compFn, props, targetContainer, refCallback);
         }
         let { comptId, componentStates , context } = this.#getCompContext(name);
         let result = this.#callComponentFunction(compFn, props, context);
         if (result?.then) {
-          return this.#handleAsyncComp(promisify(result), name, props, componentStates , targetContainer);
+          return this.#handleAsyncComp(promisify(result), name, props, componentStates , targetContainer,refCallback);
         }
-        return this.#procCompResult(result, name, props, componentStates , targetContainer);
+        return this.#procCompResult(result, name, props, componentStates , targetContainer,refCallback);
        //return this.#newCompFrag(result, name, props, componentStates , targetContainer)
         //return this.#callComponentFunction(compFn, props, context)
       } catch (error) {
@@ -724,12 +727,12 @@ class ComponentManager {
       return context;
     }
 
-    #createWithAsyncProps(name, compFn, props, targetContainer = null) {
+    #createWithAsyncProps(name, compFn, props, targetContainer = null, refCallback=null) {
       let ph = targetContainer || this.#newPlaceholder(name, 'async-props-loading');
       this.placeholders.set(ph, { name, props, type: 'async-props' });
       this.#resolveAsyncProps(props).then(resolved => {
         try {
-          let elem = this.#createSyncComponent(name, compFn, resolved, targetContainer);
+          let elem = this.#createSyncComponent(name, compFn, resolved, targetContainer, refCallback);
           if (targetContainer) {
             // If using external container, replace contents instead of element
             targetContainer.innerHTML = '';
@@ -771,21 +774,21 @@ class ComponentManager {
       return resolved;
     }
 
-    #createSyncComponent(name, compFn, props, targetContainer = null) {
+    #createSyncComponent(name, compFn, props, targetContainer = null, refCallback=null) {
       let { comptId, componentStates , context } = this.#getCompContext(name);
       let result = this.#callComponentFunction(compFn, props, context);
       if (result?.then) {
-        return this.#handleAsyncComp(promisify(result), name, props, componentStates , targetContainer);
+        return this.#handleAsyncComp(promisify(result), name, props, componentStates , targetContainer, refCallback);
       }
-      return this.#procCompResult(result, name, props, componentStates , targetContainer);
+      return this.#procCompResult(result, name, props, componentStates , targetContainer, refCallback);
     }
 
-    #handleAsyncComp(promise, name, props, states, targetContainer = null) {
+    #handleAsyncComp(promise, name, props, states, targetContainer = null, refCallback = null) {
       let ph = targetContainer || this.#newPlaceholder(name, 'async-loading');
       this.placeholders.set(ph, { name, props, states });
       promise.then(result => {
         try {
-          let elem = this.#procCompResult(result, name, props, states, targetContainer);
+          let elem = this.#procCompResult(result, name, props, states, targetContainer, refCallback);
           if (targetContainer) {
             // If using external container, replace contents instead of element
             targetContainer.innerHTML = '';
@@ -803,120 +806,80 @@ class ComponentManager {
       return ph;
     }
 
-    #procCompResult(result, name, props, states, targetContainer = null) {
+    #procCompResult(result, name, props, states, targetContainer = null, refCallback = null) {
       if (Array.isArray(result)) {
         return this.#newCompFrag(result, name, props, states);
       }      
       let hasLifecycle = result && typeof result === 'object' && 
         (this.#hasHooks(result) || typeof result.render === 'function');      
       if (hasLifecycle) {
-        return this.#createManagedComponent(result, name, props, states, targetContainer);
+        return this.#createManagedComponent(result, name, props, states, targetContainer, refCallback);
       }
       // Handle all other cases (primitives, null, VDOM objects)
       let el = this.juris.getDR().render(result, name);
-      return this.#finalizeElement(el, name, states, result);
+      let finalElement = this.#finalizeElement(el, name, states, result);      
+      // Call ref callback after element is ready
+      this.#callRefCallback(finalElement, refCallback);      
+      return finalElement;
     }
 
-    #createManagedComponent(result, name, props, states, targetContainer = null) {
-      let inst = this.#newComp(result, name, props);
-      let currentElement = targetContainer || document.createElement('div');
-      let isExternal = !!targetContainer;
-      let allSubscriptions = new Set();
-      let hasBeenMounted = false;
-      
-      if (!isExternal) {
-        currentElement.setAttribute('data-juris-component', name);
-        currentElement.setAttribute('data-juris-rendertime', Date.now());
-      }
-      
-      const stableUpdateRender = async () => {  // Make this async
-        // Clean up subscriptions
-        allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-        allSubscriptions.clear();
-        
-        if (currentElement && currentElement._reactiveSubscriptions) {
-          currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-          currentElement._reactiveSubscriptions = [];
+    #callRefCallback(element, refCallback) {
+      if (refCallback && typeof refCallback === 'function') {
+        try {
+          let refResult = refCallback(element);
+          // If ref callback returns a cleanup function, store it
+          if (typeof refResult === 'function') {
+            element._jurisRefCleanup = refResult;
+          }
+        } catch (error) {
+          log.ee && console.error(log.e('Component ref callback error:', error), 'application');
         }
-        
+      }
+    }
+    #createManagedComponent(result, name, props, states, targetContainer = null,refCallback = null) {
+      let inst = this.#newComp(result, name, props);
+      let cont = document.createElement('div');
+      let isExternal = !!targetContainer;      
+      if (!isExternal) {
+        cont.setAttribute('data-juris-component', name);
+        cont.setAttribute('data-juris-rendertime', Date.now())
+      }
+      let updateRender = () => {
+        if (cont._reactiveSubscriptions) {
+          cont._reactiveSubscriptions.forEach(unsub => unsub());
+          cont._reactiveSubscriptions = [];
+        }
         let { result: res, deps } = this.juris.getSM().track(() => {
           if (inst.render) {
-            return inst.render(currentElement);
+            return inst.render(cont);
           }
           return result;
         });
-        
-        // Handle async render functions properly
         if (res?.then) {
-          try {
-            res = await promisify(res);  // Wait for async render to complete
-          } catch (err) {
+          cont.innerHTML = '<div class="juris-loading">Loading...</div>';
+          promisify(res).then(resolved => {
+            this.#updateContainerContent(cont, resolved, name, isExternal);
+          }).catch(err => {
             log.ee && console.error(`Async render error for ${name}:`, err);
-            res = this.#newErrElm(name, err);
+            cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
+          });
+        } else {
+          if(res){
+            this.#updateContainerContent(cont, res, name, isExternal);
+          }else{
+            cont.appendChild(this.#newErrElm(name, {message:'Component cannot return empty'}))
           }
         }
-        
-        if (res) {
-          let newElement = this.juris.getDR().render(res, name);
-          
-          if (currentElement.parentNode && newElement !== currentElement) {
-            if (currentElement.parentNode.contains(currentElement)) {
-              currentElement.parentNode.replaceChild(newElement, currentElement);
-              currentElement = newElement;
-            }
-            
-            if (!isExternal && currentElement.setAttribute) {
-              currentElement.setAttribute('data-juris-component', name);
-              currentElement.setAttribute('data-juris-rendertime', Date.now());
-            }
-          } else if (newElement && !currentElement.parentNode) {
-            currentElement = newElement;
-            
-            if (!isExternal && currentElement.setAttribute) {
-              currentElement.setAttribute('data-juris-component', name);
-              currentElement.setAttribute('data-juris-rendertime', Date.now());
-            }
-          }
-          
-          if (hasBeenMounted && (inst.hooks?.onUpdate || inst.onUpdate)) {
-            let updateHook = inst.hooks?.onUpdate || inst.onUpdate;
-            setTimeout(() => this.#runHook(updateHook, currentElement, name, 'onUpdate'), 0);
-          }
-          hasBeenMounted = true;
-        }
-        
-        // Create new subscriptions
         deps.forEach(path => {
-          let unsub = this.juris.getSM().subscribeInternal(path, stableUpdateRender);
-          allSubscriptions.add(unsub);
+          let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
+          if (!cont._reactiveSubscriptions) cont._reactiveSubscriptions = [];
+          cont._reactiveSubscriptions.push(unsub);
         });
       };
-      
-      // Initial render
-      stableUpdateRender();
-      
-      // Store cleanup function
-      currentElement._componentCleanup = () => {
-        if (inst.hooks?.onUnmount || inst.onUnmount) {
-          let unmountHook = inst.hooks?.onUnmount || inst.onUnmount;
-          try {
-            this.#runHook(unmountHook, currentElement, name, 'onUnmount');
-          } catch (error) {
-            log.ee && console.error(log.e(`onUnmount error in ${name}:`, error), 'application');
-          }
-        }
-        
-        allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-        allSubscriptions.clear();
-        
-        if (currentElement._reactiveSubscriptions) {
-          currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-          currentElement._reactiveSubscriptions = [];
-        }
-      };
-      
-      this.#setupUnifiedComp(currentElement, inst, states, name, isExternal);
-      return currentElement;
+      updateRender();
+      this.#setupUnifiedComp(cont, inst, states, name, isExternal);
+      this.#callRefCallback(cont, refCallback);
+      return cont;
     }
 
     #updateContainerContent(cont, content, name, isExternal) {
@@ -1103,7 +1066,14 @@ class ComponentManager {
           this.componentStates .delete(elm);
         }
       }
-      
+      if (elm._jurisRefCleanup && typeof elm._jurisRefCleanup === 'function') {
+        try {
+          elm._jurisRefCleanup();
+        } catch (error) {
+          log.ew && console.warn('Error cleaning up component ref callback:', error);
+        }
+        delete elm._jurisRefCleanup;
+      }
       if (this.placeholders.has(elm)) {
         this.placeholders.delete(elm);
       }
@@ -2709,7 +2679,7 @@ class Juris {
    * 
    * @param {string} elementId - The ID of the element to configure
    * @param {PlaceholderConfig} config - Configuration for loading indicators
-   * @returns {void}
+   * @returns {void}yes,
    * @since 0.91.0
    * 
    * @example
@@ -2724,56 +2694,57 @@ class Juris {
     #detectGlobalAndWarn() {
         if (!Juris._done) { (requestIdleCallback || setTimeout)(() => { if (Juris.#inGlobal) return; Juris.#inGlobal = true; for (let key in globalThis) { if (globalThis[key] instanceof Juris) { log.ew && console.warn(`JURIS GLOBAL: '${key}'`); } } }); }
     }
+    
     #createBaseContext() {
-        if (!this.contextTemplate) {
-            this.contextTemplate = {
-                getState: (path, defaultValue, track) => this.getSM().getState(path, defaultValue, track),
-                setState: (path, value, context) => this.getSM().setState(path, value, context),
-                executeBatch: (callback) => this.executeBatch(callback),
-                subscribe: (path, callback) => this.getSM().subscribe(path, callback),
-                effect: (fn) => {
-                  const { result, deps } = this.getSM().track(fn);
-                  const subscriptions = [];
-                  deps.forEach(path => {
-                    const unsub = this.getSM().subscribeInternal(path, fn);
-                    subscriptions.push(unsub);
-                  });
-                  return () => subscriptions.forEach(unsub => unsub());
-                },
-                compute: (name, fn,option) => this.getSM().compute(name,fn, option),
-                services: this.services,
-                ...(this.services || {}),
-                ...(this.headlessAPIs || {}),
-                headless: this.getHM()?.context,
-                isSSR: typeof window === 'undefined',
-                components: {
-                    register: (name, component) => this.getCM().register(name, component),
-                    registerHeadless: (name, component, options) => this.getHM()?.register(name, component, options),
-                    get: name => this.getCM().components.get(name),
-                    getHeadless: name => this.getHM()?.getInstance(name),
-                    initHeadless: (name, props) => this.getHM()?.initialize(name, props),
-                    reinitHeadless: (name, props) => this.getHM()?.reinitialize(name, props),
-                    getComponentAPI: (name) => this.getComponentAPI(name),
-                    getHeadlessAPI: name => this.getHM()?.getAPI(name),
-                    getComponentElement: (name) => this.getComponentElement(name),
-                    getNamedComponents: () => this.getCM().getNamedComponents(),
-                },
-                utils: {
-                    render: container => this.render(container),
-                    cleanup: () => this.cleanup(),
-                    forceRender: () => this.render(),
-                    getHeadlessStatus: () => this.getHM()?.getStatus(),
-                    objectToHtml: (vnode) => this.objectToHtml(vnode)
-                },
-                objectToHtml: (vnode) => this.objectToHtml(vnode),
-                setupIndicators: (elementId, config) => this.setupIndicators(elementId, config),
-                juris: this,
-                logger: {
-                    warn: log.w, error: log.e, info: log.i, debug: log.d, subscribe: logSub, unsubscribe: logUnsub
-                }
-            };
-        }
-        return this.contextTemplate;
+      if (!this.contextTemplate) {
+        this.contextTemplate = {
+          getState: (path, defaultValue, track) => this.getSM().getState(path, defaultValue, track),
+          setState: (path, value, context) => this.getSM().setState(path, value, context),
+          executeBatch: (callback) => this.executeBatch(callback),
+          subscribe: (path, callback) => this.getSM().subscribe(path, callback),
+          effect: (fn) => {
+            const { result, deps } = this.getSM().track(fn);
+            const subscriptions = [];
+            deps.forEach(path => {
+              const unsub = this.getSM().subscribeInternal(path, fn);
+              subscriptions.push(unsub);
+            });
+            return () => subscriptions.forEach(unsub => unsub());
+          },
+          compute: (name, fn,option) => this.getSM().compute(name,fn, option),
+          services: this.services,
+          ...(this.services || {}),
+          ...(this.headlessAPIs || {}),
+          headless: this.getHM()?.context,
+          isSSR: typeof window === 'undefined',
+          components: {
+              register: (name, component) => this.getCM().register(name, component),
+              registerHeadless: (name, component, options) => this.getHM()?.register(name, component, options),
+              get: name => this.getCM().components.get(name),
+              getHeadless: name => this.getHM()?.getInstance(name),
+              initHeadless: (name, props) => this.getHM()?.initialize(name, props),
+              reinitHeadless: (name, props) => this.getHM()?.reinitialize(name, props),
+              getComponentAPI: (name) => this.getComponentAPI(name),
+              getHeadlessAPI: name => this.getHM()?.getAPI(name),
+              getComponentElement: (name) => this.getComponentElement(name),
+              getNamedComponents: () => this.getCM().getNamedComponents(),
+          },
+          utils: {
+              render: container => this.render(container),
+              cleanup: () => this.cleanup(),
+              forceRender: () => this.render(),
+              getHeadlessStatus: () => this.getHM()?.getStatus(),
+              objectToHtml: (vnode) => this.objectToHtml(vnode)
+          },
+          objectToHtml: (vnode) => this.objectToHtml(vnode),
+          setupIndicators: (elementId, config) => this.setupIndicators(elementId, config),
+          juris: this,
+          logger: {
+              warn: log.w, error: log.e, info: log.i, debug: log.d, subscribe: logSub, unsubscribe: logUnsub
+          }
+        };
+      }
+      return this.contextTemplate;
     }
     
   /**

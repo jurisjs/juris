@@ -152,31 +152,8 @@ class StateManager {
         this.pathCache = new Map();
         this.maxCacheSize = 500;
         this.plugins = new Map();
-        this.isDeferringSubscriptions = false;
-        this.deferredSubscriptions = [];
     }
-    startDeferringSubscriptions() {
-      this.isDeferringSubscriptions = true;
-      this.deferredSubscriptions = [];
-    }
-    processDeferredSubscriptions() {
-    if (!this.isDeferringSubscriptions) return;
-    
-    // Temporarily disable deferring to create real subscriptions
-    let wasDeferring = this.isDeferringSubscriptions;
-    this.isDeferringSubscriptions = false;
-    
-    this.deferredSubscriptions.forEach(({path, callback, unsubscriber}) => {
-        // Create real subscription
-        let realUnsub = this.subscribeInternal(path, callback);
-        // Update the mutable reference to point to real unsubscriber
-        unsubscriber.fn = realUnsub;
-    });
-    
-    // Clear the deferred list and reset state
-    this.deferredSubscriptions = [];
-    this.isDeferringSubscriptions = false;
-}
+
     addPlugin(name, plugin) {
         this.plugins.set(name, plugin);
         if (plugin.initialize && typeof plugin.initialize === 'function') {
@@ -505,49 +482,16 @@ class StateManager {
     }
 
     subscribeInternal(path, callback) {
-    if (this.isDeferringSubscriptions) {
-        // Create a mutable unsubscriber reference
-        let unsubscriber = { fn: null };
-        
-        this.deferredSubscriptions.push({
-            path, 
-            callback,
-            unsubscriber // Store reference so we can update it later
-        });
-        
+        if (!this.subscribers.has(path)) this.subscribers.set(path, new Set());
+        this.subscribers.get(path).add(callback);
         return () => {
-            if (unsubscriber.fn) {
-                // Call the real unsubscriber if it exists
-                unsubscriber.fn();
-            } else {
-                // Remove from deferred list if not yet processed
-                let index = this.deferredSubscriptions.findIndex(
-                    sub => sub.path === path && sub.callback === callback && sub.unsubscriber === unsubscriber
-                );
-                if (index !== -1) {
-                    this.deferredSubscriptions.splice(index, 1);
-                }
+            let subs = this.subscribers.get(path);
+            if (subs) {
+                subs.delete(callback);
+                if (subs.size === 0) this.subscribers.delete(path);
             }
         };
     }
-    
-    // Normal subscription logic
-    if (!this.subscribers.has(path)) {
-        this.subscribers.set(path, new Set());
-    }
-    
-    this.subscribers.get(path).add(callback);
-    
-    return () => {
-        let subs = this.subscribers.get(path);
-        if (subs) {
-            subs.delete(callback);
-            if (subs.size === 0) {
-                this.subscribers.delete(path);
-            }
-        }
-    };
-}
 
     #notifySubscribers(path, newValue, oldValue) {
         this.#triggerPathSubscribers(path);
@@ -807,122 +751,78 @@ class ComponentManager {
       if (Array.isArray(result)) {
         return this.#newCompFrag(result, name, props, states);
       }      
-      let hasLifecycle = result && typeof result === 'object' && 
-        (this.#hasHooks(result) || typeof result.render === 'function');      
+      if (!result || typeof result !== 'object') {
+        let el = this.juris.getDR().render(result, name);
+        return this.#finalizeElement(el, name, states, result);
+      }
+      let hasLifecycle = this.#hasHooks(result) || typeof result.render === 'function';
+      
       if (hasLifecycle) {
         return this.#createManagedComponent(result, name, props, states, targetContainer);
       }
-      // Handle all other cases (primitives, null, VDOM objects)
+      let keys = Object.keys(result);
+      if (keys.length === 1 && typeof keys[0] === 'string' && keys[0].length > 0) {
+        let el = this.juris.getDR().render(result, name);
+        return this.#finalizeElement(el, name, states, result);
+      }
+
       let el = this.juris.getDR().render(result, name);
       return this.#finalizeElement(el, name, states, result);
     }
 
     #createManagedComponent(result, name, props, states, targetContainer = null) {
       let inst = this.#newComp(result, name, props);
-      let currentElement = targetContainer || document.createElement('div');
-      let isExternal = !!targetContainer;
-      let allSubscriptions = new Set();
-      let hasBeenMounted = false;
-      
+      let cont = document.createElement('div');
+      let isExternal = !!targetContainer;      
       if (!isExternal) {
-        currentElement.setAttribute('data-juris-component', name);
-        currentElement.setAttribute('data-juris-rendertime', Date.now());
+        cont.setAttribute('data-juris-component', name);
+        cont.setAttribute('data-juris-rendertime', Date.now())
       }
-      
-      const stableUpdateRender = async () => {  // Make this async
-        // Clean up subscriptions
-        allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-        allSubscriptions.clear();
-        
-        if (currentElement && currentElement._reactiveSubscriptions) {
-          currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-          currentElement._reactiveSubscriptions = [];
+      let updateRender = () => {
+        if (cont._reactiveSubscriptions) {
+          cont._reactiveSubscriptions.forEach(unsub => unsub());
+          cont._reactiveSubscriptions = [];
         }
-        
         let { result: res, deps } = this.juris.getSM().track(() => {
           if (inst.render) {
-            return inst.render(currentElement);
+            return inst.render(cont);
           }
           return result;
         });
-        
-        // Handle async render functions properly
         if (res?.then) {
-          try {
-            res = await promisify(res);  // Wait for async render to complete
-          } catch (err) {
+          cont.innerHTML = '<div class="juris-loading">Loading...</div>';
+          promisify(res).then(resolved => {
+            this.#updateContainerContent(cont, resolved, name, isExternal);
+          }).catch(err => {
             log.ee && console.error(`Async render error for ${name}:`, err);
-            res = this.#newErrElm(name, err);
+            cont.innerHTML = `<div class="juris-error">Render Error: ${err.message}</div>`;
+          });
+        } else {
+          if(res){
+            this.#updateContainerContent(cont, res, name, isExternal);
+          }else{
+            cont.appendChild(this.#newErrElm(name, {message:'Component cannot return empty'}))
           }
         }
-        
-        if (res) {
-          let newElement = this.juris.getDR().render(res, name);
-          
-          if (currentElement.parentNode && newElement !== currentElement) {
-            if (currentElement.parentNode.contains(currentElement)) {
-              currentElement.parentNode.replaceChild(newElement, currentElement);
-              currentElement = newElement;
-            }
-            
-            if (!isExternal && currentElement.setAttribute) {
-              currentElement.setAttribute('data-juris-component', name);
-              currentElement.setAttribute('data-juris-rendertime', Date.now());
-            }
-          } else if (newElement && !currentElement.parentNode) {
-            currentElement = newElement;
-            
-            if (!isExternal && currentElement.setAttribute) {
-              currentElement.setAttribute('data-juris-component', name);
-              currentElement.setAttribute('data-juris-rendertime', Date.now());
-            }
-          }
-          
-          if (hasBeenMounted && (inst.hooks?.onUpdate || inst.onUpdate)) {
-            let updateHook = inst.hooks?.onUpdate || inst.onUpdate;
-            setTimeout(() => this.#runHook(updateHook, currentElement, name, 'onUpdate'), 0);
-          }
-          hasBeenMounted = true;
-        }
-        
-        // Create new subscriptions
         deps.forEach(path => {
-          let unsub = this.juris.getSM().subscribeInternal(path, stableUpdateRender);
-          allSubscriptions.add(unsub);
+          let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
+          if (!cont._reactiveSubscriptions) cont._reactiveSubscriptions = [];
+          cont._reactiveSubscriptions.push(unsub);
         });
       };
-      
-      // Initial render
-      stableUpdateRender();
-      
-      // Store cleanup function
-      currentElement._componentCleanup = () => {
-        if (inst.hooks?.onUnmount || inst.onUnmount) {
-          let unmountHook = inst.hooks?.onUnmount || inst.onUnmount;
-          try {
-            this.#runHook(unmountHook, currentElement, name, 'onUnmount');
-          } catch (error) {
-            log.ee && console.error(log.e(`onUnmount error in ${name}:`, error), 'application');
-          }
-        }
-        
-        allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-        allSubscriptions.clear();
-        
-        if (currentElement._reactiveSubscriptions) {
-          currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-          currentElement._reactiveSubscriptions = [];
-        }
-      };
-      
-      this.#setupUnifiedComp(currentElement, inst, states, name, isExternal);
-      return currentElement;
+      updateRender();
+      this.#setupUnifiedComp(cont, inst, states, name, isExternal);      
+      return cont;
     }
 
     #updateContainerContent(cont, content, name, isExternal) {
       let children = Array.from(cont.children);
-      children.forEach(child => this.cleanup(child)); 
-      cont.innerHTML = '';
+      children.forEach(child => this.cleanup(child));      
+      if (isExternal) {
+        cont.innerHTML = '';
+      } else {
+        cont.innerHTML = '';
+      }
       let el = this.juris.getDR().render(content);
       cont.appendChild(el);
     }
@@ -1111,7 +1011,9 @@ class ComponentManager {
     }
 
     #cleanupFragment(fragment) {
-        fragment._jurisComponent?.cleanup?.();
+        if (fragment._jurisComponent?.cleanup) {
+            fragment._jurisComponent.cleanup();
+        }
         if (fragment._juriscomponentStates ) {
             this.#cleanupStateSet(fragment._juriscomponentStates );
         }
@@ -1166,7 +1068,7 @@ class DOMRenderer {
     this.placeholderConfigs = new Map();
     this.componentStack = [];
     this.objTreeAnalyzer = null;
-    this.SKIP_ATTRS = new Set(['children', 'key', 'ref']);    
+    this.SKIP_ATTRS = new Set(['children', 'key']);    
     this.BOOLEAN_ATTRS = new Set([
       'autofocus', 'autoplay', 'checked', 'controls', 'defer', 'disabled',
       'hidden', 'loop', 'multiple', 'muted', 'open', 'readonly', 'required',
@@ -1191,10 +1093,13 @@ class DOMRenderer {
     this.cleanupTimeout = null;
     this._testMode = false;
     this._lastObjectTree = null;
-    this.pendingConnectedCallbacks = new Set();
   }
 
-  #handleAsync = (promise, handlers = {}, context = {}) => {    
+  #handleAsync = (promise, handlers = {}, context = {}) => {
+    if (!this.#isPromiseLike(promise)) {
+      throw new Error('handleAsync called with non-promise value. Use #isPromiseLike check first.');
+    }
+    
     let {
       onStart = () => {},
       onResolved = () => {},
@@ -1202,12 +1107,16 @@ class DOMRenderer {
         log.ee && console.error(log.e('Async operation failed:', error), 'application');
       },
       onFinally = () => {}
-    } = handlers;    
+    } = handlers;
+    
     if (context.elm && context.type) {
       this.#applyPlaceholder(context.elm, context.type, context);
-    }    
-    onStart();    
-    let trackedPromise = promisify(promise);    
+    }
+    
+    onStart();
+    
+    let trackedPromise = promisify(promise);
+    
     return trackedPromise
       .then(resolved => {
         if (context.elm && context.type) {
@@ -1229,7 +1138,8 @@ class DOMRenderer {
   };
   
   #applyPlaceholder(elm, type, context = {}) {
-    let config = this._getPlaceholderConfig(elm);    
+    let config = this._getPlaceholderConfig(elm);
+    
     switch(type) {
       case 'children':
       case 'reactive-children':
@@ -1252,7 +1162,8 @@ class DOMRenderer {
   
   #applyChildrenPlaceholder(elm, config) {
     elm.innerHTML = '';
-    let placeholder;    
+    let placeholder;
+    
     if (config.children) {
       placeholder = this.render(config.children);
     } else {
@@ -1260,7 +1171,8 @@ class DOMRenderer {
       placeholder.className = config.className;
       placeholder.textContent = config.text;
       if (config.style) placeholder.style.cssText = config.style;
-    }    
+    }
+    
     elm.appendChild(placeholder);
     this.placeholders.set(elm, { 
       type: 'children', 
@@ -1320,51 +1232,61 @@ class DOMRenderer {
   
   #removePlaceholder(elm) {
     let placeholderData = this.placeholders.get(elm);
-    if (!placeholderData) return;    
+    if (!placeholderData) return;
+    
     let config = this._getPlaceholderConfig(elm);
-    elm.classList.remove(config.className);    
+    elm.classList.remove(config.className);
+    
     switch(placeholderData.type) {
       case 'children':
         if (placeholderData.placeholder && placeholderData.placeholder.parentNode === elm) {
           elm.removeChild(placeholderData.placeholder);
         }
-        break;        
+        break;
+        
       case 'text':
         if (placeholderData.hadStyle) {
           let originalStyle = elm.getAttribute('data-juris-original-style');
           elm.style.cssText = originalStyle || '';
           elm.removeAttribute('data-juris-original-style');
         }
-        break;        
+        break;
+        
       case 'style':
         elm.style.cssText = placeholderData.originalStyle || '';
         break;
-    }    
+    }
+    
     this.placeholders.delete(elm);
   }
   
   #applyErrorState(elm, type, error, context = {}) {
     let config = this._getPlaceholderConfig(elm);
-    this.#removePlaceholder(elm);    
-    let errorMessage = `Error: ${error.message}`;    
+    this.#removePlaceholder(elm);
+    
+    let errorMessage = `Error: ${error.message}`;
+    
     switch(type) {
       case 'children':
       case 'reactive-children':
       case 'fragment-child':
         elm.innerHTML = `<div class="${config.errorClassName}" style="${config.errorStyle}">${errorMessage}</div>`;
-        break;        
+        break;
+        
       case 'text':
         elm.textContent = errorMessage;
         elm.classList.add(config.errorClassName);
         if (config.errorStyle) elm.style.cssText = config.errorStyle;
-        break;        
+        break;
+        
       case 'attribute':
         elm.classList.add(config.errorClassName);
         if (context.attributeName) {
           elm.setAttribute(context.attributeName, 'error');
           elm.setAttribute('data-juris-error', errorMessage);
         }
-        break;        
+        break;
+        
       case 'style':
         elm.classList.add(config.errorClassName);
         if (config.errorStyle) elm.style.cssText = config.errorStyle;
@@ -1374,7 +1296,8 @@ class DOMRenderer {
   
   #createReactiveHandler(elm, getValue, updateDom, options = {}) {
     let lastValue = options.trackChanges ? null : undefined;
-    let isInitialized = false;    
+    let isInitialized = false;
+    
     let update = () => {
       try {
         let result = getValue();
@@ -1392,7 +1315,8 @@ class DOMRenderer {
           elm,
           type: options.type || 'generic',
           attributeName: options.attributeName
-        };        
+        };
+        
         return this.#handleAsync(result, {
           onResolved: (resolved) => {
             if (!options.trackChanges || !isInitialized || !deepEquals(resolved, lastValue)) {
@@ -1414,12 +1338,12 @@ class DOMRenderer {
       } catch (error) {
         if (options.onError) {
           options.onError(error);
-          log.ee && console.error(log.e(`Error in reactive ${options.name}:`, error), 'application');
         } else {
           log.ee && console.error(log.e(`Error in reactive ${options.name}:`, error), 'application');
         }
       }
-    };    
+    };
+    
     return update;
   }
   
@@ -1439,11 +1363,13 @@ class DOMRenderer {
   }
   
   #diffChildren(parent, oldChildren, newChildren) {
-    if (oldChildren.length === 0 && newChildren.length === 0) return;    
+    if (oldChildren.length === 0 && newChildren.length === 0) return;
+    
     let operations = [];
     let oldKeyMap = new Map();
     let newKeyMap = new Map();
-    let usedKeys = new Set();    
+    let usedKeys = new Set();
+    
     let oldNodes = Array.from(parent.childNodes);
     oldNodes.forEach((node, index) => {
       let key = this.nodeKeys.get(node);
@@ -1452,10 +1378,12 @@ class DOMRenderer {
       } else {
         oldKeyMap.set(`__index_${index}`, { node, index });
       }
-    });    
+    });
+    
     for (let i = 0; i < newChildren.length; i++) {
       let child = newChildren[i];
-      let key = this.#extractKey(child, i) ?? `__index_${i}`;      
+      let key = this.#extractKey(child, i) ?? `__index_${i}`;
+      
       if (usedKeys.has(key) && !key.startsWith('__index_')) {
         log.ew && console.warn(log.w(
           `Duplicate key "${key}" detected. Keys must be unique among siblings.`,
@@ -1467,7 +1395,8 @@ class DOMRenderer {
         operations.push({ type: 'create', child, index: i, key: fallbackKey });
       } else {
         usedKeys.add(key);
-        newKeyMap.set(key, { child, index: i });        
+        newKeyMap.set(key, { child, index: i });
+        
         if (oldKeyMap.has(key)) {
           let oldEntry = oldKeyMap.get(key);
           if (this.#shouldUpdateNode(oldEntry.node, child)) {
@@ -1480,12 +1409,14 @@ class DOMRenderer {
           operations.push({ type: 'create', child, index: i, key });
         }
       }
-    }    
+    }
+    
     oldKeyMap.forEach((entry, key) => {
       if (!newKeyMap.has(key)) {
         operations.push({ type: 'remove', node: entry.node, key });
       }
-    });    
+    });
+    
     this.#executeChildOperations(parent, operations, newChildren);
   }
   
@@ -1503,7 +1434,8 @@ class DOMRenderer {
         this.nodeKeys.delete(op.node);
         this.cleanup(op.node);
       }
-    });    
+    });
+    
     let createdNodes = new Map();
     operations.filter(op => op.type === 'create').forEach(op => {
       let newNode = this.#createChild(op.child);
@@ -1537,7 +1469,8 @@ class DOMRenderer {
         node.textContent = newContent;
       }
       return;
-    }    
+    }
+    
     if (node.nodeType === Node.ELEMENT_NODE && typeof vnode === 'object' && !Array.isArray(vnode)) {
       let tagName = Object.keys(vnode)[0];
       let props = vnode[tagName] || {};
@@ -1694,14 +1627,17 @@ class DOMRenderer {
     if (!componentFn) {
       log.ee && console.error(log.e('Component not found', { name: tagName }, 'application'));
       return null;
-    }    
+    }
+    
     if (this.componentStack.includes(tagName)) {
       return this.#newErrElm('recursion', [...this.componentStack, tagName].join(' → '));
-    }    
+    }
+    
     this.componentStack.push(tagName);
     let { result, deps } = this.juris.getSM().track(() => 
       this.juris.getCM().create(tagName, props, targetContainer), true);
-    this.componentStack.pop();    
+    this.componentStack.pop();
+    
     return result;
   }
   
@@ -1716,36 +1652,30 @@ class DOMRenderer {
   applyProp(elm, propName, propValue, componentName = null) {
     let subscriptions = [];
     let eventListeners = [];
-    if (propName === 'onconnected') {
-      elm._jurisOnConnected = propValue;
-      this.pendingConnectedCallbacks.add(elm);
-      return () => {
-        this.pendingConnectedCallbacks.delete(elm);
-        if (elm._jurisOnConnected) {
-          delete elm._jurisOnConnected;
-        }
-      };
-    } else if (propName === 'children') {
+    
+    if (propName === 'children') {
       this._handleChildren(elm, propValue, subscriptions, componentName);
     } else if (propName === 'text') {
-      this.#handleText(elm, propValue, subscriptions);
+      this._handleText(elm, propValue, subscriptions);
     } else if (propName === 'style') {
-      this.#handleStyle(elm, propValue, subscriptions);
+      this._handleStyle(elm, propValue, subscriptions);
     } else if (propName.startsWith('on')) {
-      this.#handleEvent(elm, propName, propValue, eventListeners);
+      this._handleEvent(elm, propName, propValue, eventListeners);
     } else if (typeof propValue === 'function') {
-      this.#handleReactiveAttribute(elm, propName, propValue, subscriptions);
+      this._handleReactiveAttribute(elm, propName, propValue, subscriptions);
     } else if (this.#isPromiseLike(propValue)) {
       this.#handleAsyncProp(elm, propName, propValue);
     } else {
-      this.#setStaticAttribute(elm, propName, propValue);
-    }    
+      this._setStaticAttribute(elm, propName, propValue);
+    }
+    
     if (subscriptions.length > 0 || eventListeners.length > 0) {
       let existing = this.subscriptions.get(elm) || { subscriptions: [], eventListeners: [] };
       existing.subscriptions.push(...subscriptions);
       existing.eventListeners.push(...eventListeners);
       this.subscriptions.set(elm, existing);
-    }    
+    }
+    
     return () => {
       subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
       eventListeners.forEach(({eventName, handler}) => {
@@ -1753,30 +1683,14 @@ class DOMRenderer {
       });
     };
   }
-
-  _processPendingConnectedCallbacks() {
-    this.pendingConnectedCallbacks.forEach(elm => {
-      if (elm.isConnected && elm._jurisOnConnected) {
-        try {
-          elm._jurisOnConnected.call(elm, { 
-            type: 'connected', 
-            target: elm,
-            timeStamp: Date.now()
-          });
-        } catch (error) {
-          log.ee && console.error(log.e('onconnected callback error:', error), 'application');
-        }
-      }
-    });
-    this.pendingConnectedCallbacks.clear();
-  }
-
+  
   #handleAsyncProp(elm, propName, propValue) {
     let asyncContext = {
       elm,
       type: 'attribute',
       attributeName: propName
-    };    
+    };
+    
     if (propName === 'innerHTML') {
       asyncContext.type = 'children';
       return this.#handleAsync(propValue, {
@@ -1787,54 +1701,20 @@ class DOMRenderer {
     }    
     return this.#handleAsync(propValue, {
       onResolved: (resolved) => {
-        this.#setStaticAttribute(elm, propName, resolved);
+        this._setStaticAttribute(elm, propName, resolved);
       }
     }, asyncContext);
   }
   
-  #attachRecompute(elm, propName, reactiveFn, updateDom) {
-    if (!elm.$) {
-      elm.$ = {};
-    }    
-    if (propName.startsWith('style_')) {
-      if (!elm.$.style) elm.$.style = {};
-      let styleProp = propName.substring(6);
-      elm.$.style[styleProp] = (options = {}) => {
-        let value = reactiveFn(elm, options);
-        updateDom(value);
-        return value;
-      };
-    } else {
-      elm.$[propName] = (options = {}) => {
-        let value = reactiveFn(elm, options);
-        updateDom(value);
-        return value;
-      };
-    }
-  }
-  
-  #handleText(elm, text, subscriptions) {
+  _handleText(elm, text, subscriptions) {
     if (typeof text === 'function') {
-      try {
-        let {result, deps} = this.juris.getSM().track(() => text(elm));
-        elm.textContent = result;        
-        this.#attachRecompute(elm, 'text', text, (value) => {
-          elm.textContent = value;
-        });
-        if(deps.size === 0){  // Use the result from tracking
-          return;
-        }
-        let updateText = this.#createReactiveHandler(
-          elm,
-          () => text(elm),
-          (value) => { elm.textContent = value; },
-          { trackChanges: true, name: 'text', type: 'text' }
-        );
-        this._createReactiveUpdate(elm, updateText, subscriptions, deps);
-       } catch (error) {
-        log.ee && console.error(log.e('Reactive text function error:', error), 'application');
-        elm.textContent = error.message
-      }
+      let updateText = this.#createReactiveHandler(
+        elm,
+        () => text(elm),
+        (value) => { elm.textContent = value; },
+        { trackChanges: true, name: 'text', type: 'text' }
+      );
+      this._createReactiveUpdate(elm, updateText, subscriptions);
     } else if (this.#isPromiseLike(text)) {
       let asyncContext = { elm, type: 'text' };
       this.#handleAsync(text, {
@@ -1847,34 +1727,16 @@ class DOMRenderer {
     }
   }
   
-  #handleStyle(elm, style, subscriptions) {
+  _handleStyle(elm, style, subscriptions) {
     if (typeof style === 'function') {
-      let {result, deps} = this.juris.getSM().track(() => {
-        let value = style.length > 0 ? style(elm) : style();
-        if (this.cssExtractor?.postProcessReactiveResult && typeof value === 'object') {
-          value = this.cssExtractor.postProcessReactiveResult(value, 'reactive', elm);
-        }
-        return value;
-      });    
-      if (typeof result === 'object') {
-        Object.assign(elm.style, result);
-      }      
-      this.#attachRecompute(elm, 'style', style, (value) => {
-        if (typeof value === 'object') {
-          Object.assign(elm.style, value);
-        }
-      });
-      if (deps.size === 0) {
-        return;
-      }    
       let updateStyle = this.#createReactiveHandler(
         elm,
         () => {
-          let value = style.length > 0 ? style(elm) : style();
-          if (this.cssExtractor?.postProcessReactiveResult && typeof value === 'object') {
-            value = this.cssExtractor.postProcessReactiveResult(value, 'reactive', elm);
+          let result = style.length > 0 ? style(elm) : style();
+          if (this.cssExtractor?.postProcessReactiveResult && typeof result === 'object') {
+            result = this.cssExtractor.postProcessReactiveResult(result, 'reactive', elm);
           }
-          return value;
+          return result;
         },
         (value) => {
           if (typeof value === 'object') {
@@ -1883,7 +1745,7 @@ class DOMRenderer {
         },
         { trackChanges: true, name: 'style', type: 'style' }
       );
-      this._createReactiveUpdate(elm, updateStyle, subscriptions, deps);
+      this._createReactiveUpdate(elm, updateStyle, subscriptions);
     } else if (this.#isPromiseLike(style)) {
       let asyncContext = { elm, type: 'style' };
       this.#handleAsync(style, {
@@ -1908,88 +1770,28 @@ class DOMRenderer {
   }
   
   #handleReactiveStyleProperty(elm, prop, valueFn, subscriptions) {
-    let {result, deps} = this.juris.getSM().track(() => valueFn(elm));  
-    this.#setStyleProperty(elm, prop, result);    
-    this.#attachRecompute(elm, `style_${prop}`, valueFn, (value) => {
-      this.#setStyleProperty(elm, prop, value);
-    });
-    if (deps.size === 0) {
-      return;
-    }    
     let updateStyleProperty = this.#createReactiveHandler(
       elm,
       () => valueFn(elm),
       (value) => this.#setStyleProperty(elm, prop, value),
       { trackChanges: true, name: `style.${prop}`, type: 'style' }
     );
-    this._createReactiveUpdate(elm, updateStyleProperty, subscriptions, deps);
+    this._createReactiveUpdate(elm, updateStyleProperty, subscriptions);
   }
   
-  #handleReactiveAttribute(elm, attr, valueFn, subscriptions) {
-    let {result, deps} = this.juris.getSM().track(() => valueFn(elm));
-    this.#setStaticAttribute(elm, attr, result);    
-    this.#attachRecompute(elm, attr, valueFn, (value) => {
-      this.#setStaticAttribute(elm, attr, value);
-    });
-    if (deps.size === 0) {
-      return;
-    }  
+  _handleReactiveAttribute(elm, attr, valueFn, subscriptions) {
     let updateAttribute = this.#createReactiveHandler(
       elm,
       () => valueFn(elm),
-      (value) => this.#setStaticAttribute(elm, attr, value),
+      (value) => this._setStaticAttribute(elm, attr, value),
       { trackChanges: true, name: `attribute '${attr}'`, type: 'attribute', attributeName: attr }
     );
-    this._createReactiveUpdate(elm, updateAttribute, subscriptions, deps);
+    this._createReactiveUpdate(elm, updateAttribute, subscriptions);
   }
   
   _handleChildren(elm, children, subscriptions, componentName = null) {
     if (typeof children === 'function') {
-      let {result, deps} = this.juris.getSM().track(() => {
-        let value = children(elm);
-        return Array.isArray(value) ? value : [value];
-      });
-      if (result !== "ignore") {
-        if (typeof result === 'string' || typeof result === 'number') {
-          elm.textContent = String(result);
-        } else {
-          this.#updateChildren(elm, result, componentName);
-        }
-      }      
-      this.#attachRecompute(elm, 'children', children, (result) => {
-        if (result !== "ignore") {
-          if (typeof result === 'string' || typeof result === 'number') {
-            elm.textContent = String(result);
-          } else {
-            this.#updateChildren(elm, result, componentName);
-          }
-        }
-      });
-      if (deps.size === 0) {
-        return;
-      }      
-      let updateChildren = this.#createReactiveHandler(
-        elm,
-        () => {
-          let value = children(elm);
-          return Array.isArray(value) ? value : [value];
-        },
-        (result) => {
-          if (result !== "ignore") {
-            if (typeof result === 'string' || typeof result === 'number') {
-              elm.textContent = String(result);
-            } else {
-              this.#updateChildren(elm, result, componentName);
-            }
-          }
-        },
-        { 
-          trackChanges: false,
-          name: 'children', 
-          type: 'reactive-children' 
-        }
-      );
-      this._createReactiveUpdate(elm, updateChildren, subscriptions, deps);      
+      this.#handleReactiveChildren(elm, children, subscriptions, componentName);
     } else if (this.#isPromiseLike(children)) {
       let asyncContext = { elm, type: 'children' };
       this.#handleAsync(children, {
@@ -2002,6 +1804,29 @@ class DOMRenderer {
     }
   }
   
+  #handleReactiveChildren(elm, childrenFn, subscriptions, componentName = null) {
+    let updateChildren = this.#createReactiveHandler(
+      elm,
+      () => childrenFn(elm),
+      (result) => {
+        if (typeof result === 'string' || typeof result === 'number') {
+          elm.textContent = String(result);
+        } else {
+          this.#updateChildren(elm, result, componentName);
+        }
+      },
+      { 
+        trackChanges: false, // Children arrays need deep comparison
+        name: 'children', 
+        type: 'reactive-children',
+        onError: (error) => {
+          elm.innerHTML = `<div class="juris-error">Children Error: ${error.message}</div>`;
+        }
+      }
+    );
+    this._createReactiveUpdate(elm, updateChildren, subscriptions);
+  }
+  
   #updateChildren(elm, children, componentName = null) {
     if (children === "ignore") return;
     if(!Array.isArray(children)){
@@ -2011,17 +1836,28 @@ class DOMRenderer {
     if (lastChildren === children) {
       return;
     }
-    if (!elm._jurisChildrenKeyed) {
-      elm._jurisChildrenKeyed = children.some(child => this.#extractKey(child) !== null);
-    }    
-    if (elm._jurisChildrenKeyed && lastChildren && Array.isArray(lastChildren)) {
-      this.#diffChildren(elm, lastChildren, children);
-    } else {
-      this.#renderChildren(elm, children, componentName);
-    }    
+    
+    if (Array.isArray(children)) {
+      if (!elm._jurisChildrenKeyed) {
+        elm._jurisChildrenKeyed = children.some(child => this.#extractKey(child) !== null);
+      }
+      
+      if (elm._jurisChildrenKeyed) {
+        if (lastChildren && Array.isArray(lastChildren)) {
+          this.#diffChildren(elm, lastChildren, children);
+        } else {
+          this.#renderStaticChildren(elm, children, componentName);
+        }
+      } else if (children.some(child => typeof child === 'function')) {
+        this.#renderReactiveChildren(elm, children, componentName);
+      } else {
+        this.#renderStaticChildren(elm, children, componentName);
+      }
+    }
+    
     elm._jurisLastChildren = children;
   }
-
+  
   #handleReactiveFragmentChildren(fragment, children, subscriptions, componentName) {
     for (let i = 0; i < children.length; i++) {
       let child = children[i];
@@ -2044,6 +1880,33 @@ class DOMRenderer {
     }
   }
   
+  #renderReactiveChildren(elm, children, componentName) {
+    elm.textContent = '';
+    let cleanupFunctions = [];
+    let fragment = document.createDocumentFragment();
+    
+    for (let i = 0; i < children.length; i++) {
+      let child = children[i];
+      if (typeof child === 'function') {
+        let { node, cleanup } = this.#createIndividualReactiveChild(child, i, componentName, elm);
+        if (node) {
+          fragment.appendChild(node);
+          cleanupFunctions.push(cleanup);
+        }
+      } else if (child != null) {
+        let childElement = this.#createChild(child, componentName);
+        if (childElement) {
+          fragment.appendChild(childElement);
+        }
+      }
+    }
+    
+    if (fragment.hasChildNodes()) elm.appendChild(fragment);
+    
+    elm._reactiveCleanup = () => {
+      cleanupFunctions.forEach(cleanup => { try { cleanup(); } catch(e) {} });
+    };
+  }
   
   #createIndividualReactiveChild(childFn, index, componentName, parentElement) {
     let config = this._getPlaceholderConfig(parentElement);
@@ -2059,7 +1922,8 @@ class DOMRenderer {
             let placeholder = document.createElement('span');
             placeholder.textContent = config.text;
             placeholder.className = config.className;
-            if (config.style) placeholder.style.cssText = config.style;            
+            if (config.style) placeholder.style.cssText = config.style;
+            
             if (currentNode.parentNode) {
               currentNode.parentNode.replaceChild(placeholder, currentNode);
             }
@@ -2115,10 +1979,10 @@ class DOMRenderer {
   }
   
   #createChild(child, componentName) {
-    if (child == null) return null;    
+    if (child == null) return null;        
     if (typeof child === 'string' || typeof child === 'number') {
       return document.createTextNode(String(child));
-    }    
+    }        
     if (Array.isArray(child)) {
       let fragment = document.createDocumentFragment();
       for (let i = 0; i < child.length; i++) {
@@ -2126,56 +1990,44 @@ class DOMRenderer {
         if (subChild) fragment.appendChild(subChild);
       }
       return fragment.hasChildNodes() ? fragment : null;
-    }    
+    }        
     if (typeof child === 'object' && child !== null) {
-      let tagName = Object.keys(child)[0];
-      let props = child[tagName] || {};
-      if (this.juris.getCM().components.has(tagName)) {
-        let tempContainer = document.createElement('div');
-        let result = this.#renderComponent(tagName, props, tempContainer);        
-        if (tempContainer.firstChild) {
-          let extractedFragment = document.createDocumentFragment();
-          while (tempContainer.firstChild) {
-            extractedFragment.appendChild(tempContainer.firstChild);
-          }
-          return extractedFragment;
-        } else if (result) {
-          return result;
-        }
-        return null;
-      }
-      
       return this.render(child, componentName);
-    }    
+    }        
     return null;
   }
   
-  #renderChildren(elm, children, componentName) {
+  #renderStaticChildren(elm, children, componentName) {
     elm.textContent = '';
-    let fragment = document.createDocumentFragment();
-    let cleanupFunctions = [];
+    let fragment = document.createDocumentFragment();  
     for (let i = 0; i < children.length; i++) {
-      let child = children[i];      
-      if (typeof child === 'function') {
-        let { node, cleanup } = this.#createIndividualReactiveChild(child, i, componentName, elm);
-        if (node) {
-          fragment.appendChild(node);
-          cleanupFunctions.push(cleanup);
-        }
-      } else if (child != null) {
-        let childElement = this.#createChild(child, componentName);
-        if (childElement) {
-          let key = this.#extractKey(child, i);
-          if (key) this.nodeKeys.set(childElement, key);
-          fragment.appendChild(childElement);
+      let child = children[i];    
+      if (child != null) {
+        let tagName = Object.keys(child)[0];
+        let props = child[tagName] || {};
+        if (this.juris.getCM().components.has(tagName)) {    
+          let tempContainer = document.createElement('div');
+          let result = this.#renderComponent(tagName, props, tempContainer);        
+          if (tempContainer.firstChild) {
+            let childCount = 0;
+            while (tempContainer.firstChild) {
+              fragment.appendChild(tempContainer.firstChild);
+              childCount++;
+            }
+          } else if (result) {
+            fragment.appendChild(result);
+          } else {
+          }
+        } else {
+          let childElement = this.render(child, componentName);
+          if (childElement) fragment.appendChild(childElement);
         }
       }
-    }
-    if (fragment.hasChildNodes()) elm.appendChild(fragment);    
-    if (cleanupFunctions.length > 0) {
-      elm._reactiveCleanup = () => {
-        cleanupFunctions.forEach(cleanup => { try { cleanup(); } catch(e) {} });
-      };
+    }  
+    if (fragment.hasChildNodes()) {
+      elm.appendChild(fragment);
+    } else {
+      console.log('WARNING: Empty fragment, nothing to append');
     }
   }
   
@@ -2187,59 +2039,64 @@ class DOMRenderer {
     }
   }
   
-  #setStaticAttribute(elm, attr, value) {
-    if (this.SKIP_ATTRS.has(attr)) return;    
-    if (this.BOOLEAN_ATTRS.has(attr)) {
-      let boolValue = value && value !== 'false';
-      if (boolValue) {
-        elm.setAttribute(attr,'');
-      } else {
-        elm.removeAttribute(attr);
-      }
-      if (attr in elm) {
-        elm[attr] = boolValue;
-      }
-      return;
-    }    
-    if (elm.namespaceURI === 'http://www.w3.org/2000/svg') {
-      elm.setAttribute(attr, value);
-      return;
-    }
-    const READ_ONLY_ATTRS = new Set(['list', 'form', 'labels']);
-    if (READ_ONLY_ATTRS.has(attr)) {
-      elm.setAttribute(attr, value);
-      return;
-    }
-    let firstChar = attr.charCodeAt(0);
-    if ((firstChar === 100 && attr.charCodeAt(4) === 45) || // data-
-        (firstChar === 97 && attr.charCodeAt(4) === 45) ||  // aria-
-        attr.indexOf('-') !== -1 ||
-        attr.indexOf(':') !== -1) {
-      elm.setAttribute(attr, value);
-      return;
-    }
-    if (attr in elm && typeof elm[attr] !== 'function') {
-      try {
-        elm[attr] = value;
-      } catch (error) {
-        elm.setAttribute(attr, value);
-      }
+_setStaticAttribute(elm, attr, value) {
+  if (this.SKIP_ATTRS.has(attr)) return;
+  
+  if (this.BOOLEAN_ATTRS.has(attr)) {
+    let boolValue = value && value !== 'false';
+    if (boolValue) {
+      elm.setAttribute(attr,'');
     } else {
-      elm.setAttribute(attr, value);
+      elm.removeAttribute(attr);
     }
+    if (attr in elm) {
+      elm[attr] = boolValue;
+    }
+    return;
+  }    
+  
+  if (elm.namespaceURI === 'http://www.w3.org/2000/svg') {
+    elm.setAttribute(attr, value);
+    return;
   }
   
-  #handleEvent(elm, eventName, handler, eventListeners) {
-    if (eventName === 'onconnected') {
-      elm._jurisOnConnected = handler;
-      return;
+  // Special handling for read-only properties
+  const READ_ONLY_ATTRS = new Set(['list', 'form', 'labels']);
+  if (READ_ONLY_ATTRS.has(attr)) {
+    elm.setAttribute(attr, value);
+    return;
+  }
+  
+  let firstChar = attr.charCodeAt(0);
+  if ((firstChar === 100 && attr.charCodeAt(4) === 45) || // data-
+      (firstChar === 97 && attr.charCodeAt(4) === 45) ||  // aria-
+      attr.indexOf('-') !== -1 ||
+      attr.indexOf(':') !== -1) {
+    elm.setAttribute(attr, value);
+    return;
+  }
+  
+  if (attr in elm && typeof elm[attr] !== 'function') {
+    try {
+      elm[attr] = value;
+    } catch (error) {
+      // If setting property fails (e.g., read-only), fall back to setAttribute
+      elm.setAttribute(attr, value);
     }
+  } else {
+    elm.setAttribute(attr, value);
+  }
+}
+  
+  _handleEvent(elm, eventName, handler, eventListeners) {
     eventName = eventName.toLowerCase();
     let actualEventName = eventName === 'onclick' ? 'click' : 
                            eventName === 'ondoubleclick' ? 'dblclick' :
-                           eventName.slice(2);    
+                           eventName.slice(2);
+    
     elm.addEventListener(actualEventName, handler);
-    eventListeners.push({ eventName: actualEventName, handler });    
+    eventListeners.push({ eventName: actualEventName, handler });
+    
     if (eventName === 'onclick') {
       this.#attachTouchSupport(elm, handler, eventListeners);
     }
@@ -2264,27 +2121,30 @@ class DOMRenderer {
           touchState.moved = true;
         }
       }
-    };    
+    };
+    
     let touchEnd = e => {
       if (!touchState.moved && Date.now() - touchState.startTime < this.TOUCH_CONFIG.timeThreshold) {
         e.preventDefault();
         handler(e);
       }
-    };    
+    };
+    
     let touchEvents = [
       { name: 'touchstart', handler: touchStart, options: { passive: true }},
       { name: 'touchmove', handler: touchMove, options: { passive: true }},
       { name: 'touchend', handler: touchEnd, options: { passive: false }}
-    ];    
+    ];
+    
     touchEvents.forEach(({name, handler, options}) => {
       elm.addEventListener(name, handler, options);
       eventListeners.push({ eventName: name, handler });
     });
   }
   
-  _createReactiveUpdate(elm, updateFn, subscriptions, deps = null) {
-    let actualDeps = deps || this.juris.getSM().track(() => updateFn(elm)).deps;
-    actualDeps.forEach(path => {
+  _createReactiveUpdate(elm, updateFn, subscriptions) {
+    let { deps } = this.juris.getSM().track(() => updateFn(elm));
+    deps.forEach(path => {
       let unsub = this.juris.getSM().subscribeInternal(path, updateFn);
       subscriptions.push(unsub);
     });
@@ -2313,14 +2173,16 @@ class DOMRenderer {
   _getPlaceholderConfig(elm) {
     if (elm?.id && this.placeholderConfigs.has(elm.id)) {
       return this.placeholderConfigs.get(elm.id);
-    }    
+    }
+    
     let current = elm?.parentElement;
     while (current) {
       if (current.id && this.placeholderConfigs.has(current.id)) {
         return this.placeholderConfigs.get(current.id);
       }
       current = current.parentElement;
-    }    
+    }
+    
     return this.defaultPlaceholder;
   }
   
@@ -2330,10 +2192,12 @@ class DOMRenderer {
   
   cleanup(elm) {
     this.juris.getCM().cleanup(elm);
-    this.nodeKeys.delete(elm);    
+    this.nodeKeys.delete(elm);
+    
     if (this.keyedNodes.has(elm)) {
       this.keyedNodes.delete(elm);
-    }    
+    }
+    
     let data = this.subscriptions.get(elm);
     if (data) {
       if (data.subscriptions) {
@@ -2345,14 +2209,17 @@ class DOMRenderer {
         });
       }
       this.subscriptions.delete(elm);
-    }    
+    }
+    
     if (elm._reactiveCleanup) {
       try { elm._reactiveCleanup(); } catch(e) {}
       elm._reactiveCleanup = null;
-    }    
+    }
+    
     if (this.placeholders.has(elm)) {
       this.placeholders.delete(elm);
-    }    
+    }
+    
     try {
       let children = elm.children;
       for (let i = 0; i < children.length; i++) {
@@ -2531,10 +2398,13 @@ class Juris {
             Object.keys(config.components).forEach(name => {
                 this.getCM().register(name, config.components[name]);
             });
-        }        
+        }
+        
         if (config.webComponents && this.webComponentFactory) {
             this.webComponentFactory.createMultiple(config.webComponents, config.webComponentOptions || {});
         }
+
+
         if (typeof requestIdleCallback === 'undefined') { 
             window.requestIdleCallback = function (callback, options) { 
                 let start = Date.now(); 
@@ -2546,7 +2416,8 @@ class Juris {
                         } 
                     }); 
                 }, 1); 
-            };            
+            };
+            
         }
         this.#detectGlobalAndWarn();
     }
@@ -3169,45 +3040,55 @@ class Juris {
    * juris.render(container);
    */
     render(container = '#app', vdom = null) {
-      let startTime = performance.now();
-      let containerEl = typeof container === 'string' ? 
-        document.querySelector(container) : container;        
+      let startTime = performance.now();      
+      let containerEl = typeof container === 'string' ?
+          document.querySelector(container) : container;            
       if (!containerEl) {
-        log.ee && console.error(log.e('Render container not found', { container }, 'application'));
-        return;
-      }      
+          log.ee && console.error(log.e('Render container not found', { container }, 'application'));
+          return;
+      }        
+      let isHydration = this.getState('isHydration', false);        
       try {
-        this.getSM().startDeferringSubscriptions();
-        let content = vdom !== null ? vdom : this.layout;
-        let isHydration = this.getState('isHydration', false);        
-        if (isHydration) {
-          this.#renderWithHydration(containerEl, content);
-        } else {
-          this.#renderImmediate(containerEl, content);
-        }
-        this.getSM().processDeferredSubscriptions();        
-        let duration = performance.now() - startTime;
-        log.ei && console.info(log.i('Render completed', {duration: `${duration.toFixed(2)}ms`,isHydration}, 'application'));        
-        return containerEl;        
+          // Handle direct VDOM rendering
+          if (vdom !== null) {
+              this.#renderImmediate(containerEl, vdom);
+              let duration = performance.now() - startTime;
+              log.ei && console.info(log.i('Direct VDOM render completed', { duration: `${duration.toFixed(2)}ms` }, 'application'));
+              return containerEl;
+          }
+          
+          // Original layout rendering
+          if (Array.isArray(this.layout)) {
+              let hasReactiveFunctions = this.layout.some(item => typeof item === 'function');
+              if (hasReactiveFunctions) {
+                  containerEl.innerHTML = '';
+                  let subscriptions = [];
+                  this.getDR()._handleChildren(containerEl, this.layout, subscriptions);
+                  if (subscriptions.length > 0) {
+                      this.getDR().subscriptions.set(containerEl, {
+                          subscriptions,
+                          eventListeners: []
+                      });
+                  }                    
+                  let duration = performance.now() - startTime;
+                  return;
+              }
+          }
+          isHydration ? this.#renderWithHydration(containerEl, vdom) : this.#renderImmediate(containerEl, vdom);
+          let duration = performance.now() - startTime;
+          log.ei && console.info(log.i('Render completed', { duration: `${duration.toFixed(2)}ms`, isHydration }, 'application'));
       } catch (error) {
-        this.getSM().processDeferredSubscriptions();
-        log.ee && console.error(log.e('Render failed', { 
-          error: error.message, 
-          container 
-        }, 'application'));
-        this.#renderError(containerEl, error);
-        return containerEl;
+          log.ee && console.error(log.e('Render failed', { error: error.message, container }, 'application'));
+          this.#renderError(containerEl, error);
       }
     }
 
-    #renderImmediate(containerEl, content) {
+    #renderImmediate(containerEl, vdom = null) {
       this.getDR().cleanup(containerEl);
       containerEl.innerHTML = '';      
+      let content = vdom !== null ? vdom : this.layout;
       let elm = this.getDR().render(content, null, false, containerEl);
-      if (elm && elm !== containerEl) {
-        containerEl.appendChild(elm);
-      }
-      this.getDR()._processPendingConnectedCallbacks();
+      if (elm && elm !== containerEl) containerEl.appendChild(elm);
     }
     
     async #renderWithHydration(containerEl, vdom = null) {
@@ -3225,7 +3106,6 @@ class Juris {
         while (stagingEl.firstChild) {
           containerEl.appendChild(stagingEl.firstChild);
         }
-        this.getDR()._processPendingConnectedCallbacks();
         this.getHM()?.initializeQueued();
       } finally {
         stopTracking();

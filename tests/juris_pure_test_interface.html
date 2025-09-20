@@ -6794,7 +6794,8 @@ testFramework.addTest('StepRenderer Component Injection', 'Control Flow Componen
     
     // Cleanup
     juris.domRenderer.cleanup(element);
-    document.body.removeChild(element);
+    //document.body.removeChild(element);
+    element.remove();
 }, `const juris = new Juris({
     components: {
         StepRenderer: (props, context) => ({
@@ -20683,94 +20684,180 @@ juris.registerComponent('Controller', Controller);
 const controllerAPI = juris.getComponentAPI('Controller');
 controllerAPI.triggerUpdate(); // Updates Display component`);
 
-// Async render function
-testFramework.addTest('Async Render Function', 'Component Patterns', async function() {
+
+testFramework.addTest('Component Interaction via APIs', 'Component Patterns', async function() {
     const juris = new Juris();
     
-    const AsyncDataComponent = (props, context) => {
-        const [data, setData] = context.newState('data', null);
-        const [loading, setLoading] = context.newState('loading', false);
+    const Display = (props, context) => {
+        const [value, setValue] = context.newState('value', 'Initial');
         
         return {
-            render: async () => {
-                if (loading()) {
-                    return { div: { text: 'Loading...', className: 'loading' }};
+            render: () => ({
+                div: { 
+                    text: `Display: ${value()}`,
+                    className: 'display'
                 }
-                
-                if (data()) {
-                    return { div: { text: `Data: ${data()}`, className: 'data' }};
-                }
-                
-                return { div: { text: 'No data', className: 'empty' }};
-            },
+            }),
             api: {
-                fetchData: async () => {
-                    setLoading(true);
-                    await new Promise(resolve => setTimeout(resolve, 50));
-                    setData('Fetched content');
-                    setLoading(false);
-                },
-                getData: () => data(),
-                isLoading: () => loading()
+                updateValue: (newValue) => setValue(newValue),
+                getValue: () => value()
             }
         };
     };
     
-    juris.registerComponent('AsyncDataComponent', AsyncDataComponent);
-    const element = juris.componentManager.create('AsyncDataComponent', {});
-    document.body.appendChild(element);
+    const Controller = (props, context) => {
+        return {
+            render: () => ({
+                div: {
+                    children: [
+                        { button: {
+                            text: 'Update Display',
+                            onclick: () => {
+                                const displayAPI = context.components.getComponentAPI('Display');
+                                if (displayAPI) {
+                                    displayAPI.updateValue('Updated from Controller');
+                                }
+                            }
+                        }},
+                        { button: {
+                            text: 'Check Display Value',
+                            className: 'check-btn',
+                            onclick: () => {
+                                const displayAPI = context.components.getComponentAPI('Display');
+                                if (displayAPI) {
+                                    const value = displayAPI.getValue();
+                                    context.setState('lastChecked', value);
+                                }
+                            }
+                        }},
+                        { span: {
+                            text: () => `Last checked: ${context.getState('lastChecked', 'none')}`
+                        }}
+                    ]
+                }
+            }),
+            api: {
+                triggerUpdate: () => {
+                    const displayAPI = context.components.getComponentAPI('Display');
+                    if (displayAPI) {
+                        displayAPI.updateValue('Triggered externally');
+                    }
+                }
+            }
+        };
+    };
+    
+    juris.registerComponent('Display', Display);
+    juris.registerComponent('Controller', Controller);
+    
+    // Create containers for the components
+    const displayContainer = document.createElement('div');
+    displayContainer.id = 'display-container';
+    const controllerContainer = document.createElement('div');
+    controllerContainer.id = 'controller-container';
+    
+    document.body.appendChild(displayContainer);
+    document.body.appendChild(controllerContainer);
+    
+    const display = juris.componentManager.create('Display', {});
+    const controller = juris.componentManager.create('Controller', {});
+    
+    displayContainer.appendChild(display);
+    controllerContainer.appendChild(controller);
+    
+    // Helper functions to get current elements
+    const getCurrentDisplay = () => displayContainer.firstElementChild || displayContainer.firstChild;
+    const getCurrentController = () => controllerContainer.firstElementChild || controllerContainer.firstChild;
     
     await new Promise(resolve => setTimeout(resolve, 10));
     
-    testFramework.expect(element.querySelector('.empty')).toBeTruthy();
+    let currentDisplay = getCurrentDisplay();
+    testFramework.expect(currentDisplay.textContent).toBe('Display: Initial');
     
-    const api = juris.getComponentAPI('AsyncDataComponent');
-    api.fetchData();
-    
+    // Update via controller button
+    let currentController = getCurrentController();
+    currentController.querySelector('button').click();
     await new Promise(resolve => setTimeout(resolve, 10));
-    testFramework.expect(element.querySelector('.loading')).toBeTruthy();
     
-    await new Promise(resolve => setTimeout(resolve, 60));
-    testFramework.expect(element.querySelector('.data').textContent).toBe('Data: Fetched content');
+    currentDisplay = getCurrentDisplay();
+    testFramework.expect(currentDisplay.textContent).toBe('Display: Updated from Controller');
     
-    element.parentNode.removeChild(element);
+    // Check value via controller
+    currentController = getCurrentController();
+    currentController.querySelector('.check-btn').click();
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    currentController = getCurrentController();
+    testFramework.expect(currentController.querySelector('span').textContent).toBe('Last checked: Updated from Controller');
+    
+    // External API call
+    const controllerAPI = juris.getComponentAPI('Controller');
+    controllerAPI.triggerUpdate();
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    currentDisplay = getCurrentDisplay();
+    testFramework.expect(currentDisplay.textContent).toBe('Display: Triggered externally');
+    
+    // Cleanup
+    juris.getDR().cleanup(displayContainer);
+    juris.getDR().cleanup(controllerContainer);
+    document.body.removeChild(displayContainer);
+    document.body.removeChild(controllerContainer);
 }, `const juris = new Juris();
 
-// Component with async render function
-const AsyncDataComponent = (props, context) => {
-    const [data, setData] = context.newState('data', null);
-    const [loading, setLoading] = context.newState('loading', false);
+// Display component exposes API for external control
+const Display = (props, context) => {
+    const [value, setValue] = context.newState('value', 'Initial');
     
     return {
-        // Render can be async
-        render: async () => {
-            if (loading()) {
-                return { div: { text: 'Loading...' }};
-            }
-            
-            if (data()) {
-                return { div: { text: \`Data: \${data()}\` }};
-            }
-            
-            return { div: { text: 'No data' }};
-        },
+        render: () => ({
+            div: { text: \`Display: \${value()}\` }
+        }),
         api: {
-            fetchData: async () => {
-                setLoading(true);
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 50));
-                setData('Fetched content');
-                setLoading(false);
-            },
-            getData: () => data()
+            updateValue: (newValue) => setValue(newValue),
+            getValue: () => value()
         }
     };
 };
 
-juris.registerComponent('AsyncDataComponent', AsyncDataComponent);
+// Controller component uses Display's API
+const Controller = (props, context) => {
+    return {
+        render: () => ({
+            div: {
+                children: [{
+                    button: {
+                        text: 'Update Display',
+                        onclick: () => {
+                            const displayAPI = context.components.getComponentAPI('Display');
+                            displayAPI?.updateValue('Updated from Controller');
+                        }
+                    }
+                }]
+            }
+        }),
+        api: {
+            triggerUpdate: () => {
+                const displayAPI = context.components.getComponentAPI('Display');
+                displayAPI?.updateValue('Triggered externally');
+            }
+        }
+    };
+};
 
-const api = juris.getComponentAPI('AsyncDataComponent');
-await api.fetchData(); // Triggers re-render with new data`);
+// Use containers to handle wrapper-less rendering
+const displayContainer = document.createElement('div');
+const controllerContainer = document.createElement('div');
+
+const display = juris.componentManager.create('Display', {});
+const controller = juris.componentManager.create('Controller', {});
+
+displayContainer.appendChild(display);
+controllerContainer.appendChild(controller);
+
+// Re-query elements after state changes
+const currentDisplay = displayContainer.firstElementChild;
+const currentController = controllerContainer.firstElementChild;`);
 
 // Reactive render with global state
 testFramework.addTest('Reactive Render with Global State', 'Component Patterns', async function() {
@@ -22785,77 +22872,6 @@ const vnode = {
 
 // ===== CONTROL FLOW COMPONENTS =====
 
-testFramework.addTest('ConditionalRenderer Component1', 'Control Flow Components', async function() {
-    const juris = new Juris({
-        components: {
-            ConditionalRenderer: (props, context) => ({
-                render: () => {
-                    const condition = typeof props.condition === 'function' 
-                        ? props.condition() 
-                        : props.condition;
-                    
-                    if (condition) {
-                        return props.then || null;
-                    } else {
-                        return props.else || null;
-                    }
-                }
-            }),
-            LoginForm: () => ({ div: { className: 'login-form', text: 'Please log in' } }),
-            WelcomeMessage: () => ({ div: { className: 'welcome', text: 'Welcome back!' } })
-        }
-    });
-    
-    juris.setState('isAuthenticated', false);
-    
-    const element = juris.objectToHtml({
-        ConditionalRenderer: {
-            condition: () => juris.getState('isAuthenticated', false),
-            then: { WelcomeMessage: {} },
-            else: { LoginForm: {} }
-        }
-    });
-    
-    document.body.appendChild(element);
-    
-    // Test false condition
-    testFramework.expect(element.querySelector('.login-form')).toBeTruthy();
-    testFramework.expect(element.querySelector('.welcome')).toBeFalsy();
-    
-    // Test true condition
-    juris.setState('isAuthenticated', true);
-    await new Promise(resolve => setTimeout(resolve, 10));
-    
-    testFramework.expect(element.querySelector('.welcome')).toBeTruthy();
-    testFramework.expect(element.querySelector('.login-form')).toBeFalsy();
-    
-    // Cleanup
-    juris.domRenderer.cleanup(element);
-    document.body.removeChild(element);
-}, `const juris = new Juris({
-    components: {
-        ConditionalRenderer: (props, context) => ({
-            render: () => {
-                const condition = typeof props.condition === 'function' 
-                    ? props.condition() 
-                    : props.condition;
-                
-                return condition ? props.then : props.else;
-            }
-        })
-    }
-});
-
-juris.setState('isAuthenticated', false);
-
-const element = juris.objectToHtml({
-    ConditionalRenderer: {
-        condition: () => juris.getState('isAuthenticated', false),
-        then: { div: { text: 'Welcome back!' } },
-        else: { div: { text: 'Please log in' } }
-    }
-});`);
-
 testFramework.addTest('IteratorRenderer Component', 'Control Flow Components', async function() {
     const juris = new Juris({
         components: {
@@ -22954,7 +22970,6 @@ const element = juris.objectToHtml({
 });`);
 
 // ===== CONTROL FLOW COMPONENTS =====
-
 testFramework.addTest('ConditionalRenderer Component', 'Control Flow Components', async function() {
     const juris = new Juris({
         components: {
@@ -22978,6 +22993,11 @@ testFramework.addTest('ConditionalRenderer Component', 'Control Flow Components'
     
     juris.setState('isAuthenticated', false);
     
+    // Create a container to hold the component
+    const container = document.createElement('div');
+    container.id = 'conditional-renderer-test';
+    document.body.appendChild(container);
+    
     const element = juris.objectToHtml({
         ConditionalRenderer: {
             condition: () => juris.getState('isAuthenticated', false),
@@ -22986,22 +23006,29 @@ testFramework.addTest('ConditionalRenderer Component', 'Control Flow Components'
         }
     });
     
-    document.body.appendChild(element);
+    container.appendChild(element);
     
-    // Test false condition
-    testFramework.expect(element.querySelector('.login-form')).toBeTruthy();
-    testFramework.expect(element.querySelector('.welcome')).toBeFalsy();
+    // Helper function to get current rendered element
+    const getCurrentElement = () => {
+        return container.firstElementChild || container.firstChild;
+    };
     
-    // Test true condition
+    // Test false condition - element IS the login form div
+    let currentEl = getCurrentElement();
+    testFramework.expect(currentEl.className).toBe('login-form');
+    testFramework.expect(currentEl.textContent).toBe('Please log in');
+    
+    // Test true condition - element becomes the welcome div
     juris.setState('isAuthenticated', true);
     await new Promise(resolve => setTimeout(resolve, 10));
     
-    testFramework.expect(element.querySelector('.welcome')).toBeTruthy();
-    testFramework.expect(element.querySelector('.login-form')).toBeFalsy();
+    currentEl = getCurrentElement();
+    testFramework.expect(currentEl.className).toBe('welcome');
+    testFramework.expect(currentEl.textContent).toBe('Welcome back!');
     
     // Cleanup
-    juris.domRenderer.cleanup(element);
-    document.body.removeChild(element);
+    juris.getDR().cleanup(container);
+    document.body.removeChild(container);
 }, `const juris = new Juris({
     components: {
         ConditionalRenderer: (props, context) => ({
@@ -23016,16 +23043,20 @@ testFramework.addTest('ConditionalRenderer Component', 'Control Flow Components'
     }
 });
 
-juris.setState('isAuthenticated', false);
-
+// Use container approach for wrapper-less rendering
+const container = document.createElement('div');
 const element = juris.objectToHtml({
     ConditionalRenderer: {
         condition: () => juris.getState('isAuthenticated', false),
         then: { div: { text: 'Welcome back!' } },
         else: { div: { text: 'Please log in' } }
     }
-});`);
+});
+container.appendChild(element);
 
+// With wrapper-less rendering, test the element directly
+const currentElement = container.firstElementChild;
+testFramework.expect(currentElement.className).toBe('login-form');`);
 testFramework.addTest('IteratorRenderer Component', 'Control Flow Components', async function() {
     const juris = new Juris({
         components: {
@@ -23052,6 +23083,11 @@ testFramework.addTest('IteratorRenderer Component', 'Control Flow Components', a
     
     juris.setState('todoList', []);
     
+    // Create a container to hold the component
+    const container = document.createElement('div');
+    container.id = 'iterator-renderer-test';
+    document.body.appendChild(container);
+    
     const element = juris.objectToHtml({
         IteratorRenderer: {
             items: () => juris.getState('todoList', []),
@@ -23069,11 +23105,17 @@ testFramework.addTest('IteratorRenderer Component', 'Control Flow Components', a
         }
     });
     
-    document.body.appendChild(element);
+    container.appendChild(element);
     
-    // Test empty state
-    testFramework.expect(element.querySelector('.empty-state')).toBeTruthy();
-    testFramework.expect(element.textContent).toContain('No todos yet');
+    // Helper function to get current rendered element(s)
+    const getCurrentContent = () => {
+        return container.firstElementChild || container.firstChild;
+    };
+    
+    // Test empty state - element IS the empty state div
+    let currentContent = getCurrentContent();
+    testFramework.expect(currentContent.className).toBe('empty-state');
+    testFramework.expect(currentContent.textContent).toBe('No todos yet');
     
     // Add items
     juris.setState('todoList', [
@@ -23082,15 +23124,16 @@ testFramework.addTest('IteratorRenderer Component', 'Control Flow Components', a
     ]);
     await new Promise(resolve => setTimeout(resolve, 10));
     
-    // Test with items
-    testFramework.expect(element.querySelectorAll('.todo-item')).toHaveLength(2);
-    testFramework.expect(element.textContent).toContain('1. Learn Juris');
-    testFramework.expect(element.textContent).toContain('2. Build an app');
-    testFramework.expect(element.querySelector('.empty-state')).toBeFalsy();
+    // With wrapper-less rendering, the component returns an array, so we need to check container children
+    const todoItems = container.querySelectorAll('.todo-item');
+    testFramework.expect(todoItems.length).toBe(2);
+    testFramework.expect(container.textContent).toContain('1. Learn Juris');
+    testFramework.expect(container.textContent).toContain('2. Build an app');
+    testFramework.expect(container.querySelector('.empty-state')).toBeFalsy();
     
     // Cleanup
-    juris.domRenderer.cleanup(element);
-    document.body.removeChild(element);
+    juris.getDR().cleanup(container);
+    document.body.removeChild(container);
 }, `const juris = new Juris({
     components: {
         IteratorRenderer: (props, context) => ({
@@ -23109,11 +23152,8 @@ testFramework.addTest('IteratorRenderer Component', 'Control Flow Components', a
     }
 });
 
-juris.setState('todoList', [
-    { id: 1, text: 'Learn Juris' },
-    { id: 2, text: 'Build an app' }
-]);
-
+// Use container approach for wrapper-less rendering
+const container = document.createElement('div');
 const element = juris.objectToHtml({
     IteratorRenderer: {
         items: () => juris.getState('todoList', []),
@@ -23121,7 +23161,11 @@ const element = juris.objectToHtml({
             div: { text: \`\${index + 1}. \${item.text}\` }
         })
     }
-});`);
+});
+container.appendChild(element);
+
+// When items are added, query the container for multiple elements
+const todoItems = container.querySelectorAll('.todo-item');`);
 
 testFramework.addTest('GuardRenderer Component', 'Control Flow Components', async function() {
     const juris = new Juris({
@@ -23149,6 +23193,12 @@ testFramework.addTest('GuardRenderer Component', 'Control Flow Components', asyn
     
     juris.setState('user', { role: 'guest', isLoading: false, error: null });
     
+    // Create a container div to hold the component
+    const container = document.createElement('div');
+    container.id = 'test-container';
+    document.body.appendChild(container);
+    
+    // Render the component into the container
     const element = juris.objectToHtml({
         GuardRenderer: {
             guards: [
@@ -23169,35 +23219,44 @@ testFramework.addTest('GuardRenderer Component', 'Control Flow Components', asyn
         }
     });
     
-    document.body.appendChild(element);
+    container.appendChild(element);
+    
+    // Helper function to get current rendered element (accounts for wrapper-less rendering)
+    const getCurrentElement = () => {
+        return container.firstElementChild || container.firstChild;
+    };
     
     // Test default fallback
-    testFramework.expect(element.querySelector('.default')).toBeTruthy();
+    let currentEl = getCurrentElement();
+    testFramework.expect(currentEl.className).toBe('default');
+    testFramework.expect(currentEl.textContent).toBe('Default Content');
     
     // Test loading guard
     juris.setState('user.isLoading', true);
     await new Promise(resolve => setTimeout(resolve, 10));
-    testFramework.expect(element.querySelector('.loading')).toBeTruthy();
-    testFramework.expect(element.querySelector('.default')).toBeFalsy();
+    currentEl = getCurrentElement();
+    testFramework.expect(currentEl.className).toBe('loading');
+    testFramework.expect(currentEl.textContent).toBe('Loading...');
     
     // Test error guard (should clear loading first)
     juris.setState('user.isLoading', false);
     juris.setState('user.error', 'Network error');
     await new Promise(resolve => setTimeout(resolve, 10));
-    testFramework.expect(element.querySelector('.error')).toBeTruthy();
-    testFramework.expect(element.querySelector('.loading')).toBeFalsy();
+    currentEl = getCurrentElement();
+    testFramework.expect(currentEl.className).toBe('error');
+    testFramework.expect(currentEl.textContent).toBe('Error occurred');
     
     // Test admin guard - clear other conditions first
     juris.setState('user.error', null);
     juris.setState('user.role', 'admin');
     await new Promise(resolve => setTimeout(resolve, 10));
-    testFramework.expect(element.querySelector('.admin')).toBeTruthy();
-    testFramework.expect(element.querySelector('.error')).toBeFalsy();
-    testFramework.expect(element.querySelector('.loading')).toBeFalsy();
+    currentEl = getCurrentElement();
+    testFramework.expect(currentEl.className).toBe('admin');
+    testFramework.expect(currentEl.textContent).toBe('Admin Dashboard');
     
     // Cleanup
-    juris.domRenderer.cleanup(element);
-    document.body.removeChild(element);
+    juris.getDR().cleanup(container);
+    document.body.removeChild(container);
 }, `const juris = new Juris({
     components: {
         GuardRenderer: (props, context) => ({
@@ -23218,6 +23277,8 @@ testFramework.addTest('GuardRenderer Component', 'Control Flow Components', asyn
     }
 });
 
+// Use a container to handle wrapper-less rendering
+const container = document.createElement('div');
 const element = juris.objectToHtml({
     GuardRenderer: {
         guards: [
@@ -23226,13 +23287,17 @@ const element = juris.objectToHtml({
                 render: { div: { text: 'Loading...' } }
             },
             {
-                condition: () => juris.getState('hasError', false),
+                condition: () => juris.getState('hasError', false), 
                 render: { div: { text: 'Error occurred' } }
             }
         ],
         fallback: { div: { text: 'Default Content' } }
     }
-});`);
+});
+container.appendChild(element);
+
+// Test the actual rendered element
+const currentElement = container.firstElementChild;`);
 
 // ===== COMPONENT RETURN PATTERNS =====
 

@@ -1,0 +1,1 @@
+export const Counter = (props, context) => ({span: {text: 'Hello ' + props.name}});

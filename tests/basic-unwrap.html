@@ -1,0 +1,64 @@
+<html>
+
+<head>
+  <script src="../src/juris.js"></script>
+</head>
+
+<body>
+  <div id="app">1</div>
+</body>
+<script type="module">
+  
+  const Decrement = (props, {getState,setState}) => {
+    console.log('render Decrement', getState('count', 0));
+    return   {
+      render:()=>{
+        const count = getState('count', 0);
+        if(count<2){
+          return {
+              button: {
+                rendered:Date.now(),
+                text: ()=>'Increment ' + getState('count', 0),
+                onclick: () => {
+                    const current = getState('count', 0);
+                    setState('count', current + 1);
+                }
+          }}
+        }else{
+          return {
+              button: {
+                rendered:Date.now(),
+                text: ()=>'Decrement ' + getState('count', 0),
+                onclick: () => {
+                    const current = getState('count', 0);
+                    setState('count', current - 1);
+                }
+          }}
+        }
+      },
+      hooks:{
+        onMount:()=>console.log('mounted Decrement'),
+        onUpdate:()=>console.log('updated Decrement'),
+        onUnmount:()=>console.log('unmounted Decrement')
+      }
+    }
+  };
+
+	const juris = new Juris({
+    states: {
+        count: 0  // Initialize the state
+    },
+		components:{Decrement},
+  	layout:[
+      {div:{
+        children:[
+          {Decrement:{}},
+        ]
+      }}
+    ]
+});
+
+juris.render();
+window.juris = juris;
+</script>
+</html>

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juris.js innerHTML vs Vanilla JS - List Rendering Benchmark</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+      background: #f8f9fa;
+      color: #2c3e50;
+      line-height: 1.4;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .logo-symbol {
+      font-size: 28px;
+      font-weight: 700;
+      color: #95a5a6;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 400;
+      color: #2c3e50;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      font-size: 14px;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .benchmark-controls {
+      background: #ffffff;
+      border: 2px solid #bdc3c7;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #495057;
+      text-transform: uppercase;
+    }
+
+    .control-group input, .control-group select {
+      padding: 6px 12px;
+      border: 1px solid #95a5a6;
+      font-family: inherit;
+      font-size: 12px;
+      background: #ffffff;
+      color: #2c3e50;
+    }
+
+    .benchmark-button {
+      padding: 12px 24px;
+      border: 2px solid #95a5a6;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      background: #ffffff;
+      color: #2c3e50;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .benchmark-button:hover {
+      background: #ecf0f1;
+      border-color: #7f8c8d;
+    }
+
+    .benchmark-button.running {
+      background: #3498db;
+      color: #ffffff;
+      border-color: #2980b9;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .result-card {
+      background: #ffffff;
+      border: 2px solid #bdc3c7;
+      padding: 20px;
+    }
+
+    .result-title {
+      margin: 0 0 16px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #2c3e50;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .result-metrics {
+      display: grid;
+      gap: 12px;
+    }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .metric:last-child {
+      border-bottom: none;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: #6c757d;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .metric-value.faster {
+      color: #27ae60;
+    }
+
+    .metric-value.slower {
+      color: #e74c3c;
+    }
+
+    .test-containers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .test-container {
+      background: #ffffff;
+      border: 2px solid #bdc3c7;
+      height: 400px;
+      overflow-y: auto;
+    }
+
+    .test-header {
+      padding: 16px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      font-size: 12px;
+      font-weight: 600;
+      color: #495057;
+      text-transform: uppercase;
+      position: sticky;
+      top: 0;
+    }
+
+    .item {
+      padding: 8px 16px;
+      border-bottom: 1px solid #f1f3f4;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .item:nth-child(even) {
+      background: #fafbfc;
+    }
+
+    .item-name {
+      font-weight: 500;
+      color: #2c3e50;
+    }
+
+    .item-value {
+      color: #6c757d;
+      font-size: 12px;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      background: #e8f4f8;
+      border: 1px solid #b8daff;
+      font-size: 12px;
+      color: #0c5460;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <span class="logo-symbol">{..}</span>
+      <h1 class="title">JURIS.JS innerHTML vs VANILLA JS BENCHMARK</h1>
+    </div>
+    <p class="subtitle">Performance comparison for list rendering scenarios</p>
+  </div>
+
+  <div class="benchmark-controls">
+    <div class="control-group">
+      <label for="itemCount">Items:</label>
+      <input type="number" id="itemCount" value="5000" min="100" max="50000" step="500">
+    </div>
+    
+    <div class="control-group">
+      <label for="iterations">Iterations:</label>
+      <input type="number" id="iterations" value="5" min="1" max="20">
+    </div>
+    
+    <div class="control-group">
+      <label for="complexity">Complexity:</label>
+      <select id="complexity">
+        <option value="simple">Simple (name + value)</option>
+        <option value="medium">Medium (+ description + timestamp)</option>
+        <option value="complex">Complex (+ nested elements + styling)</option>
+      </select>
+    </div>
+    
+    <button class="benchmark-button" onclick="runBenchmark()">
+      <span class="button-text">Run Benchmark</span>
+    </button>
+  </div>
+
+  <div class="results-grid">
+    <div class="result-card">
+      <h2 class="result-title">Vanilla JavaScript</h2>
+      <div class="result-metrics" id="vanillaResults">
+        <div class="status">Click "Run Benchmark" to start testing</div>
+      </div>
+    </div>
+    
+    <div class="result-card">
+      <h2 class="result-title">Juris.js innerHTML</h2>
+      <div class="result-metrics" id="jurisResults">
+        <div class="status">Click "Run Benchmark" to start testing</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="test-containers">
+    <div class="test-container">
+      <div class="test-header">Vanilla JavaScript Output</div>
+      <div id="vanillaContainer"></div>
+    </div>
+    
+    <div class="test-container">
+      <div class="test-header">Juris.js innerHTML Output</div>
+      <div id="jurisContainer"></div>
+    </div>
+  </div>
+
+  <script src="../src/juris.js"></script>
+  <script>
+    // Generate test data
+    function generateTestData(count, complexity) {
+      return Array.from({length: count}, (_, i) => ({
+        id: i + 1,
+        name: `Item ${i + 1}`,
+        value: Math.floor(Math.random() * 1000),
+        description: complexity !== 'simple' ? `Description for item ${i + 1} with some additional text content` : null,
+        timestamp: complexity !== 'simple' ? new Date(Date.now() - Math.random() * 86400000 * 30).toISOString() : null,
+        category: complexity === 'complex' ? ['Important', 'Normal', 'Low'][Math.floor(Math.random() * 3)] : null,
+        status: complexity === 'complex' ? ['Active', 'Inactive', 'Pending'][Math.floor(Math.random() * 3)] : null
+      }));
+    }
+
+    // HTML escape utility
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Vanilla JavaScript rendering
+    function renderVanilla(container, data, complexity) {
+      const startTime = performance.now();
+      
+      let html = '';
+      
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        
+        if (complexity === 'simple') {
+          html += `
+            <div class="item">
+              <span class="item-name">${escapeHtml(item.name)}</span>
+              <span class="item-value">${item.value}</span>
+            </div>
+          `;
+        } else if (complexity === 'medium') {
+          html += `
+            <div class="item">
+              <div>
+                <div class="item-name">${escapeHtml(item.name)}</div>
+                <div style="font-size: 11px; color: #6c757d;">${escapeHtml(item.description || '')}</div>
+              </div>
+              <div>
+                <div class="item-value">${item.value}</div>
+                <div style="font-size: 10px; color: #95a5a6;">${new Date(item.timestamp).toLocaleDateString()}</div>
+              </div>
+            </div>
+          `;
+        } else { // complex
+          html += `
+            <div class="item" style="flex-direction: column; align-items: flex-start; padding: 12px 16px;">
+              <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 4px;">
+                <span class="item-name">${escapeHtml(item.name)}</span>
+                <span class="item-value" style="font-weight: 600; color: ${item.status === 'Active' ? '#27ae60' : item.status === 'Pending' ? '#f39c12' : '#e74c3c'}">${item.value}</span>
+              </div>
+              <div style="font-size: 11px; color: #6c757d; margin-bottom: 4px;">${escapeHtml(item.description || '')}</div>
+              <div style="display: flex; justify-content: space-between; width: 100%; font-size: 10px;">
+                <span style="background: ${item.category === 'Important' ? '#e74c3c' : item.category === 'Normal' ? '#3498db' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 2px;">${item.category}</span>
+                <span style="color: #95a5a6;">${new Date(item.timestamp).toLocaleDateString()}</span>
+              </div>
+            </div>
+          `;
+        }
+      }
+      
+      container.innerHTML = html;
+      
+      return performance.now() - startTime;
+    }
+
+    // Juris.js rendering
+    let jurisInstance = null;
+    
+    function renderJuris(container, data, complexity) {
+      const startTime = performance.now();
+      
+      if (jurisInstance) {
+        jurisInstance.cleanup();
+      }
+      
+      jurisInstance = new Juris({
+        components: {
+          BenchmarkList: (props, context) => ({
+            div: {
+              innerHTML: () => {
+                const items = context.getState('benchmarkData', []);
+                const complexity = context.getState('complexity', 'simple');
+                
+                if (complexity === 'simple') {
+                  return items.map(item => `
+                    <div class="item">
+                      <span class="item-name">${escapeHtml(item.name)}</span>
+                      <span class="item-value">${item.value}</span>
+                    </div>
+                  `).join('');
+                } else if (complexity === 'medium') {
+                  return items.map(item => `
+                    <div class="item">
+                      <div>
+                        <div class="item-name">${escapeHtml(item.name)}</div>
+                        <div style="font-size: 11px; color: #6c757d;">${escapeHtml(item.description || '')}</div>
+                      </div>
+                      <div>
+                        <div class="item-value">${item.value}</div>
+                        <div style="font-size: 10px; color: #95a5a6;">${new Date(item.timestamp).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                  `).join('');
+                } else { // complex
+                  return items.map(item => `
+                    <div class="item" style="flex-direction: column; align-items: flex-start; padding: 12px 16px;">
+                      <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 4px;">
+                        <span class="item-name">${escapeHtml(item.name)}</span>
+                        <span class="item-value" style="font-weight: 600; color: ${item.status === 'Active' ? '#27ae60' : item.status === 'Pending' ? '#f39c12' : '#e74c3c'}">${item.value}</span>
+                      </div>
+                      <div style="font-size: 11px; color: #6c757d; margin-bottom: 4px;">${escapeHtml(item.description || '')}</div>
+                      <div style="display: flex; justify-content: space-between; width: 100%; font-size: 10px;">
+                        <span style="background: ${item.category === 'Important' ? '#e74c3c' : item.category === 'Normal' ? '#3498db' : '#95a5a6'}; color: white; padding: 2px 6px; border-radius: 2px;">${item.category}</span>
+                        <span style="color: #95a5a6;">${new Date(item.timestamp).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  `).join('');
+                }
+              }
+            }
+          })
+        },
+        layout: [
+          {BenchmarkList: {}}
+        ]
+      });
+      
+      jurisInstance.setState('benchmarkData', data);
+      jurisInstance.setState('complexity', complexity);
+      
+      jurisInstance.render(container);
+      
+      return performance.now() - startTime;
+    }
+
+    // Benchmark runner
+    async function runBenchmark() {
+      const button = document.querySelector('.benchmark-button');
+      const buttonText = button.querySelector('.button-text');
+      const itemCount = parseInt(document.getElementById('itemCount').value);
+      const iterations = parseInt(document.getElementById('iterations').value);
+      const complexity = document.getElementById('complexity').value;
+      
+      button.classList.add('running');
+      buttonText.textContent = 'Running...';
+      
+      const vanillaContainer = document.getElementById('vanillaContainer');
+      const jurisContainer = document.getElementById('jurisContainer');
+      const vanillaResults = document.getElementById('vanillaResults');
+      const jurisResults = document.getElementById('jurisResults');
+      
+      // Clear previous results
+      vanillaResults.innerHTML = '<div class="status">Running vanilla JS tests...</div>';
+      jurisResults.innerHTML = '<div class="status">Waiting...</div>';
+      
+      const vanillaTimes = [];
+      const jurisTimes = [];
+      
+      // Generate test data
+      const testData = generateTestData(itemCount, complexity);
+      
+      // Run vanilla JS tests
+      for (let i = 0; i < iterations; i++) {
+        buttonText.textContent = `Vanilla ${i + 1}/${iterations}`;
+        await new Promise(resolve => setTimeout(resolve, 10));
+        
+        const time = renderVanilla(vanillaContainer, testData, complexity);
+        vanillaTimes.push(time);
+      }
+      
+      // Calculate vanilla stats
+      const vanillaAvg = vanillaTimes.reduce((a, b) => a + b, 0) / vanillaTimes.length;
+      const vanillaMin = Math.min(...vanillaTimes);
+      const vanillaMax = Math.max(...vanillaTimes);
+      
+      vanillaResults.innerHTML = `
+        <div class="metric">
+          <span class="metric-label">Average Time</span>
+          <span class="metric-value">${vanillaAvg.toFixed(2)}ms</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Best Time</span>
+          <span class="metric-value">${vanillaMin.toFixed(2)}ms</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Worst Time</span>
+          <span class="metric-value">${vanillaMax.toFixed(2)}ms</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Items Rendered</span>
+          <span class="metric-value">${itemCount.toLocaleString()}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Items/ms</span>
+          <span class="metric-value">${(itemCount / vanillaAvg).toFixed(0)}</span>
+        </div>
+      `;
+      
+      // Run Juris tests
+      jurisResults.innerHTML = '<div class="status">Running Juris.js tests...</div>';
+      
+      for (let i = 0; i < iterations; i++) {
+        buttonText.textContent = `Juris ${i + 1}/${iterations}`;
+        await new Promise(resolve => setTimeout(resolve, 10));
+        
+        const time = renderJuris(jurisContainer, testData, complexity);
+        jurisTimes.push(time);
+      }
+      
+      // Calculate Juris stats
+      const jurisAvg = jurisTimes.reduce((a, b) => a + b, 0) / jurisTimes.length;
+      const jurisMin = Math.min(...jurisTimes);
+      const jurisMax = Math.max(...jurisTimes);
+      
+      // Calculate performance difference
+      const speedRatio = vanillaAvg / jurisAvg;
+      const isJurisFaster = speedRatio > 1;
+      const percentDiff = Math.abs((1 - speedRatio) * 100);
+      
+      jurisResults.innerHTML = `
+        <div class="metric">
+          <span class="metric-label">Average Time</span>
+          <span class="metric-value ${isJurisFaster ? 'faster' : 'slower'}">${jurisAvg.toFixed(2)}ms</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Best Time</span>
+          <span class="metric-value">${jurisMin.toFixed(2)}ms</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Worst Time</span>
+          <span class="metric-value">${jurisMax.toFixed(2)}ms</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Items Rendered</span>
+          <span class="metric-value">${itemCount.toLocaleString()}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Items/ms</span>
+          <span class="metric-value">${(itemCount / jurisAvg).toFixed(0)}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">vs Vanilla</span>
+          <span class="metric-value ${isJurisFaster ? 'faster' : 'slower'}">
+            ${isJurisFaster ? speedRatio.toFixed(2) + 'x faster' : (1/speedRatio).toFixed(2) + 'x slower'}
+            (${percentDiff.toFixed(1)}%)
+          </span>
+        </div>
+      `;
+      
+      // Reset button
+      button.classList.remove('running');
+      buttonText.textContent = 'Run Benchmark';
+      
+      // Log detailed results
+      console.log('Benchmark Results:', {
+        itemCount,
+        iterations,
+        complexity,
+        vanilla: {
+          times: vanillaTimes,
+          average: vanillaAvg,
+          min: vanillaMin,
+          max: vanillaMax
+        },
+        juris: {
+          times: jurisTimes,
+          average: jurisAvg,
+          min: jurisMin,
+          max: jurisMax
+        },
+        performance: {
+          speedRatio,
+          percentageDifference: percentDiff,
+          winner: isJurisFaster ? 'Juris.js' : 'Vanilla JS'
+        }
+      });
+    }
+
+    // Initialize with sample data
+    window.addEventListener('load', () => {
+      const sampleData = generateTestData(100, 'simple');
+      renderVanilla(document.getElementById('vanillaContainer'), sampleData, 'simple');
+      renderJuris(document.getElementById('jurisContainer'), sampleData, 'simple');
+    });
+  </script>
+</body>
+</html>
