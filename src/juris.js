@@ -280,41 +280,51 @@ class StateManager {
     }
 
     getState(path, defaultValue = null, track = true) {
+      try {
         if (!isValidPath(path)) return defaultValue;
         if (track && this.deps) this.deps.add(path);
         let dotIndex = path.indexOf('.');
         if (dotIndex === -1) {
-            let value = this.state[path];
-            return value !== undefined ? value : defaultValue;
+          let value = this.state[path];
+          return value !== undefined ? value : defaultValue;
         }
         let parts = this.pathCache.get(path);
         if (!parts) {
-            parts = path.split('.');
-            if (this.pathCache.size >= this.maxCacheSize) {
-                this.pathCache.delete(this.pathCache.keys().next().value);
-            }
-            this.pathCache.set(path, parts);
+          parts = path.split('.');
+          if (this.pathCache.size >= this.maxCacheSize) {
+            this.pathCache.delete(this.pathCache.keys().next().value);
+          }
+          this.pathCache.set(path, parts);
         }
         let current = this.state;
         for (let i = 0; i < parts.length; i++) {
-            current = current?.[parts[i]];
-            if (current === undefined) return defaultValue;
+          current = current?.[parts[i]];
+          if (current === undefined) return defaultValue;
         }
         return current;
+      } catch (error) {
+        log.ee && console.error(log.e('State access failed', {path, defaultValue, track, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'framework'));
+        return defaultValue;
+      }
     }
 
-    setState(path, value, context = {}) {  
+    setState(path, value, context = {}) {
+      try {
         if (!isValidPath(path)) return false;
         if (this.#hasCircularUpdate(path)) return false;
         if (this.#canQuickCompare(path, value)) {
-            let currentValue = this.#getValueFast(path);
-            if (currentValue === value) return false;
+          let currentValue = this.#getValueFast(path);
+          if (currentValue === value) return false;
         }
         if (this.isBatching) {
-            this.#queueBatchedUpdate(path, value, context);
-            return;
+          this.#queueBatchedUpdate(path, value, context);
+          return;
         }
         this.#setStateImmediate(path, value, context);
+      } catch (error) {
+        log.ee && console.error(log.e('State update failed', {path, valueType: typeof value, context, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'framework'));
+        throw error;
+      }
     }
     #canQuickCompare(path, value) {
         return (
@@ -574,7 +584,7 @@ class StateManager {
                     try {
                         callback(newValue, oldValue, changedPath);
                     } catch (error) {
-                        log.ee && console.error(log.e('External subscriber error:', error), 'application');
+                        log.ee && console.error(log.e('External subscriber error:', {error, path:changedPath, newValue,oldValue} ), 'application');
                     }
                 }
             });
@@ -582,26 +592,26 @@ class StateManager {
     }
 
     #triggerPathSubscribers(path) {
-        let subs = this.subscribers.get(path);
-        if (!subs || subs.size === 0) return;
+      let subs = this.subscribers.get(path);
+      if (!subs || subs.size === 0) return;
 
-        new Set(subs).forEach(callback => {
-            try {
-                let { result, deps } = this.track(() => callback());
-                deps.forEach(newPath => {
-                    let existingSubs = this.subscribers.get(newPath);
-                    if (!existingSubs) {
-                        existingSubs = new Set();
-                        this.subscribers.set(newPath, existingSubs);
-                    }
-                    if (!existingSubs.has(callback)) {
-                        existingSubs.add(callback);
-                    }
-                });
-            } catch (error) {
-                log.ee && console.error(log.e('Subscriber error:', error), 'application');
+      new Set(subs).forEach(callback => {
+        try {
+          let { result, deps } = this.track(() => callback());
+          deps.forEach(newPath => {
+            let existingSubs = this.subscribers.get(newPath);
+            if (!existingSubs) {
+              existingSubs = new Set();
+              this.subscribers.set(newPath, existingSubs);
             }
-        });
+            if (!existingSubs.has(callback)) {
+              existingSubs.add(callback);
+            }
+          });
+        } catch (error) {
+          log.ee && console.error(log.e('Subscriber callback failed', {path, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n'), callbackName: callback.name || 'anonymous'}, 'framework'));
+        }
+      });
     }
 
     #hasCircularUpdate(path) {
@@ -657,37 +667,40 @@ class ComponentManager {
         if (this.juris.getDR()._hasAsyncProps(props)) {
           return this.#createWithAsyncProps(name, compFn, props, targetContainer);
         }
-        let { comptId, componentStates , context } = this.#getCompContext(name);
+        let { comptId, componentStates, context } = this.#getCompContext(name);
         let result = this.#callComponentFunction(compFn, props, context);
         if (result?.then) {
-          return this.#handleAsyncComp(promisify(result), name, props, componentStates , targetContainer);
+          return this.#handleAsyncComp(promisify(result), name, props, componentStates, targetContainer);
         }
-        return this.#procCompResult(result, name, props, componentStates , targetContainer);
-       //return this.#newCompFrag(result, name, props, componentStates , targetContainer)
-        //return this.#callComponentFunction(compFn, props, context)
+        return this.#procCompResult(result, name, props, componentStates, targetContainer);
       } catch (error) {
-        log.ee && console.error(log.e('Component creation failed!', { name, error: error.message }, 'application'));
+        log.ee && console.error(log.e('Component creation failed', {name, props, error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
         return this.#newErrElm(name, error);
       }
     }
 
     #callComponentFunction(componentFn, props, context) {
+      try {
         let funcStr = componentFn.toString();
         let paramMatch = funcStr.match(/^[^(]*\(([^)]*)\)/);
         if (!paramMatch || !paramMatch[1].trim()) {
-            return componentFn();
-        }        
-        let params = paramMatch[1].split(',').map(p => p.trim());        
-        if (params.length === 1) {
-            let param = params[0];
-            if (param.startsWith('{') && param.includes('}') || param === 'props'|| param === 'prp') {
-                return componentFn(props);
-            } else {
-                return componentFn(context);
-            }
-        } else {
-            return componentFn(props, context);
+          return componentFn();
         }
+        let params = paramMatch[1].split(',').map(p => p.trim());
+        if (params.length === 1) {
+          let param = params[0];
+          if (param.startsWith('{') && param.includes('}') || param === 'props' || param === 'prp') {
+            return componentFn(props);
+          } else {
+            return componentFn(context);
+          }
+        } else {
+          return componentFn(props, context);
+        }
+      } catch (error) {
+        log.ee && console.error(log.e('Component function execution failed', {componentName: componentFn.name || 'anonymous', props, error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+        throw error;
+      }
     }
 
     #getCompContext(name) {
@@ -818,113 +831,121 @@ class ComponentManager {
     }
 
     #createManagedComponent(result, name, props, states, targetContainer = null) {
-      let inst = this.#newComp(result, name, props);
-      let currentElement = targetContainer || document.createElement('div');
-      let isExternal = !!targetContainer;
-      let allSubscriptions = new Set();
-      let hasBeenMounted = false;
-      
-      if (!isExternal) {
-        currentElement.setAttribute('data-juris-component', name);
-        currentElement.setAttribute('data-juris-rendertime', Date.now());
+      try {
+        let inst = this.#newComp(result, name, props);
+        let currentElement = targetContainer || document.createElement('div');
+        let isExternal = !!targetContainer;
+        let allSubscriptions = new Set();
+        let hasBeenMounted = false;    
+        if (!isExternal) {
+          currentElement.setAttribute('data-juris-component', name);
+          currentElement.setAttribute('data-juris-rendertime', Date.now());
+        }    
+        const updateRender = async () => {
+          try {
+            allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
+            allSubscriptions.clear();
+            if (currentElement && currentElement._reactiveSubscriptions) {
+              currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
+              currentElement._reactiveSubscriptions = [];
+            }
+            let { result: res, deps } = this.juris.getSM().track(() => {
+              if (inst.render) {
+                return inst.render(currentElement);
+              }
+              return result;
+            });
+            if (res?.then) {
+              try {
+                res = await promisify(res);
+              } catch (err) {
+                log.ee && console.error(log.e('Async render error', {
+                  componentName: name,
+                  error: err.message,
+                  stack: err.stack?.split('\n').slice(0, 5).join('\n')
+                }, 'application'));
+                res = this.#newErrElm(name, err);
+              }
+            }
+            
+            if (res) {
+              try {
+                let newElement = this.juris.getDR().render(res, name);
+                if (currentElement.parentNode && newElement !== currentElement) {
+                  if (currentElement.parentNode.contains(currentElement)) {
+                    currentElement.parentNode.replaceChild(newElement, currentElement);
+                    currentElement = newElement;
+                  }
+                  if (!isExternal && currentElement.setAttribute) {
+                    currentElement.setAttribute('data-juris-component', name);
+                    currentElement.setAttribute('data-juris-rendertime', Date.now());
+                  }
+                } else if (newElement && !currentElement.parentNode) {
+                  currentElement = newElement;              
+                  if (!isExternal && currentElement.setAttribute) {
+                    currentElement.setAttribute('data-juris-component', name);
+                    currentElement.setAttribute('data-juris-rendertime', Date.now());
+                  }
+                }            
+                if (hasBeenMounted && (inst.hooks?.onUpdate || inst.onUpdate)) {
+                  let updateHook = inst.hooks?.onUpdate || inst.onUpdate;
+                  setTimeout(() => this.#runHook(updateHook, currentElement, name, 'onUpdate'), 0);
+                }
+                hasBeenMounted = true;
+              } catch (renderError) {
+                log.ee && console.error(log.e('Render update failed', {componentName: name,error: renderError.message, stack: renderError.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+              }
+            }        
+            // Create new subscriptions
+            deps.forEach(path => {
+              try {
+                let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
+                allSubscriptions.add(unsub);
+              } catch (subError) {
+                log.ee && console.error(log.e('Subscription creation failed', {componentName: name,path,error: subError.message}, 'application'));
+              }
+            });
+          } catch (updateError) {
+            log.ee && console.error(log.e('Component update cycle failed', {componentName: name,error: updateError.message,stack: updateError.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+          }
+        };
+        try {
+          updateRender();
+        } catch (initialRenderError) {
+          log.ee && console.error(log.e('Initial component render failed', {componentName: name, error: initialRenderError.message, stack: initialRenderError.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+        }
+        currentElement._componentCleanup = () => {
+          try {
+            if (inst.hooks?.onUnmount || inst.onUnmount) {
+              let unmountHook = inst.hooks?.onUnmount || inst.onUnmount;
+              try {
+                this.#runHook(unmountHook, currentElement, name, 'onUnmount');
+              } catch (error) {
+                log.ee && console.error(log.e('onUnmount error', { componentName: name, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'application'));
+              }
+            }
+            allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
+            allSubscriptions.clear();
+            if (currentElement._reactiveSubscriptions) {
+              currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
+              currentElement._reactiveSubscriptions = [];
+            }
+          } catch (cleanupError) {
+            log.ee && console.error(log.e('Component cleanup failed', {componentName: name, error: cleanupError.message }, 'application'));
+          }
+        };
+        
+        this.#setupUnifiedComp(currentElement, inst, states, name, isExternal);
+        return currentElement;
+      } catch (error) {
+        log.ee && console.error(log.e('Managed component creation failed', {
+          componentName: name,
+          props,
+          error: error.message,
+          stack: error.stack?.split('\n').slice(0, 5).join('\n')
+        }, 'application'));
+        return this.#newErrElm(name, error);
       }
-      
-      const stableUpdateRender = async () => {  // Make this async
-        // Clean up subscriptions
-        allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-        allSubscriptions.clear();
-        
-        if (currentElement && currentElement._reactiveSubscriptions) {
-          currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-          currentElement._reactiveSubscriptions = [];
-        }
-        
-        let { result: res, deps } = this.juris.getSM().track(() => {
-          if (inst.render) {
-            return inst.render(currentElement);
-          }
-          return result;
-        });
-        
-        // Handle async render functions properly
-        if (res?.then) {
-          try {
-            res = await promisify(res);  // Wait for async render to complete
-          } catch (err) {
-            log.ee && console.error(`Async render error for ${name}:`, err);
-            res = this.#newErrElm(name, err);
-          }
-        }
-        
-        if (res) {
-          let newElement = this.juris.getDR().render(res, name);
-          
-          if (currentElement.parentNode && newElement !== currentElement) {
-            if (currentElement.parentNode.contains(currentElement)) {
-              currentElement.parentNode.replaceChild(newElement, currentElement);
-              currentElement = newElement;
-            }
-            
-            if (!isExternal && currentElement.setAttribute) {
-              currentElement.setAttribute('data-juris-component', name);
-              currentElement.setAttribute('data-juris-rendertime', Date.now());
-            }
-          } else if (newElement && !currentElement.parentNode) {
-            currentElement = newElement;
-            
-            if (!isExternal && currentElement.setAttribute) {
-              currentElement.setAttribute('data-juris-component', name);
-              currentElement.setAttribute('data-juris-rendertime', Date.now());
-            }
-          }
-          
-          if (hasBeenMounted && (inst.hooks?.onUpdate || inst.onUpdate)) {
-            let updateHook = inst.hooks?.onUpdate || inst.onUpdate;
-            setTimeout(() => this.#runHook(updateHook, currentElement, name, 'onUpdate'), 0);
-          }
-          hasBeenMounted = true;
-        }
-        
-        // Create new subscriptions
-        deps.forEach(path => {
-          let unsub = this.juris.getSM().subscribeInternal(path, stableUpdateRender);
-          allSubscriptions.add(unsub);
-        });
-      };
-      
-      // Initial render
-      stableUpdateRender();
-      
-      // Store cleanup function
-      currentElement._componentCleanup = () => {
-        if (inst.hooks?.onUnmount || inst.onUnmount) {
-          let unmountHook = inst.hooks?.onUnmount || inst.onUnmount;
-          try {
-            this.#runHook(unmountHook, currentElement, name, 'onUnmount');
-          } catch (error) {
-            log.ee && console.error(log.e(`onUnmount error in ${name}:`, error), 'application');
-          }
-        }
-        
-        allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-        allSubscriptions.clear();
-        
-        if (currentElement._reactiveSubscriptions) {
-          currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-          currentElement._reactiveSubscriptions = [];
-        }
-      };
-      
-      this.#setupUnifiedComp(currentElement, inst, states, name, isExternal);
-      return currentElement;
-    }
-
-    #updateContainerContent(cont, content, name, isExternal) {
-      let children = Array.from(cont.children);
-      children.forEach(child => this.cleanup(child)); 
-      cont.innerHTML = '';
-      let el = this.juris.getDR().render(content);
-      cont.appendChild(el);
     }
 
     #setupUnifiedComp(el, inst, states, name, isExternal = false) {
@@ -986,16 +1007,16 @@ class ComponentManager {
     }
 
     #runHook(hook, args, componentName, hookName) {
-        try {
-            let result = Array.isArray(args) ? hook(...args) : hook(args);
-            if (result?.then) {
-                promisify(result).catch(error =>
-                    log.ee && console.error(log.e(`Async ${hookName} error in ${componentName}:`, error), 'application')
-                );
-            }
-        } catch (error) {
-            log.ee && console.error(log.e(`${hookName} error in ${componentName}:`, error), 'application');
+      try {
+        let result = Array.isArray(args) ? hook(...args) : hook(args);
+        if (result?.then) {
+          promisify(result).catch(error => {
+            log.ee && console.error(log.e(`Async ${hookName} error`, {componentName,hookName,error: error.message,stack: error.stack?.split('\n').slice(0, 5).join('\n') }, 'application'));
+          });
         }
+      } catch (error) {
+        log.ee && console.error(log.e(`${hookName} error`, {componentName,hookName,error: error.message,stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+      }
     }
 
     #newVirtContainer(frag, name, props) {
@@ -1373,55 +1394,54 @@ class DOMRenderer {
   }
   
   #createReactiveHandler(elm, getValue, updateDom, options = {}) {
-    let lastValue = options.trackChanges ? null : undefined;
-    let isInitialized = false;    
-    let update = () => {
-      try {
-        let result = getValue();
-        if (!this.#isPromiseLike(result)) {
-          if (!options.trackChanges || !isInitialized || !deepEquals(result, lastValue)) {
-            updateDom(result);
+  let lastValue = options.trackChanges ? null : undefined;
+  let isInitialized = false;
+
+  let update = () => {
+    try {
+      let result = getValue();
+      if (!this.#isPromiseLike(result)) {
+        if (!options.trackChanges || !isInitialized || !deepEquals(result, lastValue)) {
+          updateDom(result);
+          if (options.trackChanges) {
+            lastValue = result;
+            isInitialized = true;
+          }
+        }
+        return result;
+      }
+      let asyncContext = {
+        elm,
+        type: options.type || 'generic',
+        attributeName: options.attributeName
+      };
+      return this.#handleAsync(result, {
+        onResolved: (resolved) => {
+          if (!options.trackChanges || !isInitialized || !deepEquals(resolved, lastValue)) {
+            updateDom(resolved);
             if (options.trackChanges) {
-              lastValue = result;
+              lastValue = resolved;
               isInitialized = true;
             }
           }
-          return result;
-        }
-        let asyncContext = {
-          elm,
-          type: options.type || 'generic',
-          attributeName: options.attributeName
-        };        
-        return this.#handleAsync(result, {
-          onResolved: (resolved) => {
-            if (!options.trackChanges || !isInitialized || !deepEquals(resolved, lastValue)) {
-              updateDom(resolved);
-              if (options.trackChanges) {
-                lastValue = resolved;
-                isInitialized = true;
-              }
-            }
-          },
-          onError: (error) => {
-            if (options.onError) {
-              options.onError(error);
-            } else {
-              log.ee && console.error(log.e(`Error in reactive ${options.name}:`, error), 'application');
-            }
+        },
+        onError: (error) => {
+          if (options.onError) {
+            options.onError(error);
           }
-        }, asyncContext);
-      } catch (error) {
-        if (options.onError) {
-          options.onError(error);
-          log.ee && console.error(log.e(`Error in reactive ${options.name}:`, error), 'application');
-        } else {
-          log.ee && console.error(log.e(`Error in reactive ${options.name}:`, error), 'application');
+          log.ee && console.error(log.e(`Reactive ${options.name} failed`, {element: elm.tagName,elementId: elm.id,type: options.type,error: error.message,stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
         }
+      }, asyncContext);
+    } catch (error) {
+      log.ee && console.error(log.e(`Reactive ${options.name} execution failed`, {element: elm.tagName,elementId: elm.id,type: options.type,error: error.message,stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+      if (options.onError) {
+        options.onError(error);
       }
-    };    
-    return update;
-  }
+    }
+  };
+
+  return update;
+}
   
   #extractKey(vnode, index) {
     if (typeof vnode === 'string' || typeof vnode === 'number' || !vnode) {
@@ -1715,43 +1735,50 @@ class DOMRenderer {
   
   applyProp(elm, propName, propValue, componentName = null) {
     let subscriptions = [];
-    let eventListeners = [];
-    if (propName === 'onconnected') {
-      elm._jurisOnConnected = propValue;
-      this.pendingConnectedCallbacks.add(elm);
+    let eventListeners = [];    
+    try {
+      if (propName === 'onconnected') {
+        elm._jurisOnConnected = propValue;
+        this.pendingConnectedCallbacks.add(elm);
+        return () => {
+          this.pendingConnectedCallbacks.delete(elm);
+          if (elm._jurisOnConnected) {
+            delete elm._jurisOnConnected;
+          }
+        };
+      } else if (propName === 'children') {
+        this._handleChildren(elm, propValue, subscriptions, componentName);
+      } else if (propName === 'text') {
+        this.#handleText(elm, propValue, subscriptions);
+      } else if (propName === 'style') {
+        this.#handleStyle(elm, propValue, subscriptions);
+      } else if (propName.startsWith('on')) {
+        this.#handleEvent(elm, propName, propValue, eventListeners);
+      } else if (typeof propValue === 'function') {
+        this.#handleReactiveAttribute(elm, propName, propValue, subscriptions);
+      } else if (this.#isPromiseLike(propValue)) {
+        this.#handleAsyncProp(elm, propName, propValue);
+      } else {
+        this.#setStaticAttribute(elm, propName, propValue);
+      }
+      
+      if (subscriptions.length > 0 || eventListeners.length > 0) {
+        let existing = this.subscriptions.get(elm) || { subscriptions: [], eventListeners: [] };
+        existing.subscriptions.push(...subscriptions);
+        existing.eventListeners.push(...eventListeners);
+        this.subscriptions.set(elm, existing);
+      }
+      
       return () => {
-        this.pendingConnectedCallbacks.delete(elm);
-        if (elm._jurisOnConnected) {
-          delete elm._jurisOnConnected;
-        }
+        subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
+        eventListeners.forEach(({eventName, handler}) => {
+          try { elm.removeEventListener(eventName, handler); } catch(e) {}
+        });
       };
-    } else if (propName === 'children') {
-      this._handleChildren(elm, propValue, subscriptions, componentName);
-    } else if (propName === 'text') {
-      this.#handleText(elm, propValue, subscriptions);
-    } else if (propName === 'style') {
-      this.#handleStyle(elm, propValue, subscriptions);
-    } else if (propName.startsWith('on')) {
-      this.#handleEvent(elm, propName, propValue, eventListeners);
-    } else if (typeof propValue === 'function') {
-      this.#handleReactiveAttribute(elm, propName, propValue, subscriptions);
-    } else if (this.#isPromiseLike(propValue)) {
-      this.#handleAsyncProp(elm, propName, propValue);
-    } else {
-      this.#setStaticAttribute(elm, propName, propValue);
-    }    
-    if (subscriptions.length > 0 || eventListeners.length > 0) {
-      let existing = this.subscriptions.get(elm) || { subscriptions: [], eventListeners: [] };
-      existing.subscriptions.push(...subscriptions);
-      existing.eventListeners.push(...eventListeners);
-      this.subscriptions.set(elm, existing);
-    }    
-    return () => {
-      subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-      eventListeners.forEach(({eventName, handler}) => {
-        try { elm.removeEventListener(eventName, handler); } catch(e) {}
-      });
-    };
+    } catch (error) {
+      log.ee && console.error(log.e('Property application failed', {element: elm.tagName,elementId: elm.id,property: propName,valueType: typeof propValue,componentName, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+      return () => {};
+    }
   }
 
   _processPendingConnectedCallbacks() {
@@ -1772,11 +1799,7 @@ class DOMRenderer {
   }
 
   #handleAsyncProp(elm, propName, propValue) {
-    let asyncContext = {
-      elm,
-      type: 'attribute',
-      attributeName: propName
-    };    
+    let asyncContext = {elm,type: 'attribute',attributeName: propName};    
     if (propName === 'innerHTML') {
       asyncContext.type = 'children';
       return this.#handleAsync(propValue, {
@@ -1817,11 +1840,11 @@ class DOMRenderer {
     if (typeof text === 'function') {
       try {
         let {result, deps} = this.juris.getSM().track(() => text(elm));
-        elm.textContent = result;        
+        elm.textContent = result;
         this.#attachRecompute(elm, 'text', text, (value) => {
           elm.textContent = value;
         });
-        if(deps.size === 0){  // Use the result from tracking
+        if(deps.size === 0) {
           return;
         }
         let updateText = this.#createReactiveHandler(
@@ -1831,9 +1854,9 @@ class DOMRenderer {
           { trackChanges: true, name: 'text', type: 'text' }
         );
         this._createReactiveUpdate(elm, updateText, subscriptions, deps);
-       } catch (error) {
-        log.ee && console.error(log.e('Reactive text function error:', error), 'application');
-        elm.textContent = error.message
+      } catch (error) {
+        log.ee && console.error(log.e('Reactive text function failed', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+        elm.textContent = `Error: ${error.message}`;
       }
     } else if (this.#isPromiseLike(text)) {
       let asyncContext = { elm, type: 'text' };
@@ -1849,41 +1872,45 @@ class DOMRenderer {
   
   #handleStyle(elm, style, subscriptions) {
     if (typeof style === 'function') {
-      let {result, deps} = this.juris.getSM().track(() => {
-        let value = style.length > 0 ? style(elm) : style();
-        if (this.cssExtractor?.postProcessReactiveResult && typeof value === 'object') {
-          value = this.cssExtractor.postProcessReactiveResult(value, 'reactive', elm);
-        }
-        return value;
-      });    
-      if (typeof result === 'object') {
-        Object.assign(elm.style, result);
-      }      
-      this.#attachRecompute(elm, 'style', style, (value) => {
-        if (typeof value === 'object') {
-          Object.assign(elm.style, value);
-        }
-      });
-      if (deps.size === 0) {
-        return;
-      }    
-      let updateStyle = this.#createReactiveHandler(
-        elm,
-        () => {
+      try {
+        let {result, deps} = this.juris.getSM().track(() => {
           let value = style.length > 0 ? style(elm) : style();
           if (this.cssExtractor?.postProcessReactiveResult && typeof value === 'object') {
             value = this.cssExtractor.postProcessReactiveResult(value, 'reactive', elm);
           }
           return value;
-        },
-        (value) => {
+        });
+        if (typeof result === 'object') {
+          Object.assign(elm.style, result);
+        }
+        this.#attachRecompute(elm, 'style', style, (value) => {
           if (typeof value === 'object') {
             Object.assign(elm.style, value);
           }
-        },
-        { trackChanges: true, name: 'style', type: 'style' }
-      );
-      this._createReactiveUpdate(elm, updateStyle, subscriptions, deps);
+        });
+        if (deps.size === 0) {
+          return;
+        }
+        let updateStyle = this.#createReactiveHandler(
+          elm,
+          () => {
+            let value = style.length > 0 ? style(elm) : style();
+            if (this.cssExtractor?.postProcessReactiveResult && typeof value === 'object') {
+              value = this.cssExtractor.postProcessReactiveResult(value, 'reactive', elm);
+            }
+            return value;
+          },
+          (value) => {
+            if (typeof value === 'object') {
+              Object.assign(elm.style, value);
+            }
+          },
+          { trackChanges: true, name: 'style', type: 'style' }
+        );
+        this._createReactiveUpdate(elm, updateStyle, subscriptions, deps);
+      } catch (error) {
+        log.ee && console.error(log.e('Reactive style function failed', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+      }
     } else if (this.#isPromiseLike(style)) {
       let asyncContext = { elm, type: 'style' };
       this.#handleAsync(style, {
@@ -1894,69 +1921,77 @@ class DOMRenderer {
         }
       }, asyncContext);
     } else if (typeof style === 'object') {
-      for (let prop in style) {
-        if (style.hasOwnProperty(prop)) {
-          let val = style[prop];
-          if (typeof val === 'function') {
-            this.#handleReactiveStyleProperty(elm, prop, val, subscriptions);
-          } else {
-            this.#setStyleProperty(elm, prop, val);
+      try {
+        for (let prop in style) {
+          if (style.hasOwnProperty(prop)) {
+            let val = style[prop];
+            if (typeof val === 'function') {
+              this.#handleReactiveStyleProperty(elm, prop, val, subscriptions);
+            } else {
+              this.#setStyleProperty(elm, prop, val);
+            }
           }
         }
+      } catch (error) {
+        log.ee && console.error(log.e('Style object processing failed', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
       }
     }
   }
   
   #handleReactiveStyleProperty(elm, prop, valueFn, subscriptions) {
-    let {result, deps} = this.juris.getSM().track(() => valueFn(elm));  
-    this.#setStyleProperty(elm, prop, result);    
-    this.#attachRecompute(elm, `style_${prop}`, valueFn, (value) => {
-      this.#setStyleProperty(elm, prop, value);
-    });
-    if (deps.size === 0) {
-      return;
-    }    
-    let updateStyleProperty = this.#createReactiveHandler(
-      elm,
-      () => valueFn(elm),
-      (value) => this.#setStyleProperty(elm, prop, value),
-      { trackChanges: true, name: `style.${prop}`, type: 'style' }
-    );
-    this._createReactiveUpdate(elm, updateStyleProperty, subscriptions, deps);
+    try {
+      let {result, deps} = this.juris.getSM().track(() => valueFn(elm));
+      this.#setStyleProperty(elm, prop, result);
+      this.#attachRecompute(elm, `style_${prop}`, valueFn, (value) => {
+        this.#setStyleProperty(elm, prop, value);
+      });
+      if (deps.size === 0) {
+        return;
+      }
+      let updateStyleProperty = this.#createReactiveHandler(
+        elm,
+        () => valueFn(elm),
+        (value) => this.#setStyleProperty(elm, prop, value),
+        { trackChanges: true, name: `style.${prop}`, type: 'style' }
+      );
+      this._createReactiveUpdate(elm, updateStyleProperty, subscriptions, deps);
+    } catch (error) {
+      element._jurisError={error};
+      element.style.borderColor='red';
+      element.title=error.message;
+      log.ee && console.error(log.e('Reactive ' + prop + ' style property failed', {element: elm.tagName, elementId: elm.id, property: prop, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+    }
   }
   
   #handleReactiveAttribute(elm, attr, valueFn, subscriptions) {
-    let {result, deps} = this.juris.getSM().track(() => valueFn(elm));
-    this.#setStaticAttribute(elm, attr, result);    
-    this.#attachRecompute(elm, attr, valueFn, (value) => {
-      this.#setStaticAttribute(elm, attr, value);
-    });
-    if (deps.size === 0) {
-      return;
-    }  
-    let updateAttribute = this.#createReactiveHandler(
-      elm,
-      () => valueFn(elm),
-      (value) => this.#setStaticAttribute(elm, attr, value),
-      { trackChanges: true, name: `attribute '${attr}'`, type: 'attribute', attributeName: attr }
-    );
-    this._createReactiveUpdate(elm, updateAttribute, subscriptions, deps);
+    try {
+      let {result, deps} = this.juris.getSM().track(() => valueFn(elm));
+      this.#setStaticAttribute(elm, attr, result);
+      this.#attachRecompute(elm, attr, valueFn, (value) => {
+        this.#setStaticAttribute(elm, attr, value);
+      });
+      if (deps.size === 0) {
+        return;
+      }
+      let updateAttribute = this.#createReactiveHandler(
+        elm,
+        () => valueFn(elm),
+        (value) => this.#setStaticAttribute(elm, attr, value),
+        { trackChanges: true, name: `attribute '${attr}'`, type: 'attribute', attributeName: attr }
+      );
+      this._createReactiveUpdate(elm, updateAttribute, subscriptions, deps);
+    } catch (error) {
+      log.ee && console.error(log.e('Reactive ' + attr +' attribute failed', {element: elm.tagName, elementId: elm.id, attribute: attr, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+    }
   }
   
   _handleChildren(elm, children, subscriptions, componentName = null) {
     if (typeof children === 'function') {
-      let {result, deps} = this.juris.getSM().track(() => {
-        let value = children(elm);
-        return Array.isArray(value) ? value : [value];
-      });
-      if (result !== "ignore") {
-        if (typeof result === 'string' || typeof result === 'number') {
-          elm.textContent = String(result);
-        } else {
-          this.#updateChildren(elm, result, componentName);
-        }
-      }      
-      this.#attachRecompute(elm, 'children', children, (result) => {
+      try {
+        let {result, deps} = this.juris.getSM().track(() => {
+          let value = children(elm);
+          return Array.isArray(value) ? value : [value];
+        });
         if (result !== "ignore") {
           if (typeof result === 'string' || typeof result === 'number') {
             elm.textContent = String(result);
@@ -1964,17 +1999,7 @@ class DOMRenderer {
             this.#updateChildren(elm, result, componentName);
           }
         }
-      });
-      if (deps.size === 0) {
-        return;
-      }      
-      let updateChildren = this.#createReactiveHandler(
-        elm,
-        () => {
-          let value = children(elm);
-          return Array.isArray(value) ? value : [value];
-        },
-        (result) => {
+        this.#attachRecompute(elm, 'children', children, (result) => {
           if (result !== "ignore") {
             if (typeof result === 'string' || typeof result === 'number') {
               elm.textContent = String(result);
@@ -1982,23 +2007,48 @@ class DOMRenderer {
               this.#updateChildren(elm, result, componentName);
             }
           }
-        },
-        { 
-          trackChanges: false,
-          name: 'children', 
-          type: 'reactive-children' 
+        });
+        if (deps.size === 0) {
+          return;
         }
-      );
-      this._createReactiveUpdate(elm, updateChildren, subscriptions, deps);      
+        let updateChildren = this.#createReactiveHandler(
+          elm,
+          () => {
+            let value = children(elm);
+            return Array.isArray(value) ? value : [value];
+          },
+          (result) => {
+            if (result !== "ignore") {
+              if (typeof result === 'string' || typeof result === 'number') {
+                elm.textContent = String(result);
+              } else {
+                this.#updateChildren(elm, result, componentName);
+              }
+            }
+          },
+          { trackChanges: false, name: 'children', type: 'reactive-children' }
+        );
+        this._createReactiveUpdate(elm, updateChildren, subscriptions, deps);
+      } catch (error) {
+        log.ee && console.error(log.e('Reactive children function failed', {element: elm.tagName, elementId: elm.id, componentName, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'application'));
+        elm.textContent = `Error rendering children: ${error.message}`;
+      }
     } else if (this.#isPromiseLike(children)) {
       let asyncContext = { elm, type: 'children' };
       this.#handleAsync(children, {
         onResolved: (resolved) => {
           this.#updateChildren(elm, resolved, componentName);
+        },
+        onError: (error) => {
+          log.ee && console.error(log.e('Async children resolution failed', {element: elm.tagName,elementId: elm.id,componentName,error: error.message}, 'application'));
         }
       }, asyncContext);
     } else {
-      this.#updateChildren(elm, children, componentName);
+      try {
+        this.#updateChildren(elm, children, componentName);
+      } catch (error) {
+        log.ee && console.error(log.e('Children update failed', {element: elm.tagName,elementId: elm.id,componentName,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+      }
     }
   }
   
@@ -2115,39 +2165,43 @@ class DOMRenderer {
   }
   
   #createChild(child, componentName) {
-    if (child == null) return null;    
-    if (typeof child === 'string' || typeof child === 'number') {
-      return document.createTextNode(String(child));
-    }    
-    if (Array.isArray(child)) {
-      let fragment = document.createDocumentFragment();
-      for (let i = 0; i < child.length; i++) {
-        let subChild = this.#createChild(child[i], componentName);
-        if (subChild) fragment.appendChild(subChild);
+    try {
+      if (child == null) return null;
+      if (typeof child === 'string' || typeof child === 'number') {
+        return document.createTextNode(String(child));
       }
-      return fragment.hasChildNodes() ? fragment : null;
-    }    
-    if (typeof child === 'object' && child !== null) {
-      let tagName = Object.keys(child)[0];
-      let props = child[tagName] || {};
-      if (this.juris.getCM().components.has(tagName)) {
-        let tempContainer = document.createElement('div');
-        let result = this.#renderComponent(tagName, props, tempContainer);        
-        if (tempContainer.firstChild) {
-          let extractedFragment = document.createDocumentFragment();
-          while (tempContainer.firstChild) {
-            extractedFragment.appendChild(tempContainer.firstChild);
-          }
-          return extractedFragment;
-        } else if (result) {
-          return result;
+      if (Array.isArray(child)) {
+        let fragment = document.createDocumentFragment();
+        for (let i = 0; i < child.length; i++) {
+          let subChild = this.#createChild(child[i], componentName);
+          if (subChild) fragment.appendChild(subChild);
         }
-        return null;
+        return fragment.hasChildNodes() ? fragment : null;
       }
-      
-      return this.render(child, componentName);
-    }    
-    return null;
+      if (typeof child === 'object' && child !== null) {
+        let tagName = Object.keys(child)[0];
+        let props = child[tagName] || {};
+        if (this.juris.getCM().components.has(tagName)) {
+          let tempContainer = document.createElement('div');
+          let result = this.#renderComponent(tagName, props, tempContainer);
+          if (tempContainer.firstChild) {
+            let extractedFragment = document.createDocumentFragment();
+            while (tempContainer.firstChild) {
+              extractedFragment.appendChild(tempContainer.firstChild);
+            }
+            return extractedFragment;
+          } else if (result) {
+            return result;
+          }
+          return null;
+        }
+        return this.render(child, componentName);
+      }
+      return null;
+    } catch (error) {
+      log.ee && console.error(log.e('Child creation failed', {childType: typeof child,componentName,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'application'));
+      return document.createTextNode(`Error: ${error.message}`);
+    }
   }
   
   #renderChildren(elm, children, componentName) {
@@ -2188,62 +2242,72 @@ class DOMRenderer {
   }
   
   #setStaticAttribute(elm, attr, value) {
-    if (this.SKIP_ATTRS.has(attr)) return;    
-    if (this.BOOLEAN_ATTRS.has(attr)) {
-      let boolValue = value && value !== 'false';
-      if (boolValue) {
-        elm.setAttribute(attr,'');
+    try {
+      if (this.SKIP_ATTRS.has(attr)) return;
+      if (this.BOOLEAN_ATTRS.has(attr)) {
+        let boolValue = value && value !== 'false';
+        if (boolValue) {
+          elm.setAttribute(attr,'');
+        } else {
+          elm.removeAttribute(attr);
+        }
+        if (attr in elm) {
+          elm[attr] = boolValue;
+        }
+        return;
+      }
+      if (elm.namespaceURI === 'http://www.w3.org/2000/svg') {
+        elm.setAttribute(attr, value);
+        return;
+      }
+      const READ_ONLY_ATTRS = new Set(['list', 'form', 'labels']);
+      if (READ_ONLY_ATTRS.has(attr)) {
+        elm.setAttribute(attr, value);
+        return;
+      }
+      let firstChar = attr.charCodeAt(0);
+      if ((firstChar === 100 && attr.charCodeAt(4) === 45) ||
+          (firstChar === 97 && attr.charCodeAt(4) === 45) ||
+          attr.indexOf('-') !== -1 ||
+          attr.indexOf(':') !== -1) {
+        elm.setAttribute(attr, value);
+        return;
+      }
+      if (attr in elm && typeof elm[attr] !== 'function') {
+        try {
+          elm[attr] = value;
+        } catch (error) {
+          elm.setAttribute(attr, value);
+        }
       } else {
-        elm.removeAttribute(attr);
-      }
-      if (attr in elm) {
-        elm[attr] = boolValue;
-      }
-      return;
-    }    
-    if (elm.namespaceURI === 'http://www.w3.org/2000/svg') {
-      elm.setAttribute(attr, value);
-      return;
-    }
-    const READ_ONLY_ATTRS = new Set(['list', 'form', 'labels']);
-    if (READ_ONLY_ATTRS.has(attr)) {
-      elm.setAttribute(attr, value);
-      return;
-    }
-    let firstChar = attr.charCodeAt(0);
-    if ((firstChar === 100 && attr.charCodeAt(4) === 45) || // data-
-        (firstChar === 97 && attr.charCodeAt(4) === 45) ||  // aria-
-        attr.indexOf('-') !== -1 ||
-        attr.indexOf(':') !== -1) {
-      elm.setAttribute(attr, value);
-      return;
-    }
-    if (attr in elm && typeof elm[attr] !== 'function') {
-      try {
-        elm[attr] = value;
-      } catch (error) {
         elm.setAttribute(attr, value);
       }
-    } else {
-      elm.setAttribute(attr, value);
+    } catch (error) {
+      log.ee && console.error(log.e('Attribute setting failed', {element: elm.tagName, elementId: elm.id, attribute: attr, value: typeof value === 'object' ? JSON.stringify(value) : value, error: error.message}, 'application'));
     }
   }
   
   #handleEvent(elm, eventName, handler, eventListeners) {
-    if (eventName === 'onconnected') {
-      elm._jurisOnConnected = handler;
-      return;
-    }
-    eventName = eventName.toLowerCase();
-    let actualEventName = eventName === 'onclick' ? 'click' : 
-                           eventName === 'ondoubleclick' ? 'dblclick' :
-                           eventName.slice(2);    
-    elm.addEventListener(actualEventName, handler);
-    eventListeners.push({ eventName: actualEventName, handler });    
-    if (eventName === 'onclick') {
-      this.#attachTouchSupport(elm, handler, eventListeners);
-    }
+  if (eventName === 'onconnected') {
+    elm._jurisOnConnected = handler;
+    return;
   }
+  eventName = eventName.toLowerCase();
+  let actualEventName = eventName === 'onclick' ? 'click' :   eventName === 'ondoubleclick' ? 'dblclick' :
+                         eventName.slice(2);  
+  const wrappedHandler = (e) => {
+    try {
+      return handler(e);
+    } catch (error) {
+      log.ee && console.error(log.e('Event handler failed', {eventType: actualEventName,element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+    }
+  };
+  elm.addEventListener(actualEventName, wrappedHandler);
+  eventListeners.push({ eventName: actualEventName, handler: wrappedHandler });
+  if (eventName === 'onclick') {
+    this.#attachTouchSupport(elm, wrappedHandler, eventListeners);
+  }
+}
   
   #attachTouchSupport(elm, handler, eventListeners) {
     if (!/Mobi|Android/i.test(navigator.userAgent)) return;    
@@ -3175,7 +3239,7 @@ class Juris {
       if (!containerEl) {
         log.ee && console.error(log.e('Render container not found', { container }, 'application'));
         return;
-      }      
+      }
       try {
         this.getSM().startDeferringSubscriptions();
         let content = vdom !== null ? vdom : this.layout;
@@ -3336,65 +3400,71 @@ class Juris {
    * // Check armed events
    * console.log(buttonArmed.events); // Array of event information
    */
-    arm(target, handlerFn) {    
-        if(handlerFn == null || typeof handlerFn !== 'function') {
-            log.ew && console.warn(log.w('arm() called without valid handler function'), 'framework');
-            return null;
-        }
+    arm(target, handlerFn) {
+      if(handlerFn == null || typeof handlerFn !== 'function') {
+        log.ew && console.warn(log.w('arm() called without valid handler function'), 'framework');
+        return null;
+      }
+      try {
         let context = this.createContext(target);
         let handlers = handlerFn(context);
-        let listeners  = [];
-        let jurisIns = this;
+        let listeners = [];
+        let jurisIns = this;        
         for (let eventName in handlers) {
-            let actualEventName;                
-            if (eventName.startsWith('on-')) {
-                actualEventName = eventName.slice(3);
-            } else if (eventName.startsWith('on:')) {
-                actualEventName = eventName.slice(3);
-            } else {
-                actualEventName = eventName.slice(2).toLowerCase();
-            }                
-            let handler = handlers[eventName];                
-            if (typeof handler === 'function') {
-                target.addEventListener(actualEventName, handler);
-                listeners.push({ 
-                    original: eventName,
-                    actual: actualEventName, 
-                    handler 
-                });
-            }
-        }
-        let instance = {
-            events: listeners.map(e => ({
-                name: e.original,
-                actualEvent: e.actual,
-                handler: e.handler
-            })),
-            trigger(eventName, eventData = {}) {
-                let listener = listeners.find(e => e.original === eventName || e.actual === eventName);
-                if (listener) {
-                    let mockEvent = {
-                        type: listener.actual,
-                        target: target,
-                        preventDefault: () => {},
-                        stopPropagation: () => {},
-                        ...eventData
-                    };                    
-                    listener.handler.call(target, mockEvent);
-                    return true;
-                }
-                return false;
-            },
-            cleanup() {                
-                listeners.forEach(({ actual, handler }) => {
-                    target.removeEventListener(actual, handler);
-                });
-                jurisIns.armedElements.delete(target);
+          let actualEventName;
+          if (eventName.startsWith('on-')) {
+            actualEventName = eventName.slice(3);
+          } else if (eventName.startsWith('on:')) {
+            actualEventName = eventName.slice(3);
+          } else {
+            actualEventName = eventName.slice(2).toLowerCase();
+          }          
+          let handler = handlers[eventName];          
+          if (typeof handler === 'function') {
+            const wrappedHandler = (e) => {
+              try {
+                return handler(e);
+              } catch (error) {
+                log.ee && console.error(log.e('Armed event handler failed', {eventType: actualEventName, target: target.tagName || target.toString(), error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+              }
+            };            
+            target.addEventListener(actualEventName, wrappedHandler);
+            listeners.push({ 
+              original: eventName,
+              actual: actualEventName, 
+              handler: wrappedHandler
+            });
+          }
+        }        
+        let instance = {events: listeners.map(e => ({name: e.original,actualEvent: e.actual,handler: e.handler})),
+          trigger(eventName, eventData = {}) {
+            let listener = listeners.find(e => e.original === eventName || e.actual === eventName);
+            if (listener) {
+              let mockEvent = {type: listener.actual,target: target,preventDefault: () => {},stopPropagation: () => {}, ...eventData};
+              try {
+                listener.handler.call(target, mockEvent);
                 return true;
+              } catch (error) {
+                log.ee && console.error(log.e('Armed event trigger failed', {eventName,target: target.tagName || target.toString(),error: error.message}, 'application'));
+                return false;
+              }
             }
-        };
+            return false;
+          },
+          cleanup() {
+            listeners.forEach(({ actual, handler }) => {
+              target.removeEventListener(actual, handler);
+            });
+            jurisIns.armedElements.delete(target);
+            return true;
+          }
+        };        
         jurisIns.armedElements.set(target, { listeners, context, instance: instance });
         return instance;
+      } catch (error) {
+        log.ee && console.error(log.e('arm() setup failed', {target: target.tagName || target.toString(),error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+        return null;
+      }
     }
 
   /**

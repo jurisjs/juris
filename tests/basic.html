@@ -28,7 +28,7 @@ function examplePromise() {
 const SwitchRenderer = (props, context) => {
     return {
       render: () => {
-            const value = context.getState('count', 0)
+            const value = props.value();
             // Look for exact match first
             if (props[value]) {
                 const match = props[value];
@@ -40,8 +40,6 @@ const SwitchRenderer = (props, context) => {
         }      
     }
 }
-
-
 //usage
 const Increment = (props, {getState,setState}) => (
   {button: {
@@ -58,6 +56,11 @@ const Increment = (props, {getState,setState}) => (
   const Decrement = (props, {getState,setState}) => (
   {button: {
     text: ()=>props.lable(),
+    class:()=>getState('count', 0),
+    'data-any':()=>getState('count', 0),
+    style:{
+      color:()=>getState('count', 0),
+    },
     onclick: () => {
         const current = getState('count', 0);
         setState('count', current - 1);
