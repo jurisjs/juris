@@ -64,12 +64,45 @@
 let jurisLinesOfCode = 2600;
 let jurisVersion = '0.91.0';
 let jurisMinifiedSize = '38kB, 12kB gzipped';
-let isValidPath = path => typeof path === 'string' && path.trim().length > 0 && !path.includes('..');
 let getPathParts = path => path.split('.').filter(Boolean);
+
+/**
+ * Check if value is a function
+ * @param {*} val 
+ * @returns 
+ */
+let _isFN = (val) => {
+  return typeof val === 'function';
+}
+/**
+ * Check if value is a plain object
+ * @param {*} val - Value to check
+ * @returns {boolean} True if val is an object (excludes null and arrays)
+ */
+let _isOb = (val) => {
+  return val !== null && typeof val === 'object' && !Array.isArray(val);
+}
+/**
+ * Check if value is a string
+ * @param {*} val - Value to check
+ * @returns {boolean} True if val is a string
+ */
+let _isSt = (val) => {
+  return typeof val === 'string';
+}
+/**
+ * Check if value is a number
+ * @param {*} val - Value to check
+ * @returns {boolean} True if val is a number
+ */
+let _isNu = (val) => {
+  return typeof val === 'number' && !isNaN(val);
+}
+let isValidPath = path => _isSt(path) && path.trim().length > 0 && !path.includes('..');
 let deepEquals = (a, b) => {
     if (a === b) return true;
     if (a == null || b == null || typeof a !== typeof b) return false;
-    if (typeof a === 'object') {
+    if (_isOb(a)) {
         if (Array.isArray(a) !== Array.isArray(b)) return false;
         let keysA = Object.keys(a), keysB = Object.keys(b);
         if (keysA.length !== keysB.length) return false;
@@ -77,7 +110,6 @@ let deepEquals = (a, b) => {
     }
     return false;
 };
-
 let createLogger = () => {
     let s = [];
     let f = (m, c, cat) => {
@@ -103,7 +135,7 @@ let createPromisify = () => {
         }
     };
     let trackingPromisify = result => {
-        let promise = typeof result?.then === "function" ? result : Promise.resolve(result);
+        let promise = _isFN(result?.then) ? result : Promise.resolve(result);
         if (isTracking && promise !== result) {
             activePromises.add(promise);
             promise.finally(() => {
@@ -179,7 +211,7 @@ class StateManager {
 }
     addPlugin(name, plugin) {
         this.plugins.set(name, plugin);
-        if (plugin.initialize && typeof plugin.initialize === 'function') {
+        if (_isFN(plugin.initialize)) {
             plugin.initialize(this);
         }
         return plugin;
@@ -195,7 +227,7 @@ class StateManager {
 
     removePlugin(name) {
         let plugin = this.plugins.get(name);
-        if (plugin && plugin.destroy && typeof plugin.destroy === 'function') {
+        if (plugin && _isFN(plugin.destroy)) {
             plugin.destroy();
         }
         return this.plugins.delete(name);
@@ -211,7 +243,7 @@ class StateManager {
     compute(name, fn, options = {}) {
         let computePlugin = this.getPlugin('compute');
         if (!computePlugin) {
-            throw new Error('Compute plugin not available. Add ComputePlugin via features.compute in Juris config.');
+            throw new Error('Compute not available.');
         }
         return computePlugin.compute(name, fn, options);
     }
@@ -219,7 +251,7 @@ class StateManager {
     configureCompute(defaults) {
         let computePlugin = this.getPlugin('compute');
         if (!computePlugin) {
-            throw new Error('Compute plugin not available.');
+            throw new Error('Compute not available.');
         }
         return computePlugin.configureCompute(defaults);
     }
@@ -270,10 +302,8 @@ class StateManager {
         }
         this.state = JSON.parse(JSON.stringify(this.initialState));
         this.pathCache.clear();
-        
-        // Add this:
         this.plugins.forEach(plugin => {
-            if (plugin.reset && typeof plugin.reset === 'function') {
+            if (_isFN(plugin.reset)) {
                 plugin.reset();
             }
         });
@@ -303,7 +333,7 @@ class StateManager {
         }
         return current;
       } catch (error) {
-        log.ee && console.error(log.e('State access failed', {path, defaultValue, track, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'framework'));
+        log.ee && console.error(log.e('State access failed', {path, defaultValue, track, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'frk'));
         return defaultValue;
       }
     }
@@ -322,13 +352,13 @@ class StateManager {
         }
         this.#setStateImmediate(path, value, context);
       } catch (error) {
-        log.ee && console.error(log.e('State update failed', {path, valueType: typeof value, context, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'framework'));
+        log.ee && console.error(log.e('State update failed', {path, valueType: typeof value, context, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'frk'));
         throw error;
       }
     }
     #canQuickCompare(path, value) {
         return (
-            (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') &&
+            (_isSt(value) || _isNu(value) || typeof value === 'boolean') &&
             path.indexOf('.') === -1 &&
             this.middleware.length === 0
         );
@@ -342,7 +372,7 @@ class StateManager {
         this.#beginBatch();
         try {
             let result = callback();
-            if (result && typeof result.then === 'function') {
+            if (result && _isFN(result.then)) {
                 return result
                     .then(value => { this.#endBatch(); return value; })
                     .catch(error => { this.#endBatch(); throw error; });
@@ -363,7 +393,7 @@ class StateManager {
 
     #endBatch() {
         if (!this.isBatching) {
-            log.ew && console.warn(log.w('endBatch() called without beginBatch()', {}, 'framework'));
+            log.ew && console.warn(log.w('invalid use of endBatch()', {}, 'frk'));
             return;
         }
         this.isBatching = false;
@@ -408,7 +438,7 @@ class StateManager {
                     log.ee && console.error(log.e('Middleware error in batch', {
                         path: update.path,
                         error: error.message
-                    }, 'application'));
+                    }, 'app'));
                 }
             }
             if (deepEquals(oldValue, finalValue)) return;
@@ -430,7 +460,7 @@ class StateManager {
                     try {
                         callback(this.getState(path, null, false), null, path);
                     } catch (error) {
-                        log.ee && console.error(log.e('External subscriber error:', error), 'application');
+                        log.ee && console.error(log.e('ex-subscriber error:', error), 'app');
                     }
                 });
             }
@@ -447,12 +477,12 @@ class StateManager {
                     let result = this.middleware[i]({ path, oldValue, newValue: finalValue, context, state: this.state });
                     if (result !== undefined) finalValue = result;
                 } catch (error) {
-                    log.ee && console.error(log.e('Middleware error', { path, error: error.message, middlewareName: middleware.name || 'anonymous' }, 'application'));
+                    log.ee && console.error(log.e('Middleware error', { path, error: error.message, middlewareName: middleware.name || 'anonymous' }, 'app'));
                 }
             }
         }
         if (deepEquals(oldValue, finalValue)) {
-            log.ed && console.debug(log.d('State unchanged, skipping update', { path }, 'framework'));
+            log.ed && console.debug(log.d('State not updated', { path }, 'frk'));
             return;
         }
         this.#setStateFast(path, finalValue);
@@ -489,7 +519,7 @@ class StateManager {
         let lastIndex = parts.length - 1;
         for (let i = 0; i < lastIndex; i++) {
             let part = parts[i];
-            if (current[part] == null || typeof current[part] !== 'object') {
+            if (current[part] == null || !_isOb(current[part])) {
                 current[part] = {};
             }
             current = current[part];
@@ -584,7 +614,7 @@ class StateManager {
                     try {
                         callback(newValue, oldValue, changedPath);
                     } catch (error) {
-                        log.ee && console.error(log.e('External subscriber error:', {error, path:changedPath, newValue,oldValue} ), 'application');
+                        log.ee && console.error(log.e('ex-subscriber error:', {error, path:changedPath, newValue,oldValue} ), 'app');
                     }
                 }
             });
@@ -609,7 +639,7 @@ class StateManager {
             }
           });
         } catch (error) {
-          log.ee && console.error(log.e('Subscriber callback failed', {path, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n'), callbackName: callback.name || 'anonymous'}, 'framework'));
+          log.ee && console.error(log.e('subscriber error:', {path, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n'), callbackName: callback.name || 'anonymous'}, 'frk'));
         }
       });
     }
@@ -617,7 +647,7 @@ class StateManager {
     #hasCircularUpdate(path) {
         if (!this.newSubs) this.newSubs = new Set();
         if (this.newSubs.has(path)) {
-            log.ew && console.warn(log.w('Circular dependency detected', { path }, 'framework'));
+            log.ew && console.warn(log.w('Circular dependency detected', { path }, 'frk'));
             return true;
         }
         return false;
@@ -660,7 +690,7 @@ class ComponentManager {
     create(name, props = {}, targetContainer = null) {
       let compFn = this.components.get(name);
       if (!compFn) {
-        log.ee && console.error(log.e('Component not found', { name }, 'application'));
+        log.ee && console.error(log.e('Component not found', { name }, 'app'));
         return null;
       }
       try {
@@ -674,7 +704,7 @@ class ComponentManager {
         }
         return this.#procCompResult(result, name, props, componentStates, targetContainer);
       } catch (error) {
-        log.ee && console.error(log.e('Component creation failed', {name, props, error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+        log.ee && console.error(log.e('Component creation failed', {name, props, error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
         return this.#newErrElm(name, error);
       }
     }
@@ -698,7 +728,7 @@ class ComponentManager {
           return componentFn(props, context);
         }
       } catch (error) {
-        log.ee && console.error(log.e('Component function execution failed', {componentName: componentFn.name || 'anonymous', props, error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+        log.ee && console.error(log.e('Component Error', {componentName: componentFn.name || 'anonymous', props, error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
         throw error;
       }
     }
@@ -809,7 +839,7 @@ class ComponentManager {
             this.#replacePlaceholder(ph, elem);
           }
         } catch (err) {
-          log.ee && console.error(log.e('Async component failed', { name, error: err.message }, 'application'));
+          log.ee && console.error(log.e('Async component failed', { name, error: err.message }, 'app'));
           this.#replaceWithError(ph, err);
         }
       }).catch(err => this.#replaceWithError(ph, err));
@@ -820,8 +850,8 @@ class ComponentManager {
       if (Array.isArray(result)) {
         return this.#newCompFrag(result, name, props, states);
       }      
-      let hasLifecycle = result && typeof result === 'object' && 
-        (this.#hasHooks(result) || typeof result.render === 'function');      
+      let hasLifecycle = _isOb(result) && 
+        (this.#hasHooks(result) || _isFN(result.render));      
       if (hasLifecycle) {
         return this.#createManagedComponent(result, name, props, states, targetContainer);
       }
@@ -829,17 +859,19 @@ class ComponentManager {
       let el = this.juris.getDR().render(result, name);
       return this.#finalizeElement(el, name, states, result);
     }
-
+    #createElm(tagName){
+      return document.createElement(tagName);
+    }
     #createManagedComponent(result, name, props, states, targetContainer = null) {
       try {
         let inst = this.#newComp(result, name, props);
-        let currentElement = targetContainer || document.createElement('div');
+        let currentElement = targetContainer || this.#createElm('div');
         let isExternal = !!targetContainer;
         let allSubscriptions = new Set();
         let hasBeenMounted = false;    
         if (!isExternal) {
-          currentElement.setAttribute('data-juris-component', name);
-          currentElement.setAttribute('data-juris-rendertime', Date.now());
+          currentElement.setAttribute('data-jc', name);
+          currentElement.setAttribute('data-jr', Date.now());
         }    
         const updateRender = async () => {
           try {
@@ -863,7 +895,7 @@ class ComponentManager {
                   componentName: name,
                   error: err.message,
                   stack: err.stack?.split('\n').slice(0, 5).join('\n')
-                }, 'application'));
+                }, 'app'));
                 res = this.#newErrElm(name, err);
               }
             }
@@ -877,14 +909,14 @@ class ComponentManager {
                     currentElement = newElement;
                   }
                   if (!isExternal && currentElement.setAttribute) {
-                    currentElement.setAttribute('data-juris-component', name);
-                    currentElement.setAttribute('data-juris-rendertime', Date.now());
+                    currentElement.setAttribute('data-jc', name);
+                    currentElement.setAttribute('data-jr', Date.now());
                   }
                 } else if (newElement && !currentElement.parentNode) {
                   currentElement = newElement;              
                   if (!isExternal && currentElement.setAttribute) {
-                    currentElement.setAttribute('data-juris-component', name);
-                    currentElement.setAttribute('data-juris-rendertime', Date.now());
+                    currentElement.setAttribute('data-jc', name);
+                    currentElement.setAttribute('data-jr', Date.now());
                   }
                 }            
                 if (hasBeenMounted && (inst.hooks?.onUpdate || inst.onUpdate)) {
@@ -893,7 +925,7 @@ class ComponentManager {
                 }
                 hasBeenMounted = true;
               } catch (renderError) {
-                log.ee && console.error(log.e('Render update failed', {componentName: name,error: renderError.message, stack: renderError.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+                log.ee && console.error(log.e('Render update failed', {componentName: name,error: renderError.message, stack: renderError.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
               }
             }        
             // Create new subscriptions
@@ -902,17 +934,17 @@ class ComponentManager {
                 let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
                 allSubscriptions.add(unsub);
               } catch (subError) {
-                log.ee && console.error(log.e('Subscription creation failed', {componentName: name,path,error: subError.message}, 'application'));
+                log.ee && console.error(log.e('Subscription creation failed', {componentName: name,path,error: subError.message}, 'app'));
               }
             });
           } catch (updateError) {
-            log.ee && console.error(log.e('Component update cycle failed', {componentName: name,error: updateError.message,stack: updateError.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+            log.ee && console.error(log.e('Component update cycle failed', {componentName: name,error: updateError.message,stack: updateError.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
           }
         };
         try {
           updateRender();
         } catch (initialRenderError) {
-          log.ee && console.error(log.e('Initial component render failed', {componentName: name, error: initialRenderError.message, stack: initialRenderError.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+          log.ee && console.error(log.e('Initial component render failed', {componentName: name, error: initialRenderError.message, stack: initialRenderError.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
         }
         currentElement._componentCleanup = () => {
           try {
@@ -921,7 +953,7 @@ class ComponentManager {
               try {
                 this.#runHook(unmountHook, currentElement, name, 'onUnmount');
               } catch (error) {
-                log.ee && console.error(log.e('onUnmount error', { componentName: name, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'application'));
+                log.ee && console.error(log.e('onUnmount error', { componentName: name, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'app'));
               }
             }
             allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
@@ -931,7 +963,7 @@ class ComponentManager {
               currentElement._reactiveSubscriptions = [];
             }
           } catch (cleanupError) {
-            log.ee && console.error(log.e('Component cleanup failed', {componentName: name, error: cleanupError.message }, 'application'));
+            log.ee && console.error(log.e('Component cleanup failed', {componentName: name, error: cleanupError.message }, 'app'));
           }
         };
         
@@ -943,7 +975,7 @@ class ComponentManager {
           props,
           error: error.message,
           stack: error.stack?.split('\n').slice(0, 5).join('\n')
-        }, 'application'));
+        }, 'app'));
         return this.#newErrElm(name, error);
       }
     }
@@ -954,7 +986,7 @@ class ComponentManager {
       if (states?.size > 0) {
         this.componentStates .set(el, states);
       }      
-      if (inst.api && typeof inst.api === 'object') {
+      if (_isOb(inst.api)) {
         el.api = inst.api;
         this.namedComps.set(name, { elm: el, instance: inst });
       }
@@ -969,11 +1001,11 @@ class ComponentManager {
       if (el && states.size > 0) {
         this.componentStates .set(el, states);
       }
-      if (result.api && typeof result.api === 'object' && el) {
+      if (_isOb(result.api) && el) {
         el.api = result.api;
       }
       if (el && el.setAttribute) {
-        el.setAttribute('data-juris-component', name);
+        el.setAttribute('data-jc', name);
         el._jurisComponent = name;
       }
       return el;
@@ -1011,11 +1043,11 @@ class ComponentManager {
         let result = Array.isArray(args) ? hook(...args) : hook(args);
         if (result?.then) {
           promisify(result).catch(error => {
-            log.ee && console.error(log.e(`Async ${hookName} error`, {componentName,hookName,error: error.message,stack: error.stack?.split('\n').slice(0, 5).join('\n') }, 'application'));
+            log.ee && console.error(log.e(`Async ${hookName} error`, {componentName,hookName,error: error.message,stack: error.stack?.split('\n').slice(0, 5).join('\n') }, 'app'));
           });
         }
       } catch (error) {
-        log.ee && console.error(log.e(`${hookName} error`, {componentName,hookName,error: error.message,stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+        log.ee && console.error(log.e(`${hookName} error`, {componentName,hookName,error: error.message,stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
       }
     }
 
@@ -1057,7 +1089,7 @@ class ComponentManager {
     }
 
     #newPlaceholder(name, className) {
-        let tempElement = document.createElement('div');
+        let tempElement = this.#createElm('div');
         tempElement.id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
         return this._createPlaceholder(`Loading ${name}...`, className, tempElement);
     }
@@ -1070,19 +1102,19 @@ class ComponentManager {
     }
 
     #replaceWithError(placeholder, error) {
-        let errorElement = this.#newErrElm(
-            placeholder._jurisComponent?.name || 'Unknown Component', 
-            error
-        );
-        if (placeholder.parentNode) {
-            placeholder.parentNode.replaceChild(errorElement, placeholder);
-        }
-        this.placeholders.delete(placeholder);
+      let errorElement = this.#newErrElm(
+          placeholder._jurisComponent?.name || 'Unknown Component', 
+          error
+      );
+      if (placeholder.parentNode) {
+          placeholder.parentNode.replaceChild(errorElement, placeholder);
+      }
+      this.placeholders.delete(placeholder);
     }
 
     #newErrElm(name, error) {
-        let elm = document.createElement('div');
-        elm.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
+        let elm = this.#createElm('div');
+        elm.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6;';
         elm.textContent = `Component Error in ${name}: ${error.message}`;
         return elm;
     }
@@ -1169,7 +1201,7 @@ class ComponentManager {
     
     _createPlaceholder(text, className, elm = null) {
         let config = this.juris.getDR()._getPlaceholderConfig(elm);
-        let placeholder = document.createElement('div');
+        let placeholder = this.#createElm('div');
         placeholder.className = config.className;
         placeholder.textContent = config.text;
         if (config.style) placeholder.style.cssText = config.style;
@@ -1220,7 +1252,7 @@ class DOMRenderer {
       onStart = () => {},
       onResolved = () => {},
       onError = (error) => {
-        log.ee && console.error(log.e('Async operation failed:', error), 'application');
+        log.ee && console.error(log.e('Async operation failed:', error), 'app');
       },
       onFinally = () => {}
     } = handlers;    
@@ -1277,7 +1309,7 @@ class DOMRenderer {
     if (config.children) {
       placeholder = this.render(config.children);
     } else {
-      placeholder = document.createElement('div');
+      placeholder = this.#createElm('div');
       placeholder.className = config.className;
       placeholder.textContent = config.text;
       if (config.style) placeholder.style.cssText = config.style;
@@ -1295,7 +1327,7 @@ class DOMRenderer {
     elm.textContent = config.text;
     elm.classList.add(config.className);
     if (config.style) {
-      elm.setAttribute('data-juris-original-style', elm.style.cssText);
+      elm.setAttribute('data-jos', elm.style.cssText);
       elm.style.cssText = config.style;
     }
     this.placeholders.set(elm, { 
@@ -1331,11 +1363,11 @@ class DOMRenderer {
   }
   
   #createComponentPlaceholder(config, componentName) {
-    let placeholder = document.createElement('div');
+    let placeholder = this.#createElm('div');
     placeholder.className = config.className;
     placeholder.textContent = componentName ? `Loading ${componentName}...` : config.text;
     if (config.style) placeholder.style.cssText = config.style;
-    placeholder.setAttribute('data-juris-placeholder', 'component');
+    placeholder.setAttribute('data-jp', 'component');
     return placeholder;
   }
   
@@ -1352,9 +1384,9 @@ class DOMRenderer {
         break;        
       case 'text':
         if (placeholderData.hadStyle) {
-          let originalStyle = elm.getAttribute('data-juris-original-style');
+          let originalStyle = elm.getAttribute('data-jos');
           elm.style.cssText = originalStyle || '';
-          elm.removeAttribute('data-juris-original-style');
+          elm.removeAttribute('data-jos');
         }
         break;        
       case 'style':
@@ -1429,11 +1461,11 @@ class DOMRenderer {
           if (options.onError) {
             options.onError(error);
           }
-          log.ee && console.error(log.e(`Reactive ${options.name} failed`, {element: elm.tagName,elementId: elm.id,type: options.type,error: error.message,stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+          log.ee && console.error(log.e(`Reactive ${options.name} failed`, {element: elm.tagName,elementId: elm.id,type: options.type,error: error.message,stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
         }
       }, asyncContext);
     } catch (error) {
-      log.ee && console.error(log.e(`Reactive ${options.name} execution failed`, {element: elm.tagName,elementId: elm.id,type: options.type,error: error.message,stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+      log.ee && console.error(log.e(`Reactive ${options.name} execution failed`, {element: elm.tagName,elementId: elm.id,type: options.type,error: error.message,stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
       if (options.onError) {
         options.onError(error);
       }
@@ -1444,13 +1476,13 @@ class DOMRenderer {
 }
   
   #extractKey(vnode, index) {
-    if (typeof vnode === 'string' || typeof vnode === 'number' || !vnode) {
+    if (_isSt(vnode) || _isNu(vnode) || !vnode) {
       return null;
     }
     if (Array.isArray(vnode)) {
       return null;
     }
-    if (typeof vnode === 'object') {
+    if (_isOb(vnode)) {
       let tagName = Object.keys(vnode)[0];
       let props = vnode[tagName];
       return props?.key ?? null;
@@ -1480,7 +1512,7 @@ class DOMRenderer {
         log.ew && console.warn(log.w(
           `Duplicate key "${key}" detected. Keys must be unique among siblings.`,
           { parent: parent.tagName, key },
-          'framework'
+          'frk'
         ));
         let fallbackKey = `__index_${i}`;
         newKeyMap.set(fallbackKey, { child, index: i });
@@ -1529,7 +1561,7 @@ class DOMRenderer {
       let newNode = this.#createChild(op.child);
       if (newNode) {
         createdNodes.set(op.key, newNode);
-        if (op.key && typeof op.key === 'string' && !op.key.startsWith('__')) {
+        if (_isSt(op.key) && !op.key.startsWith('__')) {
           this.nodeKeys.set(newNode, op.key);
         }
       }
@@ -1558,14 +1590,14 @@ class DOMRenderer {
       }
       return;
     }    
-    if (node.nodeType === Node.ELEMENT_NODE && typeof vnode === 'object' && !Array.isArray(vnode)) {
+    if (node.nodeType === Node.ELEMENT_NODE && _isOb(vnode) && !Array.isArray(vnode)) {
       let tagName = Object.keys(vnode)[0];
       let props = vnode[tagName] || {};
       let subscriptions = [];            
       for (let key in props) {
         if (key === 'key') continue;
         let cleanup = this.applyProp(node, key, props[key]);
-        if (cleanup && typeof cleanup === 'function') {
+        if (_isFN(cleanup)) {
           subscriptions.push(cleanup);
         }
       }            
@@ -1600,7 +1632,7 @@ class DOMRenderer {
   }
   
   render(vnode, componentName = null, returnObjectTree = false, targetContainer = null) {
-    if (typeof vnode === 'string' || typeof vnode === 'number') {
+    if (_isSt(vnode) || _isNu(vnode)) {
       return document.createTextNode(String(vnode));
     }
     if (this._testMode && returnObjectTree && this.objTreeAnalyzer) {
@@ -1610,10 +1642,10 @@ class DOMRenderer {
   }
   
   _renderToDOM(vnode, componentName = null, targetContainer = null) {
-    if (typeof vnode === 'string' || typeof vnode === 'number') {
+    if (_isSt(vnode) || _isNu(vnode)) {
       return document.createTextNode(String(vnode));
     }        
-    if (!vnode || typeof vnode !== 'object') return null;        
+    if (!vnode || typeof vnode !== 'object') return null;//not for _isOb
     if (Array.isArray(vnode)) {
       return this.#createArrayFragment(vnode, componentName);
     }        
@@ -1628,7 +1660,7 @@ class DOMRenderer {
     if (/^[A-Z]/.test(tagName)) {
       return this.#newErrElm('component', `Component "${tagName}" not registered`);
     }        
-    if (typeof tagName !== 'string' || tagName.length === 0) return null;        
+    if (!_isSt(tagName) || tagName.length === 0) return null;        
     let modifiedProps = props;
     if (props.style && this.cssExtractor) {
       let elementName = componentName || tagName;
@@ -1643,7 +1675,7 @@ class DOMRenderer {
     for (let key in props) {
       if (!props.hasOwnProperty(key) || key === 'key') continue;
       let cleanup = this.applyProp(elm, key, props[key], componentName);
-      if (cleanup && typeof cleanup === 'function') {
+      if (_isFN(cleanup)) {
         allSubscriptions.push(cleanup);
       }
     }        
@@ -1654,12 +1686,20 @@ class DOMRenderer {
     }        
     return elm;
   }
-  
+  #createSVG(tagName){
+    return document.createElementNS("http://www.w3.org/2000/svg", tagName);
+  }
+  #createElm(tagName){
+    return document.createElement(tagName);
+  }
+  #createFrg(){
+    return document.createDocumentFragment();
+  }
   #createElementByType(tagName) {
     let isSVG = this.elementTypeCache.get(tagName);
     if (isSVG === undefined) {
       try {
-        let svgEl = document.createElementNS("http://www.w3.org/2000/svg", tagName);
+        let svgEl = this.#createSVG(tagName);
         let isCommonHTML = ['a', 'script', 'style', 'title'].includes(tagName);
         isSVG = !isCommonHTML && svgEl.constructor !== SVGElement;
         this.elementTypeCache.set(tagName, isSVG);
@@ -1669,15 +1709,15 @@ class DOMRenderer {
       }
     }        
     return isSVG 
-      ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
-      : document.createElement(tagName);
+      ? this.#createSVG(tagName)
+      : this.#createElm(tagName);
   }
   
   #createArrayFragment(vnode, componentName) {
-    let hasReactiveFunctions = vnode.some(item => typeof item === 'function');
+    let hasReactiveFunctions = vnode.some(item => _isFN(item));
     let hasKeys = vnode.some(item => this.#extractKey(item) !== null);        
     if (hasReactiveFunctions || hasKeys) {
-      let fragment = document.createDocumentFragment();
+      let fragment = this.#createFrg();
       let subscriptions = [];            
       if (hasKeys && !hasReactiveFunctions) {
         for (let i = 0; i < vnode.length; i++) {
@@ -1701,7 +1741,7 @@ class DOMRenderer {
       }
       return fragment;
     }
-    let fragment = document.createDocumentFragment();
+    let fragment = this.#createFrg();
     for (let i = 0; i < vnode.length; i++) {
       let childElement = this.render(vnode[i], componentName);
       if (childElement) fragment.appendChild(childElement);
@@ -1712,7 +1752,7 @@ class DOMRenderer {
   #renderComponent(tagName, props, targetContainer = null) {
     let componentFn = this.juris.getCM().components.get(tagName);
     if (!componentFn) {
-      log.ee && console.error(log.e('Component not found', { name: tagName }, 'application'));
+      log.ee && console.error(log.e('Component not found', { name: tagName }, 'app'));
       return null;
     }    
     if (this.componentStack.includes(tagName)) {
@@ -1726,7 +1766,7 @@ class DOMRenderer {
   }
   
   #newErrElm(type, message) {
-    let elm = document.createElement('div');
+    let elm = this.#createElm('div');
     elm.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
     elm.textContent = message;
     elm.setAttribute('data-juris-error', type);
@@ -1746,17 +1786,17 @@ class DOMRenderer {
             delete elm._jurisOnConnected;
           }
         };
-      } else if (propName === 'children') {
+      } else if (propName === 'children' && propValue) {
         this._handleChildren(elm, propValue, subscriptions, componentName);
       } else if (propName === 'text') {
         this.#handleText(elm, propValue, subscriptions);
       } else if (propName === 'style') {
         this.#handleStyle(elm, propValue, subscriptions);
-      } else if (propName.startsWith('on')) {
+      } else if (propName.startsWith('on') && propValue) {
         this.#handleEvent(elm, propName, propValue, eventListeners);
-      } else if (typeof propValue === 'function') {
+      } else if (_isFN(propValue)) {
         this.#handleReactiveAttribute(elm, propName, propValue, subscriptions);
-      } else if (this.#isPromiseLike(propValue)) {
+      } else if (this.#isPromiseLike(propValue) && propValue) {
         this.#handleAsyncProp(elm, propName, propValue);
       } else {
         this.#setStaticAttribute(elm, propName, propValue);
@@ -1776,7 +1816,7 @@ class DOMRenderer {
         });
       };
     } catch (error) {
-      log.ee && console.error(log.e('Property application failed', {element: elm.tagName,elementId: elm.id,property: propName,valueType: typeof propValue,componentName, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+      log.ee && console.error(log.e('Property application failed', {element: elm.tagName,elementId: elm.id,property: propName,valueType: typeof propValue,componentName, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
       return () => {};
     }
   }
@@ -1791,7 +1831,7 @@ class DOMRenderer {
             timeStamp: Date.now()
           });
         } catch (error) {
-          log.ee && console.error(log.e('onconnected callback error:', error), 'application');
+          log.ee && console.error(log.e('onconnected callback error:', error), 'app');
         }
       }
     });
@@ -1837,7 +1877,7 @@ class DOMRenderer {
   }
   
   #handleText(elm, text, subscriptions) {
-    if (typeof text === 'function') {
+    if (_isFN(text)) {
       try {
         let {result, deps} = this.juris.getSM().track(() => text(elm));
         elm.textContent = result;
@@ -1855,7 +1895,7 @@ class DOMRenderer {
         );
         this._createReactiveUpdate(elm, updateText, subscriptions, deps);
       } catch (error) {
-        log.ee && console.error(log.e('Reactive text function failed', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+        log.ee && console.error(log.e('Reactive text function failed', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
         elm.textContent = `Error: ${error.message}`;
       }
     } else if (this.#isPromiseLike(text)) {
@@ -1871,20 +1911,20 @@ class DOMRenderer {
   }
   
   #handleStyle(elm, style, subscriptions) {
-    if (typeof style === 'function') {
+    if (_isFN(style)) {
       try {
         let {result, deps} = this.juris.getSM().track(() => {
           let value = style.length > 0 ? style(elm) : style();
-          if (this.cssExtractor?.postProcessReactiveResult && typeof value === 'object') {
+          if (this.cssExtractor?.postProcessReactiveResult && _isOb(value)) {
             value = this.cssExtractor.postProcessReactiveResult(value, 'reactive', elm);
           }
           return value;
         });
-        if (typeof result === 'object') {
+        if (_isOb(result)) {
           Object.assign(elm.style, result);
         }
         this.#attachRecompute(elm, 'style', style, (value) => {
-          if (typeof value === 'object') {
+          if (_isOb(value)) {
             Object.assign(elm.style, value);
           }
         });
@@ -1895,13 +1935,13 @@ class DOMRenderer {
           elm,
           () => {
             let value = style.length > 0 ? style(elm) : style();
-            if (this.cssExtractor?.postProcessReactiveResult && typeof value === 'object') {
+            if (this.cssExtractor?.postProcessReactiveResult && _isOb(value)) {
               value = this.cssExtractor.postProcessReactiveResult(value, 'reactive', elm);
             }
             return value;
           },
           (value) => {
-            if (typeof value === 'object') {
+            if (_isOb(value)) {
               Object.assign(elm.style, value);
             }
           },
@@ -1909,23 +1949,23 @@ class DOMRenderer {
         );
         this._createReactiveUpdate(elm, updateStyle, subscriptions, deps);
       } catch (error) {
-        log.ee && console.error(log.e('Reactive style function failed', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+        log.ee && console.error(log.e('Style Error', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
       }
     } else if (this.#isPromiseLike(style)) {
       let asyncContext = { elm, type: 'style' };
       this.#handleAsync(style, {
         onResolved: (resolved) => {
-          if (typeof resolved === 'object') {
+          if (_isOb(resolved)) {
             Object.assign(elm.style, resolved);
           }
         }
       }, asyncContext);
-    } else if (typeof style === 'object') {
+    } else if (_isOb(style)) {
       try {
         for (let prop in style) {
           if (style.hasOwnProperty(prop)) {
             let val = style[prop];
-            if (typeof val === 'function') {
+            if (_isFN(val)) {
               this.#handleReactiveStyleProperty(elm, prop, val, subscriptions);
             } else {
               this.#setStyleProperty(elm, prop, val);
@@ -1933,7 +1973,7 @@ class DOMRenderer {
           }
         }
       } catch (error) {
-        log.ee && console.error(log.e('Style object processing failed', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+        log.ee && console.error(log.e('Style Error', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
       }
     }
   }
@@ -1959,7 +1999,7 @@ class DOMRenderer {
       element._jurisError={error};
       element.style.borderColor='red';
       element.title=error.message;
-      log.ee && console.error(log.e('Reactive ' + prop + ' style property failed', {element: elm.tagName, elementId: elm.id, property: prop, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+      log.ee && console.error(log.e(prop + ' style Error', {element: elm.tagName, elementId: elm.id, property: prop, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
     }
   }
   
@@ -1981,19 +2021,19 @@ class DOMRenderer {
       );
       this._createReactiveUpdate(elm, updateAttribute, subscriptions, deps);
     } catch (error) {
-      log.ee && console.error(log.e('Reactive ' + attr +' attribute failed', {element: elm.tagName, elementId: elm.id, attribute: attr, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+      log.ee && console.error(log.e(attr +' attribute error', {element: elm.tagName, elementId: elm.id, attribute: attr, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
     }
   }
   
   _handleChildren(elm, children, subscriptions, componentName = null) {
-    if (typeof children === 'function') {
+    if (_isFN(children)) {
       try {
         let {result, deps} = this.juris.getSM().track(() => {
           let value = children(elm);
           return Array.isArray(value) ? value : [value];
         });
         if (result !== "ignore") {
-          if (typeof result === 'string' || typeof result === 'number') {
+          if (_isSt(result) || _isNu(result)) {
             elm.textContent = String(result);
           } else {
             this.#updateChildren(elm, result, componentName);
@@ -2001,7 +2041,7 @@ class DOMRenderer {
         }
         this.#attachRecompute(elm, 'children', children, (result) => {
           if (result !== "ignore") {
-            if (typeof result === 'string' || typeof result === 'number') {
+            if (_isSt(result) || _isNu(result)) {
               elm.textContent = String(result);
             } else {
               this.#updateChildren(elm, result, componentName);
@@ -2019,7 +2059,7 @@ class DOMRenderer {
           },
           (result) => {
             if (result !== "ignore") {
-              if (typeof result === 'string' || typeof result === 'number') {
+              if (_isSt(result) || _isNu(result)) {
                 elm.textContent = String(result);
               } else {
                 this.#updateChildren(elm, result, componentName);
@@ -2030,7 +2070,7 @@ class DOMRenderer {
         );
         this._createReactiveUpdate(elm, updateChildren, subscriptions, deps);
       } catch (error) {
-        log.ee && console.error(log.e('Reactive children function failed', {element: elm.tagName, elementId: elm.id, componentName, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'application'));
+        log.ee && console.error(log.e('children error', {element: elm.tagName, elementId: elm.id, componentName, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'app'));
         elm.textContent = `Error rendering children: ${error.message}`;
       }
     } else if (this.#isPromiseLike(children)) {
@@ -2040,14 +2080,14 @@ class DOMRenderer {
           this.#updateChildren(elm, resolved, componentName);
         },
         onError: (error) => {
-          log.ee && console.error(log.e('Async children resolution failed', {element: elm.tagName,elementId: elm.id,componentName,error: error.message}, 'application'));
+          log.ee && console.error(log.e('Async children error', {element: elm.tagName,elementId: elm.id,componentName,error: error.message}, 'app'));
         }
       }, asyncContext);
     } else {
       try {
         this.#updateChildren(elm, children, componentName);
       } catch (error) {
-        log.ee && console.error(log.e('Children update failed', {element: elm.tagName,elementId: elm.id,componentName,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'application'));
+        log.ee && console.error(log.e('Children error', {element: elm.tagName,elementId: elm.id,componentName,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
       }
     }
   }
@@ -2075,7 +2115,7 @@ class DOMRenderer {
   #handleReactiveFragmentChildren(fragment, children, subscriptions, componentName) {
     for (let i = 0; i < children.length; i++) {
       let child = children[i];
-      if (typeof child === 'function') {
+      if (_isFN(child)) {
         let { node, cleanup } = this.#createIndividualReactiveChild(child, i, componentName, fragment);
         if (node) {
           fragment.appendChild(node);
@@ -2092,8 +2132,7 @@ class DOMRenderer {
         }
       }
     }
-  }
-  
+  }  
   
   #createIndividualReactiveChild(childFn, index, componentName, parentElement) {
     let config = this._getPlaceholderConfig(parentElement);
@@ -2106,7 +2145,7 @@ class DOMRenderer {
       if (this.#isPromiseLike(result)) {
         this.#handleAsync(result, {
           onStart: () => {
-            let placeholder = document.createElement('span');
+            let placeholder = this.#createElm('span');
             placeholder.textContent = config.text;
             placeholder.className = config.className;
             if (config.style) placeholder.style.cssText = config.style;            
@@ -2123,7 +2162,7 @@ class DOMRenderer {
             currentNode = newNode;
           },
           onError: (error) => {
-            let errorNode = document.createElement('span');
+            let errorNode = this.#createElm('span');
             errorNode.className = config.errorClassName;
             errorNode.textContent = `Error: ${error.message}`;
             if (currentNode.parentNode) {
@@ -2140,7 +2179,7 @@ class DOMRenderer {
           }
           currentNode = newNode;
         } catch (error) {
-          let errorNode = document.createElement('span');
+          let errorNode = this.#createElm('span');
           errorNode.className = config.errorClassName;
           errorNode.textContent = `Error: ${error.message}`;
           if (currentNode.parentNode) {
@@ -2167,25 +2206,25 @@ class DOMRenderer {
   #createChild(child, componentName) {
     try {
       if (child == null) return null;
-      if (typeof child === 'string' || typeof child === 'number') {
+      if (_isSt(child) || _isNu(child)) {
         return document.createTextNode(String(child));
       }
       if (Array.isArray(child)) {
-        let fragment = document.createDocumentFragment();
+        let fragment = this.#createFrg();
         for (let i = 0; i < child.length; i++) {
           let subChild = this.#createChild(child[i], componentName);
           if (subChild) fragment.appendChild(subChild);
         }
         return fragment.hasChildNodes() ? fragment : null;
       }
-      if (typeof child === 'object' && child !== null) {
+      if (_isOb(child)) {
         let tagName = Object.keys(child)[0];
         let props = child[tagName] || {};
         if (this.juris.getCM().components.has(tagName)) {
-          let tempContainer = document.createElement('div');
+          let tempContainer = this.#createElm('div');
           let result = this.#renderComponent(tagName, props, tempContainer);
           if (tempContainer.firstChild) {
-            let extractedFragment = document.createDocumentFragment();
+            let extractedFragment = this.#createFrg();
             while (tempContainer.firstChild) {
               extractedFragment.appendChild(tempContainer.firstChild);
             }
@@ -2199,18 +2238,18 @@ class DOMRenderer {
       }
       return null;
     } catch (error) {
-      log.ee && console.error(log.e('Child creation failed', {childType: typeof child,componentName,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'application'));
+      log.ee && console.error(log.e('Child creation failed', {childType: typeof child,componentName,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'app'));
       return document.createTextNode(`Error: ${error.message}`);
     }
   }
   
   #renderChildren(elm, children, componentName) {
     elm.textContent = '';
-    let fragment = document.createDocumentFragment();
+    let fragment = this.#createFrg();
     let cleanupFunctions = [];
     for (let i = 0; i < children.length; i++) {
       let child = children[i];      
-      if (typeof child === 'function') {
+      if (_isFN(child)) {
         let { node, cleanup } = this.#createIndividualReactiveChild(child, i, componentName, elm);
         if (node) {
           fragment.appendChild(node);
@@ -2273,7 +2312,7 @@ class DOMRenderer {
         elm.setAttribute(attr, value);
         return;
       }
-      if (attr in elm && typeof elm[attr] !== 'function') {
+      if (attr in elm && !_isFN(elm[attr])) {
         try {
           elm[attr] = value;
         } catch (error) {
@@ -2283,7 +2322,7 @@ class DOMRenderer {
         elm.setAttribute(attr, value);
       }
     } catch (error) {
-      log.ee && console.error(log.e('Attribute setting failed', {element: elm.tagName, elementId: elm.id, attribute: attr, value: typeof value === 'object' ? JSON.stringify(value) : value, error: error.message}, 'application'));
+      log.ee && console.error(log.e('Attribute setting failed', {element: elm.tagName, elementId: elm.id, attribute: attr, value: typeof value === 'object' ? JSON.stringify(value) : value, error: error.message}, 'app'));
     }
   }
   
@@ -2299,7 +2338,7 @@ class DOMRenderer {
     try {
       return handler(e);
     } catch (error) {
-      log.ee && console.error(log.e('Event handler failed', {eventType: actualEventName,element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+      log.ee && console.error(log.e('Event handler failed', {eventType: actualEventName,element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
     }
   };
   elm.addEventListener(actualEventName, wrappedHandler);
@@ -2426,7 +2465,7 @@ class DOMRenderer {
   }
   
   clearCSSCache() {
-    if (this.cssExtractor && typeof this.cssExtractor.clearCache === 'function') {
+    if (_isFN(this.cssExtractor)) {
       this.cssExtractor.clearCache();
     }
   }
@@ -2450,83 +2489,8 @@ class DOMRenderer {
   }
 }
 
-/**
- * Juris - JavaScript Unified Reactive Interface Solution
- * The First and Only Non-blocking Reactive Platform, Architecturally Optimized for Next Generation Cutting-Edge Cross-Platform Application.
- * 
- * @class Juris
- * @author Resti Guay
- * @version 0.91.0
- * @license MIT
- * @see {@link https://jurisjs.com/} Official Website
- * @see {@link https://github.com/jurisjs/juris} GitHub Repository
- * @see {@link https://www.npmjs.com/package/juris} NPM Package
- * 
- * @description
- * Juris aims to eliminate build complexity from small to large applications with features including:
- * - Temporal Independent rendering
- * - Automatic deep call stack branch aware dependency detection
- * - Smart Promise (Asynchronous) Handling for Non-Blocking Rendering
- * - Component lazy compilation
- * - Global Non-Reactive State Management
- * - SSR (Server-Side Rendering) ready and CSR (Client-Side Rendering)
- * - Loading Status templating
- * - Web Component support
- * - SVG Support
- * - Dual Template Mode (HTML and Object VDOM)
- * - Advanced Reactive Management with arm() API
- * 
- * @example
- * // Basic initialization
- * const juris = new Juris({
- *   states: { counter: 0 },
- *   components: {
- *     MyComponent: (props) => ({
- *       div: {
- *         text: () => juris.getState('counter', 0),
- *         onclick: () => juris.setState('counter', juris.getState('counter') + 1)
- *       }
- *     })
- *   }
- * });
- * 
- * @example
- * // Advanced configuration with features
- * const juris = new Juris({
- *   states: { app: { theme: 'dark' } },
- *   middleware: [(action) => console.log('State change:', action)],
- *   features: {
- *     compute: ComputePlugin,
- *     enhance: EnhancePlugin,
- *     template: TemplatePlugin
- *   },
- *   services: {
- *     api: new ApiService(),
- *     storage: new StorageService()
- *   }
- * });
- */
 class Juris {
-  /**
-   * @private
-   * @static
-   * @type {boolean}
-   * @description Internal flag to track global instance detection
-   */
-    static #inGlobal = false;/**
-   * Creates a new Juris instance
-   * 
-   * @constructor
-   * @param {JurisConfig} [config={}] - Configuration object for Juris initialization
-   * 
-   * @example
-   * const juris = new Juris({
-   *   states: { user: { name: 'John' } },
-   *   components: { Header: () => ({ h1: { text: 'Hello' } }) },
-   *   services: { api: new ApiService() },
-   *   features: { compute: ComputePlugin }
-   * });
-   */
+    static #inGlobal = false;
     constructor(config = {}) {
         if (config.logLevel) {
             this.setupLogging(config.logLevel);
@@ -2535,17 +2499,15 @@ class Juris {
         this.contextCache = new Map();
         this.services = config.services || {};
         this.layout = config.layout;        
-        // Core features - always initialized (minimal)
         this.stateManager = new StateManager(config.states || {}, config.middleware || []);
         this.componentManager = new ComponentManager(this);
         this.domRenderer = new DOMRenderer(this);
-
         this.armedElements = new Map();
         let features = config.features || {};
         if (features.headless) {
             this.headlessManager = new features.headless(this, log);
             this.headlessAPIs = {};
-        }        
+        }
         if (features.enhance) {
             this.domEnhancer = new features.enhance(this);
         }        
@@ -2565,12 +2527,12 @@ class Juris {
             let computeOptions = config.computeOptions || {};
             let computePlugin = new features.compute(this.stateManager, computeOptions);
             this.stateManager.addPlugin('compute', computePlugin);
-            log.ei && console.info(log.i('Compute plugin initialized', { options: computeOptions }, 'framework'));
+            log.ei && console.info(log.i('Compute plugin initialized', { options: computeOptions }, 'frk'));
         }
         if (config.headlessComponents && this.getHM()) {
             Object.keys(config.headlessComponents).forEach(name => {
                 const componentConfig = config.headlessComponents[name];
-                if (typeof componentConfig === 'function') {
+                if (_isFN(componentConfig)) {
                     this.getHM().register(name, componentConfig);
                 } else {
                     this.getHM().register(name, componentConfig.fn, componentConfig.options);
@@ -2615,127 +2577,24 @@ class Juris {
         this.#detectGlobalAndWarn();
     }
 
-
-  /**
-   * Gets the DOM Renderer instance
-   * 
-   * @returns {DOMRenderer} The DOM renderer instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const renderer = juris.getDR();
-   * const element = renderer.render({ div: { text: 'Hello' } });
-   */
     getDR() { return this.domRenderer; }
     
-    /**
-   * Gets the State Manager instance
-   * 
-   * @returns {StateManager} The state manager instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const stateManager = juris.getSM();
-   * stateManager.setState('user.name', 'Jane');
-   */
     getSM() { return this.stateManager; }
 
-    
-  /**
-   * Gets the Headless Manager instance
-   * 
-   * @returns {HeadlessManager|undefined} The headless manager instance if available
-   * @since 0.91.0
-   * 
-   * @example
-   * const headless = juris.getHM();
-   * if (headless) {
-   *   headless.register('DataProcessor', processorFn);
-   * }
-   */
     getHM() { return this.headlessManager; }
     
-  /**
-   * Gets the Component Manager instance
-   * 
-   * @returns {ComponentManager} The component manager instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const componentManager = juris.getCM();
-   * componentManager.register('Button', buttonComponent);
-   */   
     getCM() { return this.componentManager; }
     
-  /**
-   * Gets the API object of a named component
-   * 
-   * @param {string} name - The name of the component
-   * @returns {Object|null} The component's API object or null if not found
-   * @since 0.91.0
-   * 
-   * @example
-   * // Register component with API
-   * juris.registerComponent('Modal', (props) => ({
-   *   api: {
-   *     open: () => juris.setState('modal.isOpen', true),
-   *     close: () => juris.setState('modal.isOpen', false)
-   *   },
-   *   render: () => ({ div: { text: 'Modal content' } })
-   * }));
-   * 
-   * // Use the API
-   * const modalAPI = juris.getComponentAPI('Modal');
-   * modalAPI.open();
-   */
     getComponentAPI(name) { return this.getCM().getComponentAPI(name); }
 
-    
-  /**
-   * Gets the DOM element of a named component
-   * 
-   * @param {string} name - The name of the component
-   * @returns {HTMLElement|null} The component's DOM element or null if not found
-   * @since 0.91.0
-   * 
-   * @example
-   * const modalElement = juris.getComponentElement('Modal');
-   * if (modalElement) {
-   *   modalElement.scrollIntoView();
-   * }
-   */
+
     getComponentElement(name) {return this.getCM().getComponentElement(name); }
     
-  /**
-   * Gets an array of all named component names
-   * 
-   * @returns {string[]} Array of component names that have APIs
-   * @since 0.91.0
-   * 
-   * @example
-   * const componentNames = juris.getNamedComponents();
-   * console.log('Available components:', componentNames);
-   */
     getNamedComponents() { return this.getCM().getNamedComponents();}
 
-    /**
-    * Compiles template elements into Juris components
-    * 
-    * @param {NodeList|HTMLTemplateElement[]|null} [templates=null] - Template elements to compile, or null to auto-detect
-    * @returns {void}
-    * @since 0.91.0
-    * 
-    * @example
-    * // Auto-compile all templates with data-component attribute
-    * juris.compileTemplates();
-    * 
-    * // Compile specific templates
-    * const templates = document.querySelectorAll('template.my-templates');
-    * juris.compileTemplates(templates);
-    */
     compileTemplates(templates = null) {
         if (!this.templateCompiler) {
-            log.ew && console.warn(log.w('Template compilation requested but templateCompiler not available'), 'framework');
+            log.ew && console.warn(log.w('Template compilation requested but templateCompiler not available'), 'frk');
             return;
         }
         let templateElements = templates || document.querySelectorAll('template[data-component]');
@@ -2745,17 +2604,6 @@ class Juris {
         });
     }
 
-  /**
-   * Sets up logging configuration for Juris
-   * 
-   * @param {string} level - Log level: 'debug', 'info', 'warn', or 'error'
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.setupLogging('debug'); // Show all logs
-   * juris.setupLogging('error'); // Only show errors
-   */
     setupLogging(level) {
         log.ei=true;log.ed=true;log.el=true;log.ew=true;log.ee=true;
         let levels = { debug: 0, info: 1, warn: 2, error: 3 };
@@ -2768,21 +2616,6 @@ class Juris {
         }
     }
 
-  /**
-   * Sets up loading/async indicators for specific elements
-   * 
-   * @param {string} elementId - The ID of the element to configure
-   * @param {PlaceholderConfig} config - Configuration for loading indicators
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.setupIndicators('app-container', {
-   *   className: 'loading-spinner',
-   *   text: 'Loading application...',
-   *   style: 'opacity: 0.7; text-align: center;'
-   * });
-   */
     setupIndicators(elementId, config) { this.getDR().setupIndicators(elementId, config); }
 
     #detectGlobalAndWarn() {
@@ -2840,104 +2673,28 @@ class Juris {
         return this.contextTemplate;
     }
     
-  /**
-   * Creates a headless context (alias for createContext)
-   * 
-   * @param {HTMLElement|null} [elm=null] - Optional element to bind to the context
-   * @returns {JurisContext} A context object with Juris APIs
-   * @since 0.91.0
-   * 
-   * @example
-   * const headlessContext = juris.createHeadlessContext();
-   * headlessContext.components.registerHeadless('DataProcessor', processorFn);
-   */
     createHeadlessContext(elm = null) {
         return this.createContext(elm);
     }
 
-  /**
-   * Executes multiple state updates in a single batch for better performance
-   * 
-   * @param {Function} callback - Function containing state updates to batch
-   * @returns {*} The return value of the callback
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.executeBatch(() => {
-   *   juris.setState('user.name', 'John');
-   *   juris.setState('user.age', 30);
-   *   juris.setState('user.city', 'New York');
-   * }); // All updates happen together, triggering render only once
-   */
     executeBatch(callback) {return this.getSM().executeBatch(callback);}
 
-  /**
-   * Creates a custom web component from a Juris component definition
-   * 
-   * @param {string} name - The name for the web component (must contain a hyphen)
-   * @param {Function|Object} componentDefinition - The component definition
-   * @param {WebComponentOptions} [options={}] - Options for web component creation
-   * @returns {Function|null} The web component class or null if not available
-   * @since 0.91.0
-   * 
-   * @example
-   * const MyButton = juris.createWebComponent('my-button', (props) => ({
-   *   button: {
-   *     text: props.label || 'Click me',
-   *     onclick: () => console.log('Clicked!')
-   *   }
-   * }));
-   * 
-   * // Usage in HTML: <my-button label="Submit"></my-button>
-   */
     createWebComponent(name, componentDefinition, options = {}) {
         if (!this.webComponentFactory) {
-            log.ee && console.error(log.e('WebComponent not available'), 'application');
+            log.ee && console.error(log.e('WebComponent not available'), 'app');
             return null;
         }
         return this.webComponentFactory.createWebComponent(name, componentDefinition, options);
     }
 
-  /**
-   * Creates multiple web components from a components object
-   * 
-   * @param {Object.<string, Function>} components - Object mapping component names to definitions
-   * @param {WebComponentOptions} [globalOptions={}] - Global options for all web components
-   * @returns {Object.<string, Function>} Object mapping component names to their web component classes
-   * @since 0.91.0
-   * 
-   * @example
-   * const webComponents = juris.createWebComponents({
-   *   'my-button': (props) => ({ button: { text: props.label } }),
-   *   'my-input': (props) => ({ input: { type: 'text', placeholder: props.hint } })
-   * }, { 
-   *   shadowRoot: true,
-   *   observedAttributes: ['label', 'hint']
-   * });
-   */
     createWebComponents(components, globalOptions = {}) {
         if (!this.webComponentFactory) {
-            log.ee && console.error(log.e('WebComponents not available'), 'application');
+            log.ee && console.error(log.e('WebComponents not available'), 'app');
             return {};
         }
         return this.webComponentFactory.createMultiple(components, globalOptions);
     }
     
-  /**
-   * Creates a new Juris context with access to all APIs and services
-   * 
-   * @param {HTMLElement|null} [elm=null] - Optional element to bind to the context
-   * @returns {JurisContext} A context object with Juris APIs
-   * @since 0.91.0
-   * 
-   * @example
-   * const context = juris.createContext();
-   * context.setState('user.name', 'John');
-   * 
-   * // With element binding
-   * const elementContext = juris.createContext(document.getElementById('app'));
-   * console.log(elementContext.element); // The bound element
-   */
     createContext(elm = null) {
         let context = { ...this.#createBaseContext() };
         if (this.getHM()) {
@@ -2948,296 +2705,49 @@ class Juris {
         return context;
     }
     
-  /**
-   * Wraps a value or promise with Juris's promise tracking system
-   * 
-   * @param {*} result - Value or promise to wrap
-   * @returns {Promise} A promise that integrates with Juris's async tracking
-   * @since 0.91.0
-   * 
-   * @example
-   * const trackedPromise = juris.promisify(fetch('/api/data'));
-   * trackedPromise.then(data => {
-   *   juris.setState('data', data);
-   * });
-   */
     promisify(result) { return promisify(result);}
     
-  /**
-   * Gets a value from the global state
-   * 
-   * @param {string} path - Dot-notation path to the state value
-   * @param {*} [defaultValue] - Default value if path doesn't exist
-   * @param {boolean} [track=true] - Whether to track this access for reactivity
-   * @returns {*} The state value or default value
-   * @since 0.91.0
-   * 
-   * @example
-   * const userName = juris.getState('user.name', 'Anonymous');
-   * const settings = juris.getState('app.settings', {});
-   * 
-   * // Skip reactivity tracking
-   * const staticValue = juris.getState('config.version', '1.0.0', false);
-   */
     getState(path, defaultValue, track) { return this.getSM().getState(path, defaultValue, track); }
     
-  /**
-   * Sets a value in the global state
-   * 
-   * @param {string} path - Dot-notation path to set the value
-   * @param {*} value - The value to set
-   * @param {Object} [context] - Additional context for middleware
-   * @returns {boolean} Whether the state was actually changed
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.setState('user.name', 'John Doe');
-   * juris.setState('app.theme', 'dark');
-   * juris.setState('items', [], { action: 'reset' });
-   */
     setState(path, value, context) {
         return this.getSM().setState(path, value, context);
     }
     
-  /**
-   * Subscribes to state changes at a specific path
-   * 
-   * @param {string} path - Dot-notation path to subscribe to
-   * @param {Function} callback - Function to call when state changes
-   * @param {boolean} [hierarchical=true] - Whether to listen to child path changes too
-   * @returns {Function} Unsubscribe function
-   * @since 0.91.0
-   * 
-   * @example
-   * const unsubscribe = juris.subscribe('user', (newValue, oldValue, changedPath) => {
-   *   console.log('User changed:', newValue);
-   * });
-   * 
-   * // Later...
-   * unsubscribe();
-   */
     subscribe(path, callback, hierarchical = true) { return this.getSM().subscribe(path, callback, hierarchical); }
     
-  /**
-   * Subscribes to state changes only at the exact path (no children)
-   * 
-   * @param {string} path - Dot-notation path to subscribe to
-   * @param {Function} callback - Function to call when state changes
-   * @returns {Function} Unsubscribe function
-   * @since 0.91.0
-   * 
-   * @example
-   * const unsubscribe = juris.subscribeExact('user.name', (newValue, oldValue) => {
-   *   console.log('Name changed from', oldValue, 'to', newValue);
-   * });
-   */
     subscribeExact(path, callback) { return this.getSM().subscribeExact(path, callback); }
     
-  /**
-   * Registers a new component with Juris
-   * 
-   * @param {string} name - The name of the component
-   * @param {Function} component - The component function
-   * @returns {Function} The registered component function
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.registerComponent('Button', (props) => ({
-   *   button: {
-   *     text: props.label,
-   *     class: props.variant || 'primary',
-   *     onclick: props.onClick
-   *   }
-   * }));
-   * 
-   * // Usage in VDOM
-   * { Button: { label: 'Click me', onClick: () => console.log('Clicked!') } }
-   */
     registerComponent(name, component) {
         return this.getCM().register(name, component);
     }
 
-  /**
-   * Registers a headless component (non-visual logic component)
-   * 
-   * @param {string} name - The name of the headless component
-   * @param {Function} component - The headless component function
-   * @param {Object} [options] - Options for the headless component
-   * @returns {*} Result from headless manager registration
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.registerHeadlessComponent('DataManager', (context) => ({
-   *   api: {
-   *     loadData: async () => {
-   *       const data = await fetch('/api/data').then(r => r.json());
-   *       context.setState('app.data', data);
-   *     },
-   *     clearData: () => context.setState('app.data', null)
-   *   }
-   * }));
-   */
     registerHeadlessComponent(name, component, options) { return this.getHM().register(name, component, options); }
     
-  /**
-   * Initializes all queued headless components
-   * 
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.initializeQueuedHeadlessComponent();
-   */
     initializeQueuedHeadlessComponent() { this.getHM().initializeQueued(); }
     
-  /**
-   * Initializes a specific headless component with props
-   * 
-   * @param {string} name - The name of the headless component
-   * @param {Object} [props] - Props to pass to the component
-   * @returns {*} The initialized component instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const dataManager = juris.initializeHeadlessComponent('DataManager', {
-   *   endpoint: '/api/users'
-   * });
-   */
     initializeHeadlessComponent(name, props) { return this.getHM().initialize(name, props); }
     
-  /**
-   * Gets a headless component instance
-   * 
-   * @param {string} name - The name of the headless component
-   * @returns {*} The headless component instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const dataManager = juris.getHeadlessComponent('DataManager');
-   * if (dataManager) {
-   *   dataManager.loadData();
-   * }
-   */
     getHeadlessComponent(name) { return this.getHM().getInstance(name); }
     
-  /**
-   * Gets the API of a headless component
-   * 
-   * @param {string} name - The name of the headless component
-   * @returns {Object|null} The headless component's API
-   * @since 0.91.0
-   * 
-   * @example
-   * const api = juris.getHeadlessAPI('DataManager');
-   * if (api) {
-   *   api.loadData();
-   * }
-   */
-   getHeadlessAPI(name) { return this.getHM()?.getAPI(name); }
+    getHeadlessAPI(name) { return this.getHM()?.getAPI(name); }
 
-    
-  /**
-   * Gets a registered component function
-   * 
-   * @param {string} name - The name of the component
-   * @returns {Function|undefined} The component function
-   * @since 0.91.0
-   * 
-   * @example
-   * const ButtonComponent = juris.getComponent('Button');
-   * if (ButtonComponent) {
-   *   const vdom = ButtonComponent({ label: 'Submit' });
-   * }
-   */
     getComponent(name) { return this.getCM().components.get(name); }
 
-
-  /**
-   * Registers and immediately initializes a headless component
-   * 
-   * @param {string} name - The name of the headless component
-   * @param {Function} componentFn - The component function
-   * @param {Object} [options={}] - Options for registration and initialization
-   * @returns {*} The initialized component instance
-   * @since 0.91.0
-   * 
-   * @example
-   * const authManager = juris.registerAndInitHeadless('AuthManager', (context) => ({
-   *   api: {
-   *     login: (credentials) => context.setState('auth.user', credentials),
-   *     logout: () => context.setState('auth.user', null)
-   *   }
-   * }));
-   */
     registerAndInitHeadless(name, componentFn, options = {}) {
         this.getHM().register(name, componentFn, options);
         return this.getHM().initialize(name, options);
     }
 
-  /**
-   * Gets the status of all headless components
-   * 
-   * @returns {Object} Status object with headless component information
-   * @since 0.91.0
-   * 
-   * @example
-   * const status = juris.getHeadlessStatus();
-   * console.log('Registered headless components:', status.registered);
-   * console.log('Initialized headless components:', status.initialized);
-   */
     getHeadlessStatus() { return this.getHM().getStatus(); }
     
-  /**
-   * Converts a VDOM object to HTML DOM element
-   * 
-   * @param {Object} vnode - The VDOM object to convert
-   * @returns {HTMLElement} The resulting DOM element
-   * @since 0.91.0
-   * 
-   * @example
-   * const element = juris.objectToHtml({
-   *   div: {
-   *     class: 'container',
-   *     children: [
-   *       { h1: { text: 'Hello World' } },
-   *       { p: { text: 'Welcome to Juris' } }
-   *     ]
-   *   }
-   * });
-   * document.body.appendChild(element);
-   */
     objectToHtml(vnode) { return this.getDR().render(vnode); }
     
-  /**
-   * Renders the application to a container element
-   * 
-   * @param {string|HTMLElement} [container='#app'] - Container selector or element
-   * @param {Object|null} [vdom=null] - Optional VDOM to render instead of layout
-   * @returns {HTMLElement|void} The container element or void
-   * @since 0.91.0
-   * 
-   * @example
-   * // Render with layout from config
-   * juris.render('#app');
-   * 
-   * // Render custom VDOM
-   * juris.render('#content', {
-   *   div: {
-   *     class: 'welcome',
-   *     text: 'Hello World'
-   *   }
-   * });
-   * 
-   * // Render to element reference
-   * const container = document.getElementById('app');
-   * juris.render(container);
-   */
     render(container = '#app', vdom = null) {
       let startTime = performance.now();
-      let containerEl = typeof container === 'string' ? 
+      let containerEl = _isSt(container) ? 
         document.querySelector(container) : container;        
       if (!containerEl) {
-        log.ee && console.error(log.e('Render container not found', { container }, 'application'));
+        log.ee && console.error(log.e('Render container not found', { container }, 'app'));
         return;
       }
       try {
@@ -3251,14 +2761,14 @@ class Juris {
         }
         this.getSM().processDeferredSubscriptions();        
         let duration = performance.now() - startTime;
-        log.ei && console.info(log.i('Render completed', {duration: `${duration.toFixed(2)}ms`,isHydration}, 'application'));        
+        log.ei && console.info(log.i('Render completed', {duration: `${duration.toFixed(2)}ms`,isHydration}, 'app'));        
         return containerEl;        
       } catch (error) {
         this.getSM().processDeferredSubscriptions();
         log.ee && console.error(log.e('Render failed', { 
           error: error.message, 
           container 
-        }, 'application'));
+        }, 'app'));
         this.#renderError(containerEl, error);
         return containerEl;
       }
@@ -3275,7 +2785,7 @@ class Juris {
     }
     
     async #renderWithHydration(containerEl, vdom = null) {
-      let stagingEl = document.createElement('div');
+      let stagingEl = this.#createElm('div');
       stagingEl.style.cssText = 'position: absolute; left: -9999px; visibility: hidden;';
       document.body.appendChild(stagingEl);
       try {
@@ -3296,9 +2806,11 @@ class Juris {
         document.body.removeChild(stagingEl);
       }
     }
-
+    #createElm(tagName){
+      return document.createElement(tagName);
+    }
     #renderError(container, error) {
-        let errorEl = document.createElement('div');
+        let errorEl = this.#createElm('div');
         errorEl.style.cssText = 'color: red; border: 2px solid red; padding: 16px; margin: 8px; background: #ffe6e6;';
         errorEl.innerHTML = `
             <h3>Render Error</h3>
@@ -3308,101 +2820,19 @@ class Juris {
         container.appendChild(errorEl);
     }
 
-  /**
-   * Enhances existing DOM elements with Juris functionality
-   * 
-   * @param {string} selector - CSS selector for elements to enhance
-   * @param {Object|Function} definition - Enhancement definition
-   * @param {Object} [options] - Enhancement options
-   * @returns {*} Result from DOM enhancer
-   * @since 0.91.0
-   * 
-   * @example
-   * // Enhance existing buttons
-   * juris.enhance('button.counter', {
-   *   onclick: (context) => (e) => {
-   *     const count = context.getState('counter', 0);
-   *     context.setState('counter', count + 1);
-   *   },
-   *   text: (context) => () => `Count: ${context.getState('counter', 0)}`
-   * });
-   */
     enhance(selector, definition, options) { return this.domEnhancer.enhance(selector, definition, options); }
     
-  /**
-   * Configures enhancement behavior
-   * 
-   * @param {Object} options - Configuration options for enhancement
-   * @returns {*} Result from DOM enhancer configuration
-   * @since 0.91.0
-   * 
-   * @example
-   * juris.configureEnhancement({
-   *   autoCleanup: true,
-   *   batchUpdates: true,
-   *   debugMode: false
-   * });
-   */
     configureEnhancement(options) { 
         if (!this.domEnhancer) {
-            log.ew && console.warn(log.w('Enhancement configuration requested but domEnhancer not available'), 'framework');
+            log.ew && console.warn(log.w('Enhancement configuration requested but domEnhancer not available'), 'frk');
             return;
         }
         return this.domEnhancer.configure(options); 
     }
     
-  /**
-   * Arms an element with event handlers and full Juris context access
-   * The arm() API provides a powerful way to handle events with complete access to Juris state and services
-   * 
-   * @param {HTMLElement|Window|Document} target - The target element, window, or document to arm
-   * @param {Function} handlerFn - Function that receives context and returns event handlers object
-   * @returns {ArmedInstance|null} Armed instance with event management capabilities
-   * @since 0.91.0
-   * 
-   * @example
-   * // Arm a button element
-   * const buttonArmed = juris.arm(document.getElementById('myButton'), (context) => ({
-   *   onclick: (e) => {
-   *     const count = context.getState('counter', 0);
-   *     context.setState('counter', count + 1);
-   *     console.log('Button clicked, new count:', count + 1);
-   *   },
-   *   onmouseover: (e) => {
-   *     context.setState('ui.hovered', true);
-   *   },
-   *   onmouseout: (e) => {
-   *     context.setState('ui.hovered', false);
-   *   }
-   * }));
-   * 
-   * @example
-   * // Arm window for global events
-   * const windowArmed = juris.arm(window, (context) => ({
-   *   onresize: (e) => {
-   *     context.setState('ui.windowSize', {
-   *       width: window.innerWidth,
-   *       height: window.innerHeight
-   *     });
-   *   },
-   *   onkeydown: (e) => {
-   *     if (e.key === 'Escape') {
-   *       context.setState('ui.modalOpen', false);
-   *     }
-   *   }
-   * }));
-   * 
-   * @example
-   * // Using armed instance methods
-   * buttonArmed.trigger('onclick'); // Programmatically trigger click
-   * buttonArmed.cleanup(); // Remove all event listeners
-   * 
-   * // Check armed events
-   * console.log(buttonArmed.events); // Array of event information
-   */
     arm(target, handlerFn) {
-      if(handlerFn == null || typeof handlerFn !== 'function') {
-        log.ew && console.warn(log.w('arm() called without valid handler function'), 'framework');
+      if(handlerFn == null || !_isFN(handlerFn)) {
+        log.ew && console.warn(log.w('arm() called without valid handler function'), 'frk');
         return null;
       }
       try {
@@ -3420,12 +2850,12 @@ class Juris {
             actualEventName = eventName.slice(2).toLowerCase();
           }          
           let handler = handlers[eventName];          
-          if (typeof handler === 'function') {
+          if (_isFN(handler)) {
             const wrappedHandler = (e) => {
               try {
                 return handler(e);
               } catch (error) {
-                log.ee && console.error(log.e('Armed event handler failed', {eventType: actualEventName, target: target.tagName || target.toString(), error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+                log.ee && console.error(log.e('Armed event handler failed', {eventType: actualEventName, target: target.tagName || target.toString(), error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
               }
             };            
             target.addEventListener(actualEventName, wrappedHandler);
@@ -3445,7 +2875,7 @@ class Juris {
                 listener.handler.call(target, mockEvent);
                 return true;
               } catch (error) {
-                log.ee && console.error(log.e('Armed event trigger failed', {eventName,target: target.tagName || target.toString(),error: error.message}, 'application'));
+                log.ee && console.error(log.e('Armed event trigger failed', {eventName,target: target.tagName || target.toString(),error: error.message}, 'app'));
                 return false;
               }
             }
@@ -3462,39 +2892,15 @@ class Juris {
         jurisIns.armedElements.set(target, { listeners, context, instance: instance });
         return instance;
       } catch (error) {
-        log.ee && console.error(log.e('arm() setup failed', {target: target.tagName || target.toString(),error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'application'));
+        log.ee && console.error(log.e('arm() setup failed', {target: target.tagName || target.toString(),error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
         return null;
       }
     }
 
-  /**
-   * Cleans up all Juris resources and removes event listeners
-   * 
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * // Clean up when component unmounts or app closes
-   * juris.cleanup();
-   */
     cleanup() {
         this.armedElements = new Map();
         this.getHM()?.cleanup();
-    }
-
-  /**
-   * Completely destroys the Juris instance and all associated resources
-   * Use this when you need to completely tear down a Juris application
-   * 
-   * @returns {void}
-   * @since 0.91.0
-   * 
-   * @example
-   * // Complete teardown
-   * juris.destroy();
-   * 
-   * // Instance is no longer usable after this
-   */
+    } 
     destroy() {
         this.cleanup();
         if (this.domEnhancer) {
