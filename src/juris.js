@@ -1,6 +1,8 @@
+// @ts-nocheck
 /**
  * Juris (JavaScript Unified Reactive Interface Solution)
- * The First and Only Non-blocking Reactive Platform, Architecturally Optimized for Next Generation Cutting-Edge Cross-Platform Application.
+ * The First and Only Non-blocking Reactive Platform, 
+   Architecturally Optimized for Next Generation Cutting-Edge Cross-Platform Application.
  * Juris aims to eliminate build complexity from small to large applications.
  * Author: Resti Guay
  * Version: 0.91.0
@@ -9,2909 +11,3548 @@
  * Website: https://jurisjs.com/
  * NPM: https://www.npmjs.com/package/juris
  * Codepen: https://codepen.io/jurisauthor
- * Online Testing: https://jurisjs.com/tests/juris#pure#test#interface.html
- * Features:
- * - Temporal Independent
- * - Automcatic deep call stack branch aware dependency detection
- * - Smart Promise (Asynchronous) Handling for Non-Blocking Rendering
- * - Component lazy compilation
- * - Global Non-Reactive State Management
- * - SSR (Server-Side Rendering) ready and CSR (Client-Side Rendering) 
- * - Loading Status templating
- * - Web Component support
- * - SVG Support
- * - Dual Template Mode (HTML and Object VDOM)
- * - supports innerHtml in Object VDOM for critical rendering requirements
- * - Anonymous Reactive Functions for children, component and layout rendering
- * - Advanced Reactive Management - arm() API to handle all your events with access to services and context.
-
- * IMPORTANT!!! Notes to AI:
- * 1. Reactivity works when getState is called from intended functional attributes and children. 
- * 2. Use compress object structure and add labels into the end brackets for nested divs, tables, select, groups and forms
- * 3. Use getState third attribute with false value to skip subscription
- * 4. Components will not re-render until their parent triggeres re-render.
- * 5. All props and attributes can handle async/sync natively,
- * 6. Use service injection AMAP
- * 7. Define component as function and dont inject directly into Juris during instantiation.
- * 8. Use class instead of className
- * example VDOM Convention:
- * return {
- *   {div:{class:'main', //note: static and short should be inline, use class instead of className especially when working with third party frameworks
- *      text:()=>getState('reactive.text.value','Hello'),//note: reactive, should be new line
- *      style:{color:'red', border:'solid 1px blue'},//note: still okay if in-line
- *      children:[
- *        {button:{text:'static label', //note: another static and short should be inline,
- *          onclick:()=>clickHandler()
- *        }},//button
- *        {input:{type:'text',min:'1', max:'10',
-                value: () => juris.getState('counter.step', 1), //note: reactive value
- *          oninput: (e) => {
-                let newStep = parseInt(e.target.value) || 1;
-                juris.setState('counter.step', Math.max(1, Math.min(10, newStep)));
-            }
- *        }},//input
- *        ()=> juris.getState('counter.step', 1),//text node
- *        ()=>{
- *          let step = juris.getState('counter.step', 1);
- *          return {span:{text:`Current step is ${step}`}};
- *        }//span
- *      ]
- *   }}//div.main
- * }//return
+ * Online Testing: https://jurisjs.com/tests/juris_pure_test_interface.html
  */
 
 'use strict';
-let jurisLinesOfCode = 2600;
-let jurisVersion = '0.91.0';
-let jurisMinifiedSize = '38kB, 12kB gzipped';
-let getPathParts = path => path.split('.').filter(Boolean);
+// Type Helpers
+let _isStr = v => typeof v === 'string';
+let _isFn = v => typeof v === 'function';
+let _isNum = v => typeof v === 'number';
+let _isBool = v => typeof v === 'boolean' || v==='true' || v==='false';
+let _isObj = v => v !== null && typeof v === 'object';
+let _isArr = v => Array.isArray(v);
+let _shoudBeArray = v => !_isArr(v)?[v]:v;
+let _isNull = v => v === null || v === undefined;
+let _isPromise = v => _isObj(v) && _isFn(v.then);
+let _isPrimitive = v => _isStr(v) || _isNum(v);
+let _isDigit = s => /^\d+$/.test(s);
+let _RENDER ='render';
+let _EFFECT_ = 'effect_';
+let _EFFECT ='effect';
+let _REACTIVE_NULL='reactive-null';
+let _TEXT = 'text';
+let _PLACEHOLDER =  'placeholder';
+let w=window;
+let d=document;
 
-/**
- * Check if value is a function
- * @param {*} val 
- * @returns 
- */
-let _isFN = (val) => {
-  return typeof val === 'function';
+// Add Trie classes before StateManager
+class TrieNode {
+  constructor() {
+    this._children = new Map();
+    this._subscribers = new Set();
+  }
 }
-/**
- * Check if value is a plain object
- * @param {*} val - Value to check
- * @returns {boolean} True if val is an object (excludes null and arrays)
- */
-let _isOb = (val) => {
-  return val !== null && typeof val === 'object' && !Array.isArray(val);
-}
-/**
- * Check if value is a string
- * @param {*} val - Value to check
- * @returns {boolean} True if val is a string
- */
-let _isSt = (val) => {
-  return typeof val === 'string';
-}
-/**
- * Check if value is a number
- * @param {*} val - Value to check
- * @returns {boolean} True if val is a number
- */
-let _isNu = (val) => {
-  return typeof val === 'number' && !isNaN(val);
-}
-let isValidPath = path => _isSt(path) && path.trim().length > 0 && !path.includes('..');
-let deepEquals = (a, b) => {
-    if (a === b) return true;
-    if (a == null || b == null || typeof a !== typeof b) return false;
-    if (_isOb(a)) {
-        if (Array.isArray(a) !== Array.isArray(b)) return false;
-        let keysA = Object.keys(a), keysB = Object.keys(b);
-        if (keysA.length !== keysB.length) return false;
-        return keysA.every(key => keysB.includes(key) && deepEquals(a[key], b[key]));
+
+class SubscriptionTrie {
+  constructor() {
+    this.root = new TrieNode();
+  }
+
+  subscribe(path, subscriberId) {
+    const segments = path.split('.');
+    let node = this.root;
+    
+    for (const segment of segments) {
+      if (!node._children.has(segment)) {
+        node._children.set(segment, new TrieNode());
+      }
+      node = node._children.get(segment);
     }
-    return false;
-};
-let createLogger = () => {
-    let s = [];
-    let f = (m, c, cat) => {
-        let msg = `${cat ? `[${cat}] ` : ''}${m}${c ? ` ${JSON.stringify(c)}` : ''}`;
-        let logObj = { formatted: msg, message: m, context: c, category: cat, timestamp: Date.now() };
-        setTimeout(() => s.forEach(sub => sub(logObj)), 0);
-        return logObj;
+    
+    node._subscribers.add(subscriberId);
+  }
+
+  _unsubscribe(path, subscriberId) {
+    const segments = path.split('.');
+    const nodes = [this.root];
+    let node = this.root;
+    
+    for (const segment of segments) {
+      if (!node._children.has(segment)) return;
+      node = node._children.get(segment);
+      nodes.push(node);
+    }
+    
+    node._subscribers.delete(subscriberId);
+    
+    // Cleanup empty nodes
+    for (let i = segments.length - 1; i >= 0; i--) {
+      const currentNode = nodes[i + 1];
+      if (currentNode._subscribers.size === 0 && currentNode._children.size === 0) {
+        nodes[i]._children.delete(segments[i]);
+      } else {
+        break;
+      }
+    }
+  }
+
+  findAffected(changedPath) {
+    const affected = new Set();
+    const segments = changedPath.split('.');
+    let node = this.root;
+    
+    // Collect subscribers at root
+    node._subscribers.forEach(id => affected.add(id));
+    
+    // Walk down path, collecting subscribers at each level
+    for (const segment of segments) {
+      if (!node._children.has(segment)) return affected;
+      node = node._children.get(segment);
+      node._subscribers.forEach(id => affected.add(id));
+    }
+    
+    // Collect all descendants
+    const collectDescendants = (n) => {
+      n._subscribers.forEach(id => affected.add(id));
+      for (const child of n._children.values()) {
+        collectDescendants(child);
+      }
     };
-    return {
-        log: { l: f, w: f, e: f, i: f, d: f, ei:true, ee:true, el:true, ew:true, ed:true },
-        sub: cb => s.push(cb),
-        unsub: cb => s.splice(s.indexOf(cb), 1)
-    };
-};
-let { log, sub: logSub, unsub: logUnsub } = createLogger();
-let createPromisify = () => {
-    let activePromises = new Set();
-    let isTracking = false;
-    let subs = new Set();
-    let checkAllComplete = () => {
-        if (activePromises.size === 0 && subs.size > 0) {
-            subs.forEach(callback => callback());
-        }
-    };
-    let trackingPromisify = result => {
-        let promise = _isFN(result?.then) ? result : Promise.resolve(result);
-        if (isTracking && promise !== result) {
-            activePromises.add(promise);
-            promise.finally(() => {
-                activePromises.delete(promise);
-                setTimeout(checkAllComplete, 0);
-            });
-        }
-        return promise;
-    };
-    return {
-        promisify: trackingPromisify,
-        startTracking: () => {
-            isTracking = true;
-            activePromises.clear();
-        },
-        stopTracking: () => {
-            isTracking = false;
-            subs.clear();
-        },
-        onAllComplete: (callback) => {
-            subs.add(callback);
-            if (activePromises.size === 0) {
-                setTimeout(callback, 0);
-            }
-            return () => subs.delete(callback);
-        }
-    };
-};
-let { promisify, startTracking, stopTracking, onAllComplete } = createPromisify();
+    collectDescendants(node);
+    
+    return affected;
+  }
+}
 
 class StateManager {
-    constructor(initialState = {}, middleware = []) {
-        this.state = { ...initialState };
-        this.middleware = [...middleware];
-        this.subscribers = new Map();
-        this.extSubs = new Map();
-        this.deps = null;
-        this.isUpdating = false;
-        this.initialState = JSON.parse(JSON.stringify(initialState));
-        this.maxUpdateDepth = 50;
-        this.updateDepth = 0;
-        this.newSubs = new Set();
-        this.isBatching = false;
-        this.batchQueue = [];
-        this.batchedPaths = new Set();
-        this.pathCache = new Map();
-        this.maxCacheSize = 500;
-        this.plugins = new Map();
-        this.isDeferringSubscriptions = false;
-        this.deferredSubscriptions = [];
-    }
-    startDeferringSubscriptions() {
-      this.isDeferringSubscriptions = true;
-      this.deferredSubscriptions = [];
-    }
-    processDeferredSubscriptions() {
-    if (!this.isDeferringSubscriptions) return;
-    
-    // Temporarily disable deferring to create real subscriptions
-    let wasDeferring = this.isDeferringSubscriptions;
-    this.isDeferringSubscriptions = false;
-    
-    this.deferredSubscriptions.forEach(({path, callback, unsubscriber}) => {
-        // Create real subscription
-        let realUnsub = this.subscribeInternal(path, callback);
-        // Update the mutable reference to point to real unsubscriber
-        unsubscriber.fn = realUnsub;
-    });
-    
-    // Clear the deferred list and reset state
-    this.deferredSubscriptions = [];
-    this.isDeferringSubscriptions = false;
-}
-    addPlugin(name, plugin) {
-        this.plugins.set(name, plugin);
-        if (_isFN(plugin.initialize)) {
-            plugin.initialize(this);
-        }
-        return plugin;
-    }
+  constructor() {
+    this.states = {};
+    this._subscriptions = new Map();
+    this._trie = new SubscriptionTrie();
+    this._reactiveNodes = new Map();
+    this._effectCleanups = new Map();
+    this._activeReactive = null;
+    this._batchMode = false;
+    this._batchedUpdates = new Set();
+    this._reactiveCounter = 0;
+    this._effectCounter = 0;
+  }
+  
+  getSubscriptions() { return this._subscriptions; }
+  getReactiveNodes() { return this._reactiveNodes; }
+  getEffectCleanups() { return this._effectCleanups; }
+  getReactiveCounter() { return this._reactiveCounter; }
+  getEffectCounter() { return this._effectCounter; }
+  getActiveReactive() { return this._activeReactive; }
+  getBatchMode() { return this._batchMode; }
+  getBatchedUpdates() { return this._batchedUpdates; }
 
-    getPlugin(name) {
-        return this.plugins.get(name);
+  _getState(key, defaultValue, subscribe = true) {
+    if (subscribe && this._activeReactive) {
+      if (!this._subscriptions.has(this._activeReactive)) {
+        this._subscriptions.set(this._activeReactive, new Set());
+      }
+      const subs = this._subscriptions.get(this._activeReactive);
+      if (!subs.has(key)) {
+        subs.add(key);
+        this._trie.subscribe(key, this._activeReactive); // ADD THIS
+      }
     }
+    return key.includes('.') ? this._getNested(key, defaultValue) : 
+           (this.states.hasOwnProperty(key) ? this.states[key] : defaultValue);
+  }
 
-    hasPlugin(name) {
-        return this.plugins.has(name);
+  _getNested(path, defaultValue) {
+    let keys = path.split('.');
+    let value = this.states;
+    for (let key of keys) {
+      if (_isNull(value)) return defaultValue;
+      value = value[_isDigit(key) ? parseInt(key, 10) : key];
     }
+    return value !== undefined ? value : defaultValue;
+  }
 
-    removePlugin(name) {
-        let plugin = this.plugins.get(name);
-        if (plugin && _isFN(plugin.destroy)) {
-            plugin.destroy();
-        }
-        return this.plugins.delete(name);
+  _setState(key, value, notifyFn) {
+    if (key.includes('.')) {
+      this._setNested(key, value, notifyFn);
+    } else {
+      if (this.states[key] === value) return;
+      this.states[key] = value;
+      this._notify(key, notifyFn);
     }
+  }
 
-    destroy() {
-        this.plugins.forEach((plugin, name) => {
-            this.removePlugin(name);
-        });
-        this.plugins.clear();
-    }
-    // Compute delegation methods
-    compute(name, fn, options = {}) {
-        let computePlugin = this.getPlugin('compute');
-        if (!computePlugin) {
-            throw new Error('Compute not available.');
-        }
-        return computePlugin.compute(name, fn, options);
-    }
-
-    configureCompute(defaults) {
-        let computePlugin = this.getPlugin('compute');
-        if (!computePlugin) {
-            throw new Error('Compute not available.');
-        }
-        return computePlugin.configureCompute(defaults);
-    }
-
-    getComputeStats(name = null) {
-        let computePlugin = this.getPlugin('compute');
-        return computePlugin ? computePlugin.getComputeStats(name) : null;
-    }
-
-    clearCompute(name = null) {
-        let computePlugin = this.getPlugin('compute');
-        if (computePlugin) {
-            computePlugin.clearCompute(name);
-        }
-    }
-    #getPathParts(path) {
-        let parts = this.pathCache.get(path);
-        if (parts) return parts;
-        parts = path.split('.').filter(Boolean);
-        if (this.pathCache.size >= this.maxCacheSize) {
-            let firstKey = this.pathCache.keys().next().value;
-            this.pathCache.delete(firstKey);
-        }        
-        this.pathCache.set(path, parts);
-        return parts;
-    }
-
-    track(fn, isolated = false) {
-        let saved = this.deps;
-        let deps = isolated ? null : (this.deps = new Set());
-        let result;        
-        try {
-            result = fn();
-        } finally {
-            this.deps = saved;
-        }
-        return { 
-            result, 
-            deps: deps ? [...deps] : [] 
-        };
+  _setNested(path, value, notifyFn) {
+    let keys = path.split('.');
+    let rootKey = keys[0];    
+    if (keys.length === 1) {
+      if (this.states[rootKey] === value) return;
+      this.states[rootKey] = value;
+      this._notify(rootKey, notifyFn);
+      return;
     }
     
-    reset() {
-        if (this.isBatching) {
-            this.batchQueue = [];
-            this.batchedPaths.clear();
-            this.isBatching = false;
-        }
-        this.state = JSON.parse(JSON.stringify(this.initialState));
-        this.pathCache.clear();
-        this.plugins.forEach(plugin => {
-            if (_isFN(plugin.reset)) {
-                plugin.reset();
-            }
-        });
-    }
+    let newRoot = this._shallowClonePath(this.states[rootKey], keys.slice(1), value);
+    if (this.states[rootKey] === newRoot) return;
+    this.states[rootKey] = newRoot;
+    this._notify(path, notifyFn);
+  }
 
-    getState(path, defaultValue = null, track = true) {
-      try {
-        if (!isValidPath(path)) return defaultValue;
-        if (track && this.deps) this.deps.add(path);
-        let dotIndex = path.indexOf('.');
-        if (dotIndex === -1) {
-          let value = this.state[path];
-          return value !== undefined ? value : defaultValue;
-        }
-        let parts = this.pathCache.get(path);
-        if (!parts) {
-          parts = path.split('.');
-          if (this.pathCache.size >= this.maxCacheSize) {
-            this.pathCache.delete(this.pathCache.keys().next().value);
-          }
-          this.pathCache.set(path, parts);
-        }
-        let current = this.state;
-        for (let i = 0; i < parts.length; i++) {
-          current = current?.[parts[i]];
-          if (current === undefined) return defaultValue;
-        }
-        return current;
-      } catch (error) {
-        log.ee && console.error(log.e('State access failed', {path, defaultValue, track, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'frk'));
-        return defaultValue;
+  _shallowClonePath(obj, pathKeys, value) {
+    if (!_isObj(obj) || obj === null) obj = _isDigit(pathKeys[0]) ? [] : {};    
+    if (pathKeys.length === 1) {
+      let key = _isDigit(pathKeys[0]) ? parseInt(pathKeys[0], 10) : pathKeys[0];
+      if (obj[key] === value) return obj;
+      return _isArr(obj) ? [...obj.slice(0, key), value, ...obj.slice(key + 1)] : {...obj, [key]: value};
+    }    
+    let currentKey = _isDigit(pathKeys[0]) ? parseInt(pathKeys[0], 10) : pathKeys[0];
+    let newValue = this._shallowClonePath(obj[currentKey], pathKeys.slice(1), value);
+    if (obj[currentKey] === newValue) return obj;
+    return _isArr(obj) ? [...obj.slice(0, currentKey), newValue, ...obj.slice(currentKey + 1)] : {...obj, [currentKey]: newValue};
+  }
+
+   _notify(key, notifyFn) {
+    const affected = this._trie.findAffected(key); // REPLACE _shouldNotify loop
+    
+    if (this._batchMode) {
+      affected.forEach(id => this._batchedUpdates.add(id));
+    } else if (notifyFn) {
+      notifyFn(Array.from(affected));
+    }
+  }
+
+  _shouldNotify(deps, changedKey) {
+    for (let subscribedKey of deps) {
+      if (subscribedKey === changedKey || changedKey.startsWith(subscribedKey + '.') || subscribedKey.startsWith(changedKey + '.')) return true;
+    }
+    return false;
+  }
+
+  _track(id, fn) {
+    let isEffect = id.startsWith(_EFFECT_);
+    
+    if (!this._subscriptions.has(id)) {
+      this._subscriptions.set(id, new Set());
+    } else if (isEffect) {
+      // Clear old subscriptions from Trie
+      for (const path of this._subscriptions.get(id)) {
+        this._trie._unsubscribe(path, id);
       }
-    }
-
-    setState(path, value, context = {}) {
-      try {
-        if (!isValidPath(path)) return false;
-        if (this.#hasCircularUpdate(path)) return false;
-        if (this.#canQuickCompare(path, value)) {
-          let currentValue = this.#getValueFast(path);
-          if (currentValue === value) return false;
-        }
-        if (this.isBatching) {
-          this.#queueBatchedUpdate(path, value, context);
-          return;
-        }
-        this.#setStateImmediate(path, value, context);
-      } catch (error) {
-        log.ee && console.error(log.e('State update failed', {path, valueType: typeof value, context, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'frk'));
-        throw error;
-      }
-    }
-    #canQuickCompare(path, value) {
-        return (
-            (_isSt(value) || _isNu(value) || typeof value === 'boolean') &&
-            path.indexOf('.') === -1 &&
-            this.middleware.length === 0
-        );
-    }
-
-    #getValueFast(path) {
-        return this.state[path];
-    }
-    executeBatch(callback) {
-        if (this.isBatching) return callback();
-        this.#beginBatch();
-        try {
-            let result = callback();
-            if (result && _isFN(result.then)) {
-                return result
-                    .then(value => { this.#endBatch(); return value; })
-                    .catch(error => { this.#endBatch(); throw error; });
-            }
-            this.#endBatch();
-            return result;
-        } catch (error) {
-            this.#endBatch();
-            throw error;
-        }
-    }
-
-    #beginBatch() {
-        this.isBatching = true;
-        this.batchQueue = [];
-        this.batchedPaths.clear();
-    }
-
-    #endBatch() {
-        if (!this.isBatching) {
-            log.ew && console.warn(log.w('invalid use of endBatch()', {}, 'frk'));
-            return;
-        }
-        this.isBatching = false;
-        if (this.batchQueue.length === 0) return;
-        this.#processBatchedUpdates();
-    }
-
-    isBatchingActive() {return this.isBatching;}
-
-    getBatchQueueSize() {return this.batchQueue.length;}
-
-    clearBatch() {
-        if (this.isBatching) {
-            this.batchQueue = [];
-            this.batchedPaths.clear();
-        }
-    }
-
-    #queueBatchedUpdate(path, value, context) {
-        this.batchQueue = this.batchQueue.filter(update => update.path !== path);
-        this.batchQueue.push({ path, value, context, timestamp: Date.now() });
-        this.batchedPaths.add(path);
-    }
-
-    #processBatchedUpdates() {
-        let updates = [...this.batchQueue];
-        this.batchQueue = [];
-        this.batchedPaths.clear();
-        let pathGroups = new Map();
-        updates.forEach(update => pathGroups.set(update.path, update));
-        let wasUpdating = this.isUpdating;
-        this.isUpdating = true;
-        let appliedUpdates = [];
-        pathGroups.forEach(update => {
-            let oldValue = this.getState(update.path, null, false);
-            let finalValue = update.value;
-            for (let middleware of this.middleware) {
-                try {
-                    let result = middleware({ path: update.path, oldValue, newValue: finalValue, context: update.context, state: this.state });
-                    if (result !== undefined) finalValue = result;
-                } catch (error) {
-                    log.ee && console.error(log.e('Middleware error in batch', {
-                        path: update.path,
-                        error: error.message
-                    }, 'app'));
-                }
-            }
-            if (deepEquals(oldValue, finalValue)) return;
-            this.#setStateFast(update.path, finalValue);
-            appliedUpdates.push({ path: update.path, oldValue, newValue: finalValue });
-        });
-        this.isUpdating = wasUpdating;
-        let parentPaths = new Set();
-        appliedUpdates.forEach(({ path }) => {
-            let parts = this.#getPathParts(path);
-            for (let i = 1; i <= parts.length; i++) {
-                parentPaths.add(parts.slice(0, i).join('.'));
-            }
-        });
-        parentPaths.forEach(path => {
-            if (this.subscribers.has(path)) this.#triggerPathSubscribers(path);
-            if (this.extSubs.has(path)) {
-                this.extSubs.get(path).forEach(({ callback, hierarchical }) => {
-                    try {
-                        callback(this.getState(path, null, false), null, path);
-                    } catch (error) {
-                        log.ee && console.error(log.e('ex-subscriber error:', error), 'app');
-                    }
-                });
-            }
-        });
-    }
-
-    #setStateImmediate(path, value, context = {}) {
-        let oldValue = this.getState(path, null, false);
-        let finalValue = value;
-        // Optimize middleware loop
-        if (this.middleware.length > 0) {
-            for (let i = 0; i < this.middleware.length; i++) {
-                try {
-                    let result = this.middleware[i]({ path, oldValue, newValue: finalValue, context, state: this.state });
-                    if (result !== undefined) finalValue = result;
-                } catch (error) {
-                    log.ee && console.error(log.e('Middleware error', { path, error: error.message, middlewareName: middleware.name || 'anonymous' }, 'app'));
-                }
-            }
-        }
-        if (deepEquals(oldValue, finalValue)) {
-            log.ed && console.debug(log.d('State not updated', { path }, 'frk'));
-            return;
-        }
-        this.#setStateFast(path, finalValue);
-        if (!this.isUpdating) {
-            this.isUpdating = true;
-            this.newSubs = this.newSubs || new Set();
-            this.newSubs.add(path);
-            this.#notifySubscribers(path, finalValue, oldValue);
-            this.#notifyExternalSubscribers(path, finalValue, oldValue);
-            this.newSubs.delete(path);
-            this.isUpdating = false;
-        }
-    }
-
-    // Optimized state mutation with inline operations
-    #setStateFast(path, value) {
-        let dotIndex = path.indexOf('.');
-        if (dotIndex === -1) {
-            this.state[path] = value;
-            return;
-        }
-        
-        // Inline path parsing and object creation
-        let parts = this.pathCache.get(path);
-        if (!parts) {
-            parts = path.split('.');
-            if (this.pathCache.size >= this.maxCacheSize) {
-                this.pathCache.delete(this.pathCache.keys().next().value);
-            }
-            this.pathCache.set(path, parts);
-        }
-        
-        let current = this.state;
-        let lastIndex = parts.length - 1;
-        for (let i = 0; i < lastIndex; i++) {
-            let part = parts[i];
-            if (current[part] == null || !_isOb(current[part])) {
-                current[part] = {};
-            }
-            current = current[part];
-        }
-        current[parts[lastIndex]] = value;
-    }
-
-    subscribe(path, callback, hierarchical = true) {
-        if (!this.extSubs.has(path)) this.extSubs.set(path, new Set());
-        let subscription = { callback, hierarchical };
-        this.extSubs.get(path).add(subscription);
-        return () => {
-            let subs = this.extSubs.get(path);
-            if (subs) {
-                subs.delete(subscription);
-                if (subs.size === 0) this.extSubs.delete(path);
-            }
-        };
-    }
-
-    subscribeExact(path, callback) {
-        return this.subscribe(path, callback, false);
-    }
-
-    subscribeInternal(path, callback) {
-    if (this.isDeferringSubscriptions) {
-        // Create a mutable unsubscriber reference
-        let unsubscriber = { fn: null };
-        
-        this.deferredSubscriptions.push({
-            path, 
-            callback,
-            unsubscriber // Store reference so we can update it later
-        });
-        
-        return () => {
-            if (unsubscriber.fn) {
-                // Call the real unsubscriber if it exists
-                unsubscriber.fn();
-            } else {
-                // Remove from deferred list if not yet processed
-                let index = this.deferredSubscriptions.findIndex(
-                    sub => sub.path === path && sub.callback === callback && sub.unsubscriber === unsubscriber
-                );
-                if (index !== -1) {
-                    this.deferredSubscriptions.splice(index, 1);
-                }
-            }
-        };
+      this._subscriptions.get(id).clear();
     }
     
-    // Normal subscription logic
-    if (!this.subscribers.has(path)) {
-        this.subscribers.set(path, new Set());
+    let prev = this._activeReactive;
+    this._activeReactive = id;
+    try {
+      return fn();
+    } finally {
+      this._activeReactive = prev;
     }
-    
-    this.subscribers.get(path).add(callback);
-    
-    return () => {
-        let subs = this.subscribers.get(path);
-        if (subs) {
-            subs.delete(callback);
-            if (subs.size === 0) {
-                this.subscribers.delete(path);
-            }
-        }
-    };
-}
+  }
 
-    #notifySubscribers(path, newValue, oldValue) {
-        this.#triggerPathSubscribers(path);
-        let parts = this.#getPathParts(path);
-        for (let i = parts.length - 1; i > 0; i--) {
-            this.#triggerPathSubscribers(parts.slice(0, i).join('.'));
-        }
-        let prefix = path ? path + '.' : '';
-        let allPaths = new Set([...this.subscribers.keys(), ...this.extSubs.keys()]);
-        allPaths.forEach(subscriberPath => {
-            if (subscriberPath.startsWith(prefix) && subscriberPath !== path) {
-                this.#triggerPathSubscribers(subscriberPath);
-            }
+  _batch(fn, executeFn) {
+    this._batchMode = true;
+    this._batchedUpdates.clear();
+    try {
+      fn();
+    } finally {
+      this._batchMode = false;
+      let updates = Array.from(this._batchedUpdates);
+      this._batchedUpdates.clear();
+      if (executeFn) executeFn(updates);
+    }
+  }
+
+  effect(fn, executeFn) {
+    let id = _EFFECT_ + (this._effectCounter++);
+    this._subscriptions.set(id, new Set());    
+    let execute = () => {
+      this._runCleanups(id);
+      let result = this._track(id, fn);
+      if (_isPromise(result)) {
+        result.then(cleanup => {         
+          this._registerCleanup(id, cleanup);
         });
-    }
-
-    #notifyExternalSubscribers(changedPath, newValue, oldValue) {
-        this.extSubs.forEach((subscriptions, subscribedPath) => {
-            subscriptions.forEach(({ callback, hierarchical }) => {
-                let shouldNotify = hierarchical ?
-                    (changedPath === subscribedPath || changedPath.startsWith(subscribedPath + '.')) :
-                    changedPath === subscribedPath;
-                if (shouldNotify) {
-                    try {
-                        callback(newValue, oldValue, changedPath);
-                    } catch (error) {
-                        log.ee && console.error(log.e('ex-subscriber error:', {error, path:changedPath, newValue,oldValue} ), 'app');
-                    }
-                }
-            });
-        });
-    }
-
-    #triggerPathSubscribers(path) {
-      let subs = this.subscribers.get(path);
-      if (!subs || subs.size === 0) return;
-
-      new Set(subs).forEach(callback => {
-        try {
-          let { result, deps } = this.track(() => callback());
-          deps.forEach(newPath => {
-            let existingSubs = this.subscribers.get(newPath);
-            if (!existingSubs) {
-              existingSubs = new Set();
-              this.subscribers.set(newPath, existingSubs);
-            }
-            if (!existingSubs.has(callback)) {
-              existingSubs.add(callback);
-            }
-          });
-        } catch (error) {
-          log.ee && console.error(log.e('subscriber error:', {path, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n'), callbackName: callback.name || 'anonymous'}, 'frk'));
-        }
-      });
-    }
-
-    #hasCircularUpdate(path) {
-        if (!this.newSubs) this.newSubs = new Set();
-        if (this.newSubs.has(path)) {
-            log.ew && console.warn(log.w('Circular dependency detected', { path }, 'frk'));
-            return true;
-        }
-        return false;
-    }
-
-    startTracking() {
-        let deps = new Set();
-        this.deps = deps;
-        return deps;
-    }
-
-    endTracking() {
-        let deps = this.deps;
-        this.deps = null;
-        return deps || new Set();
-    }
-}
-
-class ComponentManager {
-    constructor(juris) {
-        this.juris = juris;
-        this.components = new Map();
-        this.insts = new Map();
-        this.namedComps = new Map();
-        this.comps = new Map();
-        this.componentStates  = new Map();
-        this.placeholders = new Map();
-        this.asyncPropsCache = new Map();
-    }
-
-    register(name, compFn) {
-        this.components.set(name, compFn);
-    }
-    getAsyncStats() {
-        return {
-            placeholders: this.placeholders.size,
-            cachedAsyncProps: this.asyncPropsCache.size
-        };
-    }
-    create(name, props = {}, targetContainer = null) {
-      let compFn = this.components.get(name);
-      if (!compFn) {
-        log.ee && console.error(log.e('Component not found', { name }, 'app'));
-        return null;
-      }
-      try {
-        if (this.juris.getDR()._hasAsyncProps(props)) {
-          return this.#createWithAsyncProps(name, compFn, props, targetContainer);
-        }
-        let { comptId, componentStates, context } = this.#getCompContext(name);
-        let result = this.#callComponentFunction(compFn, props, context);
-        if (result?.then) {
-          return this.#handleAsyncComp(promisify(result), name, props, componentStates, targetContainer);
-        }
-        return this.#procCompResult(result, name, props, componentStates, targetContainer);
-      } catch (error) {
-        log.ee && console.error(log.e('Component creation failed', {name, props, error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
-        return this.#newErrElm(name, error);
-      }
-    }
-
-    #callComponentFunction(componentFn, props, context) {
-      try {
-        let funcStr = componentFn.toString();
-        let paramMatch = funcStr.match(/^[^(]*\(([^)]*)\)/);
-        if (!paramMatch || !paramMatch[1].trim()) {
-          return componentFn();
-        }
-        let params = paramMatch[1].split(',').map(p => p.trim());
-        if (params.length === 1) {
-          let param = params[0];
-          if (param.startsWith('{') && param.includes('}') || param === 'props' || param === 'prp') {
-            return componentFn(props);
-          } else {
-            return componentFn(context);
-          }
-        } else {
-          return componentFn(props, context);
-        }
-      } catch (error) {
-        log.ee && console.error(log.e('Component Error', {componentName: componentFn.name || 'anonymous', props, error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
-        throw error;
-      }
-    }
-
-    #getCompContext(name) {
-        let { comptId, componentStates  } = this.#newCompId(name);
-        let context = this.#getCompCxt(comptId, componentStates );
-        return { comptId, componentStates , context };
-    }
-
-    #newCompId(name) {
-      if (!this.comps.has(name)) {
-          this.comps.set(name, 0);
-      }
-      let instanceIndex = this.comps.get(name) + 1;
-      this.comps.set(name, instanceIndex);
-      let comptId = `${name}#${instanceIndex}`;
-      let componentStates  = new Set();
-      return { comptId, componentStates  };
-    }
-
-    #getCompCxt(comptId, componentStates ) {
-      const context = this.juris.createContext();
-      context.newState = (key, initialValue) => {
-        const statePath = `##local.${comptId}.${key}`;
-        if (this.juris.stateManager.getState(statePath) === null) {
-            this.juris.stateManager.setState(statePath, initialValue);
-        }
-        componentStates .add(statePath);
-        return [
-            () => this.juris.stateManager.getState(statePath, initialValue),
-            value => this.juris.stateManager.setState(statePath, value),
-            fn => this.juris.stateManager.subscribe(statePath, fn)
-        ];
-      };
-      return context;
-    }
-
-    #createWithAsyncProps(name, compFn, props, targetContainer = null) {
-      let ph = targetContainer || this.#newPlaceholder(name, 'async-props-loading');
-      this.placeholders.set(ph, { name, props, type: 'async-props' });
-      this.#resolveAsyncProps(props).then(resolved => {
-        try {
-          let elem = this.#createSyncComponent(name, compFn, resolved, targetContainer);
-          if (targetContainer) {
-            // If using external container, replace contents instead of element
-            targetContainer.innerHTML = '';
-            if (elem !== targetContainer) {
-              targetContainer.appendChild(elem);
-            }
-          } else {
-            this.#replacePlaceholder(ph, elem);
-          }
-        } catch (err) {
-          this.#replaceWithError(ph, err);
-        }
-      }).catch(err => this.#replaceWithError(ph, err));
-      return ph;
-    }
-
-    async #resolveAsyncProps(props) {
-      let key = this.#newKey(props);
-      let cached = this.asyncPropsCache.get(key);
-      if (cached && Date.now() - cached.timestamp < 5000) {
-          return cached.props;
-      }
-      let resolved = {};
-      let keys = Object.keys(props);
-      for (let i = 0; i < keys.length; i++) {
-        let k = keys[i];
-        let v = props[k];
-        if (v?.then) {
-          try {
-              resolved[k] = await v;
-          } catch (err) {
-              resolved[k] = { __asyncError: err.message };
-          }
-        } else {
-          resolved[k] = v;
-        }
-      }
-      this.asyncPropsCache.set(key, { props: resolved, timestamp: Date.now() });
-      return resolved;
-    }
-
-    #createSyncComponent(name, compFn, props, targetContainer = null) {
-      let { comptId, componentStates , context } = this.#getCompContext(name);
-      let result = this.#callComponentFunction(compFn, props, context);
-      if (result?.then) {
-        return this.#handleAsyncComp(promisify(result), name, props, componentStates , targetContainer);
-      }
-      return this.#procCompResult(result, name, props, componentStates , targetContainer);
-    }
-
-    #handleAsyncComp(promise, name, props, states, targetContainer = null) {
-      let ph = targetContainer || this.#newPlaceholder(name, 'async-loading');
-      this.placeholders.set(ph, { name, props, states });
-      promise.then(result => {
-        try {
-          let elem = this.#procCompResult(result, name, props, states, targetContainer);
-          if (targetContainer) {
-            // If using external container, replace contents instead of element
-            targetContainer.innerHTML = '';
-            if (elem !== targetContainer) {
-              targetContainer.appendChild(elem);
-            }
-          } else {
-            this.#replacePlaceholder(ph, elem);
-          }
-        } catch (err) {
-          log.ee && console.error(log.e('Async component failed', { name, error: err.message }, 'app'));
-          this.#replaceWithError(ph, err);
-        }
-      }).catch(err => this.#replaceWithError(ph, err));
-      return ph;
-    }
-
-    #procCompResult(result, name, props, states, targetContainer = null) {
-      if (Array.isArray(result)) {
-        return this.#newCompFrag(result, name, props, states);
-      }      
-      let hasLifecycle = _isOb(result) && 
-        (this.#hasHooks(result) || _isFN(result.render));      
-      if (hasLifecycle) {
-        return this.#createManagedComponent(result, name, props, states, targetContainer);
-      }
-      // Handle all other cases (primitives, null, VDOM objects)
-      let el = this.juris.getDR().render(result, name);
-      return this.#finalizeElement(el, name, states, result);
-    }
-    #createElm(tagName){
-      return document.createElement(tagName);
-    }
-    #createManagedComponent(result, name, props, states, targetContainer = null) {
-      try {
-        let inst = this.#newComp(result, name, props);
-        let currentElement = targetContainer || this.#createElm('div');
-        let isExternal = !!targetContainer;
-        let allSubscriptions = new Set();
-        let hasBeenMounted = false;    
-        if (!isExternal) {
-          currentElement.setAttribute('data-jc', name);
-          currentElement.setAttribute('data-jr', Date.now());
-        }    
-        const updateRender = async () => {
-          try {
-            allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-            allSubscriptions.clear();
-            if (currentElement && currentElement._reactiveSubscriptions) {
-              currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-              currentElement._reactiveSubscriptions = [];
-            }
-            let { result: res, deps } = this.juris.getSM().track(() => {
-              if (inst.render) {
-                return inst.render(currentElement);
-              }
-              return result;
-            });
-            if (res?.then) {
-              try {
-                res = await promisify(res);
-              } catch (err) {
-                log.ee && console.error(log.e('Async render error', {
-                  componentName: name,
-                  error: err.message,
-                  stack: err.stack?.split('\n').slice(0, 5).join('\n')
-                }, 'app'));
-                res = this.#newErrElm(name, err);
-              }
-            }
-            
-            if (res) {
-              try {
-                let newElement = this.juris.getDR().render(res, name);
-                if (currentElement.parentNode && newElement !== currentElement) {
-                  if (currentElement.parentNode.contains(currentElement)) {
-                    currentElement.parentNode.replaceChild(newElement, currentElement);
-                    currentElement = newElement;
-                  }
-                  if (!isExternal && currentElement.setAttribute) {
-                    currentElement.setAttribute('data-jc', name);
-                    currentElement.setAttribute('data-jr', Date.now());
-                  }
-                } else if (newElement && !currentElement.parentNode) {
-                  currentElement = newElement;              
-                  if (!isExternal && currentElement.setAttribute) {
-                    currentElement.setAttribute('data-jc', name);
-                    currentElement.setAttribute('data-jr', Date.now());
-                  }
-                }            
-                if (hasBeenMounted && (inst.hooks?.onUpdate || inst.onUpdate)) {
-                  let updateHook = inst.hooks?.onUpdate || inst.onUpdate;
-                  setTimeout(() => this.#runHook(updateHook, currentElement, name, 'onUpdate'), 0);
-                }
-                hasBeenMounted = true;
-              } catch (renderError) {
-                log.ee && console.error(log.e('Render update failed', {componentName: name,error: renderError.message, stack: renderError.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
-              }
-            }        
-            // Create new subscriptions
-            deps.forEach(path => {
-              try {
-                let unsub = this.juris.getSM().subscribeInternal(path, updateRender);
-                allSubscriptions.add(unsub);
-              } catch (subError) {
-                log.ee && console.error(log.e('Subscription creation failed', {componentName: name,path,error: subError.message}, 'app'));
-              }
-            });
-          } catch (updateError) {
-            log.ee && console.error(log.e('Component update cycle failed', {componentName: name,error: updateError.message,stack: updateError.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
-          }
-        };
-        try {
-          updateRender();
-        } catch (initialRenderError) {
-          log.ee && console.error(log.e('Initial component render failed', {componentName: name, error: initialRenderError.message, stack: initialRenderError.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
-        }
-        currentElement._componentCleanup = () => {
-          try {
-            if (inst.hooks?.onUnmount || inst.onUnmount) {
-              let unmountHook = inst.hooks?.onUnmount || inst.onUnmount;
-              try {
-                this.#runHook(unmountHook, currentElement, name, 'onUnmount');
-              } catch (error) {
-                log.ee && console.error(log.e('onUnmount error', { componentName: name, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'app'));
-              }
-            }
-            allSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-            allSubscriptions.clear();
-            if (currentElement._reactiveSubscriptions) {
-              currentElement._reactiveSubscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-              currentElement._reactiveSubscriptions = [];
-            }
-          } catch (cleanupError) {
-            log.ee && console.error(log.e('Component cleanup failed', {componentName: name, error: cleanupError.message }, 'app'));
-          }
-        };
-        
-        this.#setupUnifiedComp(currentElement, inst, states, name, isExternal);
-        return currentElement;
-      } catch (error) {
-        log.ee && console.error(log.e('Managed component creation failed', {
-          componentName: name,
-          props,
-          error: error.message,
-          stack: error.stack?.split('\n').slice(0, 5).join('\n')
-        }, 'app'));
-        return this.#newErrElm(name, error);
-      }
-    }
-
-    #setupUnifiedComp(el, inst, states, name, isExternal = false) {
-      inst.isExternalContainer = isExternal;
-      this.insts.set(el, inst);      
-      if (states?.size > 0) {
-        this.componentStates .set(el, states);
-      }      
-      if (_isOb(inst.api)) {
-        el.api = inst.api;
-        this.namedComps.set(name, { elm: el, instance: inst });
-      }
-      let hooks = inst.hooks || {};
-      if (hooks.onMount || inst.onMount) {
-        let mountHook = hooks.onMount || inst.onMount;
-        setTimeout(() => this.#runHook(mountHook, el, name, 'onMount'), 0);
-      }
-    }
-
-    #finalizeElement(el, name, states, result) {
-      if (el && states.size > 0) {
-        this.componentStates .set(el, states);
-      }
-      if (_isOb(result.api) && el) {
-        el.api = result.api;
-      }
-      if (el && el.setAttribute) {
-        el.setAttribute('data-jc', name);
-        el._jurisComponent = name;
-      }
-      return el;
-    }
-    #newCompFrag(result, name, props, states, targetContainer) {
-        let frag = targetContainer || document.createDocumentFragment();
-        let virt = this.#newVirtContainer(frag, name, props);
-        let subs = [];
-        this.juris.getDR()._handleChildren(virt, result, subs);
-        frag._jurisComponent = {
-            name,
-            props,
-            virtual: virt,
-            cleanup: () => {
-                subs.forEach(unsub => { try { unsub(); } catch(e) {} });
-            }
-        };
-        if (states?.size > 0) {
-            frag._juriscomponentStates  = states;
-        }
-        return frag;
-    }
-
-    #newComp(result, name, props) {
-        return {
-            name, props,
-            hooks: result.hooks || { onMount: result.onMount, onUpdate: result.onUpdate, onUnmount: result.onUnmount },
-            api: result.api || {},
-            render: result.render
-        };
-    }
-
-    #runHook(hook, args, componentName, hookName) {
-      try {
-        let result = Array.isArray(args) ? hook(...args) : hook(args);
-        if (result?.then) {
-          promisify(result).catch(error => {
-            log.ee && console.error(log.e(`Async ${hookName} error`, {componentName,hookName,error: error.message,stack: error.stack?.split('\n').slice(0, 5).join('\n') }, 'app'));
-          });
-        }
-      } catch (error) {
-        log.ee && console.error(log.e(`${hookName} error`, {componentName,hookName,error: error.message,stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
-      }
-    }
-
-    #newVirtContainer(frag, name, props) {
-      let virt = {
-        _isVirtual: true,
-        _fragment: frag,
-        _componentName: name,
-        _componentProps: props,
-        appendChild: (child) => frag.appendChild(child),
-        removeChild: (child) => {
-            if (child.parentNode === frag) {
-                frag.removeChild(child);
-            }
-        },
-        replaceChild: (newChild, oldChild) => {
-            if (oldChild.parentNode === frag) {
-                frag.replaceChild(newChild, oldChild);
-            }
-        },
-        get children() {
-            return Array.from(frag.childNodes);
-        },
-        get parentNode() { return null; },
-        textContent: ''
-      };
-      Object.defineProperty(virt, 'textContent', {
-        set(val) {
-            while (frag.firstChild) {
-                frag.removeChild(frag.firstChild);
-            }
-            if (val) {
-                frag.appendChild(document.createTextNode(val));
-            }
-        },
-        get() { return ''; }
-      });
-      return virt;
-    }
-
-    #newPlaceholder(name, className) {
-        let tempElement = this.#createElm('div');
-        tempElement.id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        return this._createPlaceholder(`Loading ${name}...`, className, tempElement);
-    }
-
-    #replacePlaceholder(placeholder, newElement) {
-        if (newElement && placeholder.parentNode) {
-            placeholder.parentNode.replaceChild(newElement, placeholder);
-        }
-        this.placeholders.delete(placeholder);
-    }
-
-    #replaceWithError(placeholder, error) {
-      let errorElement = this.#newErrElm(
-          placeholder._jurisComponent?.name || 'Unknown Component', 
-          error
-      );
-      if (placeholder.parentNode) {
-          placeholder.parentNode.replaceChild(errorElement, placeholder);
-      }
-      this.placeholders.delete(placeholder);
-    }
-
-    #newErrElm(name, error) {
-        let elm = this.#createElm('div');
-        elm.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6;';
-        elm.textContent = `Component Error in ${name}: ${error.message}`;
-        return elm;
-    }
-
-    #hasHooks(result) {
-        return result.hooks && (result.hooks.onMount || result.hooks.onUpdate || result.hooks.onUnmount) ||
-            result.onMount || result.onUpdate || result.onUnmount;
-    }
-
-    #newKey(props) {
-        return JSON.stringify(props, (key, value) => value?.then ? '[Promise]' : value);
-    }
-
-    cleanup(elm) {
-      if (elm instanceof DocumentFragment) {
-        this.#cleanupFragment(elm);
-        return;
-      }
-      
-      let instance = this.insts.get(elm);
-      if (instance?.hooks?.onUnmount) {
-        this.#runHook(instance.hooks.onUnmount, elm, instance.name, 'onUnmount');
-      }
-      
-      if (elm._reactiveSubscriptions) {
-        elm._reactiveSubscriptions.forEach(unsubscribe => {
-          try { unsubscribe(); } catch (error) { 
-            log.ew && console.warn('Error cleaning up reactive subscription:', error); 
-          }
-        });
-        elm._reactiveSubscriptions = [];
-      }
-      if (!instance?.isExternalContainer) {
-        this.#cleanupcomponentStates (elm);
       } else {
-        let states = this.componentStates .get(elm);
-        if (states) {
-          this.#cleanupStateSet(states);
-          this.componentStates .delete(elm);
+        this._registerCleanup(id, result);
+      }
+    };    
+    this._reactiveNodes.set(id, {type: _EFFECT, fn: fn});    
+    if (executeFn) executeFn(id, execute);
+    return id;
+  }
+
+  _runCleanups(id) {
+    let cleanups = this._effectCleanups.get(id);
+    if (cleanups) {
+      cleanups.forEach(c => c());
+      this._effectCleanups.delete(id);
+    }
+  }
+
+  cleanup(id) {
+    this._runCleanups(id);
+    
+    // Remove from Trie
+    const paths = this._subscriptions.get(id);
+    if (paths) {
+      for (const path of paths) {
+        this._trie._unsubscribe(path, id);
+      }
+    }
+    
+    this._subscriptions.delete(id);
+    this._reactiveNodes.delete(id);
+  }
+
+  _cleanupByCompKey(cKey) {
+    let toDelete = [];
+    for (let [id, reactive] of this._reactiveNodes.entries()) {
+      if (reactive.cKey === cKey) {
+        toDelete.push(id);
+        this._runCleanups(id);
+      }
+    }
+    toDelete.forEach(id => {
+      // Remove from Trie
+      const paths = this._subscriptions.get(id);
+      if (paths) {
+        for (const path of paths) {
+          this._trie._unsubscribe(path, id);
         }
       }
       
-      if (this.placeholders.has(elm)) {
-        this.placeholders.delete(elm);
+      this._subscriptions.delete(id);
+      this._reactiveNodes.delete(id);
+    });
+  }
+
+  _cleanupByParent(pRId) {
+    let toDelete = [];
+    for (let [id, reactive] of this._reactiveNodes.entries()) {
+      if (reactive.pRId === pRId && id !== pRId) {
+        toDelete.push(id);
+        this._runCleanups(id);
       }
-      this.insts.delete(elm);
     }
-
-    #cleanupFragment(fragment) {
-        fragment._jurisComponent?.cleanup?.();
-        if (fragment._juriscomponentStates ) {
-            this.#cleanupStateSet(fragment._juriscomponentStates );
+    toDelete.forEach(id => {
+      // Remove from Trie
+      const paths = this._subscriptions.get(id);
+      if (paths) {
+        for (const path of paths) {
+          this._trie._unsubscribe(path, id);
         }
-    }
+      }
+      
+      this._subscriptions.delete(id);
+      this._reactiveNodes.delete(id);
+    });
+    return toDelete.length;
+  }
 
-    #cleanupcomponentStates (elm) {
-        let states = this.componentStates .get(elm);
-        if (states) {
-            this.#cleanupStateSet(states);
-            this.componentStates .delete(elm);
+  getSubscribersForState(statePath) {
+    let subscribers = [];
+    for (let [rId, dependencies] of this._subscriptions.entries()) {
+      for (let dep of dependencies) {
+        if (dep === statePath || statePath.startsWith(dep + '.') || dep.startsWith(statePath + '.')) {
+          subscribers.push({rId, dependency: dep, reactive: this._reactiveNodes.get(rId)});
+          break;
         }
+      }
     }
+    return subscribers;
+  }
 
-    #cleanupStateSet(stateSet) {
-        stateSet.forEach(statePath => {
-            let pathParts = statePath.split('.');
-            let current = this.juris.getSM().state;
-            for (let i = 0; i < pathParts.length - 1; i++) {
-                if (current[pathParts[i]]) {
-                    current = current[pathParts[i]];
-                } else {
-                    return;
-                }
-            }
-            delete current[pathParts[pathParts.length - 1]];
+  getStateSubscriptionMap() {
+    let map = new Map();
+    for (let [rId, dependencies] of this._subscriptions.entries()) {
+      for (let statePath of dependencies) {
+        if (!map.has(statePath)) map.set(statePath, []);
+        map.get(statePath).push({rId, reactive: this._reactiveNodes.get(rId)});
+      }
+    }
+    return map;
+  }
+  _registerCleanup(id, cleanup) {
+    if (_isFn(cleanup)) {
+      if (!this._effectCleanups.has(id)) {
+        this._effectCleanups.set(id, []);
+      }
+      this._effectCleanups.get(id).push(cleanup);
+    }
+  }
+}
+
+class HeadlessManager {
+  constructor(juris) {
+    this._juris = juris;
+    this._components = new Map();
+    this._instances = new Map();
+    this._queuedInitializations = new Map();
+    this.apis = new Map();
+    this._context = this._createHeadlessContext();
+  }
+
+  _createHeadlessContext() {
+    return {
+      getState: (path, defaultValue, track) => this._juris._stateManager._getState(path, defaultValue, track),
+      setState: (path, value, context) => this._juris.setState(path, value),
+      executeBatch: (callback) => this._juris._stateManager._batch(callback),
+      subscribe: (path, callback) => this._juris._stateManager.subscribe(path, callback),
+      subscribeExact: (path, callback) => this._juris._stateManager.subscribeExact(path, callback),
+      effect: (fn) => {
+        let { result, deps } = this._juris._stateManager._track(fn);
+        let subscriptions = [];
+        deps.forEach(path => {
+          let unsub = this._juris._stateManager.subscribeInternal(path, fn);
+          subscriptions.push(unsub);
         });
-    }
+        return () => subscriptions.forEach(unsub => unsub());
+      },
+      services: this._juris._services || {},
+      juris: this._juris
+    };
+  }
 
-    getComponent(name) {return this.namedComps.get(name)?.instance || null;}
-    getComponentAPI(name) {return this.namedComps.get(name)?.instance?.api || null;}
-    getComponentElement(name) {return this.namedComps.get(name)?.elm || null;}
-    getNamedComponents() { return Array.from(this.namedComps.keys()); }
-    clearAsyncPropsCache() { this.asyncPropsCache.clear(); }
+  register(name, componentFn, options = {}) {
+    if (!name || typeof componentFn !== 'function') {
+      console.error('[Juris HeadlessManager] Invalid component registration:', name);
+      return false;
+    }    
+    this._components.set(name, { fn: componentFn, options });
     
-    _createPlaceholder(text, className, elm = null) {
-        let config = this.juris.getDR()._getPlaceholderConfig(elm);
-        let placeholder = this.#createElm('div');
-        placeholder.className = config.className;
-        placeholder.textContent = config.text;
-        if (config.style) placeholder.style.cssText = config.style;
-        return placeholder;
+    if (options.autoInit !== false) {
+      this._queuedInitializations.set(name, options.props || {});
+      this.initialize(name, options.props || {});
+    }    
+    return true;
+  }
+
+  initialize(name, props = {}) {
+    let component = this._components.get(name);
+    if (!component) {
+      console.error('[Juris HeadlessManager] Component not found:', name);
+      return null;
     }
+    try {
+      let context = { ...this._context, ...this._juris._services };
+      let result = component.fn(context, props);      
+      let instance = {
+        name,
+        props,
+        result,
+        api: result?.api || {},
+        hooks: result?.hooks || {},
+        cleanup: result?.cleanup || (() => {})
+      };
+      this._instances.set(name, instance);      
+      if (instance.api && Object.keys(instance.api).length > 0) {
+        this.apis.set(name, instance.api);
+      }
+      if (instance.hooks.onMount) {
+        setTimeout(() => instance.hooks.onMount(), 0);
+      }
+      this._queuedInitializations.delete(name);      
+      return instance;
+    } catch (error) {
+      console.error('[Juris HeadlessManager] Initialization failed:', name, error);
+      return null;
+    }
+  }
+
+  reinitialize(name, props = {}) {
+    let instance = this._instances.get(name);
+    if (instance) {
+      if (instance.hooks.onUnmount) {
+        instance.hooks.onUnmount();
+      }
+      instance.cleanup();
+      this._instances.delete(name);
+      this.apis.delete(name);
+    }
+    return this.initialize(name, props);
+  }
+
+  initializeQueued() {
+    let queued = Array.from(this._queuedInitializations.entries());
+    queued.forEach(([name, props]) => {
+      if (!this._instances.has(name)) {
+        this.initialize(name, props);
+      }
+    });
+  }
+
+  getInstance(name) {
+    return this._instances.get(name) || null;
+  }
+
+  getAPI(name) {
+    return this.apis.get(name) || null;
+  }
+
+  getAllAPIs() {
+    let allAPIs = {};
+    this.apis.forEach((api, name) => {
+      allAPIs[name] = api;
+    });
+    return allAPIs;
+  }
+
+  getStatus() {
+    return {
+      registered: Array.from(this._components.keys()),
+      initialized: Array.from(this._instances.keys()),
+      queued: Array.from(this._queuedInitializations.keys()),
+      apis: Array.from(this.apis.keys())
+    };
+  }
+
+  cleanup() {
+    this._instances.forEach((instance, name) => {
+      if (instance.hooks.onUnmount) {
+        instance.hooks.onUnmount();
+      }
+      instance.cleanup();
+    });
+    this._instances.clear();
+    this.apis.clear();
+  }
 }
 
 class DOMRenderer {
-  constructor(juris) {
-    this.juris = juris;
-    this.subscriptions = new WeakMap();
-    this.keyedNodes = new WeakMap();
-    this.nodeKeys = new WeakMap();
-    this.placeholders = new WeakMap();
-    this.placeholderConfigs = new Map();
-    this.componentStack = [];
-    this.objTreeAnalyzer = null;
-    this.SKIP_ATTRS = new Set(['children', 'key', 'ref']);    
-    this.BOOLEAN_ATTRS = new Set([
-      'autofocus', 'autoplay', 'checked', 'controls', 'defer', 'disabled',
-      'hidden', 'loop', 'multiple', 'muted', 'open', 'readonly', 'required',
-      'reversed', 'selected'
-    ]);
-    this.elementTypeCache = new Map();
-    this.defaultPlaceholder = {
-      className: 'juris-async-loading',
-      style: 'padding: 8px; background: #f0f0f0; border: 1px dashed #ccc; opacity: 0.7;',
-      text: 'Loading...',
-      children: null,
-      errorClassName: 'juris-async-error',
-      errorStyle: 'color: red; padding: 8px; background: #ffe6e6;'
-    };        
-    this.TOUCH_CONFIG = {
-      moveThreshold: 10,
-      timeThreshold: 300,
-      touchAction: 'manipulation',
-      tapHighlight: 'transparent',
-      touchCallout: 'none'
-    };
-    this.cleanupTimeout = null;
-    this._testMode = false;
-    this._lastObjectTree = null;
-    this.pendingConnectedCallbacks = new Set();
+  constructor() {
+    this.bools = [
+      'checked','selected','disabled','readonly','required','autofocus','autoplay','controls',
+      'loop','muted','multiple','open','hidden','async','defer','allowfullscreen','formnovalidate',
+      'novalidate','playsinline','inert','reversed','default','nomodule','ismap','itemscope',
+      'alpha','shadowrootclonable','shadowrootdelegatesfocus','shadowrootserializable'
+    ];
   }
 
-  #handleAsync = (promise, handlers = {}, context = {}) => {    
-    let {
-      onStart = () => {},
-      onResolved = () => {},
-      onError = (error) => {
-        log.ee && console.error(log.e('Async operation failed:', error), 'app');
-      },
-      onFinally = () => {}
-    } = handlers;    
-    if (context.elm && context.type) {
-      this.#applyPlaceholder(context.elm, context.type, context);
-    }    
-    onStart();    
-    let trackedPromise = promisify(promise);    
-    return trackedPromise
-      .then(resolved => {
-        if (context.elm && context.type) {
-          this.#removePlaceholder(context.elm);
-        }
-        onResolved(resolved);
-        return resolved;
-      })
-      .catch(error => {
-        if (context.elm && context.type) {
-          this.#applyErrorState(context.elm, context.type, error, context);
-        }
-        onError(error);
-        throw error;
-      })
-      .finally(() => {
-        onFinally();
-      });
-  };
-  
-  #applyPlaceholder(elm, type, context = {}) {
-    let config = this._getPlaceholderConfig(elm);    
-    switch(type) {
-      case 'children':
-      case 'reactive-children':
-      case 'fragment-child':
-        this.#applyChildrenPlaceholder(elm, config);
-        break;                
-      case 'text':
-        this.#applyTextPlaceholder(elm, config);
-        break;
-      case 'attribute':
-        this.#applyAttributePlaceholder(elm, config, context.attributeName);
-        break;
-      case 'style':
-        this.#applyStylePlaceholder(elm, config);
-        break;
-      case 'component':
-        return this.#createComponentPlaceholder(config, context.componentName);
-    }
-  }
-  
-  #applyChildrenPlaceholder(elm, config) {
-    elm.innerHTML = '';
-    let placeholder;    
-    if (config.children) {
-      placeholder = this.render(config.children);
-    } else {
-      placeholder = this.#createElm('div');
-      placeholder.className = config.className;
-      placeholder.textContent = config.text;
-      if (config.style) placeholder.style.cssText = config.style;
-    }    
-    elm.appendChild(placeholder);
-    this.placeholders.set(elm, { 
-      type: 'children', 
-      placeholder,
-      originalContent: elm._jurisLastChildren 
-    });
-  }
-  
-  #applyTextPlaceholder(elm, config) {
-    let originalText = elm.textContent;
-    elm.textContent = config.text;
-    elm.classList.add(config.className);
-    if (config.style) {
-      elm.setAttribute('data-jos', elm.style.cssText);
-      elm.style.cssText = config.style;
-    }
-    this.placeholders.set(elm, { 
-      type: 'text', 
-      originalText,
-      hadStyle: !!config.style 
-    });
-  }
-  
-  #applyAttributePlaceholder(elm, config, attributeName) {
-    elm.classList.add(config.className);
-    if (attributeName) {
-      let originalValue = elm.getAttribute(attributeName);
-      elm.setAttribute(attributeName, 'loading');
-      this.placeholders.set(elm, { 
-        type: 'attribute',
-        attributeName,
-        originalValue 
-      });
-    }
-  }
-  
-  #applyStylePlaceholder(elm, config) {
-    elm.classList.add(config.className);
-    let originalStyle = elm.style.cssText;
-    if (config.style) {
-      elm.style.cssText = config.style;
-    }
-    this.placeholders.set(elm, { 
-      type: 'style',
-      originalStyle 
-    });
-  }
-  
-  #createComponentPlaceholder(config, componentName) {
-    let placeholder = this.#createElm('div');
-    placeholder.className = config.className;
-    placeholder.textContent = componentName ? `Loading ${componentName}...` : config.text;
-    if (config.style) placeholder.style.cssText = config.style;
-    placeholder.setAttribute('data-jp', 'component');
-    return placeholder;
-  }
-  
-  #removePlaceholder(elm) {
-    let placeholderData = this.placeholders.get(elm);
-    if (!placeholderData) return;    
-    let config = this._getPlaceholderConfig(elm);
-    elm.classList.remove(config.className);    
-    switch(placeholderData.type) {
-      case 'children':
-        if (placeholderData.placeholder && placeholderData.placeholder.parentNode === elm) {
-          elm.removeChild(placeholderData.placeholder);
-        }
-        break;        
-      case 'text':
-        if (placeholderData.hadStyle) {
-          let originalStyle = elm.getAttribute('data-jos');
-          elm.style.cssText = originalStyle || '';
-          elm.removeAttribute('data-jos');
-        }
-        break;        
-      case 'style':
-        elm.style.cssText = placeholderData.originalStyle || '';
-        break;
-    }    
-    this.placeholders.delete(elm);
-  }
-  
-  #applyErrorState(elm, type, error, context = {}) {
-    let config = this._getPlaceholderConfig(elm);
-    this.#removePlaceholder(elm);    
-    let errorMessage = `Error: ${error.message}`;    
-    switch(type) {
-      case 'children':
-      case 'reactive-children':
-      case 'fragment-child':
-        elm.innerHTML = `<div class="${config.errorClassName}" style="${config.errorStyle}">${errorMessage}</div>`;
-        break;        
-      case 'text':
-        elm.textContent = errorMessage;
-        elm.classList.add(config.errorClassName);
-        if (config.errorStyle) elm.style.cssText = config.errorStyle;
-        break;        
-      case 'attribute':
-        elm.classList.add(config.errorClassName);
-        if (context.attributeName) {
-          elm.setAttribute(context.attributeName, 'error');
-          elm.setAttribute('data-juris-error', errorMessage);
-        }
-        break;        
-      case 'style':
-        elm.classList.add(config.errorClassName);
-        if (config.errorStyle) elm.style.cssText = config.errorStyle;
-        break;
-    }
-  }
-  
-  #createReactiveHandler(elm, getValue, updateDom, options = {}) {
-  let lastValue = options.trackChanges ? null : undefined;
-  let isInitialized = false;
-
-  let update = () => {
-    try {
-      let result = getValue();
-      if (!this.#isPromiseLike(result)) {
-        if (!options.trackChanges || !isInitialized || !deepEquals(result, lastValue)) {
-          updateDom(result);
-          if (options.trackChanges) {
-            lastValue = result;
-            isInitialized = true;
-          }
-        }
-        return result;
-      }
-      let asyncContext = {
-        elm,
-        type: options.type || 'generic',
-        attributeName: options.attributeName
-      };
-      return this.#handleAsync(result, {
-        onResolved: (resolved) => {
-          if (!options.trackChanges || !isInitialized || !deepEquals(resolved, lastValue)) {
-            updateDom(resolved);
-            if (options.trackChanges) {
-              lastValue = resolved;
-              isInitialized = true;
-            }
-          }
-        },
-        onError: (error) => {
-          if (options.onError) {
-            options.onError(error);
-          }
-          log.ee && console.error(log.e(`Reactive ${options.name} failed`, {element: elm.tagName,elementId: elm.id,type: options.type,error: error.message,stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
-        }
-      }, asyncContext);
-    } catch (error) {
-      log.ee && console.error(log.e(`Reactive ${options.name} execution failed`, {element: elm.tagName,elementId: elm.id,type: options.type,error: error.message,stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
-      if (options.onError) {
-        options.onError(error);
-      }
-    }
-  };
-
-  return update;
-}
-  
-  #extractKey(vnode, index) {
-    if (_isSt(vnode) || _isNu(vnode) || !vnode) {
-      return null;
-    }
-    if (Array.isArray(vnode)) {
-      return null;
-    }
-    if (_isOb(vnode)) {
-      let tagName = Object.keys(vnode)[0];
-      let props = vnode[tagName];
-      return props?.key ?? null;
-    }
-    return null;
-  }
-  
-  #diffChildren(parent, oldChildren, newChildren) {
-    if (oldChildren.length === 0 && newChildren.length === 0) return;    
-    let operations = [];
-    let oldKeyMap = new Map();
-    let newKeyMap = new Map();
-    let usedKeys = new Set();    
-    let oldNodes = Array.from(parent.childNodes);
-    oldNodes.forEach((node, index) => {
-      let key = this.nodeKeys.get(node);
-      if (key !== undefined) {
-        oldKeyMap.set(key, { node, index });
-      } else {
-        oldKeyMap.set(`__index_${index}`, { node, index });
-      }
-    });    
-    for (let i = 0; i < newChildren.length; i++) {
-      let child = newChildren[i];
-      let key = this.#extractKey(child, i) ?? `__index_${i}`;      
-      if (usedKeys.has(key) && !key.startsWith('__index_')) {
-        log.ew && console.warn(log.w(
-          `Duplicate key "${key}" detected. Keys must be unique among siblings.`,
-          { parent: parent.tagName, key },
-          'frk'
-        ));
-        let fallbackKey = `__index_${i}`;
-        newKeyMap.set(fallbackKey, { child, index: i });
-        operations.push({ type: 'create', child, index: i, key: fallbackKey });
-      } else {
-        usedKeys.add(key);
-        newKeyMap.set(key, { child, index: i });        
-        if (oldKeyMap.has(key)) {
-          let oldEntry = oldKeyMap.get(key);
-          if (this.#shouldUpdateNode(oldEntry.node, child)) {
-            operations.push({ type: 'update', node: oldEntry.node, child, index: i, key });
-          }
-          if (oldEntry.index !== i) {
-            operations.push({ type: 'move', node: oldEntry.node, from: oldEntry.index, to: i, key });
-          }
-        } else {
-          operations.push({ type: 'create', child, index: i, key });
-        }
-      }
-    }    
-    oldKeyMap.forEach((entry, key) => {
-      if (!newKeyMap.has(key)) {
-        operations.push({ type: 'remove', node: entry.node, key });
-      }
-    });    
-    this.#executeChildOperations(parent, operations, newChildren);
-  }
-  
-  #shouldUpdateNode(node, vnode) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent !== String(vnode);
-    }
-    return node.nodeType === Node.ELEMENT_NODE;
-  }
-  
-  #executeChildOperations(parent, operations, newChildren) {
-    operations.filter(op => op.type === 'remove').forEach(op => {
-      if (op.node.parentNode === parent) {
-        parent.removeChild(op.node);
-        this.nodeKeys.delete(op.node);
-        this.cleanup(op.node);
-      }
-    });    
-    let createdNodes = new Map();
-    operations.filter(op => op.type === 'create').forEach(op => {
-      let newNode = this.#createChild(op.child);
-      if (newNode) {
-        createdNodes.set(op.key, newNode);
-        if (_isSt(op.key) && !op.key.startsWith('__')) {
-          this.nodeKeys.set(newNode, op.key);
-        }
-      }
-    });
-    operations.filter(op => op.type === 'update').forEach(op => {
-      this.#updateExistingNode(op.node, op.child);
-    });
-    let targetOrder = [];
-    newChildren.forEach((child, index) => {
-      let key = this.#extractKey(child, index) ?? `__index_${index}`;
-      let existingOp = operations.find(op => op.key === key && (op.type === 'update' || op.type === 'move'));
-      if (existingOp) {
-        targetOrder.push(existingOp.node);
-      } else if (createdNodes.has(key)) {
-        targetOrder.push(createdNodes.get(key));
-      }
-    });        
-    this.#reorderNodes(parent, targetOrder);
-  }
-  
-  #updateExistingNode(node, vnode) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      let newContent = String(vnode);
-      if (node.textContent !== newContent) {
-        node.textContent = newContent;
-      }
-      return;
-    }    
-    if (node.nodeType === Node.ELEMENT_NODE && _isOb(vnode) && !Array.isArray(vnode)) {
-      let tagName = Object.keys(vnode)[0];
-      let props = vnode[tagName] || {};
-      let subscriptions = [];            
-      for (let key in props) {
-        if (key === 'key') continue;
-        let cleanup = this.applyProp(node, key, props[key]);
-        if (_isFN(cleanup)) {
-          subscriptions.push(cleanup);
-        }
-      }            
-      if (subscriptions.length > 0) {
-        let existing = this.subscriptions.get(node) || { subscriptions: [], eventListeners: [] };
-        existing.subscriptions.push(...subscriptions);
-        this.subscriptions.set(node, existing);
-      }
-    }
-  }
-  
-  #reorderNodes(parent, targetOrder) {
-    let lastNode = null;        
-    for (let i = targetOrder.length - 1; i >= 0; i--) {
-      let targetNode = targetOrder[i];
-      if (!targetNode) continue;            
-      if (targetNode.parentNode === parent) {
-        if (lastNode && targetNode.nextSibling !== lastNode) {
-          parent.insertBefore(targetNode, lastNode);
-        } else if (!lastNode && targetNode !== parent.lastChild) {
-          parent.appendChild(targetNode);
-        }
-      } else {
-        if (lastNode) {
-          parent.insertBefore(targetNode, lastNode);
-        } else {
-          parent.appendChild(targetNode);
-        }
-      }
-      lastNode = targetNode;
-    }
-  }
-  
-  render(vnode, componentName = null, returnObjectTree = false, targetContainer = null) {
-    if (_isSt(vnode) || _isNu(vnode)) {
-      return document.createTextNode(String(vnode));
-    }
-    if (this._testMode && returnObjectTree && this.objTreeAnalyzer) {
-      return this.objTreeAnalyzer.buildObjectTree(vnode, componentName);
-    }
-    return this._renderToDOM(vnode, componentName, targetContainer);
-  }
-  
-  _renderToDOM(vnode, componentName = null, targetContainer = null) {
-    if (_isSt(vnode) || _isNu(vnode)) {
-      return document.createTextNode(String(vnode));
-    }        
-    if (!vnode || typeof vnode !== 'object') return null;//not for _isOb
-    if (Array.isArray(vnode)) {
-      return this.#createArrayFragment(vnode, componentName);
-    }        
-    let tagName = Object.keys(vnode)[0];
-    let props = vnode[tagName] || {};        
-    if (this.componentStack.includes(tagName)) {
-      return this.#newErrElm('recursion', [...this.componentStack, tagName].join(' → '));
-    }        
-    if (this.juris.getCM().components.has(tagName)) {
-      return this.#renderComponent(tagName, props, targetContainer);
-    }        
-    if (/^[A-Z]/.test(tagName)) {
-      return this.#newErrElm('component', `Component "${tagName}" not registered`);
-    }        
-    if (!_isSt(tagName) || tagName.length === 0) return null;        
-    let modifiedProps = props;
-    if (props.style && this.cssExtractor) {
-      let elementName = componentName || tagName;
-      modifiedProps = this.cssExtractor.processProps(props, elementName, this);
-    }        
-    return this.#createElement(tagName, modifiedProps, componentName);
-  }
-  
-  #createElement(tagName, props, componentName = null) {
-    let elm = this.#createElementByType(tagName);
-    let allSubscriptions = [];        
-    for (let key in props) {
-      if (!props.hasOwnProperty(key) || key === 'key') continue;
-      let cleanup = this.applyProp(elm, key, props[key], componentName);
-      if (_isFN(cleanup)) {
-        allSubscriptions.push(cleanup);
-      }
-    }        
-    if (allSubscriptions.length > 0) {
-      let existing = this.subscriptions.get(elm) || { subscriptions: [], eventListeners: [] };
-      existing.subscriptions.push(...allSubscriptions);
-      this.subscriptions.set(elm, existing);
-    }        
-    return elm;
-  }
-  #createSVG(tagName){
-    return document.createElementNS("http://www.w3.org/2000/svg", tagName);
-  }
-  #createElm(tagName){
-    return document.createElement(tagName);
-  }
-  #createFrg(){
-    return document.createDocumentFragment();
-  }
-  #createElementByType(tagName) {
-    let isSVG = this.elementTypeCache.get(tagName);
-    if (isSVG === undefined) {
-      try {
-        let svgEl = this.#createSVG(tagName);
-        let isCommonHTML = ['a', 'script', 'style', 'title'].includes(tagName);
-        isSVG = !isCommonHTML && svgEl.constructor !== SVGElement;
-        this.elementTypeCache.set(tagName, isSVG);
-      } catch {
-        isSVG = false;
-        this.elementTypeCache.set(tagName, false);
-      }
-    }        
-    return isSVG 
-      ? this.#createSVG(tagName)
-      : this.#createElm(tagName);
-  }
-  
-  #createArrayFragment(vnode, componentName) {
-    let hasReactiveFunctions = vnode.some(item => _isFN(item));
-    let hasKeys = vnode.some(item => this.#extractKey(item) !== null);        
-    if (hasReactiveFunctions || hasKeys) {
-      let fragment = this.#createFrg();
-      let subscriptions = [];            
-      if (hasKeys && !hasReactiveFunctions) {
-        for (let i = 0; i < vnode.length; i++) {
-          let child = vnode[i];
-          let childElement = this.render(child, componentName);
-          if (childElement) {
-            let key = this.#extractKey(child, i);
-            if (key) {
-              this.nodeKeys.set(childElement, key);
-            }
-            fragment.appendChild(childElement);
-          }
-        }
-      } else {
-        this.#handleReactiveFragmentChildren(fragment, vnode, subscriptions, componentName);
-      }
-      if (subscriptions.length > 0) {
-        fragment._jurisCleanup = () => {
-          subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-        };
-      }
-      return fragment;
-    }
-    let fragment = this.#createFrg();
-    for (let i = 0; i < vnode.length; i++) {
-      let childElement = this.render(vnode[i], componentName);
-      if (childElement) fragment.appendChild(childElement);
-    }
-    return fragment;
-  }
-  
-  #renderComponent(tagName, props, targetContainer = null) {
-    let componentFn = this.juris.getCM().components.get(tagName);
-    if (!componentFn) {
-      log.ee && console.error(log.e('Component not found', { name: tagName }, 'app'));
-      return null;
-    }    
-    if (this.componentStack.includes(tagName)) {
-      return this.#newErrElm('recursion', [...this.componentStack, tagName].join(' → '));
-    }    
-    this.componentStack.push(tagName);
-    let { result, deps } = this.juris.getSM().track(() => 
-      this.juris.getCM().create(tagName, props, targetContainer), true);
-    this.componentStack.pop();    
-    return result;
-  }
-  
-  #newErrElm(type, message) {
-    let elm = this.#createElm('div');
-    elm.style.cssText = 'color: red; border: 1px solid red; padding: 8px; background: #ffe6e6; font-family: monospace;';
-    elm.textContent = message;
-    elm.setAttribute('data-juris-error', type);
-    return elm;
-  }
-  
-  applyProp(elm, propName, propValue, componentName = null) {
-    let subscriptions = [];
-    let eventListeners = [];    
-    try {
-      if (propName === 'onconnected') {
-        elm._jurisOnConnected = propValue;
-        this.pendingConnectedCallbacks.add(elm);
-        return () => {
-          this.pendingConnectedCallbacks.delete(elm);
-          if (elm._jurisOnConnected) {
-            delete elm._jurisOnConnected;
-          }
-        };
-      } else if (propName === 'children' && propValue) {
-        this._handleChildren(elm, propValue, subscriptions, componentName);
-      } else if (propName === 'text') {
-        this.#handleText(elm, propValue, subscriptions);
-      } else if (propName === 'style') {
-        this.#handleStyle(elm, propValue, subscriptions);
-      } else if (propName.startsWith('on') && propValue) {
-        this.#handleEvent(elm, propName, propValue, eventListeners);
-      } else if (_isFN(propValue)) {
-        this.#handleReactiveAttribute(elm, propName, propValue, subscriptions);
-      } else if (this.#isPromiseLike(propValue) && propValue) {
-        this.#handleAsyncProp(elm, propName, propValue);
-      } else {
-        this.#setStaticAttribute(elm, propName, propValue);
-      }
-      
-      if (subscriptions.length > 0 || eventListeners.length > 0) {
-        let existing = this.subscriptions.get(elm) || { subscriptions: [], eventListeners: [] };
-        existing.subscriptions.push(...subscriptions);
-        existing.eventListeners.push(...eventListeners);
-        this.subscriptions.set(elm, existing);
-      }
-      
-      return () => {
-        subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-        eventListeners.forEach(({eventName, handler}) => {
-          try { elm.removeEventListener(eventName, handler); } catch(e) {}
-        });
-      };
-    } catch (error) {
-      log.ee && console.error(log.e('Property application failed', {element: elm.tagName,elementId: elm.id,property: propName,valueType: typeof propValue,componentName, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
-      return () => {};
-    }
+  _createElement(tag, isSvg=false) {
+    let el = isSvg ? d.createElementNS('http://www.w3.org/2000/svg', tag) : d.createElement(tag);
+    return el;
   }
 
-  _processPendingConnectedCallbacks() {
-    this.pendingConnectedCallbacks.forEach(elm => {
-      if (elm.isConnected && elm._jurisOnConnected) {
-        try {
-          elm._jurisOnConnected.call(elm, { 
-            type: 'connected', 
-            target: elm,
-            timeStamp: Date.now()
-          });
-        } catch (error) {
-          log.ee && console.error(log.e('onconnected callback error:', error), 'app');
-        }
-      }
-    });
-    this.pendingConnectedCallbacks.clear();
+  _createTextNode(text) {
+    return d.createTextNode(text);
   }
 
-  #handleAsyncProp(elm, propName, propValue) {
-    let asyncContext = {elm,type: 'attribute',attributeName: propName};    
-    if (propName === 'innerHTML') {
-      asyncContext.type = 'children';
-      return this.#handleAsync(propValue, {
-        onResolved: (resolved) => {
-          elm.innerHTML = resolved;
-        }
-      }, asyncContext);
-    }    
-    return this.#handleAsync(propValue, {
-      onResolved: (resolved) => {
-        this.#setStaticAttribute(elm, propName, resolved);
-      }
-    }, asyncContext);
+  _createComments(text) {
+    return _shoudBeArray(text).map(t => d.createComment(t));
   }
-  
-  #attachRecompute(elm, propName, reactiveFn, updateDom) {
-    if (!elm.$) {
-      elm.$ = {};
-    }    
-    if (propName.startsWith('style_')) {
-      if (!elm.$.style) elm.$.style = {};
-      let styleProp = propName.substring(6);
-      elm.$.style[styleProp] = (options = {}) => {
-        let value = reactiveFn(elm, options);
-        updateDom(value);
-        return value;
-      };
-    } else {
-      elm.$[propName] = (options = {}) => {
-        let value = reactiveFn(elm, options);
-        updateDom(value);
-        return value;
-      };
-    }
+
+  _createFragment() {
+    return d.createDocumentFragment();
   }
-  
-  #handleText(elm, text, subscriptions) {
-    if (_isFN(text)) {
-      try {
-        let {result, deps} = this.juris.getSM().track(() => text(elm));
-        elm.textContent = result;
-        this.#attachRecompute(elm, 'text', text, (value) => {
-          elm.textContent = value;
-        });
-        if(deps.size === 0) {
-          return;
-        }
-        let updateText = this.#createReactiveHandler(
-          elm,
-          () => text(elm),
-          (value) => { elm.textContent = value; },
-          { trackChanges: true, name: 'text', type: 'text' }
-        );
-        this._createReactiveUpdate(elm, updateText, subscriptions, deps);
-      } catch (error) {
-        log.ee && console.error(log.e('Reactive text function failed', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
-        elm.textContent = `Error: ${error.message}`;
-      }
-    } else if (this.#isPromiseLike(text)) {
-      let asyncContext = { elm, type: 'text' };
-      this.#handleAsync(text, {
-        onResolved: (resolved) => {
-          elm.textContent = resolved;
-        }
-      }, asyncContext);
-    } else {
-      elm.textContent = text;
-    }
-  }
-  
-  #handleStyle(elm, style, subscriptions) {
-    if (_isFN(style)) {
-      try {
-        let {result, deps} = this.juris.getSM().track(() => {
-          let value = style.length > 0 ? style(elm) : style();
-          if (this.cssExtractor?.postProcessReactiveResult && _isOb(value)) {
-            value = this.cssExtractor.postProcessReactiveResult(value, 'reactive', elm);
-          }
-          return value;
-        });
-        if (_isOb(result)) {
-          Object.assign(elm.style, result);
-        }
-        this.#attachRecompute(elm, 'style', style, (value) => {
-          if (_isOb(value)) {
-            Object.assign(elm.style, value);
-          }
-        });
-        if (deps.size === 0) {
-          return;
-        }
-        let updateStyle = this.#createReactiveHandler(
-          elm,
-          () => {
-            let value = style.length > 0 ? style(elm) : style();
-            if (this.cssExtractor?.postProcessReactiveResult && _isOb(value)) {
-              value = this.cssExtractor.postProcessReactiveResult(value, 'reactive', elm);
-            }
-            return value;
-          },
-          (value) => {
-            if (_isOb(value)) {
-              Object.assign(elm.style, value);
-            }
-          },
-          { trackChanges: true, name: 'style', type: 'style' }
-        );
-        this._createReactiveUpdate(elm, updateStyle, subscriptions, deps);
-      } catch (error) {
-        log.ee && console.error(log.e('Style Error', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
-      }
-    } else if (this.#isPromiseLike(style)) {
-      let asyncContext = { elm, type: 'style' };
-      this.#handleAsync(style, {
-        onResolved: (resolved) => {
-          if (_isOb(resolved)) {
-            Object.assign(elm.style, resolved);
-          }
-        }
-      }, asyncContext);
-    } else if (_isOb(style)) {
-      try {
-        for (let prop in style) {
-          if (style.hasOwnProperty(prop)) {
-            let val = style[prop];
-            if (_isFN(val)) {
-              this.#handleReactiveStyleProperty(elm, prop, val, subscriptions);
-            } else {
-              this.#setStyleProperty(elm, prop, val);
-            }
-          }
-        }
-      } catch (error) {
-        log.ee && console.error(log.e('Style Error', {element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
-      }
-    }
-  }
-  
-  #handleReactiveStyleProperty(elm, prop, valueFn, subscriptions) {
-    try {
-      let {result, deps} = this.juris.getSM().track(() => valueFn(elm));
-      this.#setStyleProperty(elm, prop, result);
-      this.#attachRecompute(elm, `style_${prop}`, valueFn, (value) => {
-        this.#setStyleProperty(elm, prop, value);
-      });
-      if (deps.size === 0) {
-        return;
-      }
-      let updateStyleProperty = this.#createReactiveHandler(
-        elm,
-        () => valueFn(elm),
-        (value) => this.#setStyleProperty(elm, prop, value),
-        { trackChanges: true, name: `style.${prop}`, type: 'style' }
-      );
-      this._createReactiveUpdate(elm, updateStyleProperty, subscriptions, deps);
-    } catch (error) {
-      element._jurisError={error};
-      element.style.borderColor='red';
-      element.title=error.message;
-      log.ee && console.error(log.e(prop + ' style Error', {element: elm.tagName, elementId: elm.id, property: prop, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
-    }
-  }
-  
-  #handleReactiveAttribute(elm, attr, valueFn, subscriptions) {
-    try {
-      let {result, deps} = this.juris.getSM().track(() => valueFn(elm));
-      this.#setStaticAttribute(elm, attr, result);
-      this.#attachRecompute(elm, attr, valueFn, (value) => {
-        this.#setStaticAttribute(elm, attr, value);
-      });
-      if (deps.size === 0) {
-        return;
-      }
-      let updateAttribute = this.#createReactiveHandler(
-        elm,
-        () => valueFn(elm),
-        (value) => this.#setStaticAttribute(elm, attr, value),
-        { trackChanges: true, name: `attribute '${attr}'`, type: 'attribute', attributeName: attr }
-      );
-      this._createReactiveUpdate(elm, updateAttribute, subscriptions, deps);
-    } catch (error) {
-      log.ee && console.error(log.e(attr +' attribute error', {element: elm.tagName, elementId: elm.id, attribute: attr, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
-    }
-  }
-  
-  _handleChildren(elm, children, subscriptions, componentName = null) {
-    if (_isFN(children)) {
-      try {
-        let {result, deps} = this.juris.getSM().track(() => {
-          let value = children(elm);
-          return Array.isArray(value) ? value : [value];
-        });
-        if (result !== "ignore") {
-          if (_isSt(result) || _isNu(result)) {
-            elm.textContent = String(result);
-          } else {
-            this.#updateChildren(elm, result, componentName);
-          }
-        }
-        this.#attachRecompute(elm, 'children', children, (result) => {
-          if (result !== "ignore") {
-            if (_isSt(result) || _isNu(result)) {
-              elm.textContent = String(result);
-            } else {
-              this.#updateChildren(elm, result, componentName);
-            }
-          }
-        });
-        if (deps.size === 0) {
-          return;
-        }
-        let updateChildren = this.#createReactiveHandler(
-          elm,
-          () => {
-            let value = children(elm);
-            return Array.isArray(value) ? value : [value];
-          },
-          (result) => {
-            if (result !== "ignore") {
-              if (_isSt(result) || _isNu(result)) {
-                elm.textContent = String(result);
-              } else {
-                this.#updateChildren(elm, result, componentName);
-              }
-            }
-          },
-          { trackChanges: false, name: 'children', type: 'reactive-children' }
-        );
-        this._createReactiveUpdate(elm, updateChildren, subscriptions, deps);
-      } catch (error) {
-        log.ee && console.error(log.e('children error', {element: elm.tagName, elementId: elm.id, componentName, error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'app'));
-        elm.textContent = `Error rendering children: ${error.message}`;
-      }
-    } else if (this.#isPromiseLike(children)) {
-      let asyncContext = { elm, type: 'children' };
-      this.#handleAsync(children, {
-        onResolved: (resolved) => {
-          this.#updateChildren(elm, resolved, componentName);
-        },
-        onError: (error) => {
-          log.ee && console.error(log.e('Async children error', {element: elm.tagName,elementId: elm.id,componentName,error: error.message}, 'app'));
-        }
-      }, asyncContext);
-    } else {
-      try {
-        this.#updateChildren(elm, children, componentName);
-      } catch (error) {
-        log.ee && console.error(log.e('Children error', {element: elm.tagName,elementId: elm.id,componentName,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n')}, 'app'));
-      }
-    }
-  }
-  
-  #updateChildren(elm, children, componentName = null) {
-    if (children === "ignore") return;
-    if(!Array.isArray(children)){
-      children = [children];
-    }
-    let lastChildren = elm._jurisLastChildren;
-    if (lastChildren === children) {
+
+  _setAttribute(el, key, value, isSvg = false) {
+    if (isSvg) {
+      _isNull(value) ? el.removeAttribute(key) : el.setAttribute(key, value);
       return;
     }
-    if (!elm._jurisChildrenKeyed) {
-      elm._jurisChildrenKeyed = children.some(child => this.#extractKey(child) !== null);
-    }    
-    if (elm._jurisChildrenKeyed && lastChildren && Array.isArray(lastChildren)) {
-      this.#diffChildren(elm, lastChildren, children);
-    } else {
-      this.#renderChildren(elm, children, componentName);
-    }    
-    elm._jurisLastChildren = children;
+    if (this.bools.includes(key)) {
+      value ? el.setAttribute(key, '') : el.removeAttribute(key);
+      return;
+    }
+    let props = {value:'value',checked:'checked',selected:'selected',htmlFor:'htmlFor'};
+    if (props[key]) { el[props[key]] = value; return; }
+    if (key === 'class' || key === 'className') { el.className = value; return; }
+    if (key === 'style' && _isObj(value)) { Object.assign(el.style, value); return; }
+    _isNull(value) ? el.removeAttribute(key) : el.setAttribute(key, value);
   }
 
-  #handleReactiveFragmentChildren(fragment, children, subscriptions, componentName) {
-    for (let i = 0; i < children.length; i++) {
-      let child = children[i];
-      if (_isFN(child)) {
-        let { node, cleanup } = this.#createIndividualReactiveChild(child, i, componentName, fragment);
-        if (node) {
-          fragment.appendChild(node);
-          subscriptions.push(cleanup);
-        }
-      } else if (child != null) {
-        let childElement = this.#createChild(child, componentName);
-        if (childElement) {
-          let key = this.#extractKey(child, i);
-          if (key) {
-            this.nodeKeys.set(childElement, key);
-          }
-          fragment.appendChild(childElement);
-        }
+  _updateText(node, value) {
+    if (_isNull(value)) {
+      if (node.nodeType === 3) {
+        let [comment] = this._createComments(_REACTIVE_NULL);
+        node.parentNode?.replaceChild(comment, node);
+        return {node: comment, type: _REACTIVE_NULL};
       }
+      return {node, type: _REACTIVE_NULL};
     }
-  }  
-  
-  #createIndividualReactiveChild(childFn, index, componentName, parentElement) {
-    let config = this._getPlaceholderConfig(parentElement);
-    let currentNode = document.createTextNode('');
-    let subscriptions = [];        
-    let updateThisChild = () => {
-      subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-      subscriptions = [];            
-      let { result, deps } = this.juris.getSM().track(() => childFn(parentElement));
-      if (this.#isPromiseLike(result)) {
-        this.#handleAsync(result, {
-          onStart: () => {
-            let placeholder = this.#createElm('span');
-            placeholder.textContent = config.text;
-            placeholder.className = config.className;
-            if (config.style) placeholder.style.cssText = config.style;            
-            if (currentNode.parentNode) {
-              currentNode.parentNode.replaceChild(placeholder, currentNode);
-            }
-            currentNode = placeholder;
-          },
-          onResolved: (resolved) => {
-            let newNode = this.#createChild(resolved, componentName) || document.createTextNode('');
-            if (currentNode.parentNode) {
-              currentNode.parentNode.replaceChild(newNode, currentNode);
-            }
-            currentNode = newNode;
-          },
-          onError: (error) => {
-            let errorNode = this.#createElm('span');
-            errorNode.className = config.errorClassName;
-            errorNode.textContent = `Error: ${error.message}`;
-            if (currentNode.parentNode) {
-              currentNode.parentNode.replaceChild(errorNode, currentNode);
-            }
-            currentNode = errorNode;
-          }
-        });
-      } else {
-        try {
-          let newNode = this.#createChild(result, componentName) || document.createTextNode('');
-          if (currentNode.parentNode) {
-            currentNode.parentNode.replaceChild(newNode, currentNode);
-          }
-          currentNode = newNode;
-        } catch (error) {
-          let errorNode = this.#createElm('span');
-          errorNode.className = config.errorClassName;
-          errorNode.textContent = `Error: ${error.message}`;
-          if (currentNode.parentNode) {
-            currentNode.parentNode.replaceChild(errorNode, currentNode);
-          }
-          currentNode = errorNode;
-        }
+    if (node.nodeType === 8) {
+      let text = this._createTextNode(String(value));
+      node.parentNode?.replaceChild(text, node);
+      return {node: text, type: _TEXT};
+    }
+    node.textContent = String(value);
+    return {node, type: _TEXT};
+  }
+
+  _removeRange(start, end) {
+    let node = start.nextSibling;
+    while (node && node !== end) {
+      let next = node.nextSibling;
+      node.parentNode?.removeChild(node);
+      node = next;
+    }
+  }
+
+  _insertBeforeMarker(parent, nodes, marker) {
+    let frag = this._createFragment();
+    nodes.forEach(n => { if (n) frag.appendChild(n); });
+    parent?.insertBefore(frag, marker);
+  }
+
+  _replaceElement(oldEl, newEl) {
+    oldEl.parentNode?.replaceChild(newEl, oldEl);
+  }
+
+  _appendChildren(parent, children) {
+    if(children ==='ignore') return;
+    _shoudBeArray(children).forEach(child => {
+      if(!_isNull(child)) {
+        parent.appendChild(child);
       }
-      deps.forEach(path => {
-        let unsub = this.juris.getSM().subscribeInternal(path, updateThisChild);
-        subscriptions.push(unsub);
+    });
+  }
+
+  _insertBefore(parent, newNode, refNode) {
+    parent.insertBefore(newNode, refNode);
+  }
+
+  _removeChild(parent, children) {
+    _shoudBeArray(children).forEach(child => {
+      parent.removeChild(child);
+    });
+  }
+
+  _addEventListener(el, eventName, handler) {
+    el.addEventListener(eventName, handler);
+  }
+
+  _removeEventListener(el, eventName, handler) {
+    el.removeEventListener(eventName, handler);
+  }
+
+  _createLoadingPlaceholder(position) {
+    let loadingSpan = this._createElement('span');
+    loadingSpan.style.cssText = 'color: #999; font-style: italic; padding: 4px 8px; display: inline-flex; align-items: center; gap: 6px;';
+    let spinner = this._createElement('span');
+    spinner.style.cssText = 'display: inline-block; width: 12px; height: 12px; border: 2px solid #e0e0e0; border-top-color: #667eea; border-radius: 50%; animation: juris-spin 0.8s linear infinite;';
+    if (!d.getElementById('juris-spinner-styles')) {
+      let style = this._createElement('style');
+      style.id = 'juris-spinner-styles';
+      style.textContent = '@keyframes juris-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+      d.head.appendChild(style);
+    }
+    this._appendChildren(loadingSpan, [spinner, this._createTextNode('Loading...')]);
+    loadingSpan._jurisAsyncPlaceholder = true;
+    return loadingSpan;
+  }
+
+  _cleanupEventListeners(el) {
+    if (!el) return;
+    if (el._jurisEventListeners) {
+      el._jurisEventListeners.forEach(({eventName, handler}) => {
+        this._removeEventListener(el, eventName, handler);
       });
-    };        
-    updateThisChild();        
-    return {
-      node: currentNode,
-      cleanup: () => {
-        subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-        subscriptions = [];
-      }
-    };
-  }
-  
-  #createChild(child, componentName) {
-    try {
-      if (child == null) return null;
-      if (_isSt(child) || _isNu(child)) {
-        return document.createTextNode(String(child));
-      }
-      if (Array.isArray(child)) {
-        let fragment = this.#createFrg();
-        for (let i = 0; i < child.length; i++) {
-          let subChild = this.#createChild(child[i], componentName);
-          if (subChild) fragment.appendChild(subChild);
-        }
-        return fragment.hasChildNodes() ? fragment : null;
-      }
-      if (_isOb(child)) {
-        let tagName = Object.keys(child)[0];
-        let props = child[tagName] || {};
-        if (this.juris.getCM().components.has(tagName)) {
-          let tempContainer = this.#createElm('div');
-          let result = this.#renderComponent(tagName, props, tempContainer);
-          if (tempContainer.firstChild) {
-            let extractedFragment = this.#createFrg();
-            while (tempContainer.firstChild) {
-              extractedFragment.appendChild(tempContainer.firstChild);
-            }
-            return extractedFragment;
-          } else if (result) {
-            return result;
-          }
-          return null;
-        }
-        return this.render(child, componentName);
-      }
-      return null;
-    } catch (error) {
-      log.ee && console.error(log.e('Child creation failed', {childType: typeof child,componentName,error: error.message, stack: error.stack?.split('\n').slice(0, 3).join('\n') }, 'app'));
-      return document.createTextNode(`Error: ${error.message}`);
-    }
-  }
-  
-  #renderChildren(elm, children, componentName) {
-    elm.textContent = '';
-    let fragment = this.#createFrg();
-    let cleanupFunctions = [];
-    for (let i = 0; i < children.length; i++) {
-      let child = children[i];      
-      if (_isFN(child)) {
-        let { node, cleanup } = this.#createIndividualReactiveChild(child, i, componentName, elm);
-        if (node) {
-          fragment.appendChild(node);
-          cleanupFunctions.push(cleanup);
-        }
-      } else if (child != null) {
-        let childElement = this.#createChild(child, componentName);
-        if (childElement) {
-          let key = this.#extractKey(child, i);
-          if (key) this.nodeKeys.set(childElement, key);
-          fragment.appendChild(childElement);
-        }
+      delete el._jurisEventListeners;
+    }    
+    if (el.childNodes) {
+      for (let i = 0; i < el.childNodes.length; i++) {
+        this._cleanupEventListeners(el.childNodes[i]);
       }
     }
-    if (fragment.hasChildNodes()) elm.appendChild(fragment);    
-    if (cleanupFunctions.length > 0) {
-      elm._reactiveCleanup = () => {
-        cleanupFunctions.forEach(cleanup => { try { cleanup(); } catch(e) {} });
-      };
-    }
   }
-  
-  #setStyleProperty(elm, prop, value) {
-    if (prop.startsWith('--')) {
-      elm.style.setProperty(prop, value);
-    } else {
-      elm.style[prop] = value;
-    }
-  }
-  
-  #setStaticAttribute(elm, attr, value) {
-    try {
-      if (this.SKIP_ATTRS.has(attr)) return;
-      if (this.BOOLEAN_ATTRS.has(attr)) {
-        let boolValue = value && value !== 'false';
-        if (boolValue) {
-          elm.setAttribute(attr,'');
-        } else {
-          elm.removeAttribute(attr);
-        }
-        if (attr in elm) {
-          elm[attr] = boolValue;
-        }
-        return;
-      }
-      if (elm.namespaceURI === 'http://www.w3.org/2000/svg') {
-        elm.setAttribute(attr, value);
-        return;
-      }
-      const READ_ONLY_ATTRS = new Set(['list', 'form', 'labels']);
-      if (READ_ONLY_ATTRS.has(attr)) {
-        elm.setAttribute(attr, value);
-        return;
-      }
-      let firstChar = attr.charCodeAt(0);
-      if ((firstChar === 100 && attr.charCodeAt(4) === 45) ||
-          (firstChar === 97 && attr.charCodeAt(4) === 45) ||
-          attr.indexOf('-') !== -1 ||
-          attr.indexOf(':') !== -1) {
-        elm.setAttribute(attr, value);
-        return;
-      }
-      if (attr in elm && !_isFN(elm[attr])) {
-        try {
-          elm[attr] = value;
-        } catch (error) {
-          elm.setAttribute(attr, value);
-        }
-      } else {
-        elm.setAttribute(attr, value);
-      }
-    } catch (error) {
-      log.ee && console.error(log.e('Attribute setting failed', {element: elm.tagName, elementId: elm.id, attribute: attr, value: typeof value === 'object' ? JSON.stringify(value) : value, error: error.message}, 'app'));
-    }
-  }
-  
-  #handleEvent(elm, eventName, handler, eventListeners) {
-  if (eventName === 'onconnected') {
-    elm._jurisOnConnected = handler;
-    return;
-  }
-  eventName = eventName.toLowerCase();
-  let actualEventName = eventName === 'onclick' ? 'click' :   eventName === 'ondoubleclick' ? 'dblclick' :
-                         eventName.slice(2);  
-  const wrappedHandler = (e) => {
-    try {
-      return handler(e);
-    } catch (error) {
-      log.ee && console.error(log.e('Event handler failed', {eventType: actualEventName,element: elm.tagName,elementId: elm.id,error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
-    }
-  };
-  elm.addEventListener(actualEventName, wrappedHandler);
-  eventListeners.push({ eventName: actualEventName, handler: wrappedHandler });
-  if (eventName === 'onclick') {
-    this.#attachTouchSupport(elm, wrappedHandler, eventListeners);
-  }
-}
-  
-  #attachTouchSupport(elm, handler, eventListeners) {
-    if (!/Mobi|Android/i.test(navigator.userAgent)) return;    
-    let touchState = { startTime: 0, moved: false, startX: 0, startY: 0 };    
-    let touchStart = e => {
-      touchState.startTime = Date.now();
-      touchState.moved = false;
-      if (e.touches?.[0]) {
-        touchState.startX = e.touches[0].clientX;
-        touchState.startY = e.touches[0].clientY;
-      }
-    };    
-    let touchMove = e => {
-      if (e.touches?.[0]) {
-        let deltaX = Math.abs(e.touches[0].clientX - touchState.startX);
-        let deltaY = Math.abs(e.touches[0].clientY - touchState.startY);
-        if (deltaX > this.TOUCH_CONFIG.moveThreshold || deltaY > this.TOUCH_CONFIG.moveThreshold) {
-          touchState.moved = true;
-        }
-      }
-    };    
-    let touchEnd = e => {
-      if (!touchState.moved && Date.now() - touchState.startTime < this.TOUCH_CONFIG.timeThreshold) {
-        e.preventDefault();
-        handler(e);
-      }
-    };    
-    let touchEvents = [
-      { name: 'touchstart', handler: touchStart, options: { passive: true }},
-      { name: 'touchmove', handler: touchMove, options: { passive: true }},
-      { name: 'touchend', handler: touchEnd, options: { passive: false }}
-    ];    
-    touchEvents.forEach(({name, handler, options}) => {
-      elm.addEventListener(name, handler, options);
-      eventListeners.push({ eventName: name, handler });
-    });
-  }
-  
-  _createReactiveUpdate(elm, updateFn, subscriptions, deps = null) {
-    let actualDeps = deps || this.juris.getSM().track(() => updateFn(elm)).deps;
-    actualDeps.forEach(path => {
-      let unsub = this.juris.getSM().subscribeInternal(path, updateFn);
-      subscriptions.push(unsub);
-    });
-  }
-  
-  updateElementContent(elm, newContent) {
-    this.#updateChildren(elm, [newContent]);
-  }
-  
-  setupIndicators(elementId, config) {
-    this.placeholderConfigs.set(elementId, { 
-      ...this.defaultPlaceholder, 
-      ...config 
-    });
-  }
-  
-  _hasAsyncProps(props) {
-    for (let key in props) {
-      if (props.hasOwnProperty(key) && !key.startsWith('on') && this.#isPromiseLike(props[key])) {
-        return true;
-      }
+
+  _isNodeInside(child, parent) {
+    if (!child || !parent) return false;
+    let current = child;
+    while (current && current !== d.body) {
+      if (current === parent) return true;
+      current = current.parentNode;
     }
     return false;
   }
-  
-  _getPlaceholderConfig(elm) {
-    if (elm?.id && this.placeholderConfigs.has(elm.id)) {
-      return this.placeholderConfigs.get(elm.id);
-    }    
-    let current = elm?.parentElement;
-    while (current) {
-      if (current.id && this.placeholderConfigs.has(current.id)) {
-        return this.placeholderConfigs.get(current.id);
-      }
-      current = current.parentElement;
-    }    
-    return this.defaultPlaceholder;
+}
+
+class RouteMapper {
+  constructor(config = {}) {
+    this.aliases = config.aliases || {};
+    this.routes = config.routes || {};
   }
-  
-  #isPromiseLike(value) {
-    return value?.then;
+
+  _resolve(segment) {
+    return this.aliases[segment] || segment;
   }
-  
-  cleanup(elm) {
-    this.juris.getCM().cleanup(elm);
-    this.nodeKeys.delete(elm);    
-    if (this.keyedNodes.has(elm)) {
-      this.keyedNodes.delete(elm);
-    }    
-    let data = this.subscriptions.get(elm);
-    if (data) {
-      if (data.subscriptions) {
-        data.subscriptions.forEach(unsub => { try { unsub(); } catch(e) {} });
-      }
-      if (data.eventListeners) {
-        data.eventListeners.forEach(({eventName, handler}) => {
-          try { elm.removeEventListener(eventName, handler); } catch(e) {}
-        });
-      }
-      this.subscriptions.delete(elm);
-    }    
-    if (elm._reactiveCleanup) {
-      try { elm._reactiveCleanup(); } catch(e) {}
-      elm._reactiveCleanup = null;
-    }    
-    if (this.placeholders.has(elm)) {
-      this.placeholders.delete(elm);
-    }    
-    try {
-      let children = elm.children;
-      for (let i = 0; i < children.length; i++) {
-        try { this.cleanup(children[i]); } catch(e) {}
-      }
-    } catch(e) {}
-  }
-  
-  clearCSSCache() {
-    if (_isFN(this.cssExtractor)) {
-      this.cssExtractor.clearCache();
+
+  _resolvePath(path = w.location.pathname) {
+    let routeMatch = this._matchRoute(path);
+    if (routeMatch) {
+      return routeMatch;
     }
+
+    let segments = path.split('/').filter(s => s);
+    if (segments.length > 0) {
+      let firstSegment = this._resolve(segments[0]);
+      let routeTargets = Object.values(this.routes);
+      if (routeTargets.includes(firstSegment)) {
+        return firstSegment;
+      }
+    }
+    return 'home';
   }
-  
-  attachObjectTreeAnalyzer(analyzer) {
-    this.objTreeAnalyzer = analyzer;
-    return this.objTreeAnalyzer;
+
+  match(path = w.location.pathname) {
+    let segments = path.split('/').filter(s => s);
+    let sortedRoutes = Object.entries(this.routes).sort(([a], [b]) => {
+      let aHasParams = a.includes(':');
+      let bHasParams = b.includes(':');
+      
+      if (aHasParams && !bHasParams) return 1;
+      if (!aHasParams && bHasParams) return -1;
+      
+      let aSegments = a.split('/').filter(s => s);
+      let bSegments = b.split('/').filter(s => s);
+      
+      if (aSegments.length !== bSegments.length) {
+        return bSegments.length - aSegments.length;
+      }
+      
+      let aLiteralCount = aSegments.filter(s => !s.startsWith(':')).length;
+      let bLiteralCount = bSegments.filter(s => !s.startsWith(':')).length;
+      
+      return bLiteralCount - aLiteralCount;
+    });
+
+    let candidateRoutes = sortedRoutes.filter(([pattern, target]) => {
+      let patternSegs = pattern.split('/').filter(s => s);
+      return patternSegs.length === segments.length;
+    });
+    
+    for (let [pattern, target] of candidateRoutes) {
+      let patternSegs = pattern.split('/').filter(s => s);
+      
+      let params = {};
+      let match = true;
+
+      for (let i = 0; i < patternSegs.length; i++) {
+        if (patternSegs[i].startsWith(':')) {
+          params[patternSegs[i].slice(1)] = segments[i];
+        } else if (patternSegs[i] !== segments[i]) {
+          match = false;
+          break;
+        }
+      }
+
+      if (match) {
+        return { pattern, target, params, path };
+      }
+    }
+    return null;
   }
-  
-  setTestMode(enabled = true) {
-    this._testMode = enabled;
-    return this._testMode;
+
+  getParam(paramName, path = w.location.pathname) {
+    let match = this.match(path);
+    return match ? match.params[paramName] : null;
   }
-  
-  isTestMode() {
-    return this._testMode;
+
+  _matchRoute(path) {
+    let result = this.match(path);
+    if (!result) return null;
+
+    let resolved = result.target;
+    for (let [key, value] of Object.entries(result.params)) {
+      resolved = resolved.replace(':' + key, value);
+    }
+    return resolved;
   }
-  
-  getObjectTree() {
-    return this.objTreeAnalyzer?.getObjectTree() || null;
+
+  getSegments(path = w.location.pathname) {
+    let segments = path.split('/').filter(s => s);
+    return segments.map(seg => this._resolve(seg));
   }
 }
 
 class Juris {
-    static #inGlobal = false;
-    constructor(config = {}) {
-        if (config.logLevel) {
-            this.setupLogging(config.logLevel);
+  static #count = 0;  
+  constructor(config={}) {
+    this._stateManager = new StateManager();
+    this._stateManager.states = config?.states || {};
+    this.basePath = config.basePath || '';
+    this._renderer = config.rendererInstance || new DOMRenderer();
+    this._routerInstance = config.routerInstance || new RouteMapper(config.urlMappings || {});    
+    this.__DEV__ = false;
+    this.__SSR_RENDERED__=false;
+    if (typeof window !== 'undefined'){
+      if(w.__JURIS_HYDRATION_DATA__){
+        this._stateManager.states = w.__JURIS_HYDRATION_DATA__;
+        this.__SSR_RENDERED__=true;
+      }
+      //DEVTOOLS--START
+      if (typeof window !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || _isBool(this._stateManager._getState('url.search.devMode', false, false)))) {
+        let name = (config.debugName || 'juris') + (Juris.#count++ || '');
+        Object.assign(w, {[name]: this});
+        this.__DEV__ = config.devMode || true;
+        if (this.__DEV__) {
+          this.__devtools = {componentTree: new Map()};
+          w['__JURIS_DEVTOOLS_HOOK__' + Juris.#count] = {
+            getComponentTree: () => this._buildComponentTree(),
+            getDOMTree: (root) => this._buildDOMTree(root),
+            getElementInfo: (el) => this._buildDOMNode(el),
+            getReactiveNodes: () => Array.from(this._stateManager._reactiveNodes.entries()),
+            getSubscriptions: () => Array.from(this._stateManager._subscriptions.entries()),
+            getArmedElements: () => Array.from(this._armedElements.entries())
+          }
         }
-        this.contextTemplate = null;
-        this.contextCache = new Map();
-        this.services = config.services || {};
-        this.layout = config.layout;        
-        this.stateManager = new StateManager(config.states || {}, config.middleware || []);
-        this.componentManager = new ComponentManager(this);
-        this.domRenderer = new DOMRenderer(this);
-        this.armedElements = new Map();
-        let features = config.features || {};
-        if (features.headless) {
-            this.headlessManager = new features.headless(this, log);
-            this.headlessAPIs = {};
-        }
-        if (features.enhance) {
-            this.domEnhancer = new features.enhance(this);
-        }        
-        if (features.template) {
-            this.templateCompiler = new features.template();
-            if (config.autoCompileTemplates) {
-                this.compileTemplates();
-            }
-        }
-        if (features.webComponentFactory) {
-            this.webComponentFactory = new features.webComponentFactory(this);
-        }
-        if (features.cssExtractor) {
-            this.getDR().cssExtractor = new features.cssExtractor();
-        }
-        if (features.compute) {
-            let computeOptions = config.computeOptions || {};
-            let computePlugin = new features.compute(this.stateManager, computeOptions);
-            this.stateManager.addPlugin('compute', computePlugin);
-            log.ei && console.info(log.i('Compute plugin initialized', { options: computeOptions }, 'frk'));
-        }
-        if (config.headlessComponents && this.getHM()) {
-            Object.keys(config.headlessComponents).forEach(name => {
-                const componentConfig = config.headlessComponents[name];
-                if (_isFN(componentConfig)) {
-                    this.getHM().register(name, componentConfig);
-                } else {
-                    this.getHM().register(name, componentConfig.fn, componentConfig.options);
-                }
-            });
-        }
-        if (config.placeholders) {
-            const elementIds = Object.keys(config.placeholders);
-            for (let i = 0; i < elementIds.length; i++) {
-                const elementId = elementIds[i];
-                const placeholderConfig = config.placeholders[elementId];
-                this.getDR().setupIndicators(elementId, placeholderConfig);
-            }
-        }
-        if (config.defaultPlaceholder) {
-            this.getDR().defaultPlaceholder = { ...this.getDR().defaultPlaceholder, ...config.defaultPlaceholder };
-        }
-        if (this.getHM()) {
-            this.getHM().initializeQueued();
-        }
-        if (config.components) {
-            Object.keys(config.components).forEach(name => {
-                this.getCM().register(name, config.components[name]);
-            });
-        }        
-        if (config.webComponents && this.webComponentFactory) {
-            this.webComponentFactory.createMultiple(config.webComponents, config.webComponentOptions || {});
-        }
-        if (typeof requestIdleCallback === 'undefined') { 
-            window.requestIdleCallback = function (callback, options) { 
-                let start = Date.now(); 
-                return setTimeout(function () { 
-                    callback({ 
-                        didTimeout: false, 
-                        timeRemaining: function () { 
-                            return Math.max(0, 50 - (Date.now() - start)); 
-                        } 
-                    }); 
-                }, 1); 
-            };            
-        }
-        this.#detectGlobalAndWarn();
+      }
+      //DEVTOOLS--END
     }
 
-    getDR() { return this.domRenderer; }
+    this._components = config.components || {};
+    this._activeComponents = new Set();
+    this._headComponent = config.headComponent || null;    
+    this.layout = config.layout || [];
+    this._services = config.services || {};
+    this._middlewares = config.middlewares || [];
+    this._rootEl = null;
+    this._componentMap = new Map();
+    this._componentApiMap = new Map();
+    this._componentCounter = 0;
+    this._zIndex = 1000;
+    this._zStacks = new Map();
+    this._armedElements = new Map();    
+    if (config.activeComponents && _isObj(config.activeComponents)) {
+      Object.keys(config.activeComponents).forEach(name => {
+        this._components[name] = config.activeComponents[name];
+        this._activeComponents.add(name);
+      });
+    }
+    this.indicator = this._normalizeIndicator(
+      config.indicator || 
+      config.loadingSpinner || 
+      config.loadingSpinnerComponent
+    );
+    this.indicatorDelay = config.indicatorDelay || 200;
+    this.indicatorGlobalDelay = config.indicatorGlobalDelay || 500;    
+    this._pendingPromises = new Set();
     
-    getSM() { return this.stateManager; }
-
-    getHM() { return this.headlessManager; }
-    
-    getCM() { return this.componentManager; }
-    
-    getComponentAPI(name) { return this.getCM().getComponentAPI(name); }
-
-
-    getComponentElement(name) {return this.getCM().getComponentElement(name); }
-    
-    getNamedComponents() { return this.getCM().getNamedComponents();}
-
-    compileTemplates(templates = null) {
-        if (!this.templateCompiler) {
-            log.ew && console.warn(log.w('Template compilation requested but templateCompiler not available'), 'frk');
-            return;
+    this._globalSpinnerTimeout = null;
+    this._globalSpinnerTimeout = null; 
+    this._applyMiddlewares();
+    this._initPlugins(config.plugins || {});   
+    if (config.headlessComponents) {
+      if (!this._headlessManager) {
+        this._headlessManager = new HeadlessManager(this);
+      }
+      Object.keys(config.headlessComponents).forEach(name => {
+        let componentConfig = config.headlessComponents[name];
+        if (_isFn(componentConfig)) {
+          this._headlessManager.register(name, componentConfig);
+        } else {
+          this._headlessManager.register(name, componentConfig.fn, componentConfig.options);
         }
-        let templateElements = templates || document.querySelectorAll('template[data-component]');
-        let components = this.templateCompiler.compileTemplates(templateElements);
-        Object.keys(components).forEach(name => {
-            this.registerComponent(name, components[name]);
-        });
+      });
     }
 
-    setupLogging(level) {
-        log.ei=true;log.ed=true;log.el=true;log.ew=true;log.ee=true;
-        let levels = { debug: 0, info: 1, warn: 2, error: 3 };
-        let currentLevel = levels[level] ?? 1;
-        if (currentLevel > 0) log.ed = false;
-        if (currentLevel > 1) {
-            log.el && (console.log('Juris logging initialized at level:', level));
-            log.el && (console.log('To change log level, use juris.setupLogging("newLevel") or set logLevel in config'));
-            log.el = false; log.ei = false;
+    this._startURLInjection();
+    this._baseContext = {
+      getState: (k, d, s) => this.getState(k, d, s),
+      setState: (k, v) => this.setState(k, v),
+      removeState: (k) => this.removeState(k),
+      executeBatch: (fn) => this.executeBatch(fn),
+      z: (l) => this.z(l),
+      topZ: (l) => this.topZ(l),
+      modal: (o) => this.modal(o),
+      arm: (selector, handlerFn) => this.arm(selector, handlerFn),
+      getComponentAPI: (n) => this._componentApiMap.get(n) || null,
+      getHeadlessAPI: (n) => this._headlessManager?.getAPI(n) || null,
+      getAllHeadlessAPIs: () => this.getAllHeadlessAPIs(),
+      plugin: (n) => this._services[n] || null,
+      objectToElement: (o) => this.objectToElement(o),
+      registerComponent: (n, fn, opts) => this.registerComponent(n, fn, opts),
+      registerHeadless: (n, fn, opts) => this.registerHeadless(n, fn, opts),
+      initializeHeadless: (n, props) => this.initializeHeadless(n, props),
+      registerActiveComponent: (n, fn, opts) => this.registerActiveComponent(n, fn, opts),
+      getHeadless: (n) => this.getHeadless(n),
+      juris: this,
+      services: this._services,
+      router: {
+        navigate: (path, params = null) => this.navigate(path, params),
+        replace: (path) => {
+          if(window){
+            w.history.replaceState({}, '', this.basePath + path);
+            w.dispatchEvent(new Event('urlchange'));
+          }else{
+            this.setState('url.path', path);
+            this._updateRouteParams(path);
+          }
+        },
+        back: () => { if (window) w.history.back(); },
+        forward: () => { if (window) w.history.forward(); },
+        isActive: (path, segmentIndex = null) => {
+          let current = this.getState('url.path');
+          let segments = this.getState('url.segments');
+          if (segmentIndex !== null) {
+            return segments[segmentIndex] === path;
+          }
+          path = path.startsWith('/') ? path : '/' + path;
+          return current === path || current.startsWith(path + '/');
+        },
+        query: {
+          get: (key, defaultValue, subscribe) => {
+            return this.getState(`url.search.${key}`, defaultValue, subscribe);
+          },
+          set: (key, value) => {
+            if (typeof window === 'undefined') {
+              this.setState(`url.search.${key}`, value);
+              return;
+            }   
+            let params = new URLSearchParams(w.location.search);
+            params.set(key, value);
+            let newUrl = `${w.location.pathname}?${params}`;
+            w.history.pushState({}, '', newUrl);
+            w.dispatchEvent(new Event('urlchange'));
+          }
+        },
+        hash: {
+          get: () => {
+            return this.getState('url.hash', '').replace('#', '');
+          },
+          set: (value) => {
+             if (typeof window === 'undefined') {
+              let hash = value.startsWith('#') ? value : `#${value}`;
+              this.setState('url.hash', hash);
+              return;
+            }            
+            let hash = value.startsWith('#') ? value : `#${value}`;
+            w.location.hash = hash;
+          }
+        },
+        buildPath: (pattern, params) => {
+          let path = pattern;
+          for (let [key, val] of Object.entries(params)) {
+            path = path.replace(`:${key}`, val);
+          }
+          return path;
         }
+      }
+    };
+     
+    if (this._headComponent) {
+      this._renderHeadComponent();
     }
+  }
 
-    setupIndicators(elementId, config) { this.getDR().setupIndicators(elementId, config); }
-
-    #detectGlobalAndWarn() {
-        if (!Juris._done) { (requestIdleCallback || setTimeout)(() => { if (Juris.#inGlobal) return; Juris.#inGlobal = true; for (let key in globalThis) { if (globalThis[key] instanceof Juris) { log.ew && console.warn(`JURIS GLOBAL: '${key}'`); } } }); }
+  _normalizeIndicator(ind) {
+    if (!ind) return {default: null};
+    if (_isFn(ind)) return {default: ind};
+    if (ind.tag) return {default: ind};
+    if (_isObj(ind)) {
+      if (ind.default || Object.keys(ind).some(k => k.charAt(0) === '#' || this._components[k])) {
+        return ind;
+      }
+      return {default: ind};
     }
-    #createBaseContext() {
-        if (!this.contextTemplate) {
-            this.contextTemplate = {
-                getState: (path, defaultValue, track) => this.getSM().getState(path, defaultValue, track),
-                setState: (path, value, context) => this.getSM().setState(path, value, context),
-                executeBatch: (callback) => this.executeBatch(callback),
-                subscribe: (path, callback) => this.getSM().subscribe(path, callback),
-                effect: (fn) => {
-                  const { result, deps } = this.getSM().track(fn);
-                  const subscriptions = [];
-                  deps.forEach(path => {
-                    const unsub = this.getSM().subscribeInternal(path, fn);
-                    subscriptions.push(unsub);
-                  });
-                  return () => subscriptions.forEach(unsub => unsub());
-                },
-                compute: (name, fn,option) => this.getSM().compute(name,fn, option),
-                services: this.services,
-                ...(this.services || {}),
-                ...(this.headlessAPIs || {}),
-                headless: this.getHM()?.context,
-                isSSR: typeof window === 'undefined',
-                components: {
-                    register: (name, component) => this.getCM().register(name, component),
-                    registerHeadless: (name, component, options) => this.getHM()?.register(name, component, options),
-                    get: name => this.getCM().components.get(name),
-                    getHeadless: name => this.getHM()?.getInstance(name),
-                    initHeadless: (name, props) => this.getHM()?.initialize(name, props),
-                    reinitHeadless: (name, props) => this.getHM()?.reinitialize(name, props),
-                    getComponentAPI: (name) => this.getComponentAPI(name),
-                    getHeadlessAPI: name => this.getHM()?.getAPI(name),
-                    getComponentElement: (name) => this.getComponentElement(name),
-                    getNamedComponents: () => this.getCM().getNamedComponents(),
-                },
-                utils: {
-                    render: container => this.render(container),
-                    cleanup: () => this.cleanup(),
-                    forceRender: () => this.render(),
-                    getHeadlessStatus: () => this.getHM()?.getStatus(),
-                    objectToHtml: (vnode) => this.objectToHtml(vnode)
-                },
-                objectToHtml: (vnode) => this.objectToHtml(vnode),
-                setupIndicators: (elementId, config) => this.setupIndicators(elementId, config),
-                juris: this,
-                logger: {
-                    warn: log.w, error: log.e, info: log.i, debug: log.d, subscribe: logSub, unsubscribe: logUnsub
-                }
-            };
+    return {default: null};
+  }
+
+  _getIndicator(componentName = null, elementId = null) {
+    if (elementId) {
+      let idKey = '#' + elementId;
+      if (this.indicator[idKey]) return this.indicator[idKey];
+    }
+    if (componentName && this.indicator[componentName]) {
+      return this.indicator[componentName];
+    }
+    if (!this.indicator || !this.indicator.default) return {div:{text:'Loading...', class:'juris-indicator'}};
+    return this.indicator.default;
+  }
+
+  _renderHeadComponent() {
+    if (typeof window === 'undefined') return;
+    let cKey = 'head_singleton';
+    let context = this.createContext(cKey);
+    try {
+      let result = this._headComponent({}, context);
+      let renderFn;
+      if (_isFn(result)) {
+        renderFn = result;
+      } else if (result?.render) {
+        renderFn = result.render;
+      } else {
+        renderFn = () => result;
+      }
+      let rId = 'reactive_render_' + cKey;
+      this._stateManager._subscriptions.set(rId, new Set());
+      let wrappedRender = () => {
+        let prev = this._stateManager._activeReactive;
+        this._stateManager._activeReactive = rId;
+        try {
+          return renderFn();
+        } finally {
+          this._stateManager._activeReactive = prev;
         }
-        return this.contextTemplate;
-    }
-    
-    createHeadlessContext(elm = null) {
-        return this.createContext(elm);
-    }
+      };
 
-    executeBatch(callback) {return this.getSM().executeBatch(callback);}
+      this._stateManager._reactiveNodes.set(rId, {
+        type: _RENDER,
+        cKey,
+        fn: wrappedRender,
+        hooks: result?.hooks,
+        pRId: null
+      });
 
-    createWebComponent(name, componentDefinition, options = {}) {
-        if (!this.webComponentFactory) {
-            log.ee && console.error(log.e('WebComponent not available'), 'app');
-            return null;
-        }
-        return this.webComponentFactory.createWebComponent(name, componentDefinition, options);
+      this._componentMap.set(cKey, {
+        name: 'Head',
+        props: {},
+        el: d.head,
+        type: 'head',
+        pRId: null
+      });
+      let renderOutput = wrappedRender();
+      this._processHeadVDOM(renderOutput, cKey, rId);
+      if (result?.hooks?.onMount) {
+        setTimeout(() => result.hooks.onMount(), 0);
+      }
+    } catch (error) {
+      console.error('[Juris Head] Error:', error);
     }
+  }
 
-    createWebComponents(components, globalOptions = {}) {
-        if (!this.webComponentFactory) {
-            log.ee && console.error(log.e('WebComponents not available'), 'app');
-            return {};
-        }
-        return this.webComponentFactory.createMultiple(components, globalOptions);
+  _processHeadVDOM(vdom, cKey, pRId) {
+    if (!vdom || typeof vdom !== 'object') return;
+    let children = [];
+    let keys = Object.keys(vdom);
+    if (keys.length === 1) {
+        children = [vdom];
+    } else {
+      children = keys.map(key => ({ [key]: vdom[key] }));
     }
-    
-    createContext(elm = null) {
-        let context = { ...this.#createBaseContext() };
-        if (this.getHM()) {
-            let headlessAPIs = this.getHM().getAllAPIs();
-            Object.assign(context, headlessAPIs);
-        }
-        if (elm) context.element = elm;
-        return context;
-    }
-    
-    promisify(result) { return promisify(result);}
-    
-    getState(path, defaultValue, track) { return this.getSM().getState(path, defaultValue, track); }
-    
-    setState(path, value, context) {
-        return this.getSM().setState(path, value, context);
-    }
-    
-    subscribe(path, callback, hierarchical = true) { return this.getSM().subscribe(path, callback, hierarchical); }
-    
-    subscribeExact(path, callback) { return this.getSM().subscribeExact(path, callback); }
-    
-    registerComponent(name, component) {
-        return this.getCM().register(name, component);
-    }
+    children.forEach(child => {
+      if (!child || typeof child !== 'object') return;
+      let tag = Object.keys(child)[0];
+      let props = child[tag];
+      let el = this._buildElement(child, false, cKey, props?.key, pRId);
+      if (_isPromise(el)) {
+        el.then(el => this._mountToHead(el, tag));
+      } else {
+        this._mountToHead(el, tag);
+      }
+    });
+  }
 
-    registerHeadlessComponent(name, component, options) { return this.getHM().register(name, component, options); }
-    
-    initializeQueuedHeadlessComponent() { this.getHM().initializeQueued(); }
-    
-    initializeHeadlessComponent(name, props) { return this.getHM().initialize(name, props); }
-    
-    getHeadlessComponent(name) { return this.getHM().getInstance(name); }
-    
-    getHeadlessAPI(name) { return this.getHM()?.getAPI(name); }
-
-    getComponent(name) { return this.getCM().components.get(name); }
-
-    registerAndInitHeadless(name, componentFn, options = {}) {
-        this.getHM().register(name, componentFn, options);
-        return this.getHM().initialize(name, options);
+  _mountToHead(el, tag) {
+    if (!el) return;    
+    el.setAttribute('data-jhead', 'true');    
+    if (tag === 'title') {
+      let existingTitle = d.head.querySelector('title');
+      if (existingTitle) {
+        existingTitle.replaceWith(el);
+      } else {
+        d.head.appendChild(el);
+      }
+      return;
+    }    
+    if (tag === 'base') {
+      let existingBase = d.head.querySelector('base');
+      if (existingBase) {
+        existingBase.replaceWith(el);
+      } else {
+        d.head.insertBefore(el, d.head.firstChild);
+      }
+      return;
     }
-
-    getHeadlessStatus() { return this.getHM().getStatus(); }
-    
-    objectToHtml(vnode) { return this.getDR().render(vnode); }
-    
-    render(container = '#app', vdom = null) {
-      let startTime = performance.now();
-      let containerEl = _isSt(container) ? 
-        document.querySelector(container) : container;        
-      if (!containerEl) {
-        log.ee && console.error(log.e('Render container not found', { container }, 'app'));
+    if (tag === 'meta' || tag === 'link') {
+      let existing = this._findExistingHeadElement(el, tag);
+      if (existing) {
+        existing.replaceWith(el);
         return;
       }
-      try {
-        this.getSM().startDeferringSubscriptions();
-        let content = vdom !== null ? vdom : this.layout;
-        let isHydration = this.getState('isHydration', false);        
-        if (isHydration) {
-          this.#renderWithHydration(containerEl, content);
-        } else {
-          this.#renderImmediate(containerEl, content);
-        }
-        this.getSM().processDeferredSubscriptions();        
-        let duration = performance.now() - startTime;
-        log.ei && console.info(log.i('Render completed', {duration: `${duration.toFixed(2)}ms`,isHydration}, 'app'));        
-        return containerEl;        
-      } catch (error) {
-        this.getSM().processDeferredSubscriptions();
-        log.ee && console.error(log.e('Render failed', { 
-          error: error.message, 
-          container 
-        }, 'app'));
-        this.#renderError(containerEl, error);
-        return containerEl;
-      }
-    }
+    }    
+    d.head.appendChild(el);
+  }
 
-    #renderImmediate(containerEl, content) {
-      this.getDR().cleanup(containerEl);
-      containerEl.innerHTML = '';      
-      let elm = this.getDR().render(content, null, false, containerEl);
-      if (elm && elm !== containerEl) {
-        containerEl.appendChild(elm);
-      }
-      this.getDR()._processPendingConnectedCallbacks();
+  _findExistingHeadElement(el, tag) {
+    if (tag === 'meta') {
+      if (el.name) return d.head.querySelector(`meta[name="${el.name}"]:not([data-jhead])`);
+      if (el.getAttribute('property')) return d.head.querySelector(`meta[property="${el.getAttribute('property')}"]:not([data-jhead])`);
+      if (el.getAttribute('http-equiv')) return d.head.querySelector(`meta[http-equiv="${el.getAttribute('http-equiv')}"]:not([data-jhead])`);
     }
     
-    async #renderWithHydration(containerEl, vdom = null) {
-      let stagingEl = this.#createElm('div');
-      stagingEl.style.cssText = 'position: absolute; left: -9999px; visibility: hidden;';
-      document.body.appendChild(stagingEl);
-      try {
-        startTracking();
-        let content = vdom !== null ? vdom : this.layout;
-        let elm = this.getDR().render(content);
-        if (elm) stagingEl.appendChild(elm);
-        await onAllComplete();
-        this.getDR().cleanup(containerEl);
-        containerEl.innerHTML = '';
-        while (stagingEl.firstChild) {
-          containerEl.appendChild(stagingEl.firstChild);
-        }
-        this.getDR()._processPendingConnectedCallbacks();
-        this.getHM()?.initializeQueued();
-      } finally {
-        stopTracking();
-        document.body.removeChild(stagingEl);
-      }
+    if (tag === 'link') {
+      if (el.rel === 'canonical') return d.head.querySelector('link[rel="canonical"]:not([data-jhead])');
+      if (el.rel && el.href) return d.head.querySelector(`link[rel="${el.rel}"][href="${el.href}"]:not([data-jhead])`);
     }
-    #createElm(tagName){
-      return document.createElement(tagName);
-    }
-    #renderError(container, error) {
-        let errorEl = this.#createElm('div');
-        errorEl.style.cssText = 'color: red; border: 2px solid red; padding: 16px; margin: 8px; background: #ffe6e6;';
-        errorEl.innerHTML = `
-            <h3>Render Error</h3>
-            <p><strong>Message:</strong> ${error.message}</p>
-            <pre style="background: #f5f5f5; padding: 8px; overflow: auto;">${error.stack || ''}</pre>
-        `;
-        container.appendChild(errorEl);
-    }
+    
+    return null;
+  }
 
-    enhance(selector, definition, options) { return this.domEnhancer.enhance(selector, definition, options); }
+  _updateURLState(){
+    if (typeof window === 'undefined') return;
+    let params = new URLSearchParams(w.location.search);
+    params.forEach((value, key) => {
+      this.setState('url.search.' + key, value);
+    });
+    this.setState('url.href', w.location.href);
     
-    configureEnhancement(options) { 
-        if (!this.domEnhancer) {
-            log.ew && console.warn(log.w('Enhancement configuration requested but domEnhancer not available'), 'frk');
-            return;
-        }
-        return this.domEnhancer.configure(options); 
+    let currentPath = w.location.pathname;
+    if (this.basePath && currentPath.startsWith(this.basePath)) {
+      currentPath = currentPath.substring(this.basePath.length) || '/';
     }
     
-    arm(target, handlerFn) {
-      if(handlerFn == null || !_isFN(handlerFn)) {
-        log.ew && console.warn(log.w('arm() called without valid handler function'), 'frk');
-        return null;
+    let segments = currentPath.split('/').filter(s => s);    
+    this.setState('url.path', currentPath);
+    this.setState('url.segments', segments);    
+    let mappedPath = this.getRouter()._resolvePath(currentPath);
+    this.setState('url.mappedPath', mappedPath);
+    this._updateRouteParams(currentPath);
+  }
+
+  _updateRouteParams(path){  
+    let match = this._routerInstance.match(path);
+    Object.keys(match || {}).forEach(k => {
+      if(k === 'params') {
+        this.setState('url.params', match[k]);
+      } else {
+        this.setState('url.route.' + k, match[k]);
       }
-      try {
-        let context = this.createContext(target);
-        let handlers = handlerFn(context);
-        let listeners = [];
-        let jurisIns = this;        
-        for (let eventName in handlers) {
-          let actualEventName;
-          if (eventName.startsWith('on-')) {
-            actualEventName = eventName.slice(3);
-          } else if (eventName.startsWith('on:')) {
-            actualEventName = eventName.slice(3);
-          } else {
-            actualEventName = eventName.slice(2).toLowerCase();
-          }          
-          let handler = handlers[eventName];          
-          if (_isFN(handler)) {
-            const wrappedHandler = (e) => {
-              try {
-                return handler(e);
-              } catch (error) {
-                log.ee && console.error(log.e('Armed event handler failed', {eventType: actualEventName, target: target.tagName || target.toString(), error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
-              }
-            };            
-            target.addEventListener(actualEventName, wrappedHandler);
-            listeners.push({ 
-              original: eventName,
-              actual: actualEventName, 
-              handler: wrappedHandler
-            });
+    });
+  }
+
+  _startURLInjection() {
+    if (typeof window === 'undefined') return;
+    this._updateURLState();
+    w.addEventListener('urlchange', () => {
+      this._updateURLState();
+    });
+    w.addEventListener('popstate', () => {
+      w.dispatchEvent(new Event('urlchange'));
+    });
+    w.addEventListener('hashchange', () => {
+      this.setState('url.hash', w.location.hash);
+    });
+  }  
+
+  navigate(path, params = null) {
+    if (params) {
+      for (let [key, value] of Object.entries(params)) {
+        path = path.replace(`:${key}`, value);
+      }
+    }          
+    if(window){
+      let fullPath = this.basePath + path;
+      w.history.pushState({}, '', fullPath);
+      w.dispatchEvent(new Event('urlchange'));
+    }else{
+      this.setState('url.path',this.basePath + path);
+      this._updateRouteParams(path);
+    }
+  }
+
+  get states() { return this._stateManager.states; }
+  set states(val) { this._stateManager.states = val; }
+  get subscriptions() { return this._stateManager._subscriptions; }
+  get reactiveNodes() { return this._stateManager._reactiveNodes; }
+  get renderer() { return this._renderer; }
+  getStateManager() { return this._stateManager; }
+  getRouter() { return this._routerInstance; }
+  getServices() { return this._services; }
+  get armedElements(){return this._armedElements; }
+  get activeComponents(){return this._activeComponents; }
+  get components(){return this._components; }
+  
+  registerService(name, service) {
+    this._services[name] = service;
+  }
+  
+  getActiveComponents() {
+    return Array.from(this._activeComponents);
+  }
+  
+  getComponents() {
+    return this._components;
+  }
+  
+  setMiddleware(middleware) {
+    this._middlewares.push(middleware);
+    this._applyMiddlewares();
+  }
+
+  _checkAndTrackPromise(value) {
+   if (_isPromise(value)) {
+    this._trackPromise(value);
+    return true;
+   }
+   return false;
+  }
+
+  _isComponent(value) {
+    if (!_isObj(value)) return false;
+    let keys = Object.keys(value);
+    return keys.length === 1 && this._components[keys[0]];
+  }
+
+  _trackPromise(promise) {
+    let promiseId = 'promise_' + Math.random().toString(36).substr(2, 9);
+    this._pendingPromises.add(promiseId);
+    if (this._pendingPromises.size === 1 && this.indicator?.default && !this._globalSpinnerTimeout) {
+      this._globalSpinnerTimeout = setTimeout(() => {
+        if (this._pendingPromises.size > 0) this._showGlobalSpinner();
+      }, this.indicatorGlobalDelay);
+    }
+    let cleanup = () => {
+      this._pendingPromises.delete(promiseId);
+      if (this._pendingPromises.size === 0) {
+        if (this._globalSpinnerTimeout) {
+          clearTimeout(this._globalSpinnerTimeout);
+          this._globalSpinnerTimeout = null;
+        }
+        this._hideGlobalSpinner();
+      }
+    };
+    promise.then(cleanup).catch(cleanup);
+  }
+
+  registerHeadless(name, fn, options = {}) {
+    if (!this._headlessManager) {
+      this._headlessManager = new HeadlessManager(this);
+    }
+    return this._headlessManager.register(name, fn, options);
+  }
+
+  initializeHeadless(name, props = {}) {
+    if (!this._headlessManager) {
+      console.error(' HeadlessManager not initialized');
+      return null;
+    }
+    return this._headlessManager.initialize(name, props);
+  }
+
+  reinitializeHeadless(name, props = {}) {
+    if (!this._headlessManager) {
+      console.error(' HeadlessManager not initialized');
+      return null;
+    }
+    return this._headlessManager.reinitialize(name, props);
+  }
+
+  getHeadless(name) {
+    return this._headlessManager?.getInstance(name) || null;
+  }
+
+  getHeadlessAPI(name) {
+    return this._headlessManager?.getAPI(name) || null;
+  }
+
+  getAllHeadlessAPIs() {
+    return this._headlessManager?.getAllAPIs() || {};
+  }
+
+  getHeadlessStatus() {
+    return this._headlessManager?.getStatus() || { registered: [], initialized: [], queued: [], apis: [] };
+  }
+
+  _showGlobalSpinner() {
+    if (this._globalSpinnerTimeout) return;
+    let indicatorVdom = this._getIndicator();
+    if (!indicatorVdom) return;
+    let spinnerEl = this._processNode(indicatorVdom);
+    if (spinnerEl && !_isPromise(spinnerEl)) {
+      this._globalSpinnerTimeout = spinnerEl;
+      this._renderer._appendChildren(d.body, spinnerEl);
+    }
+  }
+
+  _hideGlobalSpinner() {
+    if (this._globalSpinnerTimeout?.parentNode) {
+      this._globalSpinnerTimeout.parentNode.removeChild(this._globalSpinnerTimeout);
+      this._globalSpinnerTimeout = null;
+    }
+  }
+
+  // DEDUPLICATED: Consolidated async child replacement with error handling
+  _handleAsyncChildReplacement(promise, position, cKey = null, pRId = null) {
+    let placeholder = this._renderer._createLoadingPlaceholder(position);
+    
+    promise.then(resolved => {
+      let processResult = this._processNode(resolved, false, cKey, pRId);
+      
+      if (_isPromise(processResult)) {
+        processResult.then(node => {
+          if (placeholder.parentNode && node) {
+            this._renderer._replaceElement(placeholder, node);
           }
-        }        
-        let instance = {events: listeners.map(e => ({name: e.original,actualEvent: e.actual,handler: e.handler})),
-          trigger(eventName, eventData = {}) {
-            let listener = listeners.find(e => e.original === eventName || e.actual === eventName);
-            if (listener) {
-              let mockEvent = {type: listener.actual,target: target,preventDefault: () => {},stopPropagation: () => {}, ...eventData};
-              try {
-                listener.handler.call(target, mockEvent);
-                return true;
-              } catch (error) {
-                log.ee && console.error(log.e('Armed event trigger failed', {eventName,target: target.tagName || target.toString(),error: error.message}, 'app'));
-                return false;
+        });
+      } else if (processResult && placeholder.parentNode) {
+        this._renderer._replaceElement(placeholder, processResult);
+      }
+    }).catch(err => {
+      console.error(` Error resolving async child at position ${position}:`, err);
+      if (placeholder.parentNode) {
+        let errorSpan = this._renderer._createElement('span');
+        errorSpan.style.cssText = 'color: #ef4444; font-style: italic; padding: 4px 8px;';
+        errorSpan.textContent = 'Error loading';
+        this._renderer._replaceElement(placeholder, errorSpan);
+      }
+    });
+    
+    return placeholder;
+  }
+
+  _handlePromise(promise, parent, el, componentName = null, elementId = null) {
+    this._trackPromise(promise);
+    let [currentNode] = this._renderer._createComments('loading');
+    let spinnerTimeout = null;
+    let indicatorVdom = this._getIndicator(componentName, elementId);  
+    if (indicatorVdom && this.indicatorDelay > 0) {
+      spinnerTimeout = setTimeout(() => {
+        if (currentNode.parentNode) {
+          let spinnerEl = this._processNode(indicatorVdom);
+          if (spinnerEl && currentNode.parentNode) {
+            this._renderer._replaceElement(currentNode, spinnerEl);
+            currentNode = spinnerEl;
+          }
+        }
+      }, this.indicatorDelay);
+    } else if (indicatorVdom) {
+      return this._processNode(indicatorVdom);
+    }    
+    promise.then(result => {
+      if (spinnerTimeout) clearTimeout(spinnerTimeout);
+      let nodeResult = this._processChildNode(result);      
+      if (_isPromise(nodeResult)) {
+        nodeResult.then(node => {
+          if (currentNode?.parentNode) {
+            this._renderer._replaceElement(currentNode, node || this._renderer._createComments('null')[0]);
+          }
+        });
+      } else if (currentNode?.parentNode) {
+        this._renderer._replaceElement(currentNode, nodeResult || this._renderer._createComments('null')[0]);
+      }
+    }).catch(err => {
+      if (spinnerTimeout) clearTimeout(spinnerTimeout);
+      console.error(' Promise error:', err);
+      if (currentNode?.parentNode) {
+        this._renderer._replaceElement(currentNode, this._renderer._createComments('error')[0]);
+      }
+    });    
+    return currentNode;
+  }
+
+  _applyMiddlewares() {
+    if (this._middlewares.length === 0) return;    
+    let originalGet = this._stateManager._getState.bind(this._stateManager);
+    let originalSet = this._stateManager._setState.bind(this._stateManager);    
+    this._stateManager._getState = (key, def) => {
+      if (!this._middlewares.some(m => m.beforeGetState)) return originalGet(key, def);
+      let result = {key, defaultValue: def, value: originalGet(key, def)};
+      for (let m of this._middlewares) {
+        if (m.beforeGetState) result = m.beforeGetState(result, this) || result;
+      }
+      return result.value;
+    };    
+    this._stateManager._setState = (key, value, notifyFn) => {
+      let data = {key, value, oldValue: originalGet(key)};
+      for (let m of this._middlewares) {
+        if (m.beforeSetState) data = m.beforeSetState(data, this) || data;
+      }
+      originalSet(data.key, data.value, notifyFn);
+      for (let m of this._middlewares) {
+        if (m.afterSetState) m.afterSetState(data, this);
+      }
+    };
+  }
+
+  _notifySubscription(subscriptionId, changedKey) {
+    if (!this._subscriptionCallbacks) return;    
+    let callback = this._subscriptionCallbacks.get(subscriptionId);
+    if (!callback) return;    
+    let subscribedKeys = this._stateManager._subscriptions.get(subscriptionId);
+    if (!subscribedKeys) return;    
+    let key = Array.from(subscribedKeys)[0];
+    let newValue = this.getState(key);
+    let oldValue = this._stateManager.states._previousValues?.[key];    
+    try {
+      callback(newValue, oldValue);
+    } catch (error) {
+      console.error(' Subscription callback error:', error);
+    }
+  }
+
+  _initPlugins(plugins) {
+    Object.entries(plugins).forEach(([name, plugin]) => {
+      if (_isFn(plugin)) plugin(this);
+      else if (plugin?.install) plugin.install(this);
+    });
+  }
+
+  getState(key, def, subscribe = true) { return this._stateManager._getState(key, def, subscribe); }
+  
+  setState(key, val) {
+    this._stateManager._setState(key, val, (toUpdate) => {
+      for (let id of toUpdate) {
+        if (id.startsWith('reactive_')) {
+          this._updateReactiveNode(id);
+        } else if (id.startsWith(_EFFECT_)) {
+          this._executeEffect(id);
+        } else if (id.startsWith('subscription_')) {
+          this._notifySubscription(id, key);
+        }
+      }
+    });
+  }
+  removeState(path) {
+    let keys = path.split('.');
+    let rootKey = keys[0];
+    if (keys.length === 1) {
+      delete this._stateManager.states[rootKey];
+      this._stateManager._notify(rootKey, (toUpdate) => {
+        for (let id of toUpdate) {
+          if (id.startsWith('reactive_')) this._updateReactiveNode(id);
+          else if (id.startsWith(_EFFECT_)) this._executeEffect(id);
+        }
+      });
+      return;
+    }    
+    // Recursively delete with immutable cloning
+    let newRoot = this._deleteAtPath(this._stateManager.states[rootKey], keys.slice(1));
+    if (newRoot === this._stateManager.states[rootKey]) return;
+    this._stateManager.states[rootKey] = newRoot;
+    // Only notify subscribers of the deleted path
+    for (let [id, deps] of this._stateManager._subscriptions) {
+      if (deps.has(path)) {
+        if (id.startsWith('reactive_')) this._updateReactiveNode(id);
+        else if (id.startsWith(_EFFECT_)) this._executeEffect(id);
+      }
+    }
+  }
+
+  _deleteAtPath(obj, pathKeys) {
+    if (!obj || typeof obj !== 'object') return obj;
+    
+    if (pathKeys.length === 1) {
+      let key = pathKeys[0];
+      
+      if (Array.isArray(obj)) {
+        let index = parseInt(key, 10);
+        if (index < 0 || index >= obj.length) return obj;
+        return [...obj.slice(0, index), ...obj.slice(index + 1)];
+      } else {
+        if (!obj.hasOwnProperty(key)) return obj;
+        let {[key]: _, ...rest} = obj;
+        return rest;
+      }
+    }
+    
+    let key = pathKeys[0];
+    let currentKey = Array.isArray(obj) ? parseInt(key, 10) : key;
+    
+    if (!obj.hasOwnProperty(currentKey)) return obj;
+    
+    let newValue = this._deleteAtPath(obj[currentKey], pathKeys.slice(1));
+    
+    if (obj[currentKey] === newValue) return obj;
+    
+    return Array.isArray(obj)
+      ? [...obj.slice(0, currentKey), newValue, ...obj.slice(currentKey + 1)]
+      : {...obj, [currentKey]: newValue};
+  }
+  effect(fn) {
+    let cKey = null;
+    if (this._stateManager._activeReactive) {
+      let activeNode = this._stateManager._reactiveNodes.get(this._stateManager._activeReactive);
+      if (activeNode?.cKey) {
+        cKey = activeNode.cKey;
+      }
+    }    
+    return this._stateManager.effect(fn, (id, execute) => {
+      execute();
+      if (cKey) {
+        let effectNode = this._stateManager._reactiveNodes.get(id);
+        if (effectNode) {
+          effectNode.cKey = cKey;
+        }
+      }
+    });
+  }
+
+  executeBatch(fn) {
+    this._stateManager._batch(fn, (updates) => {
+      for (let id of updates) {
+        if (id.startsWith('reactive_')) this._updateReactiveNode(id);
+        else if (id.startsWith(_EFFECT_)) this._executeEffect(id);
+      }
+    });
+  }
+
+  _executeEffect(id) {
+    let reactive = this._stateManager._reactiveNodes.get(id);
+    if (!reactive || reactive.type !== _EFFECT) return;
+    
+    if (reactive._isExecuting) return;
+    reactive._isExecuting = true;
+    
+    // Clear subscriptions from both Map and Trie
+    if (this._stateManager._subscriptions.has(id)) {
+      const paths = this._stateManager._subscriptions.get(id);
+      for (const path of paths) {
+        this._stateManager._trie._unsubscribe(path, id);
+      }
+      paths.clear();
+    }
+  
+    this._stateManager._runCleanups(id);    
+    try {
+      let result = this._stateManager._track(id, reactive.fn);
+      if (this._checkAndTrackPromise(result)) {
+        result.then(cleanup => {
+          this._stateManager._registerCleanup(id, cleanup);
+        }).catch(err => {
+          console.error('Effect error:', err);
+        });
+      } else {
+        this._stateManager._registerCleanup(id, result);
+      }
+    } catch (err) {
+      console.error('Effect execution error:', err);
+    }finally {
+      reactive._isExecuting = false;
+    }
+  }
+
+  _updateReactiveNode(rId) {
+    let reactive = this._stateManager._reactiveNodes.get(rId);
+    if (!reactive) return;
+    
+    if (reactive.type === _RENDER) {
+      this._stateManager._subscriptions.get(rId)?.clear();
+    } else {
+      // Clear from Trie for non-render reactives
+      const paths = this._stateManager._subscriptions.get(rId);
+      if (paths) {
+        for (const path of paths) {
+          this._stateManager._trie._unsubscribe(path, rId);
+        }
+      }
+      
+      this._stateManager._subscriptions.delete(rId);
+      this._stateManager._subscriptions.set(rId, new Set());
+    }		
+    this._stateManager._activeReactive = rId;
+    let newValue;
+    try {
+      newValue = reactive.fn();
+    } catch (error) {
+      this._stateManager._activeReactive = null;
+      if (reactive.type === _RENDER) {
+        console.error(' Component update error:', error);
+        let meta = this._componentMap.get(reactive.cKey);
+        if (meta) this._processResolvedRenderResult(reactive, meta, this._createErrorVDOM(error, meta.name));
+      } else {
+        console.error(' Reactive node error:', error);
+      }
+      return;
+    }
+    this._stateManager._activeReactive = null;		
+    if (reactive.type === _TEXT || reactive.type === _REACTIVE_NULL) {
+      this._updateTextNode(reactive, newValue);
+    } else if (reactive.type === 'attr') {
+      if (reactive.attrName === 'class' || reactive.attrName === 'className') {
+        this._checkAndTrackPromise(newValue) ? newValue.then(v => reactive.el.className = v) : (reactive.el.className = newValue);
+      } else {
+        this._checkAndTrackPromise(newValue) ? newValue.then(v => this._renderer._setAttribute(reactive.el, reactive.attrName, v, reactive.isSvg)) : this._renderer._setAttribute(reactive.el, reactive.attrName, newValue, reactive.isSvg);
+      }
+    } else if (reactive.type === 'style') {
+      this._checkAndTrackPromise(newValue) ? newValue.then(s => Object.assign(reactive.el.style, s)) : Object.assign(reactive.el.style, newValue);
+    } else if (reactive.type === 'children') {
+      this._updateChildrenNode(reactive, newValue);
+    } else if (reactive.type === _RENDER) {
+      this._updateComponentRender(rId, newValue);
+    } else if (reactive.type === 'el') {
+      this._updateElementNode(reactive, newValue);
+    } else if (reactive.type === 'innerHTML') {
+      if (reactive.el) {
+        this._checkAndTrackPromise(newValue) ? newValue.then(v => reactive.el.innerHTML = v) : (reactive.el.innerHTML = newValue);
+      }
+    } else if (reactive.type === 'classList') {
+        if (!reactive.el) return;
+        let newClasses = new Set(_shoudBeArray(newValue).filter(c => c));
+        let prvCls = reactive.prvCls;
+        prvCls.forEach(cls => {
+          if (!newClasses.has(cls)) {
+            reactive.el.classList.remove(cls);
+          }
+        });
+        newClasses.forEach(cls => {
+          if (!prvCls.has(cls)) {
+            reactive.el.classList.add(cls);
+          }
+        });
+        reactive.prvCls = newClasses;
+      }
+  }
+  _replaceReactiveNode(result, reactive, newValue) {
+    const replaceNode = (el) => {
+      if (el && reactive.node?.parentNode) {
+        this._renderer._replaceElement(reactive.node, el);
+        reactive.node = el;
+        reactive.type = 'el';
+        reactive.isCom = this._isComponent(newValue);
+      }
+    };
+
+    if (_isPromise(result)) {
+      result.then(replaceNode);
+    } else if (result) {
+      replaceNode(result);
+    }
+  }
+
+  _updateTextNode(reactive, newValue) {
+    if (!reactive.node?.parentNode) return;    
+    if (_isPromise(newValue)) {
+      let placeholder = this._handlePromise(newValue, reactive.node.parentNode, reactive.el);
+      this._renderer._replaceElement(reactive.node, placeholder);
+      reactive.node = placeholder;
+    } else {
+      if (this._isComponent(newValue) || (_isObj(newValue) && !_isArr(newValue))) {
+        let result = this._processNode(newValue, false, reactive.cKey, reactive.pRId);        
+        this._replaceReactiveNode(result, reactive, newValue);
+      } else {
+        let updateResult = this._renderer._updateText(reactive.node, newValue);
+        reactive.node = updateResult.node;
+        reactive.type = updateResult.type;
+      }
+    }
+  }
+
+  _createErrorVDOM(error, componentName) {
+    //DEVTOOLS--START
+    if(this.__DEV__ === false) {
+      console.error(` Error in component or tag "${componentName}":`, error);
+      return null;
+    } 
+    //DEVTOOLS--END
+    return {
+      div: {
+        style: {padding: '12px', margin: '8px', border: '2px solid #ef4444', borderRadius: '4px', background: '#fee', color: '#991b1b', fontFamily: 'monospace', fontSize: '12px'},
+        children: [
+          {strong: {text: `Error in component or tag "${componentName}"`}},
+          {br: {}},
+          {div: {text: error.message}},
+          {br: {}},
+          {small: {text: error.stack ? error.stack.split('\n')[1] : 'No stack trace'}}
+        ]
+      }
+    };
+  }
+
+  _updateElementNode(reactive, newValue) {
+    if (!reactive.node?.parentNode) return;    
+    this._renderer._cleanupEventListeners(reactive.node);
+    if (_isPromise(newValue)) {
+      let placeholder = this._handlePromise(newValue, reactive.node.parentNode, reactive.el);
+      this._renderer._replaceElement(reactive.node, placeholder);
+      reactive.node = placeholder;
+    } else {
+      if (_isNull(newValue)) {
+        let comment = this._renderer._createComments(_REACTIVE_NULL)[0];
+        this._renderer._replaceElement(reactive.node, comment);
+        reactive.node = comment;
+        reactive.type = _REACTIVE_NULL;
+      } else if (_isPrimitive(newValue)) {
+        let textNode = this._renderer._createTextNode(String(newValue));
+        this._renderer._replaceElement(reactive.node, textNode);
+        this._setMetaElement(reactive, textNode, null, _TEXT);
+        reactive.node = textNode;
+        reactive.type = _TEXT;
+      } else if (_isObj(newValue) && !_isArr(newValue)) {
+        let result = this._processNode(newValue, false, reactive.cKey, reactive.pRId);        
+        this._replaceReactiveNode(result, reactive, newValue);
+      }
+    }
+  }
+
+  _updateChildrenNode(reactive, newValue) {
+    if (!reactive.el) return;    
+    if (_isPromise(newValue)) {
+      let placeholder = this._handlePromise(newValue, reactive.el, reactive.el);
+      this._renderer._appendChildren(reactive.el, placeholder);
+    } else {
+      this._updateReactiveChildren(reactive.el, newValue, reactive);
+    }
+  }
+
+  _cleanupDisconnectedComponents() {
+    let disconnectedComponents = [];    
+    for (let [cKey, meta] of this._componentMap.entries()) {
+      let el = meta.el;      
+      if (el && el.nodeType === 1 && !el.isConnected) {
+        disconnectedComponents.push(cKey);
+      } else if (el && el.nodeType === 8 && !el.isConnected) {
+        disconnectedComponents.push(cKey);
+      }
+    }    
+    for (let cKey of disconnectedComponents) {
+      let renderReactiveId = 'reactive_render_' + cKey;
+      let renderReactive = this._stateManager._reactiveNodes.get(renderReactiveId);      
+      if (renderReactive?.hooks?.onUnmount) {
+        renderReactive.hooks.onUnmount();
+      }      
+      this._stateManager._cleanupByCompKey(cKey);
+      this._stateManager.cleanup(renderReactiveId);
+      this._componentMap.delete(cKey);      
+      let localStateKey = `__local_${cKey}`;
+      if (this._stateManager.states[localStateKey]) {
+        delete this._stateManager.states[localStateKey];
+      }      
+      //DEVTOOLS--START
+      if (this.__DEV__ && this.__devtools?.componentTree) {
+        this.__devtools.componentTree.delete(cKey);
+      }
+      //DEVTOOLS--END
+    }    
+    return disconnectedComponents.length;
+  }
+  _cleanupComponent(cKey, meta, reactive) {
+  // Call onUnmount hook if exists
+  if (reactive?.hooks?.onUnmount) {
+    try {
+      reactive.hooks.onUnmount();
+    } catch (error) {
+      console.error('Error in onUnmount:', error);
+    }
+  }
+  
+  // Remove from DOM based on component type
+  if (meta.type === 'el' && meta.el?.parentNode) {
+    // Clean up event listeners recursively
+    this._renderer._cleanupEventListeners(meta.el);
+    // Remove the element
+    this._renderer._removeChild(meta.el.parentNode, meta.el);
+  } else if ((meta.type === 'primitive' || meta.type === 'array' || meta.type === 'null') && meta.el?.parentNode) {
+    // Remove content between markers
+    this._renderer._removeRange(meta.el, meta.endMarker);
+    this._renderer._removeChild(meta.el.parentNode, [meta.el, meta.endMarker]);
+  }
+  let rId = 'reactive_render_' + cKey;
+  this._stateManager._cleanupByCompKey(cKey);
+  this._stateManager.cleanup(rId);
+  // Remove from component map
+  this._componentMap.delete(cKey);
+  if (meta.name) {
+    this._componentApiMap.delete(meta.name);
+  }
+  let localStateKey = `__local_${cKey}`;
+  if (this._stateManager.states[localStateKey]) {
+    delete this._stateManager.states[localStateKey];
+  }
+  //DEVTOOLS--START
+  if (this.__DEV__ && this.__devtools?.componentTree) {
+    this.__devtools.componentTree.delete(cKey);
+  }
+  //DEVTOOLS--END
+}
+  _updateReactiveChildren(el, children, reactive) {
+    if (children === "ignore") return;
+    let pRId = Object.keys(reactive).find(k => reactive[k] && _isStr(reactive[k]) && reactive[k].startsWith('reactive_'));
+    this._cleanupReactiveNodesInContainer(el, pRId);
+    let newChildArray = _shoudBeArray(children);
+    let hasAsync = false;
+    let processedChildren = [];
+    for (let i = 0; i < newChildArray.length; i++) {
+      let child = newChildArray[i];
+      if (_isFn(child)) {
+        child = child(el);
+      }
+      if (_isPrimitive(child) || _isBool(child)) {
+        processedChildren[i] = {type: _TEXT, value: String(child), vdom: null, key: null};
+      } else if (_isNull(child)) {
+        processedChildren[i] = null;
+      } else if (this._checkAndTrackPromise(child)) {
+        hasAsync = true;
+        processedChildren[i] = {type:_PLACEHOLDER, position: i, promise: child, key: null};
+      } else {
+        let childKey = this._extractKey(child);
+        processedChildren[i] = {type: 'vdom', value: child, vdom: child, key: childKey};
+      }
+    }
+    let filtered = processedChildren.filter(c => c !== null);
+    this._diffChildren(el, filtered, reactive.cKey, pRId);
+    if (hasAsync) {
+      for (let i = 0; i < processedChildren.length; i++) {
+        if (processedChildren[i]?.type ===_PLACEHOLDER) {
+          let placeholder = processedChildren[i];
+          placeholder.promise.then(resolved => {
+            processedChildren[i] = {
+              type: 'vdom',
+              value: resolved,
+              vdom: resolved,
+              key: this._extractKey(resolved)
+            };
+          });
+        }
+      }
+    }
+  }
+
+  _cleanupReactiveNodesInContainer(container, pRId) {
+    if (!pRId || this._stateManager._reactiveNodes.size === 0) return;  
+    let toDelete = [];  
+    for (let [id, reactive] of this._stateManager._reactiveNodes.entries()) {
+      if (id === pRId || reactive.type === 'render') continue;    
+      if (reactive.pRId === pRId) {
+        toDelete.push(id);
+      } else if (reactive.el && !reactive.el.isConnected) {
+        toDelete.push(id);
+      } else if (reactive.node && !reactive.node.isConnected) {
+        toDelete.push(id);
+      }
+    }  
+    for (let i = 0; i < toDelete.length; i++) {
+      this._stateManager.cleanup(toDelete[i]);
+    }
+  }
+
+  _cleanupReactivesByParent(pRId) {
+    let toDelete = [];
+    for (let [id, reactive] of this._stateManager._reactiveNodes.entries()) {
+      if (reactive.pRId === pRId && id !== pRId) toDelete.push(id);
+    }
+    toDelete.forEach(id => this._stateManager.cleanup(id));
+  }
+
+  _extractKey(vdom) {
+    if (!_isObj(vdom)) return null;
+    let [props] = Object.values(vdom);
+    return props?.key ?? null;
+  }
+
+  _diffChildren(container, newChildren, cKey, pRId) {
+    let oldNodes = Array.from(container.childNodes);
+    let hasKeys = newChildren.some(c => c.key !== null && c.key !== undefined);
+    if (hasKeys) {
+      this._diffChildrenByKey(container, oldNodes, newChildren, cKey, pRId);
+    } else {
+      this._replaceAllChildren(container, newChildren, cKey, pRId);
+    }
+    requestAnimationFrame(() => {
+      this._cleanupDisconnectedComponents();
+    });
+  }
+
+  _scheduleAsyncCleanup(nodes, pRId) {
+    if (!nodes || nodes.length === 0) return;
+    setTimeout(() => this._batchDeepCleanup(nodes, pRId), 0);
+  }
+
+  _replaceAllChildren(container, newChildren, cKey, pRId) {
+    if (container._jurisPendingUpdate) {
+      container._jurisPendingUpdate._cancelled = true;
+    }
+    let updateToken = {_cancelled: false};
+    container._jurisPendingUpdate = updateToken;  
+    if (newChildren === "ignore") {
+      delete container._jurisPendingUpdate;
+      return;
+    }
+    let oldNodes = Array.from(container.childNodes);
+    let results = [];
+    for (let i = 0; i < newChildren.length; i++) {
+      let child = newChildren[i];
+      if (!child) {
+        results[i] = null;
+        continue;
+      }    
+      if (child.type === 'placeholder') {
+        let indicatorVdom = this._getIndicator(null, null);
+        let loadingSpan = indicatorVdom 
+          ? this._processNode(indicatorVdom)
+          : this._renderer._createLoadingPlaceholder(i);      
+        results[i] = loadingSpan;
+        this._trackPromise(child.promise);      
+        this._handleAsyncChildReplacement(child.promise, i, cKey, pRId).then(placeholder => {
+          if (loadingSpan.parentNode) {
+            this._renderer._replaceElement(loadingSpan, placeholder);
+          }
+        });
+        continue;
+      }    
+      if (child.type === 'text') {
+        results[i] = this._renderer._createTextNode(child.value);
+      } else {
+        let processResult = this._processNode(child.value, false, cKey, pRId);      
+        if (_isPromise(processResult)) {
+          results[i] = this._handleAsyncChildReplacement(processResult, i, cKey, pRId);
+          continue;
+        }      
+        results[i] = processResult;
+      }
+    }  
+    if (updateToken._cancelled) {
+      return;
+    }
+    container.innerHTML = '';
+    let frag = this._renderer._createFragment();
+    for (let i = 0; i < results.length; i++) {
+      if (results[i]) {
+        this._renderer._appendChildren(frag, results[i]);
+      }
+    }
+    this._renderer._appendChildren(container, frag);
+    if (oldNodes.length > 0) {
+      this._scheduleAsyncCleanup(oldNodes, pRId);
+    }
+    requestAnimationFrame(() => this._checkPendingConnected());  
+    if (container._jurisPendingUpdate === updateToken) {
+      delete container._jurisPendingUpdate;
+    }
+  }
+
+  _batchDeepCleanup(nodes, pRId) {
+    if (!nodes || nodes.length === 0) return;
+    
+    if (this._stateManager._reactiveNodes.size === 0) {
+      for (let i = 0; i < nodes.length; i++) {
+        this._cleanupEventListenersRecursive(nodes[i]);
+      }
+      return;
+    }
+    
+    let allNodesToCleanup = new Set();
+    for (let i = 0; i < nodes.length; i++) {
+      this._collectNodesRecursive(nodes[i], allNodesToCleanup);
+    }
+    
+    let toCleanup = [];
+    for (let [id, reactive] of this._stateManager._reactiveNodes.entries()) {
+      if (id.startsWith('reactive_render_')) continue;
+      
+      if (allNodesToCleanup.has(reactive.el) || allNodesToCleanup.has(reactive.node)) {
+        toCleanup.push(id);
+      }
+    }
+    
+    for (let i = 0; i < toCleanup.length; i++) {
+      this._stateManager.cleanup(toCleanup[i]);
+    }
+    
+    for (let n of allNodesToCleanup) {
+      if (n._jurisEventListeners) {
+        let listeners = n._jurisEventListeners;
+        for (let i = 0; i < listeners.length; i++) {
+          this._renderer._removeEventListener(n, listeners[i]._eventName, listeners[i]._handler);
+        }
+        delete n._jurisEventListeners;
+      }
+    }
+  }
+
+  _collectNodesRecursive(node, set) {
+    if (!node) return;
+    set.add(node);
+    if (node.childNodes) {
+      for (let i = 0; i < node.childNodes.length; i++) {
+        this._collectNodesRecursive(node.childNodes[i], set);
+      }
+    }
+  }
+
+  _cleanupEventListenersRecursive(node) {
+    if (!node) return;
+    
+    if (node._jurisEventListeners) {
+      let listeners = node._jurisEventListeners;
+      for (let i = 0; i < listeners.length; i++) {
+        this._renderer._removeEventListener(node, listeners[i]._eventName, listeners[i]._handler);
+      }
+      delete node._jurisEventListeners;
+    }
+    
+    if (node.childNodes) {
+      for (let i = 0; i < node.childNodes.length; i++) {
+        this._cleanupEventListenersRecursive(node.childNodes[i]);
+      }
+    }
+  }
+
+  _diffChildrenByKey(container, oldNodes, newChildren, cKey, pRId) {
+    if (!container._jurisNodeKeys) container._jurisNodeKeys = new Map();    
+    let oldMap = new Map(container._jurisNodeKeys);
+    
+    if (oldMap.size === 0 && oldNodes.length > 0) {
+      for (let i = 0; i < oldNodes.length; i++) {
+        let node = oldNodes[i];
+        if (node.nodeType === 1 && node._jurisKey !== undefined) {
+          oldMap.set(node._jurisKey, node);
+        }
+      }
+      container._jurisNodeKeys = oldMap;
+    }
+    
+    let newKeySet = new Set();
+    let results = [];
+    let newMap = new Map();
+    let hasAsync = false;
+    
+    for (let i = 0; i < newChildren.length; i++) {
+      let child = newChildren[i];
+      
+      if (!child || child.type === _PLACEHOLDER || _isNull(child.key)) {
+        results[i] = null;
+        continue;
+      }
+      
+      newKeySet.add(child.key);
+      
+      let existing = oldMap.get(child.key);
+      if (existing?.parentNode === container) {
+        newMap.set(child.key, existing);
+        results[i] = {key: child.key, node: existing};
+        continue;
+      }
+      
+      if (child.type === _TEXT) {
+        let node = this._renderer._createTextNode(child.value);
+        newMap.set(child.key, node);
+        results[i] = {key: child.key, node};
+      } else {
+        let processResult = this._processNode(child.value, false, cKey, pRId);
+        
+        if (_isPromise(processResult)) {
+          hasAsync = true;
+          results[i] = processResult.then(node => {
+            newMap.set(child.key, node);
+            return {key: child.key, node};
+          });
+        } else {
+          newMap.set(child.key, processResult);
+          results[i] = {key: child.key, node: processResult};
+        }
+      }
+    }
+    
+    for (let [key, node] of oldMap) {
+      if (!newKeySet.has(key) && node.parentNode === container) {
+        this._deepCleanupNode(node, pRId);
+        this._renderer._removeChild(container, node);
+      }
+    }
+    
+    let reorderChildren = () => {
+      let childNodesArray = container.childNodes;
+      let positionMap = new Map();
+      
+      for (let i = 0; i < childNodesArray.length; i++) {
+        positionMap.set(childNodesArray[i], i);
+      }
+      
+      for (let i = 0; i < results.length; i++) {
+        let result = results[i];
+        if (!result) continue;
+        
+        let {node} = result;
+        let currentPos = positionMap.get(node);
+        
+        if (currentPos === undefined) {
+          let ref = childNodesArray[i];
+          this._renderer._insertBefore(container, node, ref || null);
+          
+          positionMap.set(node, i);
+          for (let [n, pos] of positionMap.entries()) {
+            if (pos >= i && n !== node) {
+              positionMap.set(n, pos + 1);
+            }
+          }
+        } else if (currentPos !== i) {
+          let ref = childNodesArray[i];
+          if (ref !== node) {
+            this._renderer._insertBefore(container, node, ref);
+            
+            let oldPos = currentPos;
+            positionMap.set(node, i);
+            
+            for (let [n, pos] of positionMap.entries()) {
+              if (n === node) continue;
+              if (oldPos < i && pos > oldPos && pos <= i) {
+                positionMap.set(n, pos - 1);
+              } else if (oldPos > i && pos >= i && pos < oldPos) {
+                positionMap.set(n, pos + 1);
               }
             }
-            return false;
-          },
-          cleanup() {
-            listeners.forEach(({ actual, handler }) => {
-              target.removeEventListener(actual, handler);
-            });
-            jurisIns.armedElements.delete(target);
-            return true;
           }
-        };        
-        jurisIns.armedElements.set(target, { listeners, context, instance: instance });
-        return instance;
-      } catch (error) {
-        log.ee && console.error(log.e('arm() setup failed', {target: target.tagName || target.toString(),error: error.message, stack: error.stack?.split('\n').slice(0, 5).join('\n')}, 'app'));
-        return null;
+        }
+      }
+      
+      container._jurisNodeKeys = newMap;
+    };
+    
+    if (hasAsync) {
+      results.forEach((r, idx) => {
+        if (_isPromise(r)) {
+          r.then(resolved => {
+            results[idx] = resolved;
+            reorderChildren();
+          });
+        }
+      });
+    }
+    
+    reorderChildren();
+  }
+
+  _isActiveComponentNode(node) {
+    for (let [cKey, meta] of this._componentMap.entries()) {
+      if (this._activeComponents.has(meta.name)) {
+        if (meta.el === node || (meta.el?.contains && meta.el.contains(node))) return true;
       }
     }
+    return false;
+  }
 
-    cleanup() {
-        this.armedElements = new Map();
-        this.getHM()?.cleanup();
-    } 
-    destroy() {
-        this.cleanup();
-        if (this.domEnhancer) {
-            this.domEnhancer.destroy();
+  _deepCleanupNode(node, pRId) {
+    if (!node) return;
+    let nodesToCleanup = new Set();
+    let collectNodes = (n) => {
+      if (!n) return;
+      nodesToCleanup.add(n);
+      if (n.childNodes) {
+        for (let i = 0; i < n.childNodes.length; i++) {
+          collectNodes(n.childNodes[i]);
         }
-        this.getSM().subscribers.clear();
-        this.getSM().extSubs.clear();
-        this.getCM().components.clear();
-        if (this.getHM()) {
-            this.getHM().components.clear();
-        }
-        this.armedElements = new Map();
+      }
+    };
+    collectNodes(node);
+    if (nodesToCleanup.size === 0) return;
+    let toCleanup = [];
+    for (let [id, reactive] of this._stateManager._reactiveNodes.entries()) {
+      if (reactive.type === _RENDER) continue;
+      if (nodesToCleanup.has(reactive.el) || nodesToCleanup.has(reactive.node)) {
+        toCleanup.push(id);
+      }
     }
+    for (let id of toCleanup) {
+      this._stateManager.cleanup(id);
+    }
+    for (let n of nodesToCleanup) {
+      if (n._jurisEventListeners) {
+        n._jurisEventListeners.forEach(({eventName, handler}) => 
+          this._renderer._removeEventListener(n, eventName, handler)
+        );
+        delete n._jurisEventListeners;
+      }
+    }
+  }
+
+  _setMetaElement(meta, start, end=null, type=null) {
+    meta.el = start;
+    if (end) meta.endMarker = end;
+    if(type) meta.type = type;
+  }
+
+  _updateComponentRender(rId, renderResult) {
+    let reactive = this._stateManager._reactiveNodes.get(rId);
+    if (!reactive) return;
+    let meta = this._componentMap.get(reactive.cKey);
+    if (!meta) return;
+    
+    if (this._checkAndTrackPromise(renderResult)) {
+      renderResult.then(resolved => this._processResolvedRenderResult(reactive, meta, resolved))
+        .catch(err => console.error(' Async render error:', err));
+      return;
+    }
+    this._processResolvedRenderResult(reactive, meta, renderResult);
+  }
+
+  _processResolvedRenderResult(reactive, meta, renderResult) {
+    let rId = 'reactive_render_' + reactive.cKey;
+    
+    // Check for cleanup signal FIRST
+    if (renderResult === 'cleanup') {
+      this._cleanupComponent(reactive.cKey, meta, reactive);
+      return;
+    }
+    
+    // Clean up existing reactive nodes in container
+    if (meta.el) {
+      this._cleanupReactiveNodesInContainer(meta.el, rId);
+    }
+    if (_isNull(renderResult)) {
+      if (meta.type === 'null') return;
+      
+      if (meta.type === 'primitive' || meta.type === 'array') {
+        this._renderer._removeRange(meta.el, meta.endMarker);
+      } else if (meta.type === 'el' && meta.el?.parentNode) {
+        let [start, end] = this._renderer._createComments([`start:${reactive.cKey}`, `end:${reactive.cKey}`]);
+        this._renderer._insertBefore(meta.el.parentNode, start, meta.el);
+        this._renderer._insertBefore(meta.el.parentNode, end, meta.el.nextSibling);
+        this._renderer._removeChild(meta.el.parentNode, meta.el);
+        this._setMetaElement(meta, start, end, 'null');
+      }
+      return;
+    }
+    let processedResult = _isFn(renderResult) ? renderResult() : renderResult;
+    if (_isPrimitive(processedResult)) {
+      if (meta.type === 'primitive' || meta.type === 'null') {
+        if (meta.type === 'null' && !this._stateManager._subscriptions.has(rId)) {
+          this._stateManager._subscriptions.set(rId, new Set());
+        }
+        this._updatePrimitive(meta, String(processedResult));
+        meta.type = 'primitive';
+      }
+      if (reactive.hooks?.onUpdate) reactive.hooks.onUpdate();
+      return;
+    }
+    if (_isArr(processedResult)) {
+      if (meta.type === 'array' || meta.type === 'null') {
+        if (meta.type === 'null' && !this._stateManager._subscriptions.has(rId)) {
+          this._stateManager._subscriptions.set(rId, new Set());
+        }
+        this._updateArray(meta, processedResult);
+        meta.type = 'array';
+      }
+      if (reactive.hooks?.onUpdate) reactive.hooks.onUpdate();
+      return;
+    }
+    let result = this._processNode(processedResult, false, reactive.cKey, rId);  
+    let updateElement = (newElement) => {
+      if (!newElement) return;
+      if (meta.type === 'null' && !this._stateManager._subscriptions.has(rId)) {
+        this._stateManager._subscriptions.set(rId, new Set());
+      }    
+      if (meta.type === 'null' && meta.el?.parentNode) {
+        let parent = meta.el.parentNode;
+        this._renderer._insertBefore(parent, newElement, meta.endMarker);
+        this._renderer._removeChild(parent, [meta.el, meta.endMarker]);
+        this._setMetaElement(meta, newElement, null, 'el');
+      } else if (meta.el?.parentNode) {
+        this._cleanupElementReactives(meta.el);
+        if (reactive.api) this._attachApiToElement(newElement, reactive.api, meta.name);
+        this._renderer._replaceElement(meta.el, newElement);
+        this._setMetaElement(meta, newElement, null, 'el');
+      }    
+      if (reactive.hooks?.onUpdate) reactive.hooks.onUpdate();
+    };  
+    if (_isPromise(result)) {
+      result.then(updateElement);
+    } else {
+      updateElement(result);
+    }
+  }
+
+  _cleanupElementReactives(el) {
+    if (!el) return;    
+    let toDelete = [];
+    for (let [id, reactive] of this._stateManager._reactiveNodes.entries()) {
+      if (reactive.type === _RENDER) continue;
+      let reactiveNode = reactive.node || reactive.el;
+      if (reactiveNode === el || this._renderer._isNodeInside(reactiveNode, el)) toDelete.push(id);
+    }
+    toDelete.forEach(id => this._stateManager.cleanup(id));
+    this._renderer._cleanupEventListeners(el);
+  }
+
+  _updatePrimitive(meta, text) {
+    this._renderer._removeRange(meta.el, meta.endMarker);
+    this._renderer._insertBeforeMarker(meta.el.parentNode, [this._renderer._createTextNode(text)], meta.endMarker);
+  }
+
+  _updateArray(meta, items) {
+    this._renderer._removeRange(meta.el, meta.endMarker);    
+    let elements = [];    
+    for (let i = 0; i < items.length; i++) {
+      let item = items[i];
+      if (_isPrimitive(item)) {
+        elements[i] = this._renderer._createTextNode(String(item));
+      } else if (_isFn(item)) {
+        let processResult = this._processChildNode(item);
+        if (this._checkAndTrackPromise(processResult)) {
+          // DEDUPLICATED: Use consolidated handler
+          elements[i] = this._handleAsyncChildReplacement(processResult, i);
+        } else {
+          elements[i] = processResult;
+        }
+      } else if (_isBool(item) || _isNull(item)) {
+        elements[i] = null;
+      } else {
+        let processResult = this._processNode(item);
+        if (this._checkAndTrackPromise(processResult)) {
+          // DEDUPLICATED: Use consolidated handler
+          elements[i] = this._handleAsyncChildReplacement(processResult, i);
+        } else {
+          elements[i] = processResult;
+        }
+      }
+    }    
+    this._renderer._insertBeforeMarker(meta.el.parentNode, elements, meta.endMarker);
+  }
+
+  createContext(cKey) {
+    let localStateKey = `__local_${cKey}`;
+    if (!this._stateManager.states[localStateKey]) {
+      this._stateManager.states[localStateKey] = {};
+    }    
+    let localStateCounter = 0; 
+    let context = {
+      ...this._baseContext,
+      ...this._services,
+      ...(this._headlessManager ? this._headlessManager.getAllAPIs() : {}),
+      effect: (fn) => {
+        let effectId = this._stateManager.effect(fn, (id, execute) => {
+          execute();
+          let effectNode = this._stateManager._reactiveNodes.get(id);
+          if (effectNode) effectNode.cKey = cKey;
+        });
+        return effectId;
+      },
+      newState: (initialValue) => {
+        let stateId = localStateCounter++;
+        let fullKey = `${localStateKey}.${stateId}`;        
+        if (!this._stateManager.states[localStateKey]) {
+          this._stateManager.states[localStateKey] = {};
+        }
+        if (this._stateManager.states[localStateKey][stateId] === undefined) {
+          this._stateManager.states[localStateKey][stateId] = initialValue;
+        }        
+        let getter = () => {
+          let value = this.getState(fullKey);
+          return value !== undefined ? value : initialValue;
+        };
+        let setter = (value) => {
+          if (_isFn(value)) {
+            this.setState(fullKey, value(getter()));
+          } else {
+            this.setState(fullKey, value);
+          }
+        };
+        return [getter, setter];
+      }
+    };
+    return context;
+  }
+
+  registerComponent(name, fn, options = {}) {
+    if (!_isStr(name) || !name || !_isFn(fn)) {
+      console.error(' Component name must be a non-empty string and fn must be a function');
+      return false;
+    }
+    this._components[name] = fn;
+    if (options.active === true) this._activeComponents.add(name);
+    return true;
+  }
+
+  registerActiveComponent(name, fn, options={}){
+    this._components[name] = fn;
+    this._activeComponents.add(name);
+  }
+  
+  arm(target, handlerFn) {    
+    if (_isNull(handlerFn) || !_isFn(handlerFn)) {
+      console.warn(' arm() called without valid handler function');
+      return null;
+    }    
+    let context = this.createContext('arm_' + Math.random().toString(36).substr(2, 9));
+    let handlers = handlerFn(context);
+    let listeners = [];    
+    for (let eventName in handlers) {
+      let actualEventName = eventName.startsWith('on-') || eventName.startsWith('on:') 
+        ? eventName.slice(3)
+        : eventName.startsWith('on') ? eventName.slice(2).toLowerCase() : eventName;      
+      let handler = handlers[eventName];
+      if (_isFn(handler)) {
+        this._renderer._addEventListener(target, actualEventName, handler);
+        listeners.push({original: eventName, actual: actualEventName, handler});
+      }
+    }
+    let jurisInstance = this;
+    let instance = {
+      events: listeners.map(e => ({name: e.original, actualEvent: e.actual, handler: e._handler})),      
+      trigger(eventName, eventData = {}) {
+        let listener = listeners.find(e => e.original === eventName || e.actual === eventName);
+        if (listener) {
+          let mockEvent = {type: listener.actual, target, preventDefault: () => {}, stopPropagation: () => {}, ...eventData};
+          listener.handler.call(target, mockEvent);
+          return true;
+        }
+        return false;
+      },      
+      cleanup() {
+        listeners.forEach(({actual, handler}) => jurisInstance._renderer._removeEventListener(target, actual, handler));
+        jurisInstance._armedElements.delete(target);
+        return true;
+      }
+    };    
+    this._armedElements.set(target, {listeners, context, instance});
+    return instance;
+  }
+
+  z(layer = 'default') {
+    if (!this._zStacks.has(layer)) this._zStacks.set(layer, []);
+    let stack = this._zStacks.get(layer);
+    let idx = this._zIndex++;
+    stack.push(idx);
+    return {
+      value: idx,
+      pop: () => {
+        let i = stack.indexOf(idx);
+        if (i > -1) stack.splice(i, 1);
+      }
+    };
+  }
+
+  topZ(layer = 'default') {
+    let stack = this._zStacks.get(layer);
+    return stack?.length ? stack[stack.length - 1] : this._zIndex;
+  }
+
+  modal(opts) {
+    return new Promise(resolve => {
+      let id = 'modal_' + Math.random().toString(36).substr(2, 9);
+      let zh = this.z(opts.layer || 'modals');
+      if (!this._stateManager.states._modals) this._stateManager.states._modals = {};      
+      this.setState(`_modals`, {
+        [id]: {
+          visible: true,
+          zIndex: zh.value,
+          width: opts.width,
+          dismissable: opts.dismissable !== false,
+          component: opts.component,
+          onClose: (result) => {
+            this.setState(`_modals.${id}.visible`, false);
+            zh.pop();
+            setTimeout(() => {
+              this.setState(`_modals.${id}`, null);
+            }, 300);
+            resolve(result);
+          }
+        }
+      });
+    });
+  }
+
+  subscribe(key, callback, options = {}) {
+    let subscriptionId = 'subscription_' + Math.random().toString(36).substr(2, 9);    
+    this._stateManager._subscriptions.set(subscriptionId, new Set([key]));
+    this._stateManager._trie.subscribe(key, subscriptionId);    
+    if (!this._subscriptionCallbacks) {
+      this._subscriptionCallbacks = new Map();
+    }
+    this._subscriptionCallbacks.set(subscriptionId, callback);    
+    if (options.immediate !== false) {
+      let currentValue = this.getState(key, undefined, false);
+      callback(currentValue, undefined);
+    }    
+    return () => {
+      this._stateManager._trie._unsubscribe(key, subscriptionId);
+      this._subscriptionCallbacks.delete(subscriptionId);
+      this._stateManager._subscriptions.delete(subscriptionId);
+    };
+  }
+
+  _attachApiToElement(el, api, name) {
+    if (!el || !api || !_isObj(api)) return;
+    Object.keys(api).forEach(k => { el[k] = api[k]; });
+    if (name) this._componentApiMap.set(name, api);
+  }
+
+  //DEVTOOLS--START
+  _markComponentElement(el, cKey, name) {
+    if (!el || el.nodeType !== 1) return;
+    el.setAttribute('data-jcomp', cKey);
+    if (this.__DEV__) {
+      el._jurisDevCompKey = cKey;
+      el._jurisDevCompName = name;
+      if (this.__devtools?.componentTree) {
+        let meta = this.__devtools.componentTree.get(cKey);
+        if (meta) meta.el = el;
+      }
+    }
+  }
+  //DEVTOOLS--END
+
+  _collectSSRComponents(root) {
+    let elements = root.querySelectorAll('[data-jcomp]');
+    this._pendingHydration.clear();
+    
+    elements.forEach(el => {
+      let cKey = el.getAttribute('data-jcomp');
+      this._ssrComponentMap.set(cKey, el);
+      this._pendingHydration.add(cKey);
+    });
+  }
+
+  render(container = '#app', vdom = null) {
+    this._rootEl = _isStr(container) ? d.querySelector(container) : container;
+    if (!this._rootEl) return;
+    if (this.__SSR_RENDERED__) {
+      this._hydrateMode = true;
+      this._ssrComponentMap = new Map();
+      this._pendingHydration = new Set();
+      this._collectSSRComponents(this._rootEl);      
+      let layout = vdom !== null ? vdom : this.layout;
+      let result = this._buildTree(layout);      
+      const setupAndHydrate = () => {
+        this._hydrateVisibleComponents();
+        this._setupHydrationObserver();
+        requestAnimationFrame(() => this._checkPendingConnected());
+      }
+      if (_isPromise(result)) {
+        result.then(setupAndHydrate);
+      } else {
+        setupAndHydrate();
+      }     
+      return;
+    }    
+    this._rootEl.innerHTML = '';
+    let layout = vdom !== null ? vdom : this.layout;
+    let result = this._buildTree(layout);    
+    if (_isPromise(result)) {
+      result.then(frag => this._renderer._appendChildren(this._rootEl, frag));
+    } else {
+      this._renderer._appendChildren(this._rootEl, result);
+    }
+    requestAnimationFrame(() => this._checkPendingConnected());
+  }
+
+  _hydrateVisibleComponents() {
+    if (!this._ssrComponentMap || this._ssrComponentMap.size === 0) return;
+    let hydrated = 0;
+    let hydratedKeys = [];   
+    for (let cKey of this._pendingHydration) {
+      let el = this._ssrComponentMap.get(cKey);
+      if (el && this._isInViewport(el) && !el._jurisHydrated) {
+        this._hydrateComponent(cKey, el);
+        hydratedKeys.push(cKey);
+        hydrated++;
+      } else if (el) {
+        //not in view port
+      }
+    }
+    hydratedKeys.forEach(key => this._pendingHydration.delete(key));
+  }
+
+  _isInViewport(el) {
+    if (!el || !el.getBoundingClientRect) return false;    
+    let rect = el.getBoundingClientRect();
+    let windowHeight = w.innerHeight || d.documentElement.clientHeight;
+    let windowWidth = w.innerWidth || d.documentElement.clientWidth;
+    let buffer = 200;    
+    return (
+      rect.top <= windowHeight + buffer &&
+      rect.bottom >= -buffer &&
+      rect.left <= windowWidth + buffer &&
+      rect.right >= -buffer
+    );
+  }
+
+  _setupHydrationObserver() {
+    let pendingComponents = [];
+    for (let cKey of this._pendingHydration) {
+      let el = this._ssrComponentMap.get(cKey);
+      if (el && !el._jurisHydrated) {
+        pendingComponents.push({cKey, el});
+      }
+    }    
+    if (pendingComponents.length === 0) {
+      this._cleanupHydration();
+      return;
+    }    
+    if (!w.IntersectionObserver) {
+      console.warn('IntersectionObserver not available, hydrating all components');
+      for (let {cKey, el} of pendingComponents) {
+        this._hydrateComponent(cKey, el);
+        this._pendingHydration.delete(cKey);
+      }
+      this._cleanupHydration();
+      return;
+    }    
+    this._hydrationObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            let el = entry.target;
+            let cKey = el.getAttribute('data-jcomp');          
+            if (cKey && !el._jurisHydrated && this._pendingHydration.has(cKey)) {
+              this._hydrateComponent(cKey, el);
+              this._pendingHydration.delete(cKey);
+              this._hydrationObserver.unobserve(el);
+            }
+          }
+        });
+        if (this._pendingHydration.size === 0) {
+          this._cleanupHydration();
+        }
+      },
+      {
+        rootMargin: '200px',
+        threshold: 0.01
+      }
+    );
+    for (let {cKey, el} of pendingComponents) {
+      this._hydrationObserver.observe(el);
+    }
+  }
+
+  _hydrateComponent(cKey, el) {
+    if (el._jurisHydrated) return;
+    el._jurisHydrated = true;
+    let meta = this._componentMap.get(cKey);
+    if (!meta) {
+      console.warn(`No metadata found for component: ${cKey}`);
+      return;
+    }
+    let rId = 'reactive_render_' + cKey;
+    let reactive = this._stateManager._reactiveNodes.get(rId);
+    
+    if (!reactive) {
+      console.warn(`No reactive node found for component: ${cKey}`);
+      return;
+    }
+    let wasHydrating = this._hydrateMode;
+    this._hydrateMode = false;
+    const replaceWithHydrated = (resolved) => {
+      this._replaceWithHydratedElement(cKey, el, resolved, reactive);
+    }
+    try {
+      let renderResult = reactive.fn();    
+      if (_isPromise(renderResult)) {
+        renderResult.then(replaceWithHydrated);
+      } else {
+        replaceWithHydrated(renderResult);
+      }
+    } catch (error) {
+      console.error(`Error hydrating component ${cKey}:`, error);
+    } finally {
+      this._hydrateMode = wasHydrating;
+    }
+    if (reactive?.hooks?.onMount) {
+      setTimeout(() => {
+        if (reactive.hooks.onMount) {
+          reactive.hooks.onMount();
+        }
+      }, 0);
+    }
+  }
+
+  _replaceAndMarkHydrated(newElement, oldElement, cKey) {
+    if (newElement && oldElement.parentNode) {
+      newElement.setAttribute('data-jcomp', cKey);
+      this._renderer._replaceElement(oldElement, newElement);      
+      let meta = this._componentMap.get(cKey);
+      if (meta) {
+        meta.el = newElement;
+      }      
+      newElement._jurisHydrated = true;
+      this._ssrComponentMap.set(cKey, newElement);
+    }
+  }
+
+  _replaceWithHydratedElement(cKey, oldElement, renderResult, reactive) {
+    let processedResult = _isFn(renderResult) ? renderResult() : renderResult;
+    
+    if (_isNull(processedResult) || _isPrimitive(processedResult) || _isArr(processedResult)) {
+      return;
+    }
+    let newElement = this._processNode(processedResult, false, cKey, 'reactive_render_' + cKey);
+    if (_isPromise(newElement)) {
+      this._replaceAndMarkHydrated(newElement, oldElement, cKey);
+    } else if (newElement && oldElement.parentNode) {
+     this._replaceAndMarkHydrated(newElement, oldElement, cKey);
+    }
+  }
+
+  _attachComponentEvents(cKey, rootElement) {
+    let rId = 'reactive_render_' + cKey;
+    this._attachEventsToTree(rootElement, cKey, rId);
+  }
+
+  _attachEventsToTree(el, cKey, pRId) {
+    if (!el || el.nodeType !== 1) return;
+    for (let [id, reactive] of this._stateManager._reactiveNodes.entries()) {
+      if (reactive.el === el && reactive.cKey === cKey) {
+        if (el._jurisEventHandlers) {
+          for (let [eventName, handler] of Object.entries(el._jurisEventHandlers)) {
+            this._renderer._addEventListener(el, eventName, handler);
+          }
+        }
+      }
+    }
+    if (el.childNodes) {
+      for (let i = 0; i < el.childNodes.length; i++) {
+        let child = el.childNodes[i];
+        if (child.nodeType === 1 && child.getAttribute('data-jcomp')) {
+          continue;
+        }
+        this._attachEventsToTree(child, cKey, pRId);
+      }
+    }
+  }
+
+  _cleanupHydration() {
+    if (this._hydrationObserver) {
+      this._hydrationObserver.disconnect();
+      this._hydrationObserver = null;
+    }
+    this._hydrateMode = false;
+    this._ssrComponentMap.clear();
+    this._pendingHydration.clear();
+  }
+
+  _buildTree(layout) {
+    layout = _shoudBeArray(layout);    
+    let hasAsync = false;
+    let elements = [];    
+    for (let i = 0; i < layout.length; i++) {
+      let item = layout[i];
+      let processResult = this._processNode(item);      
+      if (_isPromise(processResult)) {
+        hasAsync = true;
+        elements[i] = processResult;
+      } else {
+        elements[i] = processResult;
+      }
+    }
+    
+    let buildFragment = (resolvedElements) => {
+      let frag = this._renderer._createFragment();
+      this._renderer._appendChildren(frag, resolvedElements);
+      return frag;
+    };
+    
+    if (!hasAsync) {
+      return buildFragment(elements);
+    } else {
+      return Promise.all(elements.map(e => _isPromise(e) ? e : Promise.resolve(e)))
+        .then(buildFragment);
+    }
+  }
+
+  _processNode(node, isSvgC = false, cKey = null, pRId = null) {
+    if (!_isObj(node)) return null;
+    let entries = Object.entries(node);
+    if (!entries.length) return null;    
+    let [key, props] = entries[0];
+    if (this._components[key]) {
+      return this._buildComponent(key, props, cKey ? ('reactive_render_' + cKey) : pRId);
+    }
+    let isSvg = isSvgC || key==='svg';
+    try {
+      return this._buildElement({tag: key, props}, isSvg, cKey, props?.key, pRId);
+    } catch (error) {
+      console.error('Error processing node:', {tag: key, props},error);
+      return this._buildElement(this._createErrorVDOM(error, key));
+    }
+  }
+
+  _buildComponent(name, props, pRId = null) {
+    let userKey = props?.__key ?? props?.key;
+    let cKey = userKey !== undefined 
+      ? `${name}:${userKey}_${this._componentCounter++}`
+      : `${name}_${this._hashProps(props)}_${this._componentCounter++}`;    
+    let context = this.createContext(cKey);
+    let componentError = null;
+    let errorHandler = (message, source, lineno, colno, error) => {
+      componentError = {message, source, lineno, colno, error};
+      return true;
+    };    
+    let previousHandler = w.onerror;
+    w.onerror = errorHandler;    
+    let result;
+    try {
+      result = this._components[name](props, context);
+    } catch (err) {
+      componentError = {
+        msg: err.message,
+        src: 'component',
+        ln: 0,
+        col: 0,
+        err
+      };
+    } finally {
+      w.onerror = previousHandler;
+    }    
+    //DEVTOOLS--START
+    if (this.__DEV__) {
+      this.__devtools.componentTree.set(cKey, {
+        name, 
+        cKey,
+        vdom:result,
+        parent: pRId, 
+        props: props || {},
+        propKeys: Object.keys(props || {}),
+        mountTime: Date.now(), 
+        isRoot: !pRId,
+        hasRender: !!result?.render || _isFn(result),
+        hasHooks: !!result?.hooks,
+        hasApi: !!result?.api,
+        hookNames: result?.hooks ? Object.keys(result.hooks) : [],
+        apiMethods: result?.api ? Object.keys(result.api) : [],
+        api: result?.api || null
+      });
+    }    
+    //DEVTOOLS--END
+    if (componentError) {
+      return this._renderComponentError(componentError, cKey, name, props, pRId);
+    }
+    if (this._checkAndTrackPromise(result)) {
+      return result.then(resolvedResult => {
+        let renderFn = resolvedResult?.render || (_isFn(resolvedResult) ? resolvedResult : () => resolvedResult);
+        let rId = 'reactive_render_' + cKey;
+        this._stateManager._subscriptions.set(rId, new Set());
+        let wrappedRender = () => {
+          let prev = this._stateManager._activeReactive;
+          this._stateManager._activeReactive = rId;
+          try {
+            return renderFn();
+          } catch (error) {
+            console.error(' Render error:', error);
+            return this._createErrorVDOM(error, name);
+          } finally {
+            this._stateManager._activeReactive = prev;
+          }
+        };
+        this._stateManager._reactiveNodes.set(rId, {
+          type: _RENDER, cKey, fn: wrappedRender, hooks: resolvedResult?.hooks, api: resolvedResult?.api, pRId
+        });
+        if (resolvedResult?.api) this._componentApiMap.set(name, resolvedResult.api);
+        if (resolvedResult?.hooks?.onMount) setTimeout(() => resolvedResult.hooks.onMount(), 0);
+        let renderOutput = wrappedRender();
+        if (this._checkAndTrackPromise(renderOutput)) {
+          return renderOutput.then(resolved => this._buildComponentFromResult(resolved, cKey, name, props, resolvedResult, pRId));
+        }
+        return this._buildComponentFromResult(renderOutput, cKey, name, props, resolvedResult, pRId);
+      });
+    }
+    let renderFn = result?.render || (_isFn(result) ? result : () => result);
+    let rId = 'reactive_render_' + cKey;
+    this._stateManager._subscriptions.set(rId, new Set());
+    let wrappedRender = () => {
+      let prev = this._stateManager._activeReactive;
+      this._stateManager._activeReactive = rId;
+      try {
+        return renderFn();
+      } catch (error) {
+        console.error(' Render error:', error);
+        return this._createErrorVDOM(error, name);
+      } finally {
+        this._stateManager._activeReactive = prev;
+      }
+    };
+    this._stateManager._reactiveNodes.set(rId, {
+      type: _RENDER, cKey, fn: wrappedRender, hooks: result?.hooks, api: result?.api, pRId
+    });
+    if (result?.api) this._componentApiMap.set(name, result.api);
+    if (result?.hooks?.onMount) setTimeout(() => result.hooks.onMount(), 0);
+    let renderOutput = wrappedRender();
+    if (this._checkAndTrackPromise(renderOutput)) {
+      let currentNode = this._renderer._createComments(`async-component:${cKey}`)[0];
+      let spinnerTimeout = null;
+      let indicatorVdom = this._getIndicator(name, props?.id);
+      if (indicatorVdom && this.indicatorDelay > 0) {
+        spinnerTimeout = setTimeout(() => {
+          if (currentNode.parentNode) {
+            let spinnerEl = this._processNode(indicatorVdom);
+            if (spinnerEl && currentNode.parentNode) {
+              this._renderer._replaceElement(currentNode, spinnerEl);
+              currentNode = spinnerEl;
+            }
+          }
+        }, this.indicatorDelay);
+      }   
+      renderOutput.then(resolved => {
+        if (spinnerTimeout) clearTimeout(spinnerTimeout);        
+        let componentElement = this._buildComponentFromResult(resolved, cKey, name, props, result, pRId);
+        if (_isPromise(componentElement)) {
+          componentElement.then(el => {
+            if (el && currentNode?.parentNode) {
+              this._renderer._replaceElement(currentNode, el);
+            }
+          });
+        } else if (componentElement && currentNode?.parentNode) {
+          this._renderer._replaceElement(currentNode, componentElement);
+        }
+      }).catch(err => {
+        if (spinnerTimeout) clearTimeout(spinnerTimeout);
+        console.error(' Async render error:', err);
+        if (currentNode?.parentNode) {
+          let errorEl = this._renderComponentError(
+            { message: err.message, source: 'async-render', lineno: 0, colno: 0, error: err },
+            cKey, name, props, pRId
+          );
+          this._renderer._replaceElement(currentNode, errorEl);
+        }
+      });
+      return currentNode;
+    }
+    return this._buildComponentFromResult(renderOutput, cKey, name, props, result, pRId);
+  }
+
+  _renderComponentError(error, cKey, name, props, pRId) {
+    let errorElement = this._renderer._createElement('div');
+    errorElement.style.cssText = 'padding:12px;margin:8px;border:2px solid #ef4444;border-radius:4px;background:#fee;color:#991b1b;font-family:monospace;font-size:12px;';
+    errorElement.innerHTML = `
+      <strong>Error in component "${name}"</strong><br/>
+      ${error.message}<br/>
+      <small>${error.source}:${error.lineno}:${error.colno}</small>
+    `;
+    this._componentMap.set(cKey, {name, props, el: errorElement, type: 'error', pRId});
+    return errorElement;
+  }
+
+  _hashProps(props) {
+    if (!props || typeof props !== 'object' || Object.keys(props).length === 0) return '0';    
+    let keys = Object.keys(props).filter(k => k !== '__key' && k !== 'key').sort();
+    let str = keys.map(k => {
+      let v = props[k];
+      if (_isPrimitive(v)) return `${k}:${v}`;
+      if (_isArr(v)) return `${k}:arr${v.length}`;
+      if (_isObj(v)) return `${k}:obj`;
+      return k;
+    }).join('|');    
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(36).slice(0, 6);
+  }
+  _finalizeComponentElement(el, cKey, name, props, result, pRId) {
+    if (result?.api && el) {
+      this._attachApiToElement(el, result.api, name);
+    }
+    this._markComponentElement(el, cKey, name);
+    this._componentMap.set(cKey, {name, props, el, type: 'el', pRId});
+    return el;
+  }
+
+  _buildComponentFromResult(finalResult, cKey, name, props, result, pRId) {
+    if (this._hydrateMode && this._ssrComponentMap.has(cKey)) {
+      let ssrElement = this._ssrComponentMap.get(cKey);      
+      if (result?.api) this._attachApiToElement(ssrElement, result.api, name);  
+      this._markComponentElement(ssrElement, cKey, name);
+      this._componentMap.set(cKey, {name, props, el: ssrElement, type: 'el', pRId});
+      return ssrElement;
+    }
+    if (_isNull(finalResult)) {
+      let [start, end] = this._renderer._createComments([`start:${cKey}`, `end:${cKey}`]);
+      let frag = this._renderer._createFragment();
+      this._renderer._appendChildren(frag, [start, end]);
+      this._componentMap.set(cKey, {name, props, el: start, endMarker: end, type: 'null', pRId});
+      return frag;
+    }
+    let processedResult = _isFn(finalResult) ? finalResult() : finalResult;
+    if (_isPrimitive(processedResult)) {
+      return this._createPrimitiveFragment(cKey, String(processedResult), name, props, pRId);
+    }
+    if (_isArr(processedResult)) {
+      return this._createArrayFragment(cKey, processedResult, name, props, pRId);
+    }
+    let elementResult = this._processNode(processedResult, false, cKey, 'reactive_render_' + cKey);
+    if (_isPromise(elementResult)) {
+      return elementResult.then(el => {
+        return this._finalizeComponentElement(el, cKey, name, props, result, pRId);
+      });
+    }    
+    return this._finalizeComponentElement(elementResult, cKey, name, props, result, pRId);
+  }
+
+  _createPrimitiveFragment(cKey, text, name, props, pRId = null) {
+    let [start, end] = this._renderer._createComments([`start:${cKey}`, `end:${cKey}`]);
+    let frag = this._renderer._createFragment();
+    this._renderer._appendChildren(frag, [start, this._renderer._createTextNode(text), end]);
+    this._componentMap.set(cKey, {name, props, el: start, endMarker: end, type: 'primitive', pRId});
+    return frag;
+  }
+
+  _createArrayFragment(cKey, items, name, props, pRId = null) {
+    let [start, end] = this._renderer._createComments([`start:${cKey}`, `end:${cKey}`]);
+    let elements = [];
+    for (let i = 0; i < items.length; i++) {
+      let item = items[i];      
+      if (_isPrimitive(item)) {
+        elements[i] = this._renderer._createTextNode(String(item));
+      } else if (_isFn(item)) {
+        let processResult = this._processChildNode(item, false, cKey, 'reactive_render_' + cKey);
+        if (this._checkAndTrackPromise(processResult)) {
+          elements[i] = this._handleAsyncChildReplacement(processResult, i, cKey, 'reactive_render_' + cKey);
+        } else {
+          elements[i] = processResult;
+        }
+      } else if (_isBool(item) || _isNull(item)) {
+        elements[i] = null;
+      } else {
+        let processResult = this._processNode(item, false, cKey, 'reactive_render_' + cKey);
+        if (this._checkAndTrackPromise(processResult)) {
+          elements[i] = this._handleAsyncChildReplacement(processResult, i, cKey, 'reactive_render_' + cKey);
+        } else {
+          elements[i] = processResult;
+        }
+      }
+    }    
+    let frag = this._renderer._createFragment();
+    this._renderer._appendChildren(frag, [start, ...elements, end]);
+    this._componentMap.set(cKey, {name, props, el: start, endMarker: end, type: 'array', pRId});
+    return frag;
+  }
+
+  _buildElement(nodeOrObj, isSvgC = false, cKey = null, itemKey = null, pRId = null) {
+    if(!_isObj(nodeOrObj)) return null;
+    let node = nodeOrObj.tag ? nodeOrObj : {tag: Object.keys(nodeOrObj)[0], props: Object.values(nodeOrObj)[0]};
+    let {tag, props} = node;
+    
+    if (_isNull(itemKey) && props?.key !== undefined) itemKey = props.key;
+
+    let isSvg = isSvgC || tag === 'svg';
+    let el = this._renderer._createElement(tag, isSvg);
+    if(el.constructor.name === 'HTMLUnknownElement' && this.__DEV__) {
+      console.warn(`[Juris DOMRenderer] Warning: Created unknown el <${tag}>. Check if the tag name is correct or if a custom el needs to be defined.`,el);
+    }
+    if (typeof el === 'object' || typeof SVGElement === 'object') {
+      el._jurisTag = tag;
+    }
+    if (!_isNull(itemKey)) el._jurisKey = itemKey;
+    
+    let hasAsync = false;
+    let asyncTasks = [];
+    let refCallback = props?.ref || null;
+    
+    let createReactive = (fn) => {
+      let rId = 'reactive_' + tag + (this._stateManager._reactiveCounter++);
+      this._stateManager._subscriptions.set(rId, new Set());
+      
+      let wFn = () => {
+        let prevReactive = this._stateManager._activeReactive;
+        this._stateManager._activeReactive = rId;
+        try {
+          return fn(el);
+        } finally {
+          this._stateManager._activeReactive = prevReactive;
+        }
+      };
+      
+      return {rId, wFn};
+    };
+
+    let handleReactiveProp = (type, valueFn, applyFn, nodeData = {}) => {
+      let {rId, wFn} = createReactive(valueFn);
+      let result = wFn();
+      
+      this._stateManager._reactiveNodes.set(rId, {type, fn: wFn, cKey, pRId, ...nodeData});
+      
+      if (this._checkAndTrackPromise(result)) {
+        hasAsync = true;
+        asyncTasks.push(result.then(resolved => applyFn(resolved)));
+        return; 
+      }
+      
+      applyFn(result);
+    };
+
+    let appendChildren = (childArray, pRId = null) => {
+      let nodes = [];
+      let childrenHasAsync = false;
+      
+      for (let i = 0; i < childArray.length; i++) {
+        let child = childArray[i];
+        let processResult = this._processChildNode(child, isSvg, cKey, pRId);
+        
+        if (this._checkAndTrackPromise(processResult)) {
+          childrenHasAsync = true;
+          let indicatorVdom = this._getIndicator(null, props?.id);
+          let placeholder = indicatorVdom 
+            ? this._processNode(indicatorVdom)
+            : this._renderer._createLoadingPlaceholder(i);
+          
+          nodes[i] = placeholder;
+          
+          processResult.then(node => {
+            if (placeholder.parentNode && node) {
+              this._renderer._replaceElement(placeholder, node);
+            }
+          });
+          
+          continue;
+        }
+        
+        nodes[i] = processResult;
+      }
+      
+      let frag = this._renderer._createFragment();
+      nodes.forEach(node => { if (node) this._renderer._appendChildren(frag, node); });
+      this._renderer._appendChildren(el, frag);
+    };
+    
+    let specialKeys = {ref: 1, onMount: 1, key: 1, children: 1, text: 1, innerHTML: 1, style: 1, dataset: 1, classList: 1};
+    
+    for (let key in props) {
+      let value = props[key];
+      
+      if (specialKeys[key]) {
+        if (key === _TEXT) {
+          if (_isFn(value)) {
+            let textNode = this._renderer._createTextNode('');
+            this._renderer._appendChildren(el, textNode);
+            handleReactiveProp(_TEXT, value, text => textNode.textContent = String(text), {node: textNode});
+          } else {
+            el.textContent = value;
+          }
+          continue;
+        }
+        
+        if (key === 'children') {
+          if (_isFn(value)) {
+            let {rId, wFn} = createReactive(value);
+            let children = wFn();
+            this._stateManager._reactiveNodes.set(rId, {type: 'children', el: el, fn: wFn, cKey, pRId});
+            
+            if (_isPromise(children)) {
+              hasAsync = true;
+              let indicatorVdom = this._getIndicator(null, props?.id);
+              let placeholder = indicatorVdom
+                ? this._handlePromise(children, el, el, null, props?.id)
+                : this._handlePromise(children, el, el);
+              this._renderer._appendChildren(el, placeholder);
+            } else {
+              appendChildren(_shoudBeArray(children), rId);
+            }
+          } else {
+            appendChildren(_shoudBeArray(value), pRId);
+          }
+          continue;
+        }
+        
+        if (key === 'innerHTML') {
+          if (_isFn(value)) {
+            handleReactiveProp('innerHTML', value, html => el.innerHTML = html, {el: el});
+          } else {
+            el.innerHTML = value;
+          }
+          continue;
+        }
+        
+        if (key === 'style') {
+          if (_isFn(value)) {
+            handleReactiveProp('style', value, styles => Object.assign(el.style, styles), {el: el});
+          } else if (_isObj(value)) {
+            let hasReactiveFunctions = Object.values(value).some(_isFn);
+            
+            if (hasReactiveFunctions) {
+              handleReactiveProp(
+                'style',
+                () => {
+                  let computedStyles = {};
+                  for (let styleKey in value) {
+                    computedStyles[styleKey] = _isFn(value[styleKey]) ? value[styleKey]() : value[styleKey];
+                  }
+                  return computedStyles;
+                },
+                styles => Object.assign(el.style, styles),
+                {el: el}
+              );
+            } else {
+              Object.assign(el.style, value);
+            }
+          }
+          continue;
+        }
+        
+        if (key === 'classList') {
+          value = _shoudBeArray(value);          
+          let hasReactiveFunctions = value.some(_isFn);          
+          if (hasReactiveFunctions) {
+            let prvCls = new Set();
+            let {rId, wFn} = createReactive(() => {
+              let computedClasses = [];
+              for (let i = 0; i < value.length; i++) {
+                let classItem = value[i];
+                if (_isFn(classItem)) {
+                  let result = classItem();
+                  if (result) computedClasses.push(result);
+                } else if (classItem) {
+                  computedClasses.push(classItem);
+                }
+              }
+              return computedClasses.filter(c => c);
+            });
+            let currentClasses = wFn();
+            currentClasses.forEach(cls => {
+              el.classList.add(cls);
+              prvCls.add(cls);
+            });
+            this._stateManager._reactiveNodes.set(rId, {
+              type: 'classList',
+              fn: wFn,
+              el: el,
+              cKey,
+              pRId,
+              prvCls
+            });
+          } else {
+            value.filter(c => c).forEach(cls => el.classList.add(cls));
+          }
+          continue;
+        }
+      }
+
+      if (key.charCodeAt(0) === 111 && key.charCodeAt(1) === 110) {
+        if (key !== 'onMount') this._handleEvent(el, key, value);
+        continue;
+      }
+
+      if (_isFn(value)) {
+        handleReactiveProp('attr', value, v => {
+          let descriptor = Object.getOwnPropertyDescriptor(el, key);
+          if (descriptor && descriptor.set) {
+            el[key] = value;
+          } else {
+            this._renderer._setAttribute(el, key, v, isSvg);
+          }
+        }, {el: el, attrName: key, isSvg});
+      } else {
+        let descriptor = Object.getOwnPropertyDescriptor(el, key);
+        if (descriptor && descriptor.set) {
+          el[key] = value;
+        } else {
+          this._renderer._setAttribute(el, key, value, isSvg);
+        }
+      }
+    }
+    
+    if (!hasAsync) {
+      if (refCallback) refCallback(el);
+      return el;
+    } else {
+      return Promise.all(asyncTasks).then(() => {
+        if (refCallback) refCallback(el);
+        return el;
+      });
+    }
+  }
+
+  _checkPendingConnected() {
+    if (!this._pendingConnected || this._pendingConnected.size === 0) return;    
+    let connected = [];    
+    for (let el of this._pendingConnected) {
+      if (el.isConnected && el._jurisOnConnected) {
+        try {
+          el._jurisOnConnected(el);
+        } catch (error) {
+          console.error('Error in onconnected callback:', error);
+        }
+        connected.push(el);
+        delete el._jurisOnConnected;
+      }
+    }
+    connected.forEach(el => this._pendingConnected.delete(el));
+  }
+
+  _handleEvent(el, eventName, handler) {
+    if (eventName === 'onconnected') {
+      el._jurisOnConnected = handler;
+      this._pendingConnected = this._pendingConnected || new Set();
+      this._pendingConnected.add(el);
+      return;
+    }    
+    eventName = eventName.toLowerCase();
+    let actualEventName = eventName === 'onclick' ? 'click' :
+                          eventName === 'ondblclick' || eventName === 'ondoubleclick' ? 'dblclick' :
+                          eventName.slice(2);    
+    if (actualEventName === 'dblclick') el._jurisHasDoubleClick = true;    
+    let finalHandler = actualEventName === 'click'
+      ? (e) => {
+          if (e.detail === 2 && el._jurisHasDoubleClick) return;
+          handler(e);
+        }
+      : handler;
+    this._renderer._addEventListener(el, actualEventName, finalHandler);    
+    if (!el._jurisEventListeners) el._jurisEventListeners = [];
+    el._jurisEventListeners.push({eventName: actualEventName, handler: finalHandler});
+  }
+
+  _registerElementReactiveNode(rId, el, wFn, cKey, pRId, value) {
+    this._stateManager._reactiveNodes.set(rId, {
+      type: 'el',
+      node: el,
+      fn: wFn,
+      cKey,
+      pRId,
+      isCom: this._isComponent(value)
+    });
+    return el;
+  }
+
+  _handleElementResultRegistration(elementResult, rId, wFn, cKey, pRId, value) {
+    if (_isPromise(elementResult)) {
+      return elementResult.then(el => {
+        return this._registerElementReactiveNode(rId, el, wFn, cKey, pRId, value);
+      });
+    }
+    return this._registerElementReactiveNode(rId, elementResult, wFn, cKey, pRId, value);
+  }
+
+  _processChildNode(child, isSvgC = false, cKey = null, pRId = null) {
+    if (_isPrimitive(child)) return this._renderer._createTextNode(String(child));
+    if (_isBool(child) || _isNull(child)) return this._renderer._createComments('null')[0];    
+    let arrayToFragment = (arr) => {
+      let frag = this._renderer._createFragment();
+      for (let i = 0; i < arr.length; i++) {
+        let item = arr[i];
+        if (_isNull(item)) continue;
+        
+        if (_isPrimitive(item) || _isBool(item)) {
+          this._renderer._appendChildren(frag, this._renderer._createTextNode(String(item)));
+        } else {
+          let itemResult = this._processNode(item, isSvgC, cKey, pRId);
+          if (_isPromise(itemResult)) {
+            let placeholder = this._renderer._createLoadingPlaceholder(i);
+            this._renderer._appendChildren(frag, placeholder);
+            itemResult.then(node => {
+              if (placeholder.parentNode && node) {
+                this._renderer._replaceElement(placeholder, node);
+              }
+            });
+          } else if (itemResult) {
+            this._renderer._appendChildren(frag, itemResult);
+          }
+        }
+      }
+      return frag;
+    };
+    
+    if (_isArr(child)) {
+      return arrayToFragment(child);
+    }
+    
+    if (_isFn(child)) {
+      let rId = 'reactive_' + (this._stateManager._reactiveCounter++);
+      this._stateManager._subscriptions.set(rId, new Set());
+      
+      let wFn = () => {
+        let prevReactive = this._stateManager._activeReactive;
+        this._stateManager._activeReactive = rId;
+        try {
+          return child();
+        } finally {
+          this._stateManager._activeReactive = prevReactive;
+        }
+      };
+      
+      let result = wFn();
+      if (this._checkAndTrackPromise(result)) {
+        return result.then(resolved => {
+          if (_isArr(resolved)) {
+            let frag = arrayToFragment(resolved);
+            this._stateManager._reactiveNodes.set(rId, {
+              type: 'el', node: frag, fn: wFn, cKey, pRId, isCom: false
+            });
+            return frag;
+          }
+          
+          if (_isNull(resolved)) {
+            let placeholder = this._renderer._createComments(_REACTIVE_NULL)[0];
+            this._stateManager._reactiveNodes.set(rId, {type: _REACTIVE_NULL, node: placeholder, fn: wFn, cKey, pRId});
+            return placeholder;
+          }
+          if (_isPrimitive(resolved)) {
+            let textNode = this._renderer._createTextNode(String(resolved));
+            this._stateManager._reactiveNodes.set(rId, {type: _TEXT, node: textNode, fn: wFn, cKey, pRId});
+            return textNode;
+          }
+          if (this._isComponent(resolved) || _isObj(resolved)) {
+            let elementResult = this._processNode(resolved, isSvgC, cKey, pRId);
+             if (this._checkAndTrackPromise(elementResult)) {
+              return elementResult.then(el => {
+                return this._registerElementReactiveNode(rId, el, wFn, cKey, pRId, resolved);
+              });
+            }
+            return this._registerElementReactiveNode(rId, elementResult, wFn, cKey, pRId, resolved);
+          }
+          return this._renderer._createComments('null')[0];
+        });
+      }
+      
+      if (_isArr(result)) {
+        let frag = arrayToFragment(result);
+        this._stateManager._reactiveNodes.set(rId, {
+          type: 'el', node: frag, fn: wFn, cKey, pRId, isCom: false
+        });
+        return frag;
+      }
+      
+      if (_isNull(result)) {
+        let placeholder = this._renderer._createComments(_REACTIVE_NULL)[0];
+        this._stateManager._reactiveNodes.set(rId, {type: _REACTIVE_NULL, node: placeholder, fn: wFn, cKey, pRId});
+        return placeholder;
+      }
+      if (_isPrimitive(result)) {
+        let textNode = this._renderer._createTextNode(String(result));
+        this._stateManager._reactiveNodes.set(rId, {type: _TEXT, node: textNode, fn: wFn, cKey, pRId});
+        return textNode;
+      }
+      if (this._isComponent(result) || _isObj(result)) {
+        let elementResult = this._processNode(result, isSvgC, cKey, pRId);        
+        return this._handleElementResultRegistration(elementResult, rId, wFn, cKey, pRId, result);
+      }
+      return this._renderer._createComments('null')[0];
+    }
+    
+    return this._processNode(child, isSvgC, cKey, pRId);
+  }
+
+  getCM() {
+    return this._components;
+  }
+
+  objectToElement(vdom) {
+    let result = this._buildTree(_shoudBeArray(vdom));    
+    if (_isPromise(result)) {
+      return result.then(frag => frag.children.length === 1 ? frag.children[0] : frag);
+    } else {
+      return result.children.length === 1 ? result.children[0] : result;
+    }
+  }
+
+  //DEVTOOLS--START
+  _buildComponentTree() {
+    let tree = {};
+    for (let [key, meta] of this.__devtools.componentTree.entries()) {
+      if (!meta.parent) tree[key] = this._buildTreeNode(key);
+    }
+    return tree;
+  }
+  //DEVTOOLS--END
+
+  //DEVTOOLS--START
+  _buildTreeNode(cKey) {
+    let meta = this.__devtools.componentTree.get(cKey);
+    let children = {};
+    for (let [childKey, childMeta] of this.__devtools.componentTree.entries()) {
+      if (childMeta.parent === `reactive_render_${cKey}`) {
+        children[childKey] = this._buildTreeNode(childKey);
+      }
+    }    
+    return {
+      name: meta.name,
+      props: meta.props,
+      propKeys: meta.propKeys,
+      vdom:meta.vdom,
+      el:meta.el,
+      renderCount: meta.renderCount || 0,
+      hasRender: meta.hasRender,
+      hasHooks: meta.hasHooks,
+      hasApi: meta.hasApi,
+      hookNames: meta.hookNames,
+      apiMethods: meta.apiMethods,
+      api: meta.api,
+      children: Object.keys(children).length ? children : undefined
+    };
+  }
+  //DEVTOOLS--END
+
+  //DEVTOOLS--START
+  _buildDOMTree(rootElement = null) {
+    let root = rootElement || this._rootEl;
+    if (!root) return null;
+    return this._buildDOMNode(root);
+  }
+  //DEVTOOLS--END
+
+  //DEVTOOLS--START
+  _buildDOMNode(node) {
+    if (!node) return null;
+    let nodeInfo = {
+      nodeType: node.nodeType,
+      nodeName: node.nodeName.toLowerCase(),
+    };
+    if (node.nodeType === 1) {
+      nodeInfo.tagName = node.tagName.toLowerCase();
+      nodeInfo.id = node.id || undefined;
+      nodeInfo.className = node.className || undefined;
+      nodeInfo.node = node;
+      if (node._jurisTag) nodeInfo.jurisTag = node._jurisTag;
+      if (node._jurisKey !== undefined) nodeInfo.jurisKey = node._jurisKey;
+      if (node._jurisDevCompKey) nodeInfo.cKey = node._jurisDevCompKey;
+      if (node._jurisDevCompName) nodeInfo.compName = node._jurisDevCompName;
+      if (node._jurisAsyncPlaceholder) nodeInfo.isAsyncPlaceholder = true;
+      if (node._jurisHasDoubleClick) nodeInfo.hasDoubleClick = true;
+      if (node._jurisEventListeners && node._jurisEventListeners.length > 0) {
+        nodeInfo.eventListeners = node._jurisEventListeners.map(e => e._eventName);
+      }
+      if (this._armedElements.has(node)) {
+        let armed = this._armedElements.get(node);
+        nodeInfo.armed = {
+          events: armed.instance.events.map(e => e.name)
+        };
+      }
+      if (node._jurisOnConnected) {
+        nodeInfo.hasOnConnected = true;
+      }
+      nodeInfo._reactiveNodes = this._getReactiveNodesForElement(node);
+      if (node.attributes && node.attributes.length > 0) {
+        nodeInfo.attributes = {};
+        for (let i = 0; i < node.attributes.length; i++) {
+          let attr = node.attributes[i];
+          nodeInfo.attributes[attr.name] = attr.value;
+        }
+      }
+      if (node.childNodes && node.childNodes.length > 0) {
+        nodeInfo.children = [];
+        for (let i = 0; i < node.childNodes.length; i++) {
+          let childInfo = this._buildDOMNode(node.childNodes[i]);
+          if (childInfo) nodeInfo.children.push(childInfo);
+        }
+      }
+      
+    } else if (node.nodeType === 3) {
+      nodeInfo.textContent = node.textContent;
+      nodeInfo.length = node.textContent.length;
+      nodeInfo._reactiveNodes = this._getReactiveNodesForElement(node);      
+    } else if (node.nodeType === 8) {
+      nodeInfo.data = node.data;
+      if (node.data.startsWith('start:')) {
+        //mk - markertType
+        nodeInfo.mk = 'start';
+        nodeInfo.cKey = node.data.substring(6);
+      } else if (node.data.startsWith('end:')) {
+        nodeInfo.mk = 'end';
+        nodeInfo.cKey = node.data.substring(4);
+      } else if (node.data.includes(_REACTIVE_NULL)) {
+        nodeInfo.mk = _REACTIVE_NULL;
+      } else if (node.data.includes('loading')) {
+        nodeInfo.mk = 'loading';
+      } else if (node.data.includes('async-component')) {
+        nodeInfo.mk = 'async-component';
+        let match = node.data.match(/async-component:(\S+)/);
+        if (match) nodeInfo.cKey = match[1];
+      }
+      nodeInfo._reactiveNodes = this._getReactiveNodesForElement(node);
+    }
+    
+    return nodeInfo;
+  }
+  //DEVTOOLS--END
+
+  //DEVTOOLS--START
+  _getReactiveNodesForElement(el) {
+    let reactives = [];
+    for (let [id, reactive] of this._stateManager._reactiveNodes.entries()) {
+      if (reactive.el === el || reactive.node === el) {
+        reactives.push({
+          id,
+          type: reactive.type,
+          cKey: reactive.cKey,
+          pRId: reactive.pRId,
+          dependencies: Array.from(this._stateManager._subscriptions.get(id) || []),
+          attrName: reactive.attrName,
+          isSvg: reactive.isSvg,
+          isCom: reactive.isCom,
+          hasHooks: !!(reactive.hooks && Object.keys(reactive.hooks).length > 0),
+          hasApi: !!(reactive.api && Object.keys(reactive.api).length > 0)
+        });
+      }
+    }
+    
+    return reactives.length > 0 ? reactives : undefined;
+  }
+  //DEVTOOLS--END
+}
+const jurisVersion = "0.91.0";
+const jurisLinesOfCode = 3555;
+const jurisMinifiedSize = '47kb: 14.84kb gzipped';
+if (typeof window !== 'undefined') {
+  window.Juris = Juris;
+  window.jurisVersion = jurisVersion;
+  window.jurisLinesOfCode = jurisLinesOfCode;
+  window.jurisMinifiedSize = jurisMinifiedSize;
+}
+if (typeof module !== 'undefined' && module.exports) {           
+    module.exports.Juris = Juris;
+    module.exports.default = Juris;
+    module.exports.jurisVersion = jurisVersion;
+    module.exports.jurisLinesOfCode = jurisLinesOfCode;
+    module.exports.jurisMinifiedSize = jurisMinifiedSize;
 }
