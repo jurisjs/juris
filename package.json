@@ -1,33 +1,40 @@
 {
-  "name": "juris-monorepo",
-  "version": "0.88.2",
-  "description": "Juris Framework Monorepo - Build system for browser and server packages",
-  "private": true,
-  "scripts": {
-    "build": "node build.js",
-    "build:browser": "node build.js browser",
-    "build:server": "node build.js server", 
-    "clean": "node -e \"const fs=require('fs'); if(fs.existsSync('release')) fs.rmSync('release', {recursive:true, force:true})\"",
-    "prebuild": "npm run clean",
-    "setup": "mkdir docs && echo. > docs\\browser-README.md && echo. > docs\\server-README.md",
-    "publish:browser": "cd release\\browser && npm publish",
-    "publish:server": "cd release\\server && npm publish --access public",
-    "publish:all": "npm run build && npm run publish:browser && npm run publish:server",
-    "dev": "echo Edit src/juris.js then run npm run build",
-    "test": "echo Error: no test specified && exit 1"
-  },
-  "devDependencies": {},
+  "name": "juris",
+  "version": "0.93.0",
+  "description": "The Juris core: layouts as plain objects, reactive state, the DOM renderer, the router and the browser's live client. No build step, no runtime dependency",
   "keywords": [
-    "reactive",
     "framework",
-    "javascript",
-    "monorepo",
-    "build-system"
+    "reactive",
+    "server-rendering",
+    "live-queries",
+    "no-build"
   ],
-  "author": "Resti Guay <resti.guay@gmail.com>",
-  "license": "MIT",
+  "homepage": "https://github.com/jurisjs/juris#readme",
+  "license": "Apache-2.0",
+  "author": "Resti Guay",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jurisjs/juris.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jurisjs/juris/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "main": "./juris.js",
+  "exports": {
+    ".": "./juris.js",
+    "./*": "./*"
+  },
+  "files": [
+    "*.js",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\""
   }
 }

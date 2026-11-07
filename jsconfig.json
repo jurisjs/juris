@@ -1,7 +1,0 @@
-{
-	"compilerOptions": {
-		"checkJs": false,
-		"allowJs": false
-	},
-	"include": ["**/*", "../index.juris.js"]
-}
