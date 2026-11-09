@@ -26,6 +26,10 @@ class FakeNode {
         this.childNodes = [];
     }
     get firstChild() { return this.childNodes[0] ?? null; }
+    get nextSibling() {
+        const siblings = this.parentNode?.childNodes;
+        return siblings ? (siblings[siblings.indexOf(this) + 1] ?? null) : null;
+    }
     get children() { return this.childNodes.filter((n) => n.nodeType === 1); }
     appendChild(node) { return this.insertBefore(node, null); }
     insertBefore(node, ref) {

@@ -1,5 +1,5 @@
 import StateManager, { settled, settledError, pathSegment, MAX_ERROR_LOG } from "./state-manager.js";
-import DOMRenderer from "./dom-renderer.js";
+import DOMRenderer, { startsUpperCase } from "./dom-renderer.js";
 import ComponentManager from "./component-manager.js";
 import { FallbackSignal, defaultExposeError, publicMessage } from "./errors.js";
 import { liveKey, canAddress, CALL_KIND } from "./live-protocol.js";
@@ -513,8 +513,11 @@ export default class Juris {
         return this.stateManager.toRaw(value);
     }
 
+    // StateManager.setValue, written out: its check, then the write, one frame fewer on every
+    // write's stack.
     setValue(path, value) {
-        this.stateManager.setValue(path, value);
+        this.stateManager.assertWritable(path, "setValue");
+        this.stateManager.write(path, value);
     }
 
     updateState(path, updater) {
@@ -1113,7 +1116,14 @@ export default class Juris {
             }
             try {
                 if (resolverError) throw resolverError;
-                this.stateManager.settle(binding, run, value, applyValue);
+                if (value === null || (typeof value !== "object" && typeof value !== "function")) {
+                    // A plain value is no promise and no settled one: what settle does with it, without
+                    // its frame on the stack of every binding that runs.
+                    if (binding.pending) this.stateManager.endPending(binding);
+                    applyValue(value);
+                } else {
+                    this.stateManager.settle(binding, run, value, applyValue);
+                }
             } catch (error) {
                 const handled = this.resolveError(owner, error, { phase: "binding", component: owner?.name });
                 if (!handled) throw error;
@@ -1180,9 +1190,18 @@ export default class Juris {
     }
 
     getLayoutEntry(layout) {
-        if (Array.isArray(layout)) throw new Error(LIST_GIVEN.layout);
-        const tag = Object.keys(layout)[0];
+        const tag = this.layoutTag(layout);
         return { content: layout[tag], tag };
+    }
+
+    // A layout's tag: its first own key (Object.keys(layout)[0]), read without making the list of its
+    // keys, as the renderers read it for every element. An own key always comes before an inherited
+    // one in a for-in, so the first key is the tag when it is the layout's own, and there is none when
+    // it is not.
+    layoutTag(layout) {
+        if (Array.isArray(layout)) throw new Error(LIST_GIVEN.layout);
+        for (const tag in layout) return Object.hasOwn(layout, tag) ? tag : undefined;
+        return undefined;
     }
 
     // { div: "text" } -> { textContent: "text" }; { div: null } -> {}
@@ -1251,9 +1270,11 @@ export default class Juris {
         return [...classes].join(" ");
     }
 
+    // normalizeContent's `key`, without the object it makes: content that is text or nothing has none.
     getKey(layout) {
         if (this.isTextLayout(layout) || this.isSeatLayout(layout)) return undefined;
-        return this.normalizeContent(this.getLayoutEntry(layout).content).key;
+        const content = layout[this.layoutTag(layout)];
+        return content !== null && typeof content === "object" ? content.key : undefined;
     }
 
     // Copies the component's own key onto its root layout so keyed reconcile matches component instances.
@@ -1325,7 +1346,7 @@ export default class Juris {
             throw new TypeError("Juris: components is a list of component names (\"Badge\", \"Chart\")");
         }
         const allowed = new Set(components);
-        const refused = (name) => !allowed.has(name) && (/^[A-Z]/.test(name) || this.componentManager.has(name));
+        const refused = (name) => !allowed.has(name) && (startsUpperCase(name) || this.componentManager.has(name));
         const walk = (node) => {
             if (Array.isArray(node)) return node.map(walk).filter((item) => item !== DROPPED);
             if (node === null || typeof node !== "object") return node;
@@ -1345,6 +1366,45 @@ export default class Juris {
         };
         const layout = walk(this.toRaw(value));
         return layout === DROPPED ? null : layout;
+    }
+
+    // A layout with named slots, for a shape drawn many times over with different values: a table's
+    // rows. Answers a function that takes the values and gives what to draw. `layout` is a layout
+    // holding slots ({ $slot: "label" }, which JSON can hold), or a function given `slot`, which makes
+    // one, and which reads the value by that name here, where it is called for each draw.
+    //
+    // With no string renderer this is the whole of it: what is drawn is the ordinary layout, filled.
+    // A server instance's renderer compiles it (SSRRenderer.compile in the kit), which writes the
+    // same markup without walking the layout again, so the same code runs on both sides.
+    compile(layout) {
+        const ordinary = (values = {}) => {
+            const read = (name) => (Object.hasOwn(values, name) ? values[name] : undefined);
+            return typeof layout === "function" ? layout(read) : this.fillSlots(layout, read);
+        };
+
+        return this.ssrRenderer ? this.ssrRenderer.compile(layout, ordinary) : ordinary;
+    }
+
+    isSlot(node) {
+        return node !== null && typeof node === "object" && Object.hasOwn(node, "$slot");
+    }
+
+    // A copy of `node` with each slot replaced by what `read` gives for its name. Everything else
+    // that is not a plain object or a list is kept as it is, a listener among them. An own `__proto__`
+    // key, which a parsed layout can hold, is left out, as layoutFromData leaves it out.
+    fillSlots(node, read) {
+        if (Array.isArray(node)) return node.map((item) => this.fillSlots(item, read));
+        if (this.isSlot(node)) return read(node.$slot);
+        if (node === null || typeof node !== "object") return node;
+
+        const prototype = Object.getPrototypeOf(node);
+        if (prototype !== Object.prototype && prototype !== null) return node;
+
+        const filled = {};
+        for (const key of Object.keys(node)) {
+            if (key !== "__proto__") filled[key] = this.fillSlots(node[key], read);
+        }
+        return filled;
     }
 
     enhance(target, enhancer, options = {}) {

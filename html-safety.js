@@ -16,8 +16,27 @@ const NAME = /^[A-Za-z_:][A-Za-z0-9_:.-]*$/;
 
 export function safeAttributeName(name) {
     if (typeof name !== "string" || !NAME.test(name)) return false;
-    if (/^on/i.test(name)) return false;
+    // "on", in any case, as the first two letters (`/^on/i`, without a regex).
+    const first = name.charCodeAt(0) | 32;
+    const second = name.charCodeAt(1) | 32;
+    if (first === 111 && second === 110) return false;
     return true;
+}
+
+// `name` in lower case. A reconcile asks for the same few tags on every row it keeps, and toLowerCase
+// makes a new string each time even when nothing changes, so the answers are kept, as many as
+// MAX_LOWER_NAMES, since a name can come from data. (Not exported: what this module exports is the
+// rules, which the language server keeps a copy of. The DOM renderer keeps its own.)
+const lowerNames = new Map();
+const MAX_LOWER_NAMES = 1024;
+
+function lowerName(name) {
+    let lower = lowerNames.get(name);
+    if (lower === undefined) {
+        lower = name.toLowerCase();
+        if (lowerNames.size < MAX_LOWER_NAMES) lowerNames.set(name, lower);
+    }
+    return lower;
 }
 
 // ---- tag names -------------------------------------------------------------------------------
@@ -107,7 +126,9 @@ export function checkTag(tag, allowed = null) {
 // renderers would draw themselves. Comparing the names alone let a layout write into an <iframe>
 // the page happened to hold, which it could never have created.
 export function reusableElement(localName, tag, allowed = null) {
-    return typeof tag === "string" && String(localName).toLowerCase() === tag.toLowerCase() && checkTag(tag, allowed).ok;
+    if (typeof tag !== "string") return false;
+    const sameName = localName === tag || lowerName(String(localName)) === lowerName(tag);
+    return sameName && checkTag(tag, allowed).ok;
 }
 
 // ---- markup, classes, styles -----------------------------------------------------------------
@@ -125,7 +146,23 @@ export function checkInnerHTML(allowed) {
 // attribute, with empty ones skipped. classList.toggle throws on a token with whitespace or an
 // empty one, which aborted the whole mount; the server wrote such a key as it was.
 export function classTokens(name) {
-    return String(name).split(/[\t\n\f\r ]+/).filter(Boolean);
+    const text = String(name);
+    const tokens = [];
+    let start = -1;
+    for (let index = 0; index < text.length; index += 1) {
+        const code = text.charCodeAt(index);
+        // ASCII whitespace as the DOM reads it: space, tab, line feed, form feed, carriage return.
+        const space = code === 32 || code === 9 || code === 10 || code === 12 || code === 13;
+        if (!space) {
+            if (start === -1) start = index;
+        } else if (start !== -1) {
+            tokens.push(text.slice(start, index));
+            start = -1;
+        }
+    }
+    if (start === 0) tokens.push(text);
+    else if (start !== -1) tokens.push(text.slice(start));
+    return tokens;
 }
 
 // A `style` object's key is a camelCase property (`marginTop`, `WebkitTransform`) or a custom
@@ -139,9 +176,9 @@ const NOT_PROPERTIES = new Set(["cssText", "length", "parentRule", "item", "getP
 // A value is a string or a number, and nothing in it can end the declaration or start another:
 // `red;background:url(//elsewhere)` is two declarations to the server's attribute, `{`, `}` and `<`
 // have no place in a value, `\` spells any of them as an escape, a control character (newline
-// included) ends or hides one, and `/*` opens a comment that swallows every declaration after it.
-// The DOM drops such a value when it is assigned; the server wrote it. This is the one rule for both.
-const STYLE_VALUE_REFUSED = /[;{}<\\\x00-\x1F\x7F]|\/\*/;
+// included) or DEL ends or hides one, and `/*` opens a comment that swallows every declaration after
+// it. The DOM drops such a value when it is assigned; the server wrote it. This is the one rule for
+// both (refusedStyleValue, below).
 
 // The CSS name of a camelCase key: `marginTop` is `margin-top`, a vendor prefix leads with `-`
 // (`WebkitTransform`, and `msTransform`, which the DOM spells in lower case), and `cssFloat` is
@@ -155,20 +192,50 @@ const cssName = (key) => {
     return /^(ms|webkit)-/.test(kebab) ? `-${kebab}` : kebab;
 };
 
+// Whether a style value holds what the rule above refuses: `;`, `{`, `}`, `<`, `\`, a control
+// character, DEL, or `/*`. A loop over the characters, run on every value a style draws.
+const refusedStyleValue = (text) => {
+    for (let index = 0; index < text.length; index += 1) {
+        const code = text.charCodeAt(index);
+        if (code < 32 || code === 127 || code === 59 || code === 123 || code === 125 || code === 60 || code === 92) {
+            return true;
+        }
+        if (code === 47 && text.charCodeAt(index + 1) === 42) return true;
+    }
+    return false;
+};
+
+// The keys already found to be properties, each with its CSS name and the answer every value it
+// allows gets: a page draws the same few keys on every element. Bounded, as a key can come from data.
+const styleKeys = new Map();
+const MAX_STYLE_KEYS = 512;
+
+function styleKey(key) {
+    let known = styleKeys.get(key);
+    if (known === undefined) {
+        const isCustom = typeof key === "string" && CUSTOM_PROPERTY.test(key);
+        if (!isCustom && (typeof key !== "string" || !STYLE_KEY.test(key) || NOT_PROPERTIES.has(key))) return null;
+        const name = cssName(key);
+        known = { name, passed: Object.freeze({ ok: true, name }) };
+        if (styleKeys.size < MAX_STYLE_KEYS) styleKeys.set(key, known);
+    }
+    return known;
+}
+
 // The decision both renderers make for one style key and its value. Returns { ok, name, reason }:
 // `name` is the CSS property's name, given whenever the key is one (so a refused value can take off
 // the value before it). A value of nothing (null, undefined, "") is a removal, never refused.
 export function checkStyle(key, value) {
-    const isCustom = typeof key === "string" && CUSTOM_PROPERTY.test(key);
-    if (!isCustom && (typeof key !== "string" || !STYLE_KEY.test(key) || NOT_PROPERTIES.has(key))) {
+    const known = styleKey(key);
+    if (known === null) {
         return { ok: false, reason: `style key ${JSON.stringify(String(key)).slice(0, 40)} is not a property (a camelCase name, or --custom)` };
     }
-    const name = cssName(key);
-    if (value === null || value === undefined || value === "") return { ok: true, name };
-    if ((typeof value !== "string" && typeof value !== "number") || STYLE_VALUE_REFUSED.test(String(value))) {
+    const { name } = known;
+    if (value === null || value === undefined || value === "") return known.passed;
+    if ((typeof value !== "string" && typeof value !== "number") || refusedStyleValue(String(value))) {
         return { ok: false, name, reason: `style ${key} refuses ${JSON.stringify(typeof value === "string" || typeof value === "number" ? String(value) : typeof value).slice(0, 40)}: not a single value` };
     }
-    return { ok: true, name };
+    return known.passed;
 }
 
 // ---- attribute values ------------------------------------------------------------------------
@@ -221,8 +288,22 @@ export function allowedSchemes(list) {
 }
 
 // `allowed` is the app's added schemes (Juris `allowSchemes`, from allowedSchemes), lower-cased.
+// Whether `text` holds a character safeUrl strips: a control character (C0, DEL, C1) or whitespace as
+// a regex's `\s` reads it. Most URLs hold none, and are checked as they are, without a copy.
+const holdsUrlNoise = (text) => {
+    for (let index = 0; index < text.length; index += 1) {
+        const code = text.charCodeAt(index);
+        if (code <= 32 || (code >= 127 && code <= 160)) return true;
+        if (code < 5760) continue;
+        if (code === 5760 || (code >= 8192 && code <= 8202) || code === 8232 || code === 8233) return true;
+        if (code === 8239 || code === 8287 || code === 12288 || code === 65279) return true;
+    }
+    return false;
+};
+
 export function safeUrl(value, allowed = null) {
-    const text = String(value).replace(/[\x00-\x1F\x7F-\x9F\s]+/g, "").trim();
+    const given = String(value);
+    const text = holdsUrlNoise(given) ? given.replace(/[\x00-\x1F\x7F-\x9F\s]+/g, "").trim() : given;
     if (text === "") return true;
     const colon = text.indexOf(":");
     const slash = text.indexOf("/");
@@ -242,12 +323,27 @@ export function safeUrl(value, allowed = null) {
 // The decision both renderers make for one attribute. Returns { ok, reason }. `schemes` is the
 // instance's added schemes (from allowedSchemes); it opens no attribute, only a scheme in a URL
 // attribute's value.
+// The names already found safe, each with whether it holds a URL, whose value is checked every time:
+// a page writes the same few names on thousands of elements. Only a name that passed is kept, and no
+// more than MAX_PASSED_NAMES, as a name can come from data.
+const PLAIN_NAME = 1;
+const URL_NAME = 2;
+const passedNames = new Map();
+const MAX_PASSED_NAMES = 512;
+
 export function checkAttribute(name, value, schemes = null) {
-    if (!safeAttributeName(name)) return { ok: false, reason: `attribute name "${String(name)}" is not allowed` };
-    const lower = name.toLowerCase();
-    if (REFUSED_ATTRIBUTES.has(lower)) return { ok: false, reason: `${name} takes a document, not a value, and is never written from a layout` };
-    if (URL_ATTRIBUTES.has(lower) && value !== null && value !== undefined && !safeUrl(value, schemes)) {
+    let kind = passedNames.get(name);
+    if (kind === undefined) {
+        if (!safeAttributeName(name)) return { ok: false, reason: `attribute name "${String(name)}" is not allowed` };
+        const lower = name.toLowerCase();
+        if (REFUSED_ATTRIBUTES.has(lower)) {
+            return { ok: false, reason: `${name} takes a document, not a value, and is never written from a layout` };
+        }
+        kind = URL_ATTRIBUTES.has(lower) ? URL_NAME : PLAIN_NAME;
+        if (passedNames.size < MAX_PASSED_NAMES) passedNames.set(name, kind);
+    }
+    if (kind === URL_NAME && value !== null && value !== undefined && !safeUrl(value, schemes)) {
         return { ok: false, reason: `${name} refuses "${String(value).slice(0, 40)}": scheme not allowed` };
     }
-    return { ok: true };
+    return PASSED;
 }

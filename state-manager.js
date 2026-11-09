@@ -19,6 +19,35 @@ export function pathSegment(text) {
     return segment === "__proto__" ? "%5F%5Fproto%5F%5F" : segment;
 }
 
+// A path's segments, its empty ones skipped ("a..b" and ".a.b" are "a.b"): what
+// `path.split(".").filter(Boolean)` gives, in one list rather than two.
+const splitPath = (path) => {
+    const segments = [];
+    let start = 0;
+    for (let dot = path.indexOf("."); dot !== -1; dot = path.indexOf(".", start)) {
+        if (dot > start) segments.push(path.slice(start, dot));
+        start = dot + 1;
+    }
+    if (start < path.length) segments.push(path.slice(start));
+    return segments;
+};
+
+// A pass's subscribers, sorted as they are found (affected): a computed's apart from the others'.
+// Module functions rather than closures made for every pass.
+const wakeInto = (found, callbacks) => {
+    for (const callback of callbacks) {
+        if (callback.isComputed) found.computedCallbacks.add(callback);
+        else found.otherCallbacks.add(callback);
+    }
+};
+const collectInto = (found, node) => {
+    if (node.callbacks) for (const callbacks of node.callbacks) wakeInto(found, callbacks);
+    if (node.children) for (const child of node.children.values()) collectInto(found, child);
+};
+
+// Creation order, for the binding phase of a pass (run): a parent before what it created.
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0);
+
 // ---- settled values -----------------------------------------------------------------
 // A settled value looks like a promise (.then / .catch) but is already resolved or rejected, and its
 // callbacks run at once, synchronously. Anything that would otherwise return a promise can return one
@@ -126,11 +155,14 @@ export default class StateManager {
     }
 
     // Replaces any tracking proxies inside `value` with their raw targets before storing.
-    // Containers are copied only when something inside them actually changed.
-    unwrap(value, seen = new WeakSet()) {
+    // Containers are copied only when something inside them actually changed. `seen` is made for the
+    // first container: a write of a number or a string makes nothing.
+    unwrap(value, seen = null) {
         if (value === null || typeof value !== "object") return value;
         const raw = this.toRaw(value);
-        if (seen.has(raw) || !(Array.isArray(raw) || isPlainObject(raw))) return raw;
+        if (!(Array.isArray(raw) || isPlainObject(raw))) return raw;
+        if (seen === null) seen = new WeakSet();
+        else if (seen.has(raw)) return raw;
         seen.add(raw);
         let copy = null;
         for (const key of Object.keys(raw)) {
@@ -206,7 +238,7 @@ export default class StateManager {
     getPathSegments(path) {
         let segments = this.pathCache.get(path);
         if (segments === undefined) {
-            segments = path.split(".").filter(Boolean);
+            segments = splitPath(path);
             // Walking "__proto__" reaches Object.prototype, so a write through it would pollute every object.
             if (segments.includes("__proto__")) throw new Error(`StateManager: "__proto__" is not allowed in a state path ("${path}")`);
             // A long-lived server instance sees a new path per row (`events.8812.title`) for the life
@@ -270,20 +302,26 @@ export default class StateManager {
 
     // Read without registering a dependency. Use inside event handlers or updaters.
     peek(path) {
-        return this.getPathSegments(path).reduce((currentValue, segment) => currentValue?.[segment], this.state);
+        const segments = this.getPathSegments(path);
+        let value = this.state;
+        for (let index = 0; index < segments.length; index += 1) value = value?.[segments[index]];
+        return value;
     }
 
     // Inside a capture, object values come back as tracking proxies (see track). Pass { track: false }
-    // to get the raw object; you then depend on `path` only.
-    getState(path, defaultValue, options = {}) {
+    // to get the raw object; you then depend on `path` only. Every binding reads through here, so it
+    // walks the path itself (peek's loop) and makes no options object when none is given.
+    getState(path, defaultValue, options) {
         this.activeDependencies?.add(path);
         // A second, lighter observer: it records the path and hands out no proxies. The SSR renderer
         // uses it to learn what a render depended on without changing how the render behaves.
         this.activeReads?.add(path);
-        const value = this.peek(path);
+        const segments = this.getPathSegments(path);
+        let value = this.state;
+        for (let index = 0; index < segments.length; index += 1) value = value?.[segments[index]];
 
         if (value === undefined) return defaultValue;
-        if (this.activeDependencies && options.track !== false && value !== null && typeof value === "object") {
+        if (this.activeDependencies && options?.track !== false && value !== null && typeof value === "object") {
             return this.track(value, path);
         }
         return value;
@@ -329,7 +367,14 @@ export default class StateManager {
             if (isPrimitive && Object.is(previous, value)) {
                 return;
             }
-            this.announce(path, value, previous, () => this.notify(path));
+            if (this.observers.size !== 0) {
+                this.announce(path, value, previous, () => this.notify(path));
+                return;
+            }
+            // No observer to tell: what announce and notify would do, without their two frames on
+            // every write's stack.
+            if (this.batchDepth > 0) this.batchedPaths.add(path);
+            else this.run([path]);
         }
     }
 
@@ -757,15 +802,8 @@ export default class StateManager {
     // bindings of the other rows. Only wildcard subscribers ("*" segments, from compute's watch) are
     // scanned, since a "*" can't be located as a fixed node; there are few of those.
     affected(changedPaths) {
-        const computedCallbacks = new Set();
-        const otherCallbacks = new Set();
-        const wake = (callbacks) => {
-            for (const callback of callbacks) (callback.isComputed ? computedCallbacks : otherCallbacks).add(callback);
-        };
-        const collect = (node) => {
-            if (node.callbacks) for (const callbacks of node.callbacks) wake(callbacks);
-            if (node.children) for (const child of node.children.values()) collect(child);
-        };
+        const found = { computedCallbacks: new Set(), otherCallbacks: new Set() };
+        const { computedCallbacks, otherCallbacks } = found;
         for (const marked of changedPaths) {
             // An EXACT path (a container whose shape changed) wakes that node's own subscribers only.
             const exact = marked.startsWith(EXACT);
@@ -778,16 +816,21 @@ export default class StateManager {
                 }
             }
             if (node && exact) {
-                for (const callbacks of node.callbacks ?? []) wake(callbacks);
-            } else if (node) collect(node);
+                for (const callbacks of node.callbacks ?? []) wakeInto(found, callbacks);
+            } else if (node) collectInto(found, node);
         }
+        if (this.wildcards.size !== 0) this.wakeWildcards(found, changedPaths);
+        return found;
+    }
+
+    // The wildcard subscribers ("*" segments) a pass wakes: scanned, as a "*" has no node of its own.
+    wakeWildcards(found, changedPaths) {
         for (const [path, callbacks] of this.wildcards) {
             const hit = changedPaths.some((marked) => (marked.startsWith(EXACT)
                 ? this.isAffected(path, marked.slice(EXACT.length)) && this.getPathSegments(path).length === this.getPathSegments(marked.slice(EXACT.length)).length
                 : this.isAffected(path, marked)));
-            if (hit) wake(callbacks);
+            if (hit) wakeInto(found, callbacks);
         }
-        return { computedCallbacks, otherCallbacks };
     }
 
     // One glitch-free notification pass. Writes made by callbacks are queued rather than delivered at once:
@@ -831,7 +874,11 @@ export default class StateManager {
                 }
                 // Binding phase: everything that was affected, once, in creation order — a parent re-renders
                 // (and disposes its children) before a child could run against a state it no longer belongs to.
-                for (const callback of [...otherCallbacks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))) this.guard(callback, failures);
+                if (otherCallbacks.size === 1) {
+                    for (const callback of otherCallbacks) this.guard(callback, failures);
+                } else if (otherCallbacks.size > 1) {
+                    for (const callback of [...otherCallbacks].sort(byOrder)) this.guard(callback, failures);
+                }
                 for (const changedPath of changedPaths) this.onChange?.(changedPath.startsWith(EXACT) ? changedPath.slice(EXACT.length) : changedPath);
                 pending = this.drainBatched();
             }

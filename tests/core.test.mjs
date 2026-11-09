@@ -715,6 +715,10 @@ class PageNode {
         this.childNodes = [];
     }
     get firstChild() { return this.childNodes[0] ?? null; }
+    get nextSibling() {
+        const siblings = this.parentNode?.childNodes;
+        return siblings ? (siblings[siblings.indexOf(this) + 1] ?? null) : null;
+    }
     appendChild(node) {
         node.parentNode?.removeChild(node);
         this.childNodes.push(node);
