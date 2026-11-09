@@ -113,6 +113,70 @@ const withoutErrorLogs = (value, top = false) =>
             .map(([key, child]) => [key, isPlainObject(child) ? withoutErrorLogs(child) : child]),
     );
 
+// A tracking proxy's handler (StateManager.track): one object per proxy, holding what it tracks,
+// with traps every proxy shares, rather than a closure for each trap made for every proxy.
+class Tracker {
+    constructor(manager, target, basePath) {
+        this.manager = manager;
+        this.target = target;
+        this.basePath = basePath;
+        this.paths = null; // key -> its path, made once: a binding that runs again reads the same keys
+    }
+
+    childPath(key) {
+        this.paths ??= new Map();
+        let path = this.paths.get(key);
+        if (path === undefined) {
+            path = `${this.basePath}.${key}`;
+            this.paths.set(key, path);
+        }
+        return path;
+    }
+
+    get(_, key, receiver) {
+        const { manager, target } = this;
+        if (key === RAW) return target;
+        if (typeof key === "symbol") return Reflect.get(target, key, receiver);
+        const child = target[key];
+        if (typeof child === "function") return child; // array methods etc.; their reads go through this proxy
+        const childPath = this.childPath(key);
+        manager.activeDependencies?.add(childPath);
+        const tracked = manager.activeDependencies && child !== null && typeof child === "object";
+        return tracked ? manager.track(child, childPath) : child;
+    }
+
+    has(_, key) {
+        if (typeof key !== "symbol") this.manager.activeDependencies?.add(this.childPath(key));
+        return key in this.target;
+    }
+
+    ownKeys() {
+        this.manager.activeDependencies?.add(this.basePath);
+        return Reflect.ownKeys(this.target);
+    }
+
+    set(_, key) {
+        const path = `${this.basePath}.${String(key)}`;
+        throw new Error(`StateManager: state is read-only inside bindings; use setValue("${path}", value)`);
+    }
+
+    deleteProperty(_, key) {
+        const path = `${this.basePath}.${String(key)}`;
+        throw new Error(`StateManager: state is read-only inside bindings; use deleteState("${path}")`);
+    }
+}
+
+// The handler of a proxy over a stand-in (an object that is not extensible): the real object's own
+// properties, reported configurable where the stand-in has none of that name, as only a property its
+// target has non-configurable may be reported so.
+class ClosedTracker extends Tracker {
+    getOwnPropertyDescriptor(standIn, key) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(this.target, key);
+        if (descriptor && !Object.hasOwn(standIn, key)) descriptor.configurable = true;
+        return descriptor;
+    }
+}
+
 export default class StateManager {
     constructor(initialState = {}, options = {}) {
         this.state = initialState;
@@ -195,41 +259,8 @@ export default class StateManager {
         const cached = byPath.get(basePath);
         if (cached) return cached;
 
-        const handler = {
-            get: (_, key, receiver) => {
-                if (key === RAW) return target;
-                if (typeof key === "symbol") return Reflect.get(target, key, receiver);
-                const child = target[key];
-                if (typeof child === "function") return child; // array methods etc.; their reads go through this proxy
-                const childPath = `${basePath}.${key}`;
-                this.activeDependencies?.add(childPath);
-                return this.activeDependencies && child !== null && typeof child === "object" ? this.track(child, childPath) : child;
-            },
-            has: (_, key) => {
-                if (typeof key !== "symbol") this.activeDependencies?.add(`${basePath}.${key}`);
-                return key in target;
-            },
-            ownKeys: () => {
-                this.activeDependencies?.add(basePath);
-                return Reflect.ownKeys(target);
-            },
-            set: (_, key) => {
-                throw new Error(`StateManager: state is read-only inside bindings; use setValue("${basePath}.${String(key)}", value)`);
-            },
-            deleteProperty: (_, key) => {
-                throw new Error(`StateManager: state is read-only inside bindings; use deleteState("${basePath}.${String(key)}")`);
-            },
-        };
         const closed = !Object.isExtensible(target);
-        if (closed) {
-            // The real object's own properties, reported configurable where the stand-in has none of
-            // that name: only a property its target has non-configurable may be reported so.
-            handler.getOwnPropertyDescriptor = (standIn, key) => {
-                const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
-                if (descriptor && !Object.hasOwn(standIn, key)) descriptor.configurable = true;
-                return descriptor;
-            };
-        }
+        const handler = closed ? new ClosedTracker(this, target, basePath) : new Tracker(this, target, basePath);
         const proxy = new Proxy(closed ? standInFor(target) : target, handler);
         byPath.set(basePath, proxy);
         return proxy;

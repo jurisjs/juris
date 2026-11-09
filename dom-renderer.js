@@ -107,8 +107,8 @@ const ATTRIBUTE_NAMESPACES = {
     xml: "http://www.w3.org/XML/1998/namespace",
     xmlns: "http://www.w3.org/2000/xmlns/",
 };
-const attributeNamespace = (element, name) => {
-    if (element.namespaceURI !== NAMESPACES.svg && element.namespaceURI !== NAMESPACES.math) return null;
+const attributeNamespace = (namespace, name) => {
+    if (namespace !== NAMESPACES.svg && namespace !== NAMESPACES.math) return null;
     const colon = name.indexOf(":");
     return ATTRIBUTE_NAMESPACES[colon === -1 ? (name === "xmlns" ? name : "") : name.slice(0, colon)] ?? null;
 };
@@ -267,6 +267,19 @@ export default class DOMRenderer {
         this.disposers = new WeakMap(); // element -> [dispose], its own bindings and listeners
         this.slots = new WeakMap(); // seat node -> { disposeBinding }
         this.owned = new WeakSet(); // nodes Juris created (enhance refuses to reach inside them)
+        // > 0 while the static children of an element just created are drawn (appendFreshChildren): each
+        // goes straight into that element, which is marked owned or is inside one that is, so it needs no
+        // mark of its own, isInsideOwned finding the one above it. A binding's run sets it to 0 for what
+        // it draws, which may go into an element Juris did not draw.
+        this.drawingInside = 0;
+        // The element being drawn or redrawn now, with its namespace (namespaceOf's answer) and its
+        // localName, read once: every key of its layout asks for them, and each read is a call into the
+        // DOM. Any other element is read from the DOM, so an answer is never another element's.
+        this.knownElement = null;
+        this.knownNamespace = null;
+        this.knownLocalName = null;
+        // Whether knownElement was made by this draw (createElement), and so had no attribute before it.
+        this.knownFresh = false;
         this.componentInstances = new WeakMap(); // root node -> [instance], innermost first
         this.enhanced = new WeakMap(); // foreign elements adopted through enhance(), each with its enhancement
         this.watching = new Set(); // the enhancements that observe: a redrawn element may have come to match
@@ -441,9 +454,11 @@ export default class DOMRenderer {
             const previousOwner = this.owner;
             const previousNoHtml = this.noHtml;
             const previousAllowHtml = this.allowHtml;
+            const previousInside = this.drawingInside;
             this.owner = owner;
             this.noHtml = noHtml;
             this.allowHtml = allowHtml;
+            this.drawingInside = 0;
             this.depth += 1;
             let failed = true;
             try {
@@ -454,6 +469,7 @@ export default class DOMRenderer {
                 this.owner = previousOwner;
                 this.noHtml = previousNoHtml;
                 this.allowHtml = previousAllowHtml;
+                this.drawingInside = previousInside;
                 // As in enter(): the apply's own error is the one thrown; what leave() throws gives way.
                 if (failed) undo(() => this.leave());
                 else this.leave();
@@ -1073,8 +1089,13 @@ export default class DOMRenderer {
             if (checkAttribute(name, null).ok) element.removeAttribute(name);
             return;
         }
-        const namespace = attributeNamespace(element, name);
+        // Only a prefixed name, or xmlns, can have a namespace (attributeNamespace): any other is
+        // answered without asking the element for its own.
+        const prefixed = name.indexOf(":") !== -1 || name === "xmlns";
+        const namespace = prefixed ? attributeNamespace(this.namespaceOf(element), name) : null;
         if (namespace) element.setAttributeNS(namespace, name, value);
+        // What is there already is left as it is. An element this draw made has nothing there to read.
+        else if (element === this.knownElement && this.knownFresh) element.setAttribute(name, value);
         else if (element.getAttribute(name) !== String(value)) element.setAttribute(name, value);
     }
 
@@ -1100,7 +1121,7 @@ export default class DOMRenderer {
         // option's value, the assignment was skipped as a no-op, the text landed afterwards — and
         // the option's value silently became its label: a placeholder's label was submitted as its value.
         // Options have no caret to protect, so the attribute is written outright.
-        if (element.localName === "option") {
+        if (this.localNameOf(element) === "option") {
             if (element.getAttribute("value") !== next) element.setAttribute("value", next);
             return;
         }
@@ -1471,7 +1492,7 @@ export default class DOMRenderer {
     // (named in devMode): the children beside the others, and a value beside the text.
     applyPropertiesAndChildren(element, content, reconcile, between = null) {
         const holder = this.heldBy(element, content);
-        const deferValue = element.localName === "select" && "value" in content;
+        const deferValue = this.localNameOf(element) === "select" && "value" in content;
         const valueLeftOut = holder !== "children"
             && holder !== "value"
             && "value" in content
@@ -1529,13 +1550,14 @@ export default class DOMRenderer {
     // Whether `element`'s value is state of its own, the user's to change: an HTML <input>'s,
     // <textarea>'s or <select>'s (its attribute, where it has one, is only the default).
     ownsValue(element) {
-        return this.namespaceOf(element) === null && OWN_VALUE.has(element.localName);
+        return this.namespaceOf(element) === null && OWN_VALUE.has(this.localNameOf(element));
     }
 
     // Whether `element`'s value is the text it holds: an HTML <output>'s or <textarea>'s.
     valueIsText(element) {
         if (this.namespaceOf(element) !== null) return false;
-        return element.localName === "output" || element.localName === "textarea";
+        const localName = this.localNameOf(element);
+        return localName === "output" || localName === "textarea";
     }
 
     // devMode's word for what an element's content leaves out (applyPropertiesAndChildren): `key` is
@@ -1548,7 +1570,7 @@ export default class DOMRenderer {
     // Whether `indeterminate` on `element` is its property alone: an HTML <input>'s. HTML has no such
     // attribute, so it is never written, and the server writes nothing for it.
     hasIndeterminate(element) {
-        return this.namespaceOf(element) === null && element.localName === "input";
+        return this.namespaceOf(element) === null && this.localNameOf(element) === "input";
     }
 
     applyProperties(element, properties, skip = undefined) {
@@ -1622,7 +1644,7 @@ export default class DOMRenderer {
         } else if (k === "indeterminate" && this.hasIndeterminate(element)) {
             if (bound) this.bindIndeterminate(element, propertyValue);
             else element.indeterminate = Boolean(propertyValue);
-        } else if (k === "value" && "value" in element && element.namespaceURI !== NAMESPACES.svg) {
+        } else if (k === "value" && "value" in element && this.namespaceOf(element) !== NAMESPACES.svg) {
             if (bound) this.bindValue(element, propertyValue);
             else this.applyValueProperty(element, propertyValue);
         } else {
@@ -1720,50 +1742,73 @@ export default class DOMRenderer {
 
     // ---- rendering ----------------------------------------------------------------
 
+    // The children of `parent` made what `childLayouts` says: by key when every layout has one and no
+    // two the same (reconcileByKey), else by place (reconcileByPlace). Neither makes a closure, as a
+    // redraw reconciles the children of every element it keeps.
     reconcileChildren(parent, childLayouts, namespace) {
         const layouts = childLayouts === null || childLayouts === undefined ? [] : Array.isArray(childLayouts) ? childLayouts : [childLayouts];
         const count = layouts.length;
-        // Each layout's key, read once; the keys are used when every layout has one, and no two the same.
+        // Each layout's key, read once. The set of them is made at the first key: a list with none, as
+        // most of an element's own children are, makes none.
         const keys = new Array(count);
-        const seen = new Set();
+        let seen = null;
         let hasUniqueKeys = true;
         for (let index = 0; index < count; index += 1) {
             const key = this.getKey(layouts[index]);
             keys[index] = key;
             if (!hasUniqueKeys) continue;
-            if (key === undefined || seen.has(key)) hasUniqueKeys = false;
+            if (key === undefined) {
+                hasUniqueKeys = false;
+                continue;
+            }
+            seen ??= new Set();
+            if (seen.has(key)) hasUniqueKeys = false;
             else seen.add(key);
         }
+        if (hasUniqueKeys) this.reconcileByKey(parent, layouts, keys, namespace);
+        else this.reconcileByPlace(parent, layouts, keys, namespace);
+    }
 
-        if (!hasUniqueKeys) {
-            if (this.devMode) this.keysUnused(parent, keys);
-            const existingNodes = Array.from(parent.childNodes);
-            const canPatch = existingNodes.length === layouts.length && layouts.every((layout, index) => this.canPatchNode(existingNodes[index], layout));
-            if (canPatch) {
-                layouts.forEach((layout, index) => {
-                    const node = existingNodes[index];
-                    if (this.isSeatLayout(layout)) {
-                        this.updateSlot(node, layout, namespace);
-                    } else if (node.nodeType === Node.TEXT_NODE) {
-                        const text = this.textOf(layout);
-                        if (node.nodeValue !== text) node.nodeValue = text;
-                    } else if (!this.isUnchangedComponent(node, layout)) {
-                        this.redraw(node, layout, namespace);
-                    }
-                });
-                return;
+    // Unkeyed: every node patched in its place when each can take the layout at its place
+    // (canPatchNode), else all of them replaced. A hole in the list is passed over, as every and
+    // forEach pass over one.
+    reconcileByPlace(parent, layouts, keys, namespace) {
+        if (this.devMode) this.keysUnused(parent, keys);
+        const existingNodes = Array.from(parent.childNodes);
+        let canPatch = existingNodes.length === layouts.length;
+        for (let index = 0; canPatch && index < layouts.length; index += 1) {
+            if (index in layouts) canPatch = this.canPatchNode(existingNodes[index], layouts[index]);
+        }
+        if (canPatch) {
+            for (let index = 0; index < layouts.length; index += 1) {
+                if (index in layouts) this.patchNode(existingNodes[index], layouts[index], namespace);
             }
-            // Every node goes, whichever one's disposal throws, and is off before that error is
-            // thrown (runEvery); nothing new is drawn then.
-            try {
-                runEvery(existingNodes, (child) => this.disposeTree(child));
-            } finally {
-                while (parent.firstChild) parent.removeChild(parent.firstChild); // (replaceChildren needs Safari 14)
-            }
-            this.appendChildren(parent, layouts, namespace);
             return;
         }
+        // Every node goes, whichever one's disposal throws, and is off before that error is
+        // thrown (runEvery); nothing new is drawn then.
+        try {
+            this.disposeEach(existingNodes);
+        } finally {
+            while (parent.firstChild) parent.removeChild(parent.firstChild); // (replaceChildren needs Safari 14)
+        }
+        this.appendChildren(parent, layouts, namespace);
+    }
 
+    // One node kept in its place for `layout` (reconcileByPlace).
+    patchNode(node, layout, namespace) {
+        if (this.isSeatLayout(layout)) {
+            this.updateSlot(node, layout, namespace);
+        } else if (node.nodeType === Node.TEXT_NODE) {
+            const text = this.textOf(layout);
+            if (node.nodeValue !== text) node.nodeValue = text;
+        } else if (!this.isUnchangedComponent(node, layout)) {
+            this.redraw(node, layout, namespace);
+        }
+    }
+
+    reconcileByKey(parent, layouts, keys, namespace) {
+        const count = layouts.length;
         // Keyed mode tracks the nodes that carry a key: elements, and the text node a keyed component
         // renders when its root is not an element (null, text; mountRoot keys it). Stray unkeyed
         // nodes left by an earlier unkeyed pass go. Such a component used to go with them, and was
@@ -1774,11 +1819,7 @@ export default class DOMRenderer {
         for (let node = parent.firstChild; node !== null && !stray; node = node.nextSibling) {
             stray = node.nodeType !== Node.ELEMENT_NODE && !this.elementKeys.has(node);
         }
-        if (stray) {
-            runEvery(Array.from(parent.childNodes), (node) => {
-                if (node.nodeType !== Node.ELEMENT_NODE && !this.elementKeys.has(node)) this.removeDisposed(node);
-            });
-        }
+        if (stray) this.removeStrays(Array.from(parent.childNodes));
 
         const existingElements = Array.from(parent.childNodes);
         const existingCount = existingElements.length;
@@ -1838,8 +1879,9 @@ export default class DOMRenderer {
         // else the longest run of them that did.
         let stableIndexes = null;
         if (!inOrder) {
-            const sequence = this.getLongestIncreasingSubsequence(nextElements.map((index) => index + 1));
-            stableIndexes = new Set(sequence);
+            const values = new Array(count);
+            for (let index = 0; index < count; index += 1) values[index] = nextElements[index] + 1;
+            stableIndexes = new Set(this.getLongestIncreasingSubsequence(values));
         }
         // Create and update in layout order, so components come to life in the same order the server
         // rendered them (local-state slots are numbered by creation order); then place them walking
@@ -1857,7 +1899,7 @@ export default class DOMRenderer {
                 elements.push(element);
             }
         } catch (error) {
-            undo(() => runEvery(elements.keys(), (index) => { if (nextElements[index] === -1) this.disposeTree(elements[index]); }));
+            this.disposeMadeQuietly(elements, nextElements);
             throw error;
         }
         let anchor = null;
@@ -1867,6 +1909,29 @@ export default class DOMRenderer {
             if (!stays) parent.insertBefore(element, anchor);
             anchor = element;
         }
+    }
+
+    // The nodes of a keyed list that carry no key and are no elements, left by an earlier unkeyed pass:
+    // each taken off and disposed, whichever throws (runEvery).
+    removeStrays(nodes) {
+        let failures = null;
+        for (let index = 0; index < nodes.length; index += 1) {
+            const node = nodes[index];
+            if (node.nodeType === Node.ELEMENT_NODE || this.elementKeys.has(node)) continue;
+            try {
+                this.removeDisposed(node);
+            } catch (error) {
+                (failures ??= []).push(error);
+            }
+        }
+        if (failures) throw failures[0];
+    }
+
+    // The rows a keyed pass that threw had made and not placed, disposed while its error goes on (undo).
+    disposeMadeQuietly(elements, nextElements) {
+        undo(() => runEvery(elements.keys(), (index) => {
+            if (nextElements[index] === -1) this.disposeTree(elements[index]);
+        }));
     }
 
     // Whether the element kept for a key can take `layout`. It is kept only when that layout draws the
@@ -1979,6 +2044,8 @@ export default class DOMRenderer {
         }
         const content = this.normalizeContent(rawContent);
         this.disposeElement(element);
+        this.knownElement = null;
+        this.know(element, this.namespaceOf(element), false);
         // What the element holds now (heldBy): its text or markup, a value, or its children.
         const holder = this.heldBy(element, content);
         const holdsText = holder === "textContent" || holder === "innerHTML";
@@ -2007,6 +2074,7 @@ export default class DOMRenderer {
             this.disposeEach(replaced);
             this.applyPropertiesAndChildren(element, content, true);
         } finally {
+            if (this.knownElement === element) this.knownElement = null;
             for (let index = 0; index < replaced.length; index += 1) {
                 if (replaced[index] !== this.textKept) replaced[index].remove();
             }
@@ -2301,7 +2369,18 @@ export default class DOMRenderer {
             this.bindChildren(element, parent, children, namespace, afterApply);
         } else if (children !== null && children !== undefined) {
             if (reconcile) this.reconcileChildren(parent, children, namespace);
-            else this.appendChildren(parent, children, namespace);
+            else this.appendFreshChildren(parent, children, namespace);
+        }
+    }
+
+    // The static children of an element just created (createElement, the one caller that does not
+    // reconcile): appended as appendChildren does, each one inside that element (drawingInside).
+    appendFreshChildren(parent, children, namespace) {
+        this.drawingInside += 1;
+        try {
+            this.appendChildren(parent, children, namespace);
+        } finally {
+            this.drawingInside -= 1;
         }
     }
 
@@ -2340,7 +2419,21 @@ export default class DOMRenderer {
     }
 
     namespaceOf(element) {
+        if (element === this.knownElement) return this.knownNamespace;
         return element.namespaceURI === "http://www.w3.org/1999/xhtml" ? null : element.namespaceURI;
+    }
+
+    localNameOf(element) {
+        return element === this.knownElement ? this.knownLocalName : element.localName;
+    }
+
+    // `element` as the one being drawn now (knownElement), its namespace and localName read once;
+    // `fresh` when this draw made it.
+    know(element, namespace, fresh) {
+        this.knownElement = element;
+        this.knownNamespace = namespace;
+        this.knownLocalName = element.localName;
+        this.knownFresh = fresh;
     }
 
     // Whether `name` (in any case) is a boolean attribute on `element` (BOOLEAN_ATTRIBUTES): on an
@@ -2360,7 +2453,7 @@ export default class DOMRenderer {
     // Whether `element` is one of HTML's void elements (VOID_ELEMENTS), which hold nothing. Inside
     // <svg> or <math> a <br> or an <img> is an element like any other.
     isVoid(element) {
-        return this.namespaceOf(element) === null && VOID_ELEMENTS.has(element.localName);
+        return this.namespaceOf(element) === null && VOID_ELEMENTS.has(this.localNameOf(element));
     }
 
     // Where what is drawn inside `element` goes: the element itself, but for an HTML <template>, its
@@ -2369,7 +2462,8 @@ export default class DOMRenderer {
     // it was drawn on the page. Every path that draws inside an element, or empties or disposes what
     // is there, asks this.
     contentOf(element) {
-        return element.localName === "template" && this.namespaceOf(element) === null ? element.content : element;
+        const template = this.localNameOf(element) === "template" && this.namespaceOf(element) === null;
+        return template ? element.content : element;
     }
 
     // The namespace of what is drawn inside `node`: an element's own (null for HTML), except at the
@@ -2381,7 +2475,7 @@ export default class DOMRenderer {
     // went blank.
     childNamespaceOf(node) {
         if (node.nodeType !== Node.ELEMENT_NODE) return null;
-        return namespaceInside(this.namespaceOf(node), lowerName(node.localName), node);
+        return namespaceInside(this.namespaceOf(node), lowerName(this.localNameOf(node)), node);
     }
 
     // Builds a node (and its subtree) without inserting it anywhere.
@@ -2391,7 +2485,7 @@ export default class DOMRenderer {
         }
         if (this.isTextLayout(layout)) {
             const textNode = document.createTextNode(this.textOf(layout));
-            this.owned.add(textNode);
+            if (this.drawingInside === 0) this.owned.add(textNode);
             return textNode;
         }
 
@@ -2410,7 +2504,7 @@ export default class DOMRenderer {
         if (startsUpperCase(tag)) this.juris.unknownComponent(tag, foreignContext(namespace), tagCheck.ok);
         if (!tagCheck.ok) {
             const placeholder = document.createTextNode("");
-            this.owned.add(placeholder);
+            if (this.drawingInside === 0) this.owned.add(placeholder);
             if (this.devMode) this.juris.refused(tagCheck.rule, tagCheck.reason, { name: tag, value: rawContent, node: placeholder, component: this.owner });
             return placeholder;
         }
@@ -2419,7 +2513,10 @@ export default class DOMRenderer {
         const drawnIn = elementNamespace(namespace, lowerTag);
 
         const el = drawnIn ? document.createElementNS(drawnIn, tag) : document.createElement(tag);
-        this.owned.add(el);
+        if (this.drawingInside === 0) this.owned.add(el);
+        // Its namespace is the one it was made in: createElementNS's, or none (namespaceOf's null for
+        // an HTML element, and for an element of a document that is not HTML).
+        this.know(el, drawnIn || null, true);
         if (content.key !== undefined) this.elementKeys.set(el, content.key);
         // Abandoned part way (a boundary's fallback takes its place, or an error no boundary took
         // goes on to the caller), it is never inserted, so what it holds is disposed before the
@@ -2430,6 +2527,8 @@ export default class DOMRenderer {
         } catch (error) {
             this.disposeTreeQuietly(el);
             throw error;
+        } finally {
+            if (this.knownElement === el) this.knownElement = null;
         }
         return el;
     }
