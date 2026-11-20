@@ -94,13 +94,14 @@ serves this package, flat, at `/src/`.
 ## Headless components, FluentState and web components
 
 `headless.js`, `fluentstate.js` and `webcomponent.js` carry 0.91's headless components, FluentState
-and custom elements onto this core, with their API and usage:
+and custom elements onto this core, with their API and usage. With the example's import map, this
+runs in its `<script type="module">` as it is:
 
 ```js
-import Juris from "/src/juris.js";
-import { HeadlessManager } from "/src/headless.js";
-import { createFluentStateHeadless } from "/src/fluentstate.js";
-import { WebComponentFactory } from "/src/webcomponent.js";
+import Juris from "juris/juris.js";
+import { HeadlessManager } from "juris/headless.js";
+import { createFluentStateHeadless } from "juris/fluentstate.js";
+import { WebComponentFactory } from "juris/webcomponent.js";
 
 const juris = new Juris({
     features: {
