@@ -32,7 +32,7 @@ const REGISTRY = 1;
 const REGISTRY_NAME = "__JURIS_DEVTOOLS__";
 const REGISTERED = "juris:devtools";
 // The core's version, as `hello` and `list()` name it: package.json's (tests/core.test.mjs holds the two).
-const JURIS_VERSION = "0.93.0";
+const JURIS_VERSION = "0.93.1";
 // The `v` of this module's own URL: the code id the kit's module server stamps every import with
 // (server/modules.js), or null where nothing stamped it.
 const CODE_ID = new URL(import.meta.url).searchParams.get("v");
