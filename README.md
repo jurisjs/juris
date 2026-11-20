@@ -16,42 +16,65 @@ npm install juris
 
 ## An example
 
-A counter, in a page with `<div id="app">`:
+A counter, in one HTML file: save it as `counter.html` and open it in a browser. Juris comes from
+a CDN, so there is nothing to install.
 
-```js
-import Juris from "/src/juris.js";
+```html
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Counter</title>
+    <!-- "juris/..." is the juris package from npm, through a CDN. -->
+    <script type="importmap">
+        { "imports": { "juris/": "https://cdn.jsdelivr.net/npm/juris@0.93/" } }
+    </script>
+</head>
+<body>
+    <div id="app"></div>
+    <script type="module">
+        import Juris from "juris/juris.js";
 
-const juris = new Juris({ state: { count: 0 } });
+        const juris = new Juris({ state: { count: 0 } });
 
-// A component is a function from props to a layout: a plain object, tag first.
-juris.registerComponent("Counter", (props, api) => ({
-    div: {
-        children: [
-            // A function is a binding: when the state it read changes, it runs again,
-            // and only it: the component's body doesn't.
-            { p: { textContent: () => `${props.label}: ${api.getState("count")}` } },
-            {
-                button: {
-                    textContent: "+1",
-                    onclick: () => api.updateState("count", (n) => n + 1),
-                },
+        // A component is a function from props to a layout: a plain object, tag first.
+        juris.registerComponent("Counter", (props, api) => ({
+            div: {
+                children: [
+                    // A function is a binding: when the state it read changes, it runs again,
+                    // and only it: the component's body doesn't.
+                    { p: { textContent: () => `${props.label}: ${api.getState("count")}` } },
+                    {
+                        button: {
+                            textContent: "+1",
+                            onclick: () => api.updateState("count", (n) => n + 1),
+                        },
+                    },
+                    {
+                        button: {
+                            textContent: "Reset",
+                            disabled: () => api.getState("count") === 0,
+                            onclick: () => api.setValue("count", 0),
+                        },
+                    },
+                ],
             },
-            {
-                button: {
-                    textContent: "Reset",
-                    disabled: () => api.getState("count") === 0,
-                    onclick: () => api.setValue("count", 0),
-                },
-            },
-        ],
-    },
-}));
+        }));
 
-juris.render(document.getElementById("app"), { Counter: { label: "Clicks" } });
+        juris.render(document.getElementById("app"), { Counter: { label: "Clicks" } });
+    </script>
+</body>
+</html>
 ```
 
-With [`juris-kit`](https://github.com/jurisjs/juris-kit), a server renders the same layout to HTML
-first, and the browser's `hydrate` makes that page live, with no second layout to write.
+The same code runs in other ways:
+
+- **From npm.** Run `npm install juris`, serve `node_modules/juris/` beside your page, and point
+  `juris/` in the import map at it. Each file imports only its flat siblings, so any static file
+  server will do.
+- **With [`juris-kit`](https://github.com/jurisjs/juris-kit).** The kit serves this package at
+  `/src/` (`import Juris from "/src/juris.js"`). Its server renders the same layout to HTML first,
+  and the browser's `hydrate` makes that page live, with no second layout to write.
 
 ## Where it fits
 
