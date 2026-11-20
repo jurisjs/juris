@@ -14,6 +14,45 @@ Apache-2.0. Node 24 or later to run the tests and, with the kit, render on a ser
 npm install juris
 ```
 
+## An example
+
+A counter, in a page with `<div id="app">`:
+
+```js
+import Juris from "/src/juris.js";
+
+const juris = new Juris({ state: { count: 0 } });
+
+// A component is a function from props to a layout: a plain object, tag first.
+juris.registerComponent("Counter", (props, api) => ({
+    div: {
+        children: [
+            // A function is a binding: when the state it read changes, it runs again,
+            // and only it: the component's body doesn't.
+            { p: { textContent: () => `${props.label}: ${api.getState("count")}` } },
+            {
+                button: {
+                    textContent: "+1",
+                    onclick: () => api.updateState("count", (n) => n + 1),
+                },
+            },
+            {
+                button: {
+                    textContent: "Reset",
+                    disabled: () => api.getState("count") === 0,
+                    onclick: () => api.setValue("count", 0),
+                },
+            },
+        ],
+    },
+}));
+
+juris.render(document.getElementById("app"), { Counter: { label: "Clicks" } });
+```
+
+With [`juris-kit`](https://github.com/jurisjs/juris-kit), a server renders the same layout to HTML
+first, and the browser's `hydrate` makes that page live, with no second layout to write.
+
 ## Where it fits
 
 The server, the string renderer it draws pages with, the module server that serves these files to
@@ -41,11 +80,26 @@ import { createFluentStateHeadless } from "/src/fluentstate.js";
 import { WebComponentFactory } from "/src/webcomponent.js";
 
 const juris = new Juris({
-    features: { headless: HeadlessManager, webComponentFactory: WebComponentFactory },
-    headlessComponents: { fluentState: { fn: createFluentStateHeadless, options: { autoInit: true } } },
+    features: {
+        headless: HeadlessManager,
+        webComponentFactory: WebComponentFactory,
+    },
+    headlessComponents: {
+        fluentState: {
+            fn: createFluentStateHeadless,
+            options: { autoInit: true },
+        },
+    },
 });
+
+// The state, read and written by property.
 const $ = juris.api.fluentState.getFluentStates();
-juris.createWebComponent("user-name", () => ({ b: { textContent: () => $.user.name } }));
+
+// <user-name></user-name> shows the user's name, and follows it when it changes.
+juris.createWebComponent("user-name", () => ({
+    b: { textContent: () => $.user.name },
+}));
+
 $.user.name = "Ada";
 ```
 
